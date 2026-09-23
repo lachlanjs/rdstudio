@@ -5,7 +5,7 @@ description: Visual tokens and layout rules for the dashboard, and why they were
 tags: [dashboard, design]
 generated:
   by: claude-code/claude-opus-5-5
-  at: 2026-09-23T06:40:00Z
+  at: 2026-09-23T06:12:10Z
 ---
 
 # Direction
@@ -15,19 +15,24 @@ One bold element, the graph on an engineering-grid ground; everything else quiet
 
 # Tokens
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| paper | `#f4f6f2` | `#141a20` | page ground |
-| ink | `#1c2632` | `#e2e8e3` | text |
-| rule | `#d9e1da` | `#2b353d` | dividers |
-| accent | `#5646c0` | `#a597f2` | links, current tab |
-| reviewed | `#2e7a58` | `#5fbf8f` | human-reviewed |
-| machine | `#5b6b7a` | `#93a4b3` | machine-confirmed |
-| unverified | `#a86f12` | `#e0a847` | hollow dot |
-| stale | `#b0413e` | `#ec7a73` | changed since review |
+Every theme is one stylesheet in `web/themes/` defining the same tokens for
+light and dark: `--paper`, `--paper-raised`, `--paper-sunk`, `--ink`,
+`--ink-soft`, `--ink-faint`, `--rule`, `--grid`, `--accent`, `--accent-soft`,
+trust colours (`--reviewed`, `--machine`, `--unverified`, `--stale`), change
+categories (`--cat-*`), graph palette (`--g0`…`--g7`), fonts (`--font-text`,
+`--font-ui`, `--font-mono`), `--text-size` and `--radius`. `fonts.css` declares
+every face; a browser downloads only those the active theme uses.
 
-Type: Literata (reading, headings; pairs with KaTeX) and Atkinson Hyperlegible
-Next (interface). Both vendored, no network.
+| Theme | Reading / interface / code | Character |
+|---|---|---|
+| Notebook (default) | Literata / Atkinson Hyperlegible Next / system mono | engineering paper, violet |
+| Journal | Source Serif 4 / Source Sans 3 / JetBrains Mono | academic, black on white, Oxford blue |
+| Modern | Inter / Inter / JetBrains Mono | neutral greys, teal, rounder |
+| Blueprint | IBM Plex Sans / IBM Plex Sans / IBM Plex Mono | drafting blue, orange marks |
+| Terminal | JetBrains Mono throughout | retro phosphor, square corners |
+
+Mode is `system` (follows the OS), `light` or `dark`, set with
+`data-mode` on the root element. Settings live in localStorage.
 
 # Layout
 

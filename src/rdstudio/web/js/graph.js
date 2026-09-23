@@ -1,5 +1,5 @@
 // Graph tab: force-directed view of concepts, directories and reports.
-// Positions survive navigation (module state) and reloads (sessionStorage).
+// Positions and options survive navigation (module state) and visits (localStorage).
 
 import { store } from "./data.js";
 import { h, conceptHref, dirHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
@@ -8,13 +8,16 @@ import { h, conceptHref, dirHref, trustState, TRUST_LABEL, titleCase } from "./u
 
 const KEY = "rdstudio.graph";
 const saved = (() => {
-  try { return JSON.parse(sessionStorage.getItem(KEY) || "{}"); } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem(KEY) || sessionStorage.getItem(KEY) || "{}"); } catch { return {}; }
 })();
+
+// Force multipliers: 1 is the default layout.
+export const FORCE_DEFAULTS = { repulsion: 1, spacing: 1, gravity: 1 };
 
 const G = {
   positions: new Map(Object.entries(saved.positions || {})), // id -> [x, y, pinned]
   transform: saved.transform ? d3.zoomIdentity.translate(saved.transform.x, saved.transform.y).scale(saved.transform.k) : null,
-  opts: Object.assign({ hierarchy: true, reports: true, labels: true, color: "directory" }, saved.opts || {}),
+  opts: Object.assign({ hierarchy: true, reports: true, labels: true, color: "directory" }, FORCE_DEFAULTS, saved.opts || {}),
   sim: null,
   nodes: [],
   query: "",
@@ -24,7 +27,7 @@ function persist() {
   for (const n of G.nodes) G.positions.set(n.id, [Math.round(n.x), Math.round(n.y), n.fx != null ? 1 : 0]);
   const t = G.transform;
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({
+    localStorage.setItem(KEY, JSON.stringify({
       positions: Object.fromEntries(G.positions),
       transform: t ? { x: t.x, y: t.y, k: t.k } : null,
       opts: G.opts,
@@ -37,6 +40,15 @@ export function leaveGraph() {
   persist();
   G.sim.stop();
   G.sim = null;
+}
+
+function applyForces() {
+  if (!G.sim) return;
+  const o = G.opts;
+  G.sim.force("link").distance((d) => (d.kind === "tree" ? 50 : 110) * o.spacing);
+  G.sim.force("charge").strength((d) => (d.kind === "dir" ? -420 : -240) * o.repulsion);
+  G.sim.force("x").strength(0.035 * o.gravity);
+  G.sim.force("y").strength(0.035 * o.gravity);
 }
 
 const TRUST_COLOR = {
@@ -203,12 +215,13 @@ export function graphView() {
       .clickDistance(4)
       .on("start", (event, d) => { d.moved = false; })
       .on("drag", (event, d) => {
-        if (!d.moved) { d.moved = true; if (!event.active) G.sim.alphaTarget(0.25).restart(); }
+        // Wake the simulation on the first movement so neighbours respond.
+        if (!d.moved) { d.moved = true; G.sim.alphaTarget(0.3).restart(); }
         d.fx = event.x; d.fy = event.y; tip.hidden = true;
       })
       .on("end", function (event, d) {
         if (!d.moved) return;
-        if (!event.active) G.sim.alphaTarget(0);
+        G.sim.alphaTarget(0);
         d3.select(this).classed("pinned", true);
         persist();
       }));
@@ -253,13 +266,13 @@ export function graphView() {
     let ticks = 0;
 
     G.sim = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d) => d.id)
-        .distance((d) => (d.kind === "tree" ? 50 : 110))
-        .strength((d) => (d.kind === "tree" ? 0.6 : 0.12)))
-      .force("charge", d3.forceManyBody().strength((d) => (d.kind === "dir" ? -420 : -240)).distanceMax(700))
+      .force("link", d3.forceLink(links).id((d) => d.id).strength((d) => (d.kind === "tree" ? 0.6 : 0.12)))
+      .force("charge", d3.forceManyBody().distanceMax(700))
       .force("collide", d3.forceCollide((d) => d.r + 6))
-      .force("x", d3.forceX(0).strength(0.035))
-      .force("y", d3.forceY(0).strength(0.035))
+      .force("x", d3.forceX(0))
+      .force("y", d3.forceY(0));
+    applyForces();
+    G.sim
       .alpha(fresh > nodes.length / 3 ? 1 : fresh ? 0.3 : 0)
       .on("tick", () => {
         link.each(function (d) {
@@ -301,6 +314,7 @@ export function graphView() {
 
   requestAnimationFrame(draw);
   wrap.refresh = () => { persist(); if (G.sim) G.sim.stop(); draw(); };
+  G.reset = () => { G.positions.clear(); G.transform = null; leaveGraph(); draw(); };
   return wrap;
 }
 
@@ -318,12 +332,32 @@ function controls(redraw) {
   search.addEventListener("input", () => { G.query = search.value.trim(); redraw(); });
   const legend = h("div", { class: "legend" }, legendItems());
   const narrow = matchMedia("(max-width: 760px)").matches;
+  const sync = [];
+  const sliders = [["repulsion", "Repulsion"], ["spacing", "Link length"], ["gravity", "Pull to centre"]].map(([key, text]) => {
+    const input = h("input", { type: "range", min: 0.25, max: 3, step: 0.05, value: G.opts[key], "aria-label": text });
+    const out = h("output", {}, `${Number(G.opts[key]).toFixed(2)}×`);
+    input.addEventListener("input", () => {
+      G.opts[key] = Number(input.value);
+      out.textContent = `${G.opts[key].toFixed(2)}×`;
+      applyForces();
+      G.sim?.alpha(0.4).restart();
+      persist();
+    });
+    sync.push(() => { input.value = G.opts[key]; out.textContent = `${Number(G.opts[key]).toFixed(2)}×`; });
+    return h("label", { class: "slider" }, h("span", {}, text), input, out);
+  });
+  const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
   return h("div", { class: "graph-panel" },
     h("div", { class: "row" }, search),
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
       h("div", { class: "row" }, toggle("hierarchy", "Folders"), toggle("reports", "Reports"), toggle("labels", "Labels"), colour),
-      legend));
+      legend,
+      h("div", { class: "sliders" }, sliders),
+      h("div", { class: "row" },
+        button("Unpin all", () => { for (const n of G.nodes) { n.fx = n.fy = null; } d3.selectAll(".g-node.pinned").classed("pinned", false); G.sim?.alpha(0.3).restart(); persist(); }),
+        button("Default forces", () => { Object.assign(G.opts, FORCE_DEFAULTS); sync.forEach((f) => f()); applyForces(); G.sim?.alpha(0.4).restart(); persist(); }),
+        button("Re-run layout", () => G.reset?.()))));
 }
 
 function legendItems() {

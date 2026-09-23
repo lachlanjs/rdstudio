@@ -51,4 +51,54 @@ rdstudio --help                  # everything else
   library = "<library name>"
   ```
 
-- **Static site** (e.g. for GitHub Pages): `rdstudio export <dir>`
+- **Static site:** `rdstudio export <dir>` writes a snapshot that any static
+  host can serve (see below).
+
+## Publish to GitHub Pages
+
+Anything you publish is public, including commit authors and messages in the
+Changes tab.
+
+1. In the repository's settings on GitHub, open **Pages** and set the source to
+   **GitHub Actions**.
+2. Add `.github/workflows/knowledge-pages.yml`:
+
+```yaml
+name: Publish knowledge dashboard
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # full history, for the Changes tab
+      - uses: astral-sh/setup-uv@v7
+      - run: uvx --from git+https://github.com/<owner>/rdstudio rdstudio export _site
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+```
+
+If rdstudio is a dev dependency of the project, use `uv run rdstudio export
+_site` instead of the `uvx` line. For other static hosts, run the same export
+and upload `_site/`.

@@ -1,0 +1,101 @@
+/* Journal: an academic paper. Source Serif 4 throughout the text, Source Sans 3 for the interface, black on white with Oxford blue. */
+
+:root {
+  --font-text: "Source Serif 4", Georgia, serif;
+  --font-ui: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --text-size: 18.5px;
+  --radius: 2px;
+  --paper: #ffffff;
+  --paper-raised: #ffffff;
+  --paper-sunk: #f3f3f1;
+  --ink: #111111;
+  --ink-soft: #3d3d3d;
+  --ink-faint: #767676;
+  --rule: #dcdcdc;
+  --grid: #f0f0ee;
+  --accent: #1f3a68;
+  --accent-soft: #e3e9f3;
+  --reviewed: #1d6b45;
+  --machine: #5a5a5a;
+  --unverified: #9a6200;
+  --stale: #a4262c;
+  --cat-knowledge: #1f3a68;
+  --cat-code: #245f86;
+  --cat-reports: #8a5300;
+  --cat-agent: #55662a;
+  --cat-other: #767676;
+  --g0: #1f3a68;
+  --g1: #a4262c;
+  --g2: #1d6b45;
+  --g3: #8a5300;
+  --g4: #6b3a78;
+  --g5: #245f86;
+  --g6: #55662a;
+  --g7: #3d3d3d;
+  color-scheme: light;
+}
+
+:root[data-mode="dark"] {
+  --paper: #17181b;
+  --paper-raised: #1d1f23;
+  --paper-sunk: #111214;
+  --ink: #e8e6e1;
+  --ink-soft: #b9b6ae;
+  --ink-faint: #86837c;
+  --rule: #33353a;
+  --grid: #202226;
+  --accent: #9db8e8;
+  --accent-soft: #243552;
+  --reviewed: #6cc295;
+  --machine: #a3a09a;
+  --unverified: #e2b35a;
+  --stale: #ef8a86;
+  --cat-knowledge: #9db8e8;
+  --cat-code: #7fb6dc;
+  --cat-reports: #e2a95f;
+  --cat-agent: #b4c47a;
+  --cat-other: #86837c;
+  --g0: #9db8e8;
+  --g1: #ef8a86;
+  --g2: #6cc295;
+  --g3: #e2a95f;
+  --g4: #c99ad6;
+  --g5: #7fb6dc;
+  --g6: #b4c47a;
+  --g7: #b9b6ae;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #17181b;
+    --paper-raised: #1d1f23;
+    --paper-sunk: #111214;
+    --ink: #e8e6e1;
+    --ink-soft: #b9b6ae;
+    --ink-faint: #86837c;
+    --rule: #33353a;
+    --grid: #202226;
+    --accent: #9db8e8;
+    --accent-soft: #243552;
+    --reviewed: #6cc295;
+    --machine: #a3a09a;
+    --unverified: #e2b35a;
+    --stale: #ef8a86;
+    --cat-knowledge: #9db8e8;
+    --cat-code: #7fb6dc;
+    --cat-reports: #e2a95f;
+    --cat-agent: #b4c47a;
+    --cat-other: #86837c;
+    --g0: #9db8e8;
+    --g1: #ef8a86;
+    --g2: #6cc295;
+    --g3: #e2a95f;
+    --g4: #c99ad6;
+    --g5: #7fb6dc;
+    --g6: #b4c47a;
+    --g7: #b9b6ae;
+    color-scheme: dark;
+  }
+}

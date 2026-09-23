@@ -5,6 +5,7 @@ import { conceptView, dirView } from "./js/knowledge.js";
 import { graphView, leaveGraph } from "./js/graph.js";
 import { changesView, reviewView, reviewCount, reportsView, reportView, skillsView, skillView } from "./js/pages.js";
 import { proceduresView, procedureView, procedures } from "./js/procedures.js";
+import { settingsView } from "./js/settings.js";
 import { h } from "./js/util.js";
 
 const view = document.getElementById("view");
@@ -26,6 +27,7 @@ function parse() {
     case "r": return { tab: "reports", key: "r:" + tail, render: () => reportView(tail) };
     case "procedures": return { tab: "procedures", key: "procedures", render: proceduresView };
     case "p": return { tab: "procedures", key: "p:" + tail, render: () => procedureView(tail) };
+    case "settings": return { tab: "settings", key: "settings", render: settingsView };
     case "skills": return { tab: "skills", key: "skills", render: skillsView };
     case "skill": return { tab: "skills", key: "skill:" + tail, render: () => skillView("skill", tail) };
     case "agent": return { tab: "skills", key: "agent:" + tail, render: () => skillView("agent", tail) };
@@ -34,7 +36,7 @@ function parse() {
 }
 
 function updateChrome(tab) {
-  for (const a of document.querySelectorAll(".tabs a")) {
+  for (const a of document.querySelectorAll(".tabs a, .settings-link")) {
     a.toggleAttribute("aria-current", a.dataset.tab === tab);
     if (a.dataset.tab === tab) a.setAttribute("aria-current", "page");
   }

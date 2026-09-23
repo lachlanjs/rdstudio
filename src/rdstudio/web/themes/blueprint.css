@@ -1,0 +1,101 @@
+/* Blueprint: drafting-office blue with orange marks, IBM Plex Sans and Plex Mono. */
+
+:root {
+  --font-text: "IBM Plex Sans", system-ui, sans-serif;
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --text-size: 17px;
+  --radius: 3px;
+  --paper: #eef3f9;
+  --paper-raised: #f8fbfe;
+  --paper-sunk: #e0e9f3;
+  --ink: #0e2a47;
+  --ink-soft: #3b5877;
+  --ink-faint: #7690ab;
+  --rule: #c9d8e8;
+  --grid: #dbe6f2;
+  --accent: #d9480f;
+  --accent-soft: #fde6d8;
+  --reviewed: #2b7a4b;
+  --machine: #5f7690;
+  --unverified: #a05f00;
+  --stale: #b3261e;
+  --cat-knowledge: #1d4f91;
+  --cat-code: #0b7285;
+  --cat-reports: #d9480f;
+  --cat-agent: #5c7c1f;
+  --cat-other: #7690ab;
+  --g0: #1d4f91;
+  --g1: #d9480f;
+  --g2: #0b7285;
+  --g3: #2b7a4b;
+  --g4: #862e9c;
+  --g5: #5c7c1f;
+  --g6: #b3261e;
+  --g7: #3b5877;
+  color-scheme: light;
+}
+
+:root[data-mode="dark"] {
+  --paper: #0f2742;
+  --paper-raised: #13304f;
+  --paper-sunk: #0b1f36;
+  --ink: #dbe8f7;
+  --ink-soft: #a6bfdc;
+  --ink-faint: #7391b3;
+  --rule: #274a70;
+  --grid: #173556;
+  --accent: #ffa94d;
+  --accent-soft: #4a3420;
+  --reviewed: #69db7c;
+  --machine: #a5b8cc;
+  --unverified: #ffd43b;
+  --stale: #ff8787;
+  --cat-knowledge: #74c0fc;
+  --cat-code: #66d9e8;
+  --cat-reports: #ffa94d;
+  --cat-agent: #c0eb75;
+  --cat-other: #7391b3;
+  --g0: #74c0fc;
+  --g1: #ffa94d;
+  --g2: #66d9e8;
+  --g3: #69db7c;
+  --g4: #e599f7;
+  --g5: #c0eb75;
+  --g6: #ff8787;
+  --g7: #a6bfdc;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #0f2742;
+    --paper-raised: #13304f;
+    --paper-sunk: #0b1f36;
+    --ink: #dbe8f7;
+    --ink-soft: #a6bfdc;
+    --ink-faint: #7391b3;
+    --rule: #274a70;
+    --grid: #173556;
+    --accent: #ffa94d;
+    --accent-soft: #4a3420;
+    --reviewed: #69db7c;
+    --machine: #a5b8cc;
+    --unverified: #ffd43b;
+    --stale: #ff8787;
+    --cat-knowledge: #74c0fc;
+    --cat-code: #66d9e8;
+    --cat-reports: #ffa94d;
+    --cat-agent: #c0eb75;
+    --cat-other: #7391b3;
+    --g0: #74c0fc;
+    --g1: #ffa94d;
+    --g2: #66d9e8;
+    --g3: #69db7c;
+    --g4: #e599f7;
+    --g5: #c0eb75;
+    --g6: #ff8787;
+    --g7: #a6bfdc;
+    color-scheme: dark;
+  }
+}

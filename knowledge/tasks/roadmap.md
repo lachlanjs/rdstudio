@@ -39,6 +39,10 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 - [x] [T15 Static export and visual QA](/tasks/T15-export-qa.md)
 - [ ] [T16 Instantiate in himode and test drive](/tasks/T16-himode-test-drive.md)
 
+# M6 — Refinements
+
+- [x] [T17 Graph dragging, graph options, themes and CI publishing](/tasks/T17-settings-themes-ci.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
