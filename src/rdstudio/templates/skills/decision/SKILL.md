@@ -14,7 +14,7 @@ serves changes; an interesting alternative is not enough.
 
 1. Search `type: Decision` for an existing decision on the topic. If one
    exists, update it (and say whether you are revising or reopening it).
-2. Record at `decisions/<short-slug>` with `mcp__rdstudio__record`:
+2. Record at `decisions/<short-slug>` with the rdstudio `record` tool:
 
 ```markdown
 ---

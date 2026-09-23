@@ -13,7 +13,8 @@ PROJECT_FILE = "rdstudio.toml"
 DEFAULT_CATEGORIES: dict[str, list[str]] = {
     "knowledge": ["{knowledge}/**"],
     "reports": ["{reports}/**"],
-    "agent": [".claude/**", ".mcp.json", "CLAUDE.md", "AGENTS.md", "rdstudio.toml"],
+    "agent": [".claude/**", ".mcp.json", "CLAUDE.md", "AGENTS.md", ".opencode/**", "opencode.json",
+              "opencode.jsonc", "rdstudio.toml"],
     "code": [
         "**/*.py", "**/*.pyi", "**/*.ts", "**/*.js", "**/*.svelte", "**/*.rs", "**/*.c",
         "**/*.cpp", "**/*.h", "**/*.jl", "**/*.go", "**/*.java", "**/*.sh", "**/*.css",

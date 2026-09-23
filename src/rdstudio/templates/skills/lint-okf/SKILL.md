@@ -7,7 +7,7 @@ description: Check the knowledge base for OKF format errors and broken links, an
 
 1. Run `rdstudio check -w`.
 2. Fix **errors** (missing frontmatter, missing `type`, frontmatter in a
-   non-root `index.md`) with `mcp__rdstudio__record` or by editing the file.
+   non-root `index.md`) with the rdstudio `record` tool or by editing the file.
 3. **Broken links** point at knowledge that does not exist yet. Do not delete
    them by reflex: list them for the developer as candidate concepts, and fix
    only the ones that are typos or moved files.

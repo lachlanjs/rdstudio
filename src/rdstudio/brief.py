@@ -1,6 +1,7 @@
 """A short orientation for the start of an agent session (``rdstudio brief``).
 
-Printed by a Claude Code SessionStart hook, so it must stay small: it tells the
+Printed by a Claude Code SessionStart hook and returned by the MCP ``brief``
+tool, so it must stay small: it tells the
 agent what exists and where to look, not the content itself.
 """
 
@@ -40,6 +41,6 @@ def brief(cfg: Config, *, commits: int = 3) -> str:
     if g is not None:
         count = len(Bundle.load(g.knowledge_dir).concepts)
         lines.append(f"A global knowledge base (cross-project; {count} concepts) is searchable with scope=\"global\".")
-    lines.append("Search it (rdstudio MCP tools, /search-okf, or the librarian subagent) before re-deriving; "
+    lines.append("Search it (rdstudio MCP tools, the search-okf skill, or the librarian subagent) before re-deriving; "
                  "record decisions, questions and findings as you go.")
     return "\n".join(lines)

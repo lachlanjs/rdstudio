@@ -17,8 +17,10 @@ def test_tools(bundle_dir):
     write(root, "rdstudio.toml", '[actors]\nagent = "test-agent/1"\n')
     server = create_server(config.load(root))
     names = {t.name for t in asyncio.run(server.list_tools())}
-    assert names == {"search", "outline", "read", "list_concepts", "record", "backlinks", "review_queue",
+    assert names == {"brief", "search", "outline", "read", "list_concepts", "record", "backlinks", "review_queue",
                      "procedure_next", "procedure_propose", "promote"}
+
+    assert "concepts in" in call(server, "brief")
 
     hits = json.loads(call(server, "search", query="random matrices"))
     assert hits[0]["id"] in {"research/spectrum", "design/model"} and "snippet" in hits[0]

@@ -41,11 +41,11 @@ Not started.
 2. Write the `# Plan` section: files to change, approach, assumptions, and open
    questions. Set the tag to `active`. **Stop and wait for the developer's
    approval.**
-3. Implement. Record decisions and findings as they arise (`/decision`,
-   `/record-okf`).
+3. Implement. Record decisions and findings as they arise (the `decision` skill,
+   the `record-okf` skill).
 4. Write `# Outcome`: what changed, deviations from the plan and why, follow-ups,
    and anything the developer should test. Link the report if you wrote one.
    Set the tag to `done`.
-5. Write a report with `/report` for substantial tasks.
+5. Write a report with the `report` skill for substantial tasks.
 
 Never edit the `# Prompt` section.

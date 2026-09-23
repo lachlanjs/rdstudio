@@ -7,10 +7,10 @@ description: Add a paper or book to the bibliography (papis) and the knowledge b
 
 Requires `[references] backend = "papis"` in `rdstudio.toml`. If a procedure
 concept for adding references exists (search `type: Procedure`), follow it
-with `mcp__rdstudio__procedure_next` instead of these generic steps; it holds
+with the rdstudio `procedure_next` tool instead of these generic steps; it holds
 this project's conventions and known pitfalls.
 
-1. **Check it is not already there:** `mcp__rdstudio__ref_search`.
+1. **Check it is not already there:** search with the rdstudio `ref_search` tool.
 2. **Add it to papis:** `papis add --from doi <doi>` (or `--from isbn`,
    `--from arxiv`). Run non-interactively with `--batch` where the project's
    procedure says so.
@@ -20,8 +20,8 @@ this project's conventions and known pitfalls.
    year, venue. Fix `author_list`, not the flat `author` field.
 5. **Create the knowledge stub:** `rdstudio refs sync`.
 6. **Summarise, if asked:** read only the pages you need with
-   `mcp__rdstudio__ref_text` (by page range or query), then fill the stub's
-   `# Summary` and `# Relevance` sections with `/record-okf`. Link the
+   the rdstudio `ref_text` tool (by page range or query), then fill the stub's
+   `# Summary` and `# Relevance` sections with the `record-okf` skill. Link the
    decisions, questions or designs it bears on.
 7. Regenerate any exported bibliography the project uses (for example
    `make refs`).
