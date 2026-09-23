@@ -1,0 +1,7 @@
+# rdstudio dogfoods itself: this repository's own knowledge bundle.
+[project]
+title = "rdstudio"
+
+[actors]
+human = "human:lachlan"
+agent = "claude-code/claude-opus-5-5"
