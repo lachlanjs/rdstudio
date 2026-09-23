@@ -33,10 +33,11 @@ generated.
 
 ## Significance
 
-Set `significant: false` only for trivial edits (typos, formatting) or content
-the developer dictated verbatim. Everything else is significant: it updates
-`generated` and, if a human had reviewed the concept, flags it as changed since
-review. Never add `verified` entries yourself; only the developer verifies
+A significant edit updates `generated` and, if a human had reviewed the
+concept, flags it as changed since review. Set `significant: false` for trivial
+edits (typos, formatting) or content the developer dictated verbatim, `true` for
+anything that changes meaning, or leave it out to let rdstudio judge from the
+size of the change. Never add `verified` entries yourself; only the developer verifies
 (`rdstudio verify <id>`).
 
 ## Updating part of a concept

@@ -4,6 +4,7 @@ import { store, load, watch } from "./js/data.js";
 import { conceptView, dirView } from "./js/knowledge.js";
 import { graphView, leaveGraph } from "./js/graph.js";
 import { changesView, reviewView, reviewCount, reportsView, reportView, skillsView, skillView } from "./js/pages.js";
+import { proceduresView, procedureView, procedures } from "./js/procedures.js";
 import { h } from "./js/util.js";
 
 const view = document.getElementById("view");
@@ -23,6 +24,8 @@ function parse() {
     case "review": return { tab: "review", key: "review", render: reviewView };
     case "reports": return { tab: "reports", key: "reports", render: reportsView };
     case "r": return { tab: "reports", key: "r:" + tail, render: () => reportView(tail) };
+    case "procedures": return { tab: "procedures", key: "procedures", render: proceduresView };
+    case "p": return { tab: "procedures", key: "p:" + tail, render: () => procedureView(tail) };
     case "skills": return { tab: "skills", key: "skills", render: skillsView };
     case "skill": return { tab: "skills", key: "skill:" + tail, render: () => skillView("skill", tail) };
     case "agent": return { tab: "skills", key: "agent:" + tail, render: () => skillView("agent", tail) };
@@ -46,7 +49,7 @@ function updateChrome(tab) {
   rp.textContent = reports || "";
   rp.hidden = !reports;
   menu.hidden = tab !== "knowledge";
-  document.querySelector('[data-tab="procedures"]').hidden = true;
+  document.querySelector('[data-tab="procedures"]').hidden = !procedures().length && tab !== "procedures";
 }
 
 async function route({ keepScroll = false } = {}) {

@@ -330,3 +330,45 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------------------------------------------------------- procedures */
+
+.page.wide { max-width: 1320px; }
+.flow-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; margin: 16px 0 8px; }
+.flow-scroll {
+  overflow: auto; border: 1px solid var(--rule); border-radius: var(--radius);
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  max-height: 70vh;
+}
+.flow { display: block; max-width: none; height: auto; }
+.flow.vertical { margin: 0 auto; }
+.flow-node rect { fill: var(--paper-raised); stroke: var(--ink-faint); stroke-width: 1.2; }
+.flow-node.start rect { stroke: var(--ink); stroke-width: 2; }
+.flow-node text { font: 13.5px var(--sans); fill: var(--ink); }
+.flow-node, .flow-edge { cursor: pointer; outline: none; }
+.flow-node:hover rect, .flow-node:focus-visible rect { stroke: var(--accent); }
+.flow-node.selected rect { stroke: var(--accent); stroke-width: 2.5; fill: var(--accent-soft); }
+.flow-line { fill: none; stroke-width: 1.8; }
+.flow-hit { fill: none; stroke: transparent; stroke-width: 14; }
+.flow-edge:hover .flow-line, .flow-edge:focus-visible .flow-line, .flow-edge.selected .flow-line { stroke-width: 3; }
+.flow-note { stroke: var(--paper); stroke-width: 1.5; }
+.inspector-wrap { position: sticky; top: calc(var(--bar-h) + 16px); }
+.inspector { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); padding: 14px 16px; font-size: 15px; }
+.inspector.empty { color: var(--ink-faint); font-style: italic; }
+.inspector h3 { font: 600 18px/1.35 var(--serif); margin: 0 0 10px; }
+.inspector .rel { font: 500 14px var(--sans); }
+.inspector .attr { border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 8px; }
+.inspector .attr strong { font-size: 13px; color: var(--ink-faint); }
+.inspector .attr p { margin: 2px 0 0; }
+.inspector .attr.pitfalls strong { color: var(--stale); }
+.inspector .doc-kind code { font: 12.5px var(--mono); }
+.chip.state-pending { background: var(--accent-soft); color: var(--ink); }
+.chip.state-rejected { text-decoration: line-through; }
+.chip.state-applied { color: var(--reviewed); }
+@media (max-width: 1000px) {
+  .flow-layout { grid-template-columns: 1fr; }
+  .inspector-wrap { position: static; }
+  .flow-scroll { max-height: none; }
+}

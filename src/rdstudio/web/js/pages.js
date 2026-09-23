@@ -2,6 +2,7 @@
 
 import { store } from "./data.js";
 import { render } from "./markdown.js";
+import { pendingProposals } from "./procedures.js";
 import { h, conceptHref, timeEl, trustState, trustBadge, fmtDate } from "./util.js";
 
 // ---------------------------------------------------------------- changes
@@ -84,12 +85,13 @@ export function reviewItems() {
     expired: all.filter((c) => c.content_stale),
     errors: (store.site.issues || []).filter((i) => i.level === "error"),
     broken: (store.site.issues || []).filter((i) => i.level === "warning" && i.message.startsWith("broken link")),
+    proposals: pendingProposals(),
   };
 }
 
 export function reviewCount() {
   const r = reviewItems();
-  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length;
+  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length + r.proposals.length;
 }
 
 function conceptRow(c, extra) {
@@ -120,6 +122,10 @@ export function reviewView() {
     h("p", { class: "lede" }, "What needs a human look. Mark a concept as checked with ", h("code", {}, `rdstudio verify <id>`), ` (recorded as ${human}).`),
     section("Changed since review", "Human-reviewed concepts that were meaningfully edited afterwards.", r.stale, (c) => conceptRow(c)),
     section("Open questions", null, r.questions, (c) => conceptRow(c)),
+    r.proposals.length ? section("Proposed procedure changes", "Apply or reject with rdstudio procedure apply|reject <procedure> <n>.", r.proposals, ({ c, p }) => h("li", {},
+      h("a", { class: "title", href: "#/p/" + c.id }, `${c.title}, proposal #${p.id}`),
+      h("div", { class: "sub" }, h("span", {}, p.by || ""), p.at ? h("span", {}, timeEl(p.at)) : ""),
+      p.rationale ? h("div", { class: "desc" }, p.rationale) : "")) : "",
     section("Unverified", "Concepts nobody has confirmed yet, newest first.", r.unverified, (c) => conceptRow(c, c.meta?.generated?.by ? h("span", {}, "by " + c.meta.generated.by) : "")),
     r.drafts.length ? section("Drafts", null, r.drafts, (c) => conceptRow(c)) : "",
     r.expired.length ? section("Past their stale date", "stale_after has passed.", r.expired, (c) => conceptRow(c)) : "",
@@ -181,11 +187,11 @@ export function skillsView() {
   const { skills, agents } = store.skills;
   const row = (kind) => (s) => h("li", {},
     h("a", { class: "title", href: `#/${kind}/${encodeURIComponent(s.name)}` }, kind === "skill" ? "/" + s.name : s.name),
-    h("div", { class: "sub" }, h("span", {}, s.path), s.meta?.model ? h("span", {}, "model: " + s.meta.model) : ""),
+    h("div", { class: "sub" }, s.scope === "user" ? h("span", { class: "chip" }, "user-level") : "", h("span", {}, s.path), s.meta?.model ? h("span", {}, "model: " + s.meta.model) : ""),
     s.description ? h("div", { class: "desc" }, s.description) : "");
   return h("div", { class: "page" },
     h("h1", {}, "Skills & agents"),
-    h("p", { class: "lede" }, "Skills are procedures an agent runs on request. Agents are subagent profiles the main agent can delegate to."),
+    h("p", { class: "lede" }, "Skills are procedures an agent runs on request. Agents are subagent profiles the main agent can delegate to. User-level ones apply to every project; move a skill between scopes with rdstudio skills to-user|to-project <name>."),
     h("h2", { class: "section-h" }, "Skills", h("span", { class: "count" }, skills.length)),
     skills.length ? h("ul", { class: "rows" }, skills.map(row("skill"))) : h("p", { class: "empty" }, "No skills in .claude/skills yet. Run rdstudio init to add the standard set."),
     h("h2", { class: "section-h" }, "Agents", h("span", { class: "count" }, agents.length)),

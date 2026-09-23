@@ -73,12 +73,17 @@ def tree_record(bundle: Bundle) -> dict[str, Any]:
     return out
 
 
-def _skill_files(root: Path) -> dict[str, list[dict[str, Any]]]:
-    """Skills (``.claude/skills/<name>/SKILL.md``) and agents (``.claude/agents/*.md``)."""
+def _skill_files(root: Path, *, user: bool = True) -> dict[str, list[dict[str, Any]]]:
+    """Skills (``.claude/skills/<name>/SKILL.md``) and agents (``.claude/agents/*.md``),
+    from the project and, unless ``user`` is false, from ``~/.claude``."""
     out: dict[str, list[dict[str, Any]]] = {"skills": [], "agents": []}
-    specs = [("skills", sorted((root / ".claude" / "skills").glob("*/SKILL.md"))),
-             ("agents", sorted((root / ".claude" / "agents").glob("*.md")))]
-    for kind, paths in specs:
+    specs = [("skills", "project", root, sorted((root / ".claude" / "skills").glob("*/SKILL.md"))),
+             ("agents", "project", root, sorted((root / ".claude" / "agents").glob("*.md")))]
+    if user:
+        home = Path.home()
+        specs += [("skills", "user", home, sorted((home / ".claude" / "skills").glob("*/SKILL.md"))),
+                  ("agents", "user", home, sorted((home / ".claude" / "agents").glob("*.md")))]
+    for kind, scope, base, paths in specs:
         for path in paths:
             try:
                 meta, body = split_frontmatter(path.read_text(encoding="utf-8"))
@@ -89,15 +94,15 @@ def _skill_files(root: Path) -> dict[str, list[dict[str, Any]]]:
             out[kind].append({
                 "name": str(name),
                 "description": str(meta.get("description") or ""),
-                "path": path.relative_to(root).as_posix(),
-                "scope": "project",
+                "path": ("~/" if scope == "user" else "") + path.relative_to(base).as_posix(),
+                "scope": scope,
                 "meta": jsonable(meta),
                 "body": body,
             })
     return out
 
 
-def build(cfg: Config, *, write_indexes: bool | None = None) -> Path:
+def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = False) -> Path:
     site = cfg.site_dir
     data = site / "data"
     site.mkdir(parents=True, exist_ok=True)
@@ -113,7 +118,7 @@ def build(cfg: Config, *, write_indexes: bool | None = None) -> Path:
     tree = tree_record(bundle)
     changes = gitlog.history(cfg.root, cfg.category_globs(), exclude=(cfg.output.strip("/") + "/",))
     report_items = reports.scan(cfg.reports_dir, cfg.knowledge, cfg.reports)
-    skills = _skill_files(cfg.root)
+    skills = _skill_files(cfg.root, user=not export)
     issues = [{"path": i.path, "level": i.level, "message": i.message} for i in bundle.lint()]
 
     payload = {

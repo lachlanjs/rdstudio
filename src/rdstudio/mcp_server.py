@@ -12,7 +12,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from . import __version__
+from . import __version__, classify, procedures, references, scopes
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -34,28 +34,55 @@ def _fmt(obj: Any) -> str:
 
 def create_server(cfg: Config) -> MCPServer:
     server = MCPServer("rdstudio", instructions=INSTRUCTIONS, version=__version__)
+    classifier = classify.from_config(cfg.raw)
 
     def bundle() -> Bundle:
         return Bundle.load(cfg.knowledge_dir)
 
+    def locate(ref: str) -> tuple[str, Config, Bundle, str | None]:
+        """Resolve "id" (project) or "global:id" (global knowledge base)."""
+        if ref.startswith("global:"):
+            g = scopes.global_config(cfg)
+            if g is None:
+                raise scopes.ScopeError("no global knowledge base")
+            b = Bundle.load(g.knowledge_dir)
+            return "global", g, b, b.resolve_id(ref[len("global:"):])
+        b = bundle()
+        return "project", cfg, b, b.resolve_id(ref)
+
     @server.tool()
     def search(query: str, type: str | None = None, tags: list[str] | None = None,
-               under: str | None = None, limit: int = 8) -> str:
+               under: str | None = None, limit: int = 8, scope: str = "project") -> str:
         """Keyword (BM25) search over the knowledge base. Returns concept ids, titles,
         descriptions and a one-line snippet. Filter by concept type (e.g. "Decision"),
-        tags (all must match) or a directory prefix (e.g. "design")."""
-        b = bundle()
-        hits = Index(b).search(query, limit=max(1, min(limit, 25)), type=type, tags=tags, under=under)
-        if not hits:
+        tags (all must match) or a directory prefix (e.g. "design"). scope: "project"
+        (default), "global" (the developer's cross-project knowledge base) or "all";
+        global ids are prefixed "global:"."""
+        try:
+            targets = scopes.scoped(cfg, scope)
+        except scopes.ScopeError as exc:
+            return str(exc)
+        limit = max(1, min(limit, 25))
+        results = []
+        for name, c in targets:
+            for h in Index(Bundle.load(c.knowledge_dir)).search(query, limit=limit, type=type, tags=tags, under=under):
+                d = h.as_dict()
+                if name == "global":
+                    d["id"] = "global:" + d["id"]
+                results.append(d)
+        results.sort(key=lambda d: -d["score"])
+        if not results:
             return "No matches. Try other words, drop filters, or list a directory."
-        return _fmt([h.as_dict() for h in hits])
+        return _fmt(results[:limit])
 
     @server.tool()
     def outline(id: str) -> str:
         """Metadata and heading outline of one concept, without its body. Use it to
-        decide which section to read."""
-        b = bundle()
-        cid = b.resolve_id(id)
+        decide which section to read. Prefix the id with "global:" for the global base."""
+        try:
+            _, _, b, cid = locate(id)
+        except scopes.ScopeError as exc:
+            return str(exc)
         if cid is None:
             return f"No concept {id!r}."
         c = b.concepts[cid]
@@ -73,9 +100,12 @@ def create_server(cfg: Config) -> MCPServer:
     @server.tool()
     def read(id: str, section_heading: str | None = None, frontmatter: bool = False) -> str:
         """Read a concept's body, or only the section under one heading (matched by
-        text, case-insensitive). Set frontmatter=true to include the YAML metadata."""
-        b = bundle()
-        cid = b.resolve_id(id)
+        text, case-insensitive). Set frontmatter=true to include the YAML metadata.
+        Prefix the id with "global:" for the global base."""
+        try:
+            _, _, b, cid = locate(id)
+        except scopes.ScopeError as exc:
+            return str(exc)
         if cid is None:
             return f"No concept {id!r}."
         c = b.concepts[cid]
@@ -90,10 +120,14 @@ def create_server(cfg: Config) -> MCPServer:
         return f"# {c.title} ({cid})\n\n{text}" if not section_heading else text
 
     @server.tool()
-    def list_concepts(directory: str = "") -> str:
+    def list_concepts(directory: str = "", scope: str = "project") -> str:
         """List a directory of the knowledge base: its concepts (id, type, title,
-        description) and subdirectories. Use "" for the root."""
-        b = bundle()
+        description) and subdirectories. Use "" for the root. scope: "project" or
+        "global"."""
+        try:
+            b = Bundle.load(scopes.scoped(cfg, scope)[-1][1].knowledge_dir) if scope == "global" else bundle()
+        except scopes.ScopeError as exc:
+            return str(exc)
         d = b.directories.get(directory.strip("/"))
         if d is None:
             return f"No directory {directory!r}. Top level: {sorted(b.directories[''].children)}"
@@ -111,27 +145,33 @@ def create_server(cfg: Config) -> MCPServer:
     def record(id: str, type: str | None = None, title: str | None = None,
                description: str | None = None, tags: list[str] | None = None,
                body: str | None = None, section_heading: str | None = None,
-               append: str | None = None, significant: bool = True,
-               meta: dict[str, Any] | None = None, actor: str | None = None) -> str:
+               append: str | None = None, significant: bool | None = None,
+               meta: dict[str, Any] | None = None, actor: str | None = None,
+               scope: str = "project") -> str:
         """Create or update a concept at `id` (path without .md, e.g.
         "decisions/activation-function"). New concepts need `type`, and should have a
         title and one-sentence description. `body` replaces the whole body, or only the
         section under `section_heading`; `append` adds to the end. Existing frontmatter
         is preserved; `meta` sets extra keys (null deletes). Links between concepts use
-        bundle-absolute paths like [text](/design/model.md). significant=false for
-        trivial or dictated edits (keeps provenance and review state)."""
+        bundle-absolute paths like [text](/design/model.md). `significant`: true for a
+        meaningful change, false for trivial or dictated edits (keeps provenance and
+        review state), or omit it to let rdstudio judge from the change. scope="global"
+        writes to the developer's global knowledge base: only for knowledge that is
+        not specific to this project, and only when the developer asked for it."""
         updates: dict[str, Any] = dict(meta or {})
         for key, value in (("type", type), ("title", title), ("description", description), ("tags", tags)):
             if value is not None:
                 updates[key] = value
         try:
+            target = cfg if scope == "project" else scopes.scoped(cfg, "global")[0][1]
             result = store_record(
-                cfg.knowledge_dir, id, actor=actor or cfg.agent, body=body, meta=updates,
-                section=section_heading, append=append, significant=significant,
+                target.knowledge_dir, id.removeprefix("global:"), actor=actor or cfg.agent, body=body,
+                meta=updates, section=section_heading, append=append, significant=significant,
+                classifier=classifier,
             )
-        except StoreError as exc:
+        except (StoreError, scopes.ScopeError) as exc:
             return f"Not recorded: {exc}"
-        b = bundle()
+        b = Bundle.load(target.knowledge_dir)
         b.write_indexes()
         issues = [f"{i.level}: {i.message}" for i in b.lint() if i.path == result.path]
         out = result.as_dict()
@@ -162,6 +202,88 @@ def create_server(cfg: Config) -> MCPServer:
             "unverified_count": sum(c.trust == "unverified" for c in cs),
             "errors": [f"{i.path}: {i.message}" for i in b.lint() if i.level == "error"][:limit],
         })
+
+    @server.tool()
+    def procedure_next(procedure: str, step: str | None = None, hops: int = 2) -> str:
+        """Guidance for a recorded procedure (type: Procedure). Give the step you just
+        completed (node id or label); returns the steps reachable within `hops`
+        transitions, with each transition's condition, guidance and pitfalls. With no
+        step, starts at the beginning. Use it to follow a procedure step by step
+        without loading the whole graph."""
+        b = bundle()
+        cid = b.resolve_id(procedure) or b.resolve_id("procedures/" + procedure)
+        if cid is None or not procedures.is_procedure(b.concepts[cid]):
+            names = [c.id for c in b.concepts.values() if procedures.is_procedure(c)]
+            return f"No procedure {procedure!r}. Procedures: {names or 'none recorded'}."
+        c = b.concepts[cid]
+        graph = procedures.graph_of(c)
+        node = graph.match(step)
+        matched_by = "exact"
+        if node is None and step:
+            steps = {nid: str(attrs.get("label", nid)) for nid, attrs in graph.nodes.items()}
+            decision = classifier.choose("procedure_step", list(steps), {"description": step, "steps": steps})
+            node, matched_by = decision.choice, f"{decision.backend} (confidence {decision.confidence})"
+        if node is None:
+            out = procedures.describe(c, graph, None)
+            out["note"] = f"Step {step!r} is not in this procedure; showing the whole graph."
+            return _fmt(out)
+        out = procedures.describe(c, graph.neighbourhood(node, max(1, min(hops, 4))), node)
+        if matched_by != "exact":
+            out["matched_by"] = matched_by
+        return _fmt(out)
+
+    @server.tool()
+    def procedure_propose(procedure: str, edits: list[dict[str, Any]], rationale: str,
+                          actor: str | None = None) -> str:
+        """Propose changes to a procedure's graph for the developer to accept or reject.
+        Each edit: {"op": add_node|update_node|delete_node|add_edge|update_edge|delete_edge,
+        ...}. Nodes take id and label; edges take from, to, relation (LEADS_TO, TRIGGERS,
+        PROVIDES_INPUT_FOR, CONVERGES_TO) and condition, guidance, pitfalls. Explain
+        in `rationale` what went wrong or right that motivates the change. Check the
+        procedure's rejected proposals first (read it with frontmatter=true) and do not
+        repeat them."""
+        b = bundle()
+        cid = b.resolve_id(procedure) or b.resolve_id("procedures/" + procedure)
+        if cid is None:
+            return f"No procedure {procedure!r}."
+        try:
+            return _fmt(procedures.propose(cfg.knowledge_dir, cid, edits=edits, rationale=rationale,
+                                           actor=actor or cfg.agent))
+        except procedures.ProcedureError as exc:
+            return f"Not proposed: {exc}"
+
+    @server.tool()
+    def promote(id: str, as_id: str | None = None, keep: bool = False) -> str:
+        """Move a project concept into the developer's global knowledge base (for
+        knowledge that applies beyond this project). Only do this when the developer
+        has agreed. keep=true copies instead of moving. Refuses to move a concept other
+        project concepts link to unless keep=true."""
+        try:
+            return _fmt(scopes.promote(cfg, id, as_id=as_id, keep=keep))
+        except (scopes.ScopeError, StoreError) as exc:
+            return f"Not promoted: {exc}"
+
+    if references.enabled(cfg):
+        @server.tool()
+        def ref_search(query: str, limit: int = 8) -> str:
+            """Search the bibliography (papis library) by title, authors, tags and
+            abstract. Returns citekeys (`ref`), metadata, whether a PDF is attached, and
+            the id of the Reference concept for notes."""
+            try:
+                hits = references.search(cfg, query, limit=max(1, min(limit, 25)))
+            except references.ReferenceError as exc:
+                return str(exc)
+            return _fmt(hits) if hits else "No matching references."
+
+        @server.tool()
+        def ref_text(ref: str, pages: str | None = None, query: str | None = None) -> str:
+            """Read part of a reference's PDF as plain text: `pages` like "1" or "3-4,7",
+            or `query` to get the two pages that best match. Read the pages you need
+            rather than the whole paper."""
+            try:
+                return references.text(cfg, ref, pages=pages, query=query)
+            except (references.ReferenceError, ValueError) as exc:
+                return str(exc)
 
     return server
 
