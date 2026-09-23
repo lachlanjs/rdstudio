@@ -76,6 +76,26 @@ def cmd_build(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_export(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    import shutil
+    import tempfile
+
+    from .build import build
+
+    target = Path(args.target).resolve()
+    if target.exists() and any(target.iterdir()) and not args.force:
+        print(f"{target} is not empty; pass --force to replace it", file=sys.stderr)
+        return 1
+    with tempfile.TemporaryDirectory() as tmp:
+        site = build(cfg, write_indexes=False, export=True, site=Path(tmp) / "site")
+        (site / ".nojekyll").write_text("")
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(site, target)
+    print(f"exported a static snapshot to {target} (project knowledge only)")
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .serve import serve
 
@@ -243,6 +263,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("build", help="build the dashboard site")
     s.set_defaults(func=cmd_build)
+
+    s = sub.add_parser("export", help="write a static snapshot of the dashboard (e.g. for GitHub Pages)")
+    s.add_argument("target")
+    s.add_argument("--force", action="store_true", help="replace a non-empty target directory")
+    s.set_defaults(func=cmd_export)
 
     s = sub.add_parser("serve", help="serve the dashboard, rebuilding on change")
     s.add_argument("--host", default="127.0.0.1")

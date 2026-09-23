@@ -57,3 +57,21 @@ def test_build_and_history(tmp_path, bundle_dir):
     assert changes["available"] and changes["commits"][-1]["subject"] == "init"
     pending = changes["commits"][0]
     assert pending.get("pending") and all(not f["path"].startswith(".rdstudio/") for f in pending["files"])
+
+
+def test_export(tmp_path, bundle_dir, monkeypatch):
+    import json as _json
+
+    from rdstudio.cli import main
+
+    root = bundle_dir.parent
+    write(root, "rdstudio.toml", '[project]\ntitle = "T"\n')
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    write(tmp_path / "home", ".claude/skills/private/SKILL.md", "---\nname: private\n---\nx\n")
+    out = tmp_path / "public"
+    assert main(["-C", str(root), "export", str(out)]) == 0
+    site = _json.loads((out / "data/site.json").read_text())
+    skills = _json.loads((out / "data/skills.json").read_text())
+    assert site["static"] is True and skills["skills"] == []
+    assert (out / ".nojekyll").exists() and (out / "index.html").exists()
+    assert main(["-C", str(root), "export", str(out)]) == 1  # refuses to overwrite

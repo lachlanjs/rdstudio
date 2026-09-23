@@ -127,10 +127,14 @@ export function graphView() {
     .append("path").attr("d", "M0,-3.5L8,0L0,3.5").attr("fill", "var(--ink-soft)");
   const root = svg.append("g");
 
+  let declutterQueued = false;
   const zoom = d3.zoom().scaleExtent([0.15, 4]).on("zoom", (event) => {
     G.transform = event.transform;
     root.attr("transform", event.transform);
-    root.classed("far", event.transform.k < 0.55);
+    if (!declutterQueued) {
+      declutterQueued = true;
+      requestAnimationFrame(() => { declutterQueued = false; G.declutter?.(); });
+    }
   });
   svg.call(zoom).on("dblclick.zoom", null);
 
@@ -229,13 +233,30 @@ export function graphView() {
       label.classed("dim", (d) => !hit.has(d.id));
       link.classed("g-edge-dim", (d) => !(hit.has(d.source) || hit.has(d.target)));
     }
-    label.attr("display", (d) => (G.opts.labels || d.kind === "dir" ? null : "none"));
+    // Show as many labels as fit without overlapping, most important first.
+    const hitIds = new Set(q ? nodes.filter((n) => n.label.toLowerCase().includes(q)).map((n) => n.id) : []);
+    const priority = (d) => (d.kind === "dir" ? 1e6 : 0) + (hitIds.has(d.id) ? 1e5 : 0) + d.degree * 10 + (d.kind === "report" ? 1 : 0);
+    const ranked = [...nodes].sort((a, b) => priority(b) - priority(a));
+    G.declutter = () => {
+      const k = G.transform ? G.transform.k : 1;
+      const placed = [];
+      const shown = new Set();
+      for (const d of ranked) {
+        if (!G.opts.labels && d.kind !== "dir" && !hitIds.has(d.id)) continue;
+        const x0 = (d.x + d.r + 4) * k, y0 = (d.y - 9) * k;
+        const box = [x0, y0, x0 + d.label.length * 6.4 * k, y0 + 14 * k];
+        const clash = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
+        if (!clash || d.kind === "dir") { placed.push(box); shown.add(d.id); }
+      }
+      label.attr("display", (d) => (shown.has(d.id) ? null : "none"));
+    };
+    let ticks = 0;
 
     G.sim = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id((d) => d.id)
-        .distance((d) => (d.kind === "tree" ? 46 : 90))
+        .distance((d) => (d.kind === "tree" ? 50 : 110))
         .strength((d) => (d.kind === "tree" ? 0.6 : 0.12)))
-      .force("charge", d3.forceManyBody().strength((d) => (d.kind === "dir" ? -380 : -170)).distanceMax(600))
+      .force("charge", d3.forceManyBody().strength((d) => (d.kind === "dir" ? -420 : -240)).distanceMax(700))
       .force("collide", d3.forceCollide((d) => d.r + 6))
       .force("x", d3.forceX(0).strength(0.035))
       .force("y", d3.forceY(0).strength(0.035))
@@ -251,17 +272,21 @@ export function graphView() {
         });
         node.attr("transform", (d) => `translate(${d.x},${d.y})`);
         label.attr("x", (d) => d.x).attr("y", (d) => d.y);
+        if (++ticks % 12 === 0) G.declutter();
         if (G.fitPending && G.sim && G.sim.alpha() < 0.2) { G.fitPending = false; fit(); }
       })
       .on("end", () => {
         if (G.fitPending) { G.fitPending = false; fit(); }
+        G.declutter();
         persist();
       });
 
     function fit() {
       const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
       const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-      const k = Math.min(1.6, 0.8 * Math.min(w / (x1 - x0 + 160), hgt / (y1 - y0 + 80)));
+      // On narrow screens keep labels legible; the rest is a pan away.
+      const floor = w < 700 ? 0.75 : 0.2;
+      const k = Math.max(floor, Math.min(1.6, 0.8 * Math.min(w / (x1 - x0 + 160), hgt / (y1 - y0 + 80))));
       const t = d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, hgt / 2 - k * (y0 + y1) / 2).scale(k);
       svg.transition().duration(450).call(zoom.transform, t);
     }
@@ -271,6 +296,7 @@ export function graphView() {
       G.fitPending = nodes.length > 0;
     }
     svg.call(zoom.transform, G.transform);
+    G.declutter();
   }
 
   requestAnimationFrame(draw);
