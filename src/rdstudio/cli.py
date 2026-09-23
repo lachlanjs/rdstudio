@@ -125,6 +125,29 @@ def cmd_procedure(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_refs(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import references
+
+    if not references.enabled(cfg):
+        print('references are off: add [references] backend = "papis" to rdstudio.toml', file=sys.stderr)
+        return 2
+    try:
+        if args.action == "sync":
+            created = references.sync_stubs(cfg)
+            for cid in created:
+                print(f"created {cid}")
+            print(f"{len(created)} new reference stubs")
+        elif args.action == "search":
+            for hit in references.search(cfg, " ".join(args.terms)):
+                print(f"{hit['ref']:32} {hit['year']:5} {hit['title']}")
+        elif args.action == "text":
+            print(references.text(cfg, args.terms[0], pages=args.pages))
+    except references.ReferenceError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .brief import brief
 
@@ -187,6 +210,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("procedure", nargs="?")
     s.add_argument("proposal", nargs="?", type=int)
     s.set_defaults(func=cmd_procedure)
+
+    s = sub.add_parser("refs", help="papis references: sync stubs, search, read PDF text")
+    s.add_argument("action", choices=["sync", "search", "text"])
+    s.add_argument("terms", nargs="*")
+    s.add_argument("--pages")
+    s.set_defaults(func=cmd_refs)
 
     s = sub.add_parser("brief", help="print a short orientation for an agent session")
     s.set_defaults(func=cmd_brief)

@@ -12,7 +12,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from . import __version__, procedures
+from . import __version__, procedures, references
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -203,6 +203,28 @@ def create_server(cfg: Config) -> MCPServer:
                                            actor=actor or cfg.agent))
         except procedures.ProcedureError as exc:
             return f"Not proposed: {exc}"
+
+    if references.enabled(cfg):
+        @server.tool()
+        def ref_search(query: str, limit: int = 8) -> str:
+            """Search the bibliography (papis library) by title, authors, tags and
+            abstract. Returns citekeys (`ref`), metadata, whether a PDF is attached, and
+            the id of the Reference concept for notes."""
+            try:
+                hits = references.search(cfg, query, limit=max(1, min(limit, 25)))
+            except references.ReferenceError as exc:
+                return str(exc)
+            return _fmt(hits) if hits else "No matching references."
+
+        @server.tool()
+        def ref_text(ref: str, pages: str | None = None, query: str | None = None) -> str:
+            """Read part of a reference's PDF as plain text: `pages` like "1" or "3-4,7",
+            or `query` to get the two pages that best match. Read the pages you need
+            rather than the whole paper."""
+            try:
+                return references.text(cfg, ref, pages=pages, query=query)
+            except (references.ReferenceError, ValueError) as exc:
+                return str(exc)
 
     return server
 
