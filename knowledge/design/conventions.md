@@ -3,7 +3,9 @@ type: Design
 title: Conventions
 description: How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 tags: [conventions, okf]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:32:22Z
 ---
 
 The [OKF spec](/references/okf-spec.md) is ground truth
@@ -20,7 +22,8 @@ among what OKF allows.
 
 - `generated: { by, at }` is updated on every **significant** edit, since OKF
   defines `generated.at` as the last meaningful change. Minor edits (typos,
-  dictated one-line additions) leave it unchanged.
+  dictated one-line additions) leave it unchanged. When an agent does not say,
+  the [classifier](/decisions/classifier-optional.md) judges from the change.
 - `verified` is appended to by humans (`rdstudio verify <path>`).
 - A human verification whose latest `at` precedes `generated.at` is shown as
   **stale** in the Review tab ([decision](/decisions/verification-staleness.md)).
@@ -62,6 +65,7 @@ Links into knowledge use `/knowledge/<path>.md`; they become one-way graph edges
 ([decision](/decisions/procedural-graphs.md)):
 
 ```yaml
+start: add                      # optional; default is the first node
 nodes:
   - { id: add, label: papis add by DOI }
   - { id: rename, label: Rename citekey }
@@ -72,4 +76,11 @@ edges:
     condition: entry was created
     guidance: follow author2020short convention
     pitfalls: papis auto-generates a non-conforming key
+proposals:                      # written by procedure_propose; resolved by the developer
+  - { id: 1, by: <agent>, at: <time>, state: pending, rationale: ..., edits: [...] }
 ```
+
+Agents follow a procedure with `procedure_next` (the current step and what can
+follow within two transitions) and suggest changes with `procedure_propose`.
+The developer applies or rejects them with `rdstudio procedure apply|reject`;
+rejected proposals stay as a record.

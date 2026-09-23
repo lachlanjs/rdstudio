@@ -29,10 +29,10 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 # M4 — Rich features
 
 - [x] [T10 Reports](/tasks/T10-reports.md)
-- [ ] [T11 Procedural graphs](/tasks/T11-procedures.md)
-- [ ] [T12 papis and Zotero references](/tasks/T12-references.md)
-- [ ] [T13 Global bundle and promote](/tasks/T13-global-bundle.md)
-- [ ] [T14 Pluggable classifier interface](/tasks/T14-classifier.md)
+- [x] [T11 Procedural graphs](/tasks/T11-procedures.md)
+- [x] [T12 papis and Zotero references](/tasks/T12-references.md)
+- [x] [T13 Global bundle and promote](/tasks/T13-global-bundle.md)
+- [x] [T14 Pluggable classifier interface](/tasks/T14-classifier.md)
 
 # M5 — Ship
 
