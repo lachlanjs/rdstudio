@@ -6,6 +6,7 @@ import { graphView, leaveGraph } from "./js/graph.js";
 import { changesView, reviewView, reviewCount, reportsView, reportView, skillsView, skillView } from "./js/pages.js";
 import { proceduresView, procedureView, procedures } from "./js/procedures.js";
 import { settingsView } from "./js/settings.js";
+import { renderDiagrams } from "./js/diagrams.js";
 import { h } from "./js/util.js";
 
 const view = document.getElementById("view");
@@ -69,6 +70,7 @@ async function route({ keepScroll = false } = {}) {
   }
   current = { ...next, node };
   updateChrome(next.tab);
+  renderDiagrams(view);
 }
 
 function closeDrawer() {

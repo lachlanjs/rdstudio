@@ -5,7 +5,7 @@ description: How rdstudio uses OKF fields, actor names, concept types, tasks, re
 tags: [conventions, okf]
 generated:
   by: claude-code/claude-opus-5-5
-  at: 2026-09-23T05:32:22Z
+  at: 2026-09-23T08:46:55Z
 ---
 
 The [OKF spec](/references/okf-spec.md) is ground truth
@@ -84,3 +84,23 @@ Agents follow a procedure with `procedure_next` (the current step and what can
 follow within two transitions) and suggest changes with `procedure_propose`.
 The developer applies or rejects them with `rdstudio procedure apply|reject`;
 rejected proposals stay as a record.
+
+# Diagrams
+
+Diagrams are Mermaid text, so people and agents can both read and edit them
+and diffs show what changed:
+
+- in concepts, a fenced block: ` ```mermaid ` … ` ``` ` (plain markdown, so the
+  bundle stays OKF-conformant; other viewers show the source, GitHub draws it);
+- in reports, `<pre class="mermaid">…</pre>`.
+
+The dashboard and reports draw them offline with the vendored Mermaid ESM
+build, loaded only on pages that contain a diagram and coloured from the active
+theme. A diagram that fails to parse shows the error and its source.
+
+```mermaid
+flowchart LR
+  A[Concept or report] -->|mermaid source| B[Dashboard]
+  B -->|lazy import| C[(vendor/mermaid)]
+  C --> D[SVG in theme colours]
+```

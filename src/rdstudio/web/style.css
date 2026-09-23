@@ -158,6 +158,12 @@ button { font: inherit; color: inherit; }
 .prose .katex { font-size: 1.05em; }
 .prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
 .prose eqn, .prose section.eqno { display: block; }
+code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as typed */
+.mermaid-block { margin: 0 0 1.2em; overflow-x: auto; text-align: center; }
+.mermaid-block svg { max-width: 100%; height: auto; }
+.mermaid-block pre { text-align: left; }
+.mermaid-block[data-rendered="pending"] .mermaid-source { opacity: .5; }
+.mermaid-error { font: 14px var(--font-ui); color: var(--stale); text-align: left; margin: 0 0 6px; }
 .prose .footnotes { font-size: 15px; color: var(--ink-soft); }
 .prose .footnotes-sep { border-top: 1px solid var(--rule); margin-top: 2.5em; }
 
