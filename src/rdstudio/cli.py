@@ -148,6 +148,51 @@ def cmd_refs(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_global(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import scopes
+
+    if args.action == "init":
+        for line in scopes.init_global(Path(args.path), human=args.human):
+            print(line)
+        return 0
+    g = scopes.global_config(cfg)
+    if g is None:
+        print("no global knowledge base; run `rdstudio global init [~/knowledge]`")
+        return 1
+    print(f"global knowledge base: {g.root} ({len(_bundle(g).concepts)} concepts)")
+    return 0
+
+
+def cmd_promote(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import scopes
+
+    try:
+        result = scopes.promote(cfg, args.concept, as_id=args.as_id, keep=args.keep, force=args.force)
+    except scopes.ScopeError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    verb = "moved" if result["moved"] else "copied"
+    print(f"{verb} {result['from']} to the global knowledge base as {result['to']}")
+    if result["broken_links_in_global"]:
+        print("links that do not resolve in the global base: " + ", ".join(result["broken_links_in_global"]))
+    return 0
+
+
+def cmd_skills(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import scopes
+
+    if args.action == "list":
+        for scope, skills in scopes.skill_dirs(cfg).items():
+            print(f"{scope}: {', '.join(skills) or '(none)'}")
+        return 0
+    try:
+        print(scopes.move_skill(cfg, args.name, args.action.split("-")[-1]))
+    except scopes.ScopeError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return 0
+
+
 def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .brief import brief
 
@@ -216,6 +261,24 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("terms", nargs="*")
     s.add_argument("--pages")
     s.set_defaults(func=cmd_refs)
+
+    s = sub.add_parser("global", help="set up or show the global knowledge base")
+    s.add_argument("action", choices=["init", "status"])
+    s.add_argument("path", nargs="?", default="~/knowledge")
+    s.add_argument("--human", help="your actor id, e.g. human:lachlan")
+    s.set_defaults(func=cmd_global)
+
+    s = sub.add_parser("promote", help="move a project concept into the global knowledge base")
+    s.add_argument("concept")
+    s.add_argument("--as", dest="as_id", help="id in the global base (default: same path)")
+    s.add_argument("--keep", action="store_true", help="copy instead of move")
+    s.add_argument("--force", action="store_true", help="move even if project concepts link to it")
+    s.set_defaults(func=cmd_promote)
+
+    s = sub.add_parser("skills", help="list skills by scope, or move one between project and user scope")
+    s.add_argument("action", choices=["list", "to-user", "to-project"])
+    s.add_argument("name", nargs="?")
+    s.set_defaults(func=cmd_skills)
 
     s = sub.add_parser("brief", help="print a short orientation for an agent session")
     s.set_defaults(func=cmd_brief)

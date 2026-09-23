@@ -12,7 +12,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from . import __version__, procedures, references
+from . import __version__, procedures, references, scopes
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -38,24 +38,50 @@ def create_server(cfg: Config) -> MCPServer:
     def bundle() -> Bundle:
         return Bundle.load(cfg.knowledge_dir)
 
+    def locate(ref: str) -> tuple[str, Config, Bundle, str | None]:
+        """Resolve "id" (project) or "global:id" (global knowledge base)."""
+        if ref.startswith("global:"):
+            g = scopes.global_config(cfg)
+            if g is None:
+                raise scopes.ScopeError("no global knowledge base")
+            b = Bundle.load(g.knowledge_dir)
+            return "global", g, b, b.resolve_id(ref[len("global:"):])
+        b = bundle()
+        return "project", cfg, b, b.resolve_id(ref)
+
     @server.tool()
     def search(query: str, type: str | None = None, tags: list[str] | None = None,
-               under: str | None = None, limit: int = 8) -> str:
+               under: str | None = None, limit: int = 8, scope: str = "project") -> str:
         """Keyword (BM25) search over the knowledge base. Returns concept ids, titles,
         descriptions and a one-line snippet. Filter by concept type (e.g. "Decision"),
-        tags (all must match) or a directory prefix (e.g. "design")."""
-        b = bundle()
-        hits = Index(b).search(query, limit=max(1, min(limit, 25)), type=type, tags=tags, under=under)
-        if not hits:
+        tags (all must match) or a directory prefix (e.g. "design"). scope: "project"
+        (default), "global" (the developer's cross-project knowledge base) or "all";
+        global ids are prefixed "global:"."""
+        try:
+            targets = scopes.scoped(cfg, scope)
+        except scopes.ScopeError as exc:
+            return str(exc)
+        limit = max(1, min(limit, 25))
+        results = []
+        for name, c in targets:
+            for h in Index(Bundle.load(c.knowledge_dir)).search(query, limit=limit, type=type, tags=tags, under=under):
+                d = h.as_dict()
+                if name == "global":
+                    d["id"] = "global:" + d["id"]
+                results.append(d)
+        results.sort(key=lambda d: -d["score"])
+        if not results:
             return "No matches. Try other words, drop filters, or list a directory."
-        return _fmt([h.as_dict() for h in hits])
+        return _fmt(results[:limit])
 
     @server.tool()
     def outline(id: str) -> str:
         """Metadata and heading outline of one concept, without its body. Use it to
-        decide which section to read."""
-        b = bundle()
-        cid = b.resolve_id(id)
+        decide which section to read. Prefix the id with "global:" for the global base."""
+        try:
+            _, _, b, cid = locate(id)
+        except scopes.ScopeError as exc:
+            return str(exc)
         if cid is None:
             return f"No concept {id!r}."
         c = b.concepts[cid]
@@ -73,9 +99,12 @@ def create_server(cfg: Config) -> MCPServer:
     @server.tool()
     def read(id: str, section_heading: str | None = None, frontmatter: bool = False) -> str:
         """Read a concept's body, or only the section under one heading (matched by
-        text, case-insensitive). Set frontmatter=true to include the YAML metadata."""
-        b = bundle()
-        cid = b.resolve_id(id)
+        text, case-insensitive). Set frontmatter=true to include the YAML metadata.
+        Prefix the id with "global:" for the global base."""
+        try:
+            _, _, b, cid = locate(id)
+        except scopes.ScopeError as exc:
+            return str(exc)
         if cid is None:
             return f"No concept {id!r}."
         c = b.concepts[cid]
@@ -90,10 +119,14 @@ def create_server(cfg: Config) -> MCPServer:
         return f"# {c.title} ({cid})\n\n{text}" if not section_heading else text
 
     @server.tool()
-    def list_concepts(directory: str = "") -> str:
+    def list_concepts(directory: str = "", scope: str = "project") -> str:
         """List a directory of the knowledge base: its concepts (id, type, title,
-        description) and subdirectories. Use "" for the root."""
-        b = bundle()
+        description) and subdirectories. Use "" for the root. scope: "project" or
+        "global"."""
+        try:
+            b = Bundle.load(scopes.scoped(cfg, scope)[-1][1].knowledge_dir) if scope == "global" else bundle()
+        except scopes.ScopeError as exc:
+            return str(exc)
         d = b.directories.get(directory.strip("/"))
         if d is None:
             return f"No directory {directory!r}. Top level: {sorted(b.directories[''].children)}"
@@ -112,26 +145,30 @@ def create_server(cfg: Config) -> MCPServer:
                description: str | None = None, tags: list[str] | None = None,
                body: str | None = None, section_heading: str | None = None,
                append: str | None = None, significant: bool = True,
-               meta: dict[str, Any] | None = None, actor: str | None = None) -> str:
+               meta: dict[str, Any] | None = None, actor: str | None = None,
+               scope: str = "project") -> str:
         """Create or update a concept at `id` (path without .md, e.g.
         "decisions/activation-function"). New concepts need `type`, and should have a
         title and one-sentence description. `body` replaces the whole body, or only the
         section under `section_heading`; `append` adds to the end. Existing frontmatter
         is preserved; `meta` sets extra keys (null deletes). Links between concepts use
         bundle-absolute paths like [text](/design/model.md). significant=false for
-        trivial or dictated edits (keeps provenance and review state)."""
+        trivial or dictated edits (keeps provenance and review state). scope="global"
+        writes to the developer's global knowledge base: only for knowledge that is
+        not specific to this project, and only when the developer asked for it."""
         updates: dict[str, Any] = dict(meta or {})
         for key, value in (("type", type), ("title", title), ("description", description), ("tags", tags)):
             if value is not None:
                 updates[key] = value
         try:
+            target = cfg if scope == "project" else scopes.scoped(cfg, "global")[0][1]
             result = store_record(
-                cfg.knowledge_dir, id, actor=actor or cfg.agent, body=body, meta=updates,
-                section=section_heading, append=append, significant=significant,
+                target.knowledge_dir, id.removeprefix("global:"), actor=actor or cfg.agent, body=body,
+                meta=updates, section=section_heading, append=append, significant=significant,
             )
-        except StoreError as exc:
+        except (StoreError, scopes.ScopeError) as exc:
             return f"Not recorded: {exc}"
-        b = bundle()
+        b = Bundle.load(target.knowledge_dir)
         b.write_indexes()
         issues = [f"{i.level}: {i.message}" for i in b.lint() if i.path == result.path]
         out = result.as_dict()
@@ -203,6 +240,17 @@ def create_server(cfg: Config) -> MCPServer:
                                            actor=actor or cfg.agent))
         except procedures.ProcedureError as exc:
             return f"Not proposed: {exc}"
+
+    @server.tool()
+    def promote(id: str, as_id: str | None = None, keep: bool = False) -> str:
+        """Move a project concept into the developer's global knowledge base (for
+        knowledge that applies beyond this project). Only do this when the developer
+        has agreed. keep=true copies instead of moving. Refuses to move a concept other
+        project concepts link to unless keep=true."""
+        try:
+            return _fmt(scopes.promote(cfg, id, as_id=as_id, keep=keep))
+        except (scopes.ScopeError, StoreError) as exc:
+            return f"Not promoted: {exc}"
 
     if references.enabled(cfg):
         @server.tool()

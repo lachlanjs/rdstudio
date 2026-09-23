@@ -187,11 +187,11 @@ export function skillsView() {
   const { skills, agents } = store.skills;
   const row = (kind) => (s) => h("li", {},
     h("a", { class: "title", href: `#/${kind}/${encodeURIComponent(s.name)}` }, kind === "skill" ? "/" + s.name : s.name),
-    h("div", { class: "sub" }, h("span", {}, s.path), s.meta?.model ? h("span", {}, "model: " + s.meta.model) : ""),
+    h("div", { class: "sub" }, s.scope === "user" ? h("span", { class: "chip" }, "user-level") : "", h("span", {}, s.path), s.meta?.model ? h("span", {}, "model: " + s.meta.model) : ""),
     s.description ? h("div", { class: "desc" }, s.description) : "");
   return h("div", { class: "page" },
     h("h1", {}, "Skills & agents"),
-    h("p", { class: "lede" }, "Skills are procedures an agent runs on request. Agents are subagent profiles the main agent can delegate to."),
+    h("p", { class: "lede" }, "Skills are procedures an agent runs on request. Agents are subagent profiles the main agent can delegate to. User-level ones apply to every project; move a skill between scopes with rdstudio skills to-user|to-project <name>."),
     h("h2", { class: "section-h" }, "Skills", h("span", { class: "count" }, skills.length)),
     skills.length ? h("ul", { class: "rows" }, skills.map(row("skill"))) : h("p", { class: "empty" }, "No skills in .claude/skills yet. Run rdstudio init to add the standard set."),
     h("h2", { class: "section-h" }, "Agents", h("span", { class: "count" }, agents.length)),

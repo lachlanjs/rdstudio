@@ -34,6 +34,12 @@ def brief(cfg: Config, *, commits: int = 3) -> str:
     recent = [c["subject"] for c in history.get("commits", []) if not c.get("pending")][:commits]
     if recent:
         lines.append("Recent commits: " + " | ".join(recent))
+    from .scopes import global_config
+
+    g = global_config(cfg)
+    if g is not None:
+        count = len(Bundle.load(g.knowledge_dir).concepts)
+        lines.append(f"A global knowledge base (cross-project; {count} concepts) is searchable with scope=\"global\".")
     lines.append("Search it (rdstudio MCP tools, /search-okf, or the librarian subagent) before re-deriving; "
                  "record decisions, questions and findings as you go.")
     return "\n".join(lines)

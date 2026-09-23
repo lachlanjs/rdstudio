@@ -14,6 +14,9 @@ agents. A read-only dashboard shows it: `rdstudio serve`.
   `rdstudio` MCP tools so provenance is stamped. Do not edit `index.md` files.
 - **Report substantial work** as HTML in `{reports}/` (`/report`).
 - **Close sessions** with `/handoff`.
+- **Global knowledge:** if the developer has a cross-project knowledge base,
+  search it with `scope: "global"` (or `"all"`); suggest `/promote` for
+  knowledge that is not specific to this project.
 - **Trust:** only the developer verifies concepts. Mark edits
   `significant: false` only when trivial or dictated.
 - Your actor id for provenance is `{agent}`; the developer is `{human}`.
