@@ -30,9 +30,11 @@ class WriteResult:
     path: str
     created: bool
     significant: bool
+    decided_by: str = "caller"
 
     def as_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "path": self.path, "created": self.created, "significant": self.significant}
+        return {"id": self.id, "path": self.path, "created": self.created, "significant": self.significant,
+                "decided_by": self.decided_by}
 
 
 def concept_path(root: Path, cid: str) -> Path:
@@ -79,7 +81,8 @@ def record(
     meta: dict[str, Any] | None = None,
     section: str | None = None,
     append: str | None = None,
-    significant: bool = True,
+    significant: bool | None = True,
+    classifier: Any = None,
 ) -> WriteResult:
     """Create or update a concept.
 
@@ -88,7 +91,8 @@ def record(
     - ``body`` replaces the whole body; ``section`` + ``body`` replaces only that
       section; ``append`` adds text at the end.
     - ``significant`` edits stamp ``generated: {by, at}`` (OKF: last meaningful
-      change). Minor edits leave provenance untouched.
+      change). Minor edits leave provenance untouched. ``None`` lets the
+      classifier decide from the before and after text.
     """
     path = concept_path(root, cid)
     created = not path.exists()
@@ -117,6 +121,18 @@ def record(
     if append:
         new_body = new_body.rstrip() + "\n\n" + append.strip() + "\n"
 
+    decided_by = "caller"
+    if significant is None:
+        headline = any(new_meta.get(k) != current_meta.get(k) for k in ("type", "title", "description"))
+        if headline:
+            significant, decided_by = True, "rules"
+        else:
+            from .classify import RulesClassifier
+
+            decision = (classifier or RulesClassifier()).choose(
+                "edit_significance", ["minor", "significant"], {"before": current_body, "after": new_body})
+            significant, decided_by = decision.choice != "minor", decision.backend
+
     if significant:
         new_meta["generated"] = {"by": actor, "at": now()}
 
@@ -125,7 +141,7 @@ def record(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(render_concept(ordered, new_body), encoding="utf-8")
     rel = path.relative_to(root).as_posix()
-    return WriteResult(rel[:-3], rel, created, significant)
+    return WriteResult(rel[:-3], rel, created, bool(significant), decided_by if not created else "new")
 
 
 def verify(root: Path, cid: str, *, actor: str) -> WriteResult:

@@ -12,7 +12,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from . import __version__, procedures, references, scopes
+from . import __version__, classify, procedures, references, scopes
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -34,6 +34,7 @@ def _fmt(obj: Any) -> str:
 
 def create_server(cfg: Config) -> MCPServer:
     server = MCPServer("rdstudio", instructions=INSTRUCTIONS, version=__version__)
+    classifier = classify.from_config(cfg.raw)
 
     def bundle() -> Bundle:
         return Bundle.load(cfg.knowledge_dir)
@@ -144,7 +145,7 @@ def create_server(cfg: Config) -> MCPServer:
     def record(id: str, type: str | None = None, title: str | None = None,
                description: str | None = None, tags: list[str] | None = None,
                body: str | None = None, section_heading: str | None = None,
-               append: str | None = None, significant: bool = True,
+               append: str | None = None, significant: bool | None = None,
                meta: dict[str, Any] | None = None, actor: str | None = None,
                scope: str = "project") -> str:
         """Create or update a concept at `id` (path without .md, e.g.
@@ -152,8 +153,9 @@ def create_server(cfg: Config) -> MCPServer:
         title and one-sentence description. `body` replaces the whole body, or only the
         section under `section_heading`; `append` adds to the end. Existing frontmatter
         is preserved; `meta` sets extra keys (null deletes). Links between concepts use
-        bundle-absolute paths like [text](/design/model.md). significant=false for
-        trivial or dictated edits (keeps provenance and review state). scope="global"
+        bundle-absolute paths like [text](/design/model.md). `significant`: true for a
+        meaningful change, false for trivial or dictated edits (keeps provenance and
+        review state), or omit it to let rdstudio judge from the change. scope="global"
         writes to the developer's global knowledge base: only for knowledge that is
         not specific to this project, and only when the developer asked for it."""
         updates: dict[str, Any] = dict(meta or {})
@@ -165,6 +167,7 @@ def create_server(cfg: Config) -> MCPServer:
             result = store_record(
                 target.knowledge_dir, id.removeprefix("global:"), actor=actor or cfg.agent, body=body,
                 meta=updates, section=section_heading, append=append, significant=significant,
+                classifier=classifier,
             )
         except (StoreError, scopes.ScopeError) as exc:
             return f"Not recorded: {exc}"
@@ -215,11 +218,19 @@ def create_server(cfg: Config) -> MCPServer:
         c = b.concepts[cid]
         graph = procedures.graph_of(c)
         node = graph.match(step)
+        matched_by = "exact"
+        if node is None and step:
+            steps = {nid: str(attrs.get("label", nid)) for nid, attrs in graph.nodes.items()}
+            decision = classifier.choose("procedure_step", list(steps), {"description": step, "steps": steps})
+            node, matched_by = decision.choice, f"{decision.backend} (confidence {decision.confidence})"
         if node is None:
             out = procedures.describe(c, graph, None)
             out["note"] = f"Step {step!r} is not in this procedure; showing the whole graph."
             return _fmt(out)
-        return _fmt(procedures.describe(c, graph.neighbourhood(node, max(1, min(hops, 4))), node))
+        out = procedures.describe(c, graph.neighbourhood(node, max(1, min(hops, 4))), node)
+        if matched_by != "exact":
+            out["matched_by"] = matched_by
+        return _fmt(out)
 
     @server.tool()
     def procedure_propose(procedure: str, edits: list[dict[str, Any]], rationale: str,
