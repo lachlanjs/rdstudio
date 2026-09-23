@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Local reference papers (downloaded copies; not redistributed)
+reference/papers/
+
+# Editor / OS
+.DS_Store
+*.swp
