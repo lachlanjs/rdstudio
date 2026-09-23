@@ -10,9 +10,9 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 
 # M1 — Core
 
-- [ ] [T01 Package skeleton and configuration](/tasks/T01-package-skeleton.md)
-- [ ] [T02 OKF library](/tasks/T02-okf-library.md)
-- [ ] [T03 Deterministic search and sectioned reading](/tasks/T03-search.md)
+- [x] [T01 Package skeleton and configuration](/tasks/T01-package-skeleton.md)
+- [x] [T02 OKF library](/tasks/T02-okf-library.md)
+- [x] [T03 Deterministic search and sectioned reading](/tasks/T03-search.md)
 
 # M2 — Dashboard
 
