@@ -12,7 +12,7 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from . import __version__
+from . import __version__, procedures
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -162,6 +162,47 @@ def create_server(cfg: Config) -> MCPServer:
             "unverified_count": sum(c.trust == "unverified" for c in cs),
             "errors": [f"{i.path}: {i.message}" for i in b.lint() if i.level == "error"][:limit],
         })
+
+    @server.tool()
+    def procedure_next(procedure: str, step: str | None = None, hops: int = 2) -> str:
+        """Guidance for a recorded procedure (type: Procedure). Give the step you just
+        completed (node id or label); returns the steps reachable within `hops`
+        transitions, with each transition's condition, guidance and pitfalls. With no
+        step, starts at the beginning. Use it to follow a procedure step by step
+        without loading the whole graph."""
+        b = bundle()
+        cid = b.resolve_id(procedure) or b.resolve_id("procedures/" + procedure)
+        if cid is None or not procedures.is_procedure(b.concepts[cid]):
+            names = [c.id for c in b.concepts.values() if procedures.is_procedure(c)]
+            return f"No procedure {procedure!r}. Procedures: {names or 'none recorded'}."
+        c = b.concepts[cid]
+        graph = procedures.graph_of(c)
+        node = graph.match(step)
+        if node is None:
+            out = procedures.describe(c, graph, None)
+            out["note"] = f"Step {step!r} is not in this procedure; showing the whole graph."
+            return _fmt(out)
+        return _fmt(procedures.describe(c, graph.neighbourhood(node, max(1, min(hops, 4))), node))
+
+    @server.tool()
+    def procedure_propose(procedure: str, edits: list[dict[str, Any]], rationale: str,
+                          actor: str | None = None) -> str:
+        """Propose changes to a procedure's graph for the developer to accept or reject.
+        Each edit: {"op": add_node|update_node|delete_node|add_edge|update_edge|delete_edge,
+        ...}. Nodes take id and label; edges take from, to, relation (LEADS_TO, TRIGGERS,
+        PROVIDES_INPUT_FOR, CONVERGES_TO) and condition, guidance, pitfalls. Explain
+        in `rationale` what went wrong or right that motivates the change. Check the
+        procedure's rejected proposals first (read it with frontmatter=true) and do not
+        repeat them."""
+        b = bundle()
+        cid = b.resolve_id(procedure) or b.resolve_id("procedures/" + procedure)
+        if cid is None:
+            return f"No procedure {procedure!r}."
+        try:
+            return _fmt(procedures.propose(cfg.knowledge_dir, cid, edits=edits, rationale=rationale,
+                                           actor=actor or cfg.agent))
+        except procedures.ProcedureError as exc:
+            return f"Not proposed: {exc}"
 
     return server
 

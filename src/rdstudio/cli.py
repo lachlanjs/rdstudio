@@ -92,6 +92,39 @@ def cmd_init(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_procedure(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import procedures
+
+    bundle = _bundle(cfg)
+    if args.action == "list":
+        for c in bundle.concepts.values():
+            if procedures.is_procedure(c):
+                pending = sum(p.get("state") == "pending" for p in c.meta.get("proposals") or [])
+                g = procedures.graph_of(c)
+                print(f"{c.id}  {len(g.nodes)} steps, {len(g.edges)} transitions"
+                      + (f", {pending} pending proposal(s)" if pending else ""))
+        return 0
+    cid = bundle.resolve_id(args.procedure or "") or bundle.resolve_id("procedures/" + (args.procedure or ""))
+    if cid is None:
+        print(f"no procedure {args.procedure!r}", file=sys.stderr)
+        return 2
+    if args.action == "show":
+        c = bundle.concepts[cid]
+        for p in c.meta.get("proposals") or []:
+            print(f"#{p.get('id')} [{p.get('state')}] by {p.get('by')}: {p.get('rationale')}")
+            for e in p.get("edits", []):
+                print("    " + ", ".join(f"{k}={v}" for k, v in e.items()))
+        return 0
+    actor = cfg.human or "human:unknown"
+    try:
+        result = procedures.resolve(cfg.knowledge_dir, cid, args.proposal, accept=args.action == "apply", actor=actor)
+    except procedures.ProcedureError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"proposal {result['proposal']} on {cid}: {result['state']}")
+    return 0
+
+
 def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .brief import brief
 
@@ -148,6 +181,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--no-watch", action="store_true")
     s.set_defaults(func=cmd_serve)
+
+    s = sub.add_parser("procedure", help="list procedures; show, apply or reject proposed edits")
+    s.add_argument("action", choices=["list", "show", "apply", "reject"])
+    s.add_argument("procedure", nargs="?")
+    s.add_argument("proposal", nargs="?", type=int)
+    s.set_defaults(func=cmd_procedure)
 
     s = sub.add_parser("brief", help="print a short orientation for an agent session")
     s.set_defaults(func=cmd_brief)

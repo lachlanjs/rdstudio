@@ -2,6 +2,7 @@
 
 import { store } from "./data.js";
 import { render } from "./markdown.js";
+import { pendingProposals } from "./procedures.js";
 import { h, conceptHref, timeEl, trustState, trustBadge, fmtDate } from "./util.js";
 
 // ---------------------------------------------------------------- changes
@@ -84,12 +85,13 @@ export function reviewItems() {
     expired: all.filter((c) => c.content_stale),
     errors: (store.site.issues || []).filter((i) => i.level === "error"),
     broken: (store.site.issues || []).filter((i) => i.level === "warning" && i.message.startsWith("broken link")),
+    proposals: pendingProposals(),
   };
 }
 
 export function reviewCount() {
   const r = reviewItems();
-  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length;
+  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length + r.proposals.length;
 }
 
 function conceptRow(c, extra) {
@@ -120,6 +122,10 @@ export function reviewView() {
     h("p", { class: "lede" }, "What needs a human look. Mark a concept as checked with ", h("code", {}, `rdstudio verify <id>`), ` (recorded as ${human}).`),
     section("Changed since review", "Human-reviewed concepts that were meaningfully edited afterwards.", r.stale, (c) => conceptRow(c)),
     section("Open questions", null, r.questions, (c) => conceptRow(c)),
+    r.proposals.length ? section("Proposed procedure changes", "Apply or reject with rdstudio procedure apply|reject <procedure> <n>.", r.proposals, ({ c, p }) => h("li", {},
+      h("a", { class: "title", href: "#/p/" + c.id }, `${c.title}, proposal #${p.id}`),
+      h("div", { class: "sub" }, h("span", {}, p.by || ""), p.at ? h("span", {}, timeEl(p.at)) : ""),
+      p.rationale ? h("div", { class: "desc" }, p.rationale) : "")) : "",
     section("Unverified", "Concepts nobody has confirmed yet, newest first.", r.unverified, (c) => conceptRow(c, c.meta?.generated?.by ? h("span", {}, "by " + c.meta.generated.by) : "")),
     r.drafts.length ? section("Drafts", null, r.drafts, (c) => conceptRow(c)) : "",
     r.expired.length ? section("Past their stale date", "stale_after has passed.", r.expired, (c) => conceptRow(c)) : "",

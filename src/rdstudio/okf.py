@@ -475,7 +475,9 @@ class Bundle:
         return sorted(c.id for c in self.concepts.values() if any(l.target == cid for l in c.links))
 
     def lint(self) -> list[Issue]:
-        return list(self.issues)
+        from .procedures import lint as lint_procedures  # procedures builds on this module
+
+        return list(self.issues) + [Issue(path, "error", msg) for path, msg in lint_procedures(self)]
 
     def resolve_id(self, ref: str) -> str | None:
         """Accept an id, a bundle path, or a bundle-absolute link."""
