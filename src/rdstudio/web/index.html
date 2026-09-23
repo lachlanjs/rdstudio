@@ -6,8 +6,24 @@
 <title>rdstudio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235646c0'/%3E%3Ccircle cx='11' cy='12' r='3.2' fill='%23f4f6f2'/%3E%3Ccircle cx='22' cy='10' r='2.4' fill='%23f4f6f2'/%3E%3Ccircle cx='19' cy='22' r='3.6' fill='%23f4f6f2'/%3E%3Cpath d='M11 12 22 10M11 12l8 10M22 10l-3 12' stroke='%23f4f6f2' stroke-width='1.4'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
-<link rel="stylesheet" href="vendor/hljs/github.min.css" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="vendor/hljs/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<link id="code-light" rel="stylesheet" href="vendor/hljs/github.min.css" media="(prefers-color-scheme: light)">
+<link id="code-dark" rel="stylesheet" href="vendor/hljs/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<link id="theme-css" rel="stylesheet" href="themes/notebook.css">
+<script>
+  // Apply the saved theme before first paint (see js/settings.js).
+  (function () {
+    try {
+      var themes = ["notebook", "journal", "modern", "blueprint", "terminal"];
+      var theme = localStorage.getItem("rdstudio.theme"), mode = localStorage.getItem("rdstudio.mode");
+      if (themes.indexOf(theme) > 0) document.getElementById("theme-css").href = "themes/" + theme + ".css";
+      if (mode === "light" || mode === "dark") {
+        document.documentElement.dataset.mode = mode;
+        document.getElementById("code-light").media = mode === "light" ? "all" : "not all";
+        document.getElementById("code-dark").media = mode === "dark" ? "all" : "not all";
+      }
+    } catch (e) { /* storage unavailable: defaults apply */ }
+  })();
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,6 +42,10 @@
     <a href="#/skills" data-tab="skills">Skills &amp; agents</a>
   </nav>
   <span class="live" title="The page refreshes when files change">Live</span>
+  <a class="settings-link" href="#/settings" data-tab="settings" aria-label="Settings">
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+    <span>Settings</span>
+  </a>
 </header>
 <div class="scrim"></div>
 <main id="view" tabindex="-1"></main>

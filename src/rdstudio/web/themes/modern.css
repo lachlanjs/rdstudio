@@ -1,0 +1,101 @@
+/* Modern: neutral greys, Inter for everything, a teal accent and rounder shapes. */
+
+:root {
+  --font-text: "Inter", system-ui, sans-serif;
+  --font-ui: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --text-size: 17px;
+  --radius: 10px;
+  --paper: #f7f7f8;
+  --paper-raised: #ffffff;
+  --paper-sunk: #eeeef0;
+  --ink: #16171d;
+  --ink-soft: #4b4d57;
+  --ink-faint: #85878f;
+  --rule: #e3e4e8;
+  --grid: #ededf0;
+  --accent: #0f766e;
+  --accent-soft: #d9f2ef;
+  --reviewed: #15803d;
+  --machine: #64748b;
+  --unverified: #b45309;
+  --stale: #be123c;
+  --cat-knowledge: #0f766e;
+  --cat-code: #2563eb;
+  --cat-reports: #c2410c;
+  --cat-agent: #65a30d;
+  --cat-other: #85878f;
+  --g0: #0f766e;
+  --g1: #2563eb;
+  --g2: #9333ea;
+  --g3: #c2410c;
+  --g4: #be123c;
+  --g5: #65a30d;
+  --g6: #0891b2;
+  --g7: #4b4d57;
+  color-scheme: light;
+}
+
+:root[data-mode="dark"] {
+  --paper: #0f1115;
+  --paper-raised: #16181d;
+  --paper-sunk: #0a0b0e;
+  --ink: #e7e8ec;
+  --ink-soft: #a9abb4;
+  --ink-faint: #767984;
+  --rule: #262931;
+  --grid: #181a20;
+  --accent: #2dd4bf;
+  --accent-soft: #133a37;
+  --reviewed: #4ade80;
+  --machine: #94a3b8;
+  --unverified: #fbbf24;
+  --stale: #fb7185;
+  --cat-knowledge: #2dd4bf;
+  --cat-code: #60a5fa;
+  --cat-reports: #fb923c;
+  --cat-agent: #a3e635;
+  --cat-other: #767984;
+  --g0: #2dd4bf;
+  --g1: #60a5fa;
+  --g2: #c084fc;
+  --g3: #fb923c;
+  --g4: #fb7185;
+  --g5: #a3e635;
+  --g6: #22d3ee;
+  --g7: #a9abb4;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #0f1115;
+    --paper-raised: #16181d;
+    --paper-sunk: #0a0b0e;
+    --ink: #e7e8ec;
+    --ink-soft: #a9abb4;
+    --ink-faint: #767984;
+    --rule: #262931;
+    --grid: #181a20;
+    --accent: #2dd4bf;
+    --accent-soft: #133a37;
+    --reviewed: #4ade80;
+    --machine: #94a3b8;
+    --unverified: #fbbf24;
+    --stale: #fb7185;
+    --cat-knowledge: #2dd4bf;
+    --cat-code: #60a5fa;
+    --cat-reports: #fb923c;
+    --cat-agent: #a3e635;
+    --cat-other: #767984;
+    --g0: #2dd4bf;
+    --g1: #60a5fa;
+    --g2: #c084fc;
+    --g3: #fb923c;
+    --g4: #fb7185;
+    --g5: #a3e635;
+    --g6: #22d3ee;
+    --g7: #a9abb4;
+    color-scheme: dark;
+  }
+}

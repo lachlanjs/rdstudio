@@ -1,5 +1,28 @@
 // Runtime for agent reports: KaTeX maths and Vega-Lite charts, styled to match the dashboard.
 (function () {
+  const SCRIPT_SRC = document.currentScript && document.currentScript.src;
+
+  // Follow the theme and mode chosen in the dashboard's Settings tab.
+  function applyTheme() {
+    return new Promise((resolve) => {
+      try {
+        const themes = ["notebook", "journal", "modern", "blueprint", "terminal"];
+        const theme = localStorage.getItem("rdstudio.theme");
+        const mode = localStorage.getItem("rdstudio.mode");
+        if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode;
+        if (SCRIPT_SRC && themes.includes(theme) && theme !== "notebook") {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = new URL(`themes/${theme}.css`, SCRIPT_SRC).href;
+          link.onload = link.onerror = () => resolve();
+          document.head.append(link);
+          return;
+        }
+      } catch (err) { /* storage unavailable: the default theme applies */ }
+      resolve();
+    });
+  }
+
   function css(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
@@ -9,7 +32,7 @@
     const palette = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => css(`--g${i}`));
     return {
       background: null,
-      font: "Atkinson, system-ui, sans-serif",
+      font: css("--font-ui") || "system-ui, sans-serif",
       view: { stroke: null },
       axis: { labelColor: soft, titleColor: ink, gridColor: rule, domainColor: soft, tickColor: soft, labelFontSize: 12, titleFontSize: 13, titleFontWeight: 600 },
       legend: { labelColor: soft, titleColor: ink, labelFontSize: 12, titleFontSize: 13 },
@@ -55,8 +78,9 @@
 
   function start() {
     renderMath();
-    renderCharts();
+    themed.then(renderCharts);
   }
+  const themed = applyTheme();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })();
