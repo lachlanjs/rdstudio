@@ -1,9 +1,11 @@
 ---
 type: Task
-title: "T04 — Build pipeline and server"
-description: "Emit site JSON and assets; categorised git history; serve with rebuild-on-change."
-tags: [task, m2, todo]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+title: T04 — Build pipeline and server
+description: Emit site JSON and assets; categorised git history; serve with rebuild-on-change.
+tags: [task, m2, done]
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:16:10Z
 ---
 
 # Prompt
@@ -17,4 +19,4 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
 
 # Outcome
 
-Not started.
+`rdstudio.build` writes `.rdstudio/site/` (web app copied from the package, `data/*.json`, concept bodies under `data/k/`, bundle assets, reports). Indexes regenerate automatically (`[index] auto`). `rdstudio.gitlog` categorises files with configurable globs and shows uncommitted changes; build output is excluded. `rdstudio serve` polls sources every second, rebuilds, and the page polls `version.json` every 2.5 s. Verified: an edit appears in an open page within ~5 s. Python changes need a server restart; web asset changes do not. Tests: `tests/test_build.py`.
