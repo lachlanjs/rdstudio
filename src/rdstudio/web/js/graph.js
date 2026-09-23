@@ -131,7 +131,7 @@ export function graphView() {
   const svg = d3.select(wrap).append("svg").attr("role", "img").attr("aria-label", "Knowledge graph");
   const tip = h("div", { class: "graph-tip", hidden: true });
   const panel = controls(() => { leaveGraph(); draw(); });
-  wrap.append(panel, tip, h("div", { class: "graph-hint" }, "Drag to pin a node. Double-click to release it. Click to open."));
+  wrap.append(panel, tip, h("div", { class: "graph-hint" }, "Click to open. Drag to pin a node; right-click it (or long-press on touch) to release."));
 
   svg.append("defs").append("marker")
     .attr("id", "arrow").attr("viewBox", "0 -4 8 8").attr("refX", 7).attr("refY", 0)
@@ -200,14 +200,38 @@ export function graphView() {
       .text((d) => d.label)
       .on("click", (event, d) => { persist(); navigate(d); });
 
-    node.on("click", (event, d) => { if (!event.defaultPrevented) { persist(); navigate(d); } })
-      .on("keydown", (event, d) => { if (event.key === "Enter") { persist(); navigate(d); } })
-      .on("dblclick", (event, d) => {
-        event.stopPropagation();
-        d.fx = d.fy = null;
-        d3.select(event.currentTarget).classed("pinned", false);
-        G.sim.alpha(0.3).restart();
+    // Release a pinned node without opening it: right-click, long-press on touch,
+    // or Delete / U on a focused node. (A double-click would open it first.)
+    const unpin = (el, d) => {
+      if (d.fx == null) return;
+      d.fx = d.fy = null;
+      d3.select(el).classed("pinned", false);
+      G.sim.alpha(0.3).restart();
+      persist();
+    };
+    let press = null;
+    node.on("click", (event, d) => {
+        if (event.defaultPrevented) return;
+        if (d.suppressClick) { d.suppressClick = false; return; }
+        persist(); navigate(d);
       })
+      .on("keydown", (event, d) => {
+        if (event.key === "Enter") { persist(); navigate(d); }
+        else if (event.key === "Delete" || event.key === "Backspace" || event.key.toLowerCase() === "u") { event.preventDefault(); unpin(event.currentTarget, d); }
+      })
+      .on("contextmenu", (event, d) => {
+        event.preventDefault();
+        unpin(event.currentTarget, d);
+      })
+      .on("pointerdown.longpress", (event, d) => {
+        if (event.pointerType !== "touch") return;
+        const el = event.currentTarget, x = event.clientX, y = event.clientY;
+        press = { x, y, timer: setTimeout(() => { if (d.fx != null) { d.suppressClick = true; unpin(el, d); } press = null; }, 550) };
+      })
+      .on("pointermove.longpress", (event) => {
+        if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) { clearTimeout(press.timer); press = null; }
+      })
+      .on("pointerup.longpress pointercancel.longpress", () => { if (press) { clearTimeout(press.timer); press = null; } })
       .on("pointerenter", (event, d) => showTip(event, d))
       .on("pointerleave", () => { tip.hidden = true; });
 
