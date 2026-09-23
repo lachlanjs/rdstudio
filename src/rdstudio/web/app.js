@@ -97,7 +97,11 @@ try {
   await load();
   await route();
   const live = document.querySelector(".live");
-  watch(refresh, (ok) => { live.classList.toggle("offline", !ok); live.textContent = ok ? "Live" : "Offline"; });
+  if (store.site.static) {
+    live.hidden = true; // an exported snapshot does not change
+  } else {
+    watch(refresh, (ok) => { live.classList.toggle("offline", !ok); live.textContent = ok ? "Live" : "Offline"; });
+  }
 } catch (err) {
   view.replaceChildren(h("div", { class: "page" }, h("h1", {}, "The dashboard data could not be loaded"),
     h("p", { class: "lede" }, "Run rdstudio build (or rdstudio serve) in the project, then reload this page."),

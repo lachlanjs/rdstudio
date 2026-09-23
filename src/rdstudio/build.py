@@ -102,8 +102,13 @@ def _skill_files(root: Path, *, user: bool = True) -> dict[str, list[dict[str, A
     return out
 
 
-def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = False) -> Path:
-    site = cfg.site_dir
+def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = False,
+          site: Path | None = None) -> Path:
+    """Build the dashboard into ``site`` (default ``.rdstudio/site``).
+
+    ``export`` produces a snapshot for static hosting: no user-level skills, no
+    uncommitted changes, and the page does not poll for updates."""
+    site = site or cfg.site_dir
     data = site / "data"
     site.mkdir(parents=True, exist_ok=True)
     _sync_tree(WEB_DIR, site)
@@ -117,6 +122,8 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
     concepts = [concept_record(bundle, cid) for cid in sorted(bundle.concepts)]
     tree = tree_record(bundle)
     changes = gitlog.history(cfg.root, cfg.category_globs(), exclude=(cfg.output.strip("/") + "/",))
+    if export:
+        changes["commits"] = [c for c in changes["commits"] if not c.get("pending")]
     report_items = reports.scan(cfg.reports_dir, cfg.knowledge, cfg.reports)
     skills = _skill_files(cfg.root, user=not export)
     issues = [{"path": i.path, "level": i.level, "message": i.message} for i in bundle.lint()]
@@ -134,6 +141,7 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
         "reports": cfg.reports,
         "human": cfg.human,
         "okf_version": bundle.root_meta.get("okf_version"),
+        "static": export,
         "issues": issues,
         "counts": {"concepts": len(concepts), "reports": len(report_items),
                    "skills": len(skills["skills"]), "agents": len(skills["agents"])},

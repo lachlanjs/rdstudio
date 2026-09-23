@@ -262,7 +262,6 @@ button { font: inherit; color: inherit; }
 }
 .g-label.dir { font-weight: 700; font-size: 13px; }
 .g-node.dim, .g-label.dim { opacity: .18; }
-.far .g-label.concept, .far .g-label.report { display: none; }
 .g-edge-dim { opacity: .08; }
 .graph-panel {
   position: absolute; top: 12px; left: 12px; right: auto; max-width: min(360px, calc(100% - 24px));
