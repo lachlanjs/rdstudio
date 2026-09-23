@@ -53,6 +53,13 @@
   </script>
   <p class="chart-caption">What the chart shows, and how it was produced.</p>
 
+  <p>Structure (pipelines, dependencies, state machines) as a Mermaid diagram:</p>
+  <pre class="mermaid">
+flowchart LR
+  G[Genome] --> M[Block matrix] --> S[Simulate] --> F{Fitness}
+  F -->|select| G
+  </pre>
+
   <h2>Deviations and issues</h2>
   <p>Anything that did not go to plan.</p>
 

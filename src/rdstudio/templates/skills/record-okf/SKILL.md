@@ -30,6 +30,12 @@ generated.
   attribute claims with footnotes keyed by that id: `...text.[^tao-vu]`.
 - Prefer structure (headings, lists, tables) over long prose. Maths in `$...$`
   and `$$...$$` renders in the dashboard.
+- **Diagrams** go in ` ```mermaid ` fences (flowchart, sequenceDiagram,
+  stateDiagram-v2, classDiagram, erDiagram, timeline, mindmap). The text is the
+  source of truth: anyone can read and edit it, and the dashboard draws it
+  offline. Keep each diagram small and focused; split rather than sprawl. If
+  the developer sketches something (a photo or screenshot), transcribe it into
+  Mermaid rather than storing only the image.
 
 ## Significance
 

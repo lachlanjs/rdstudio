@@ -63,6 +63,18 @@ md.core.ruler.push("task_lists", (state) => {
   }
 });
 
+// ```mermaid fences become diagram placeholders; js/diagrams.js draws them.
+// Until then (or if drawing fails) the source stays readable.
+const defaultFence = md.renderer.rules.fence;
+md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  if (token.info.trim().split(/\s+/)[0].toLowerCase() === "mermaid") {
+    const src = md.utils.escapeHtml(token.content);
+    return `<div class="mermaid-block" data-src="${src}"><pre class="mermaid-source"><code>${src}</code></pre></div>\n`;
+  }
+  return defaultFence(tokens, idx, options, env, self);
+};
+
 // Wrap tables so wide ones scroll on phones.
 md.renderer.rules.table_open = () => '<div class="table-wrap"><table>';
 md.renderer.rules.table_close = () => "</table></div>";

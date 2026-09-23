@@ -38,6 +38,8 @@ The template loads the dashboard's bundled libraries (no internet needed):
 - Charts: a Vega-Lite spec in `<script type="application/json" class="vega-lite">`
   is rendered in place. Inline data under `data.values`, or reference a CSV/JSON
   file saved next to the report.
+- Diagrams: Mermaid source in `<pre class="mermaid">...</pre>` is drawn in
+  place, in the dashboard's theme.
 - Figures: save images next to the report (e.g. `{reports}/media/`) and use
   relative paths.
 

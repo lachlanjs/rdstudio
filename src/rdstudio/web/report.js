@@ -76,9 +76,26 @@
     }
   }
 
+  // <pre class="mermaid"> blocks, drawn by the dashboard's diagram module.
+  function renderMermaid() {
+    const blocks = document.querySelectorAll("pre.mermaid");
+    if (!blocks.length || !SCRIPT_SRC) return;
+    for (const pre of blocks) {
+      const holder = document.createElement("div");
+      holder.className = "mermaid-block";
+      holder.dataset.src = pre.textContent;
+      holder.innerHTML = '<pre class="mermaid-source"></pre>';
+      holder.firstChild.textContent = pre.textContent;
+      pre.replaceWith(holder);
+    }
+    import(new URL("js/diagrams.js", SCRIPT_SRC).href)
+      .then((m) => m.renderDiagrams(document.body))
+      .catch(() => { /* the source stays visible */ });
+  }
+
   function start() {
     renderMath();
-    themed.then(renderCharts);
+    themed.then(() => { renderCharts(); renderMermaid(); });
   }
   const themed = applyTheme();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
