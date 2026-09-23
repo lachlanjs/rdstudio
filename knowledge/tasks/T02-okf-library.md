@@ -1,9 +1,11 @@
 ---
 type: Task
-title: "T02 — OKF library"
-description: "Parse bundles, frontmatter, links, trust tiers and staleness; lint; generate index.md."
-tags: [task, m1, todo]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+title: T02 — OKF library
+description: Parse bundles, frontmatter, links, trust tiers and staleness; lint; generate index.md.
+tags: [task, m1, done]
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:01:36Z
 ---
 
 # Prompt
@@ -17,4 +19,4 @@ Implement `rdstudio.okf` conforming to the [OKF spec](/references/okf-spec.md): 
 
 # Outcome
 
-Not started.
+`rdstudio.okf`: frontmatter split and round-trip (unknown keys kept, ISO UTC timestamps), concepts and directories, link resolution (absolute, relative, directory, broken, code ignored), trust tiers, verification staleness, `stale_after`, lint per OKF §11, generated §8 indexes (grouped by type, Overview first, root `okf_version`). `rdstudio.store`: record (whole body, one section, append; significant vs minor) and verify. Tests: `tests/test_okf.py`, `tests/test_store.py`. `rdstudio check` passes on this bundle.

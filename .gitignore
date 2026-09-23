@@ -12,3 +12,6 @@ reference/papers/
 # Editor / OS
 .DS_Store
 *.swp
+
+# rdstudio build output
+.rdstudio/

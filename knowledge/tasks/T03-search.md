@@ -1,9 +1,11 @@
 ---
 type: Task
-title: "T03 — Deterministic search and sectioned reading"
-description: "BM25 search with frontmatter filters; outline and section extraction."
-tags: [task, m1, todo]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+title: T03 — Deterministic search and sectioned reading
+description: BM25 search with frontmatter filters; outline and section extraction.
+tags: [task, m1, done]
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:01:36Z
 ---
 
 # Prompt
@@ -17,4 +19,4 @@ Implement `rdstudio.search`: BM25 over title, description, tags, headings and bo
 
 # Outcome
 
-Not started.
+`rdstudio.search`: BM25 with field weights (title 4, tags 3, description and headings 2, type and body 1), light plural stemming, filters (type, tags, trust, status, directory), snippets from the first matching body line. Outline and section reading live in `rdstudio.okf` (`headings`, `section`). Tests: `tests/test_search.py`.
