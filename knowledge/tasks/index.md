@@ -20,3 +20,4 @@
 * [T14 — Pluggable classifier interface](T14-classifier.md) - Interface for edit-significance and step localisation with deterministic default.
 * [T15 — Static export and visual QA](T15-export-qa.md) - Export for static hosting; screenshot review at desktop and mobile widths.
 * [T16 — Instantiate in himode and test drive](T16-himode-test-drive.md) - Run rdstudio init in ~/Repositories/himode and exercise the full workflow.
+* [T17 — Graph dragging, graph options, themes and CI publishing](T17-settings-themes-ci.md) - Fix node dragging, add persistent force options, a Settings tab with five themes, and CI export guidance.
