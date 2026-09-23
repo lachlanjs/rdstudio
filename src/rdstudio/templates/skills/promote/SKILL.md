@@ -14,12 +14,12 @@ a promoted concept must make sense on its own.
 2. **Make it self-contained.** If it links to project concepts, either inline
    the essential facts or accept that those links will not resolve in the
    global base.
-3. **Promote:** `mcp__rdstudio__promote` with the concept id. Use `keep: true`
+3. **Promote:** use the rdstudio `promote` tool with the concept id. Use `keep: true`
    to copy rather than move when the project still needs its own copy (the tool
    refuses to move a concept other project concepts link to).
 4. Report the new global id to the developer.
 
 Material that is general from the start (tooling habits, reading notes outside
 this project) can be recorded straight into the global base with
-`mcp__rdstudio__record` and `scope: "global"`, again only when the developer
+the rdstudio `record` tool and `scope: "global"`, again only when the developer
 asked for it.

@@ -9,8 +9,9 @@ them.
 
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/)
 - git
-- [Claude Code](https://claude.com/claude-code), or another harness that
-  supports MCP
+- An agent harness: [Claude Code](https://claude.com/claude-code) and
+  [OpenCode](https://opencode.ai) are set up automatically; others that read
+  `AGENTS.md` and support MCP can use the same files
 
 ## Install
 
@@ -30,9 +31,11 @@ rdstudio init --human human:<your-name>
 rdstudio serve                # dashboard at http://localhost:8000
 ```
 
-Then open Claude Code in the project and ask it to work through the bootstrap
-task. The agent agrees a structure for the knowledge base with you and fills
-in the first notes.
+`init` writes `AGENTS.md` (with `CLAUDE.md` importing it), skills in
+`.claude/skills/`, subagents for both harnesses, and MCP settings in `.mcp.json`
+and `opencode.json`. Then open Claude Code or OpenCode in the project and ask
+it to work through the bootstrap task. The agent agrees a structure for the
+knowledge base with you and fills in the first notes.
 
 ## Everyday commands
 

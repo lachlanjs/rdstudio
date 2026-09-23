@@ -34,7 +34,13 @@ def test_init_is_idempotent_and_merges(tmp_path):
     assert settings["enabledMcpjsonServers"] == ["rdstudio"]
     assert settings["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("rdstudio brief")
     claude = (root / "CLAUDE.md").read_text()
-    assert claude.startswith("# Existing") and "Keep me." in claude and "human:alice" in claude
+    assert claude.startswith("# Existing") and "Keep me." in claude and "@AGENTS.md" in claude
+    assert "human:alice" in (root / "AGENTS.md").read_text()
+    opencode = json.loads((root / "opencode.json").read_text())
+    assert opencode["mcp"]["rdstudio"]["type"] == "local"
+    assert opencode["mcp"]["rdstudio"]["command"][-2:] == ["--agent", "opencode/unknown"]
+    agent = (root / ".opencode/agents/librarian.md").read_text()
+    assert "mode: subagent" in agent and "edit: deny" in agent and "tools:" not in agent
     assert ".rdstudio/" in (root / ".gitignore").read_text()
 
     # Second run changes nothing; edited skills survive without --force.

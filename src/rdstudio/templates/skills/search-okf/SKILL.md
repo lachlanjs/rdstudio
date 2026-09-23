@@ -11,11 +11,11 @@ findings. Check it before re-deriving anything or reopening a settled question.
 
 ## Steps
 
-1. `mcp__rdstudio__search` with a few specific keywords. Filter with `type`
+1. The rdstudio `search` tool with a few specific keywords. Filter with `type`
    (e.g. `Decision`, `Question`, `Procedure`), `tags` or `under` (a directory)
    when you know them.
-2. For promising hits, `mcp__rdstudio__outline` to see the headings.
-3. `mcp__rdstudio__read` with `section_heading` to read only the part you need.
+2. For promising hits, the rdstudio `outline` tool to see the headings.
+3. The rdstudio `read` tool with `section_heading` to read only the part you need.
    Read a whole concept only when it is short or all of it is relevant.
 4. Follow `links_to` / `linked_from` from the outline when the answer spans
    concepts.
@@ -33,4 +33,4 @@ with concept ids.
 - If a recorded decision applies, follow it. If you believe its stated
   assumption no longer holds, say so explicitly instead of silently diverging.
 - If nothing is recorded, say so. If the answer you then work out is worth
-  keeping, record it with `/record-okf`.
+  keeping, record it with the `record-okf` skill.

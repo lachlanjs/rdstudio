@@ -13,6 +13,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from . import __version__, classify, procedures, references, scopes
+from .brief import brief as project_brief
 from .config import Config
 from .okf import Bundle, dump_frontmatter, headings, jsonable, section
 from .search import Index
@@ -49,6 +50,13 @@ def create_server(cfg: Config) -> MCPServer:
             return "global", g, b, b.resolve_id(ref[len("global:"):])
         b = bundle()
         return "project", cfg, b, b.resolve_id(ref)
+
+    @server.tool()
+    def brief() -> str:
+        """A short orientation to the project knowledge base: what exists, active
+        tasks, what awaits the developer and recent commits. Call it at the start
+        of a session unless one was already provided."""
+        return project_brief(cfg)
 
     @server.tool()
     def search(query: str, type: str | None = None, tags: list[str] | None = None,

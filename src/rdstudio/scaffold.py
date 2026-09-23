@@ -10,12 +10,20 @@ from pathlib import Path
 from typing import Iterator
 
 from . import config as config_mod
-from .okf import Bundle
+from .okf import Bundle, dump_frontmatter, split_frontmatter
 
 TEMPLATES = Path(__file__).parent / "templates"
 SECTION_START = "<!-- rdstudio:start"
 SECTION_END = "<!-- rdstudio:end -->"
 HOOK_COMMAND = "rdstudio brief"
+OPENCODE_AGENT = "opencode/unknown"
+
+# OpenCode subagent permissions; Claude Code's equivalent is each agent's `tools` list.
+OPENCODE_PERMISSIONS: dict[str, dict[str, str]] = {
+    "librarian": {"edit": "deny", "bash": "deny", "webfetch": "deny"},
+    "critic": {"edit": "deny", "bash": "deny", "webfetch": "deny"},
+    "searcher": {"edit": "deny"},
+}
 
 
 def _fill(text: str, values: dict[str, str]) -> str:
@@ -45,6 +53,16 @@ def mcp_command(root: Path) -> dict[str, object]:
     if _uses_dev_dependency(root) or not shutil.which("rdstudio"):
         return {"command": "uv", "args": ["run", "rdstudio", "mcp"]}
     return {"command": "rdstudio", "args": ["mcp"]}
+
+
+def opencode_agent(src: str, name: str) -> str:
+    """Translate a Claude Code subagent file into an OpenCode one."""
+    meta, body = split_frontmatter(src)
+    meta = meta or {}
+    out = {"description": meta.get("description", name), "mode": "subagent"}
+    if name in OPENCODE_PERMISSIONS:
+        out["permission"] = OPENCODE_PERMISSIONS[name]
+    return f"---\n{dump_frontmatter(out)}---\n{body}"
 
 
 def _merge_json(path: Path, root: Path, update) -> str | None:
@@ -135,8 +153,10 @@ def init(root: Path, *, title: str | None = None, human: str | None = None, forc
             if msg := _write(dst, _fill(src.read_text(encoding="utf-8"), values), root, force=force):
                 yield msg
     for src in sorted((TEMPLATES / "agents").glob("*.md")):
-        dst = root / ".claude" / "agents" / src.name
-        if msg := _write(dst, _fill(src.read_text(encoding="utf-8"), values), root, force=force):
+        text = _fill(src.read_text(encoding="utf-8"), values)
+        if msg := _write(root / ".claude" / "agents" / src.name, text, root, force=force):
+            yield msg
+        if msg := _write(root / ".opencode" / "agents" / src.name, opencode_agent(text, src.stem), root, force=force):
             yield msg
 
     # MCP registration and Claude Code settings.
@@ -164,11 +184,33 @@ def init(root: Path, *, title: str | None = None, human: str | None = None, forc
     if msg := _merge_json(root / ".claude" / "settings.json", root, add_settings):
         yield msg
 
-    section = _fill((TEMPLATES / "claude_section.md").read_text(encoding="utf-8"), values)
-    if msg := _managed_section(root / "CLAUDE.md", section, root, create=True):
+    # OpenCode: MCP registration. It reads skills from .claude/skills directly.
+    def add_opencode(data: dict) -> None:
+        data.setdefault("$schema", "https://opencode.ai/config.json")
+        data.setdefault("mcp", {})["rdstudio"] = {
+            "type": "local",
+            "command": [command["command"], *command["args"], "--agent", OPENCODE_AGENT],
+            "enabled": True,
+        }
+
+    jsonc = root / "opencode.jsonc"
+    if jsonc.exists() and not (root / "opencode.json").exists():
+        msg = _merge_json(jsonc, root, add_opencode)
+    else:
+        msg = _merge_json(root / "opencode.json", root, add_opencode)
+    if msg:
         yield msg
-    if msg := _managed_section(root / "AGENTS.md", section, root, create=False):
+
+    # Instructions: the shared section lives in AGENTS.md (read by OpenCode, Codex
+    # and others); CLAUDE.md imports it.
+    section = _fill((TEMPLATES / "agents_section.md").read_text(encoding="utf-8"), values)
+    if msg := _managed_section(root / "AGENTS.md", section, root, create=True):
         yield msg
+    claude_md = root / "CLAUDE.md"
+    if not (claude_md.is_symlink() and claude_md.resolve() == (root / "AGENTS.md").resolve()):
+        section = (TEMPLATES / "claude_section.md").read_text(encoding="utf-8")
+        if msg := _managed_section(claude_md, section, root, create=True):
+            yield msg
 
     gitignore = root / ".gitignore"
     ignore_line = cfg.output.strip("/") + "/"
@@ -182,4 +224,4 @@ def init(root: Path, *, title: str | None = None, human: str | None = None, forc
     for rel in Bundle.load(cfg.knowledge_dir).write_indexes():
         yield f"wrote {cfg.knowledge}/{rel}"
 
-    yield "done. Next: `rdstudio serve` for the dashboard; start a Claude Code session and run the bootstrap task."
+    yield "done. Next: `rdstudio serve` for the dashboard; start an agent session (Claude Code, OpenCode, ...) and run the bootstrap task."

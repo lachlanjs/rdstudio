@@ -5,16 +5,16 @@ description: Record knowledge in the project knowledge base (OKF) — findings, 
 
 # Record knowledge
 
-Write to the knowledge base through `mcp__rdstudio__record`, which stamps
+Write to the knowledge base through the rdstudio `record` tool, which stamps
 provenance and regenerates indexes. Do not hand-edit `index.md` files; they are
 generated.
 
 ## Before writing
 
-1. Search first (`/search-okf`). Update an existing concept rather than creating
+1. Search first (the `search-okf` skill). Update an existing concept rather than creating
    a near-duplicate.
 2. Pick the directory that fits; list the root with
-   `mcp__rdstudio__list_concepts` if unsure. Create a new directory only when no
+   the rdstudio `list_concepts` tool if unsure. Create a new directory only when no
    existing one fits, and mention it to the developer.
 
 ## A good concept

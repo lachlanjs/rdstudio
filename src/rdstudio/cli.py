@@ -223,6 +223,8 @@ def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
 def cmd_mcp(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .mcp_server import run
 
+    if args.agent:
+        cfg.agent = args.agent
     run(cfg)
     return 0
 
@@ -309,6 +311,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_brief)
 
     s = sub.add_parser("mcp", help="run the MCP server on stdio")
+    s.add_argument("--agent", help="actor id stamped on the agent's writes (default: [actors] agent)")
     s.set_defaults(func=cmd_mcp)
     return p
 

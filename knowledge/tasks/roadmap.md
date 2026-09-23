@@ -43,6 +43,7 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 
 - [x] [T17 Graph dragging, graph options, themes and CI publishing](/tasks/T17-settings-themes-ci.md)
 - [x] [T18 Mermaid diagrams in concepts and reports](/tasks/T18-mermaid.md)
+- [x] [T19 AGENTS.md and OpenCode support](/tasks/T19-harnesses.md)
 
 # Future
 
