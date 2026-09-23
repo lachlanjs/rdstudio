@@ -15,9 +15,12 @@ them.
 ## Install
 
 ```bash
-git clone <this repo> rdstudio
-uv tool install --editable ./rdstudio
+uv tool install git+https://github.com/lachlanjs/rdstudio@v0.1.0
 ```
+
+To upgrade later, run the same command with a newer tag, followed by
+`--force`. To work on rdstudio itself, clone the repository and run
+`uv tool install --editable .` inside it.
 
 ## Use it in a project
 
@@ -84,7 +87,7 @@ jobs:
         with:
           fetch-depth: 0   # full history, for the Changes tab
       - uses: astral-sh/setup-uv@v7
-      - run: uvx --from git+https://github.com/<owner>/rdstudio rdstudio export _site
+      - run: uvx --from git+https://github.com/lachlanjs/rdstudio@v0.1.0 rdstudio export _site
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
@@ -102,3 +105,8 @@ jobs:
 If rdstudio is a dev dependency of the project, use `uv run rdstudio export
 _site` instead of the `uvx` line. For other static hosts, run the same export
 and upload `_site/`.
+
+## Licence
+
+MIT. The bundled libraries and fonts keep their own licences, which are in
+`src/rdstudio/web/vendor/licenses/`.
