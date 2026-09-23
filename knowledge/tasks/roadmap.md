@@ -16,10 +16,10 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 
 # M2 — Dashboard
 
-- [ ] [T04 Build pipeline and server](/tasks/T04-build-serve.md)
-- [ ] [T05 Dashboard shell and Knowledge list](/tasks/T05-dashboard-knowledge.md)
-- [ ] [T06 Knowledge graph view](/tasks/T06-graph-view.md)
-- [ ] [T07 Changes and Review tabs](/tasks/T07-changes-review.md)
+- [x] [T04 Build pipeline and server](/tasks/T04-build-serve.md)
+- [x] [T05 Dashboard shell and Knowledge list](/tasks/T05-dashboard-knowledge.md)
+- [x] [T06 Knowledge graph view](/tasks/T06-graph-view.md)
+- [x] [T07 Changes and Review tabs](/tasks/T07-changes-review.md)
 
 # M3 — Agent integration
 
