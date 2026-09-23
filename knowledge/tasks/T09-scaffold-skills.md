@@ -1,9 +1,11 @@
 ---
 type: Task
-title: "T09 — Scaffolding, skills and agents"
-description: "rdstudio init plus the skill and agent set."
-tags: [task, m3, todo]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+title: T09 — Scaffolding, skills and agents
+description: rdstudio init plus the skill and agent set.
+tags: [task, m3, done]
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:21:52Z
 ---
 
 # Prompt
@@ -17,4 +19,4 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
 
 # Outcome
 
-Not started.
+`rdstudio init` writes `rdstudio.toml`, knowledge placeholders (overview and a bootstrap task telling an agent to tailor the bundle with the developer), `reports/`, eight skills (search-okf, record-okf, report with an HTML template, decision, question, task, handoff, lint-okf), three agents (librarian, critic, searcher), merges `.mcp.json` and `.claude/settings.json` (enables the server, allows its tools, adds a SessionStart hook running `rdstudio brief`), maintains a marked section in CLAUDE.md (and AGENTS.md if present), and ignores `.rdstudio/`. Idempotent; `--force` refreshes managed skills and agents only. `/promote` and `/ingest-ref` arrive with T13 and T12.

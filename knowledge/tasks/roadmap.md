@@ -23,12 +23,12 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 
 # M3 — Agent integration
 
-- [ ] [T08 MCP server](/tasks/T08-mcp-server.md)
-- [ ] [T09 Scaffolding, skills and agents](/tasks/T09-scaffold-skills.md)
+- [x] [T08 MCP server](/tasks/T08-mcp-server.md)
+- [x] [T09 Scaffolding, skills and agents](/tasks/T09-scaffold-skills.md)
 
 # M4 — Rich features
 
-- [ ] [T10 Reports](/tasks/T10-reports.md)
+- [x] [T10 Reports](/tasks/T10-reports.md)
 - [ ] [T11 Procedural graphs](/tasks/T11-procedures.md)
 - [ ] [T12 papis and Zotero references](/tasks/T12-references.md)
 - [ ] [T13 Global bundle and promote](/tasks/T13-global-bundle.md)
