@@ -3,24 +3,30 @@ type: Design
 title: Architecture
 description: Components, repository layout, and data flow of rdstudio.
 tags: [architecture]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:35:41Z
 ---
 
 # Components
 
 | Component | Module | Role |
 |---|---|---|
-| OKF library | `rdstudio.okf` | Parse bundles, frontmatter, links, trust tiers; lint; generate `index.md`. |
+| OKF library | `rdstudio.okf` | Parse bundles, frontmatter, links, trust tiers, staleness; lint; generate `index.md`. |
+| Store | `rdstudio.store` | Create and update concepts with provenance; verify. |
 | Search | `rdstudio.search` | Deterministic BM25 over title, description, tags, headings, body. |
+| Procedures | `rdstudio.procedures` | Procedural graphs: validation, neighbourhoods, proposals. |
+| References | `rdstudio.references` | Optional papis backend: stubs, search, PDF text. |
+| Scopes | `rdstudio.scopes` | Global knowledge base, promotion, skill scopes. |
+| Classifier | `rdstudio.classify` | Edit significance and step matching; rules or external command. |
 | Git history | `rdstudio.gitlog` | Commit-by-commit file lists, categorised by path rules. |
+| Reports | `rdstudio.reports` | Report metadata and links into knowledge. |
 | Build | `rdstudio.build` | Emit a static site (web assets + JSON data) to `.rdstudio/site/`. |
 | Serve | `rdstudio.serve` | Stdlib HTTP server; watches files and rebuilds. |
-| MCP | `rdstudio.mcp_server` | search / outline / read / record / verify / procedures. |
+| MCP | `rdstudio.mcp_server` | search, outline, read, list_concepts, record, backlinks, review_queue, procedure_next, procedure_propose, promote, ref_search, ref_text. |
 | Scaffold | `rdstudio.scaffold` | `rdstudio init`: bundle placeholders, skills, agents, config. |
+| Brief | `rdstudio.brief` | Session-start orientation for agents. |
 | Dashboard | `rdstudio/web/` | Vanilla JS single-page app, vendored libraries, no CDN. |
-
-See [static build decision](/decisions/static-build.md) for why the dashboard
-reads pre-built JSON rather than talking to a live API.
 
 # Layout in a host project
 
@@ -50,4 +56,4 @@ dependency ([distribution](/decisions/uv-tool-distribution.md)).
 
 # Dashboard tabs
 
-Knowledge (list + graph), Changes, Review, Reports, Procedures, Skills & Agents.
+Knowledge (list and graph), Changes, Review, Reports, Procedures (shown when any exist), Skills & agents. The [dashboard design](/design/dashboard-design.md) concept records the visual system.
