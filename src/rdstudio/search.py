@@ -24,6 +24,9 @@ K1, B = 1.4, 0.75
 
 
 def _stem(token: str) -> str:
+    for suffix in ("ness", "ing"):
+        if token.endswith(suffix) and len(token) - len(suffix) >= 4:
+            return token[: -len(suffix)]
     if len(token) > 4 and token.endswith("ies"):
         return token[:-3] + "y"
     if len(token) > 3 and token.endswith("s") and not token.endswith(("ss", "us", "is")):

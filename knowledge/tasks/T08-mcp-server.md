@@ -1,9 +1,11 @@
 ---
 type: Task
-title: "T08 — MCP server"
-description: "Local stdio MCP for search, outline, read, record, verify and log."
-tags: [task, m3, todo]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+title: T08 — MCP server
+description: Local stdio MCP for search, outline, read, record, verify and log.
+tags: [task, m3, done]
+generated:
+  by: claude-code/claude-opus-5-5
+  at: 2026-09-23T05:21:52Z
 ---
 
 # Prompt
@@ -17,4 +19,4 @@ Python MCP server (`rdstudio mcp`): `search`, `outline`, `read` (whole or by sec
 
 # Outcome
 
-Not started.
+`rdstudio mcp` (`rdstudio.mcp_server`, mcp 2.x `MCPServer`): `search`, `outline`, `read` (optionally one section, optionally with frontmatter), `list_concepts`, `record` (create/update, section replace, append, significant flag, preserves unknown keys, regenerates indexes, returns lint issues for the file), `backlinks`, `review_queue`. Responses are compact JSON or text. Human verification is deliberately not exposed. Verified in-process (`tests/test_mcp.py`) and over stdio with the MCP client.

@@ -92,6 +92,13 @@ def cmd_init(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from .brief import brief
+
+    print(brief(cfg))
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .mcp_server import run
 
@@ -141,6 +148,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--no-watch", action="store_true")
     s.set_defaults(func=cmd_serve)
+
+    s = sub.add_parser("brief", help="print a short orientation for an agent session")
+    s.set_defaults(func=cmd_brief)
 
     s = sub.add_parser("mcp", help="run the MCP server on stdio")
     s.set_defaults(func=cmd_mcp)
