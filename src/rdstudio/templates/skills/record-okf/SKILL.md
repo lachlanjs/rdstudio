@@ -1,0 +1,45 @@
+---
+name: record-okf
+description: Record knowledge in the project knowledge base (OKF) — findings, designs, references, procedures, research notes. Use whenever something worth remembering was learned or settled.
+---
+
+# Record knowledge
+
+Write to the knowledge base through `mcp__rdstudio__record`, which stamps
+provenance and regenerates indexes. Do not hand-edit `index.md` files; they are
+generated.
+
+## Before writing
+
+1. Search first (`/search-okf`). Update an existing concept rather than creating
+   a near-duplicate.
+2. Pick the directory that fits; list the root with
+   `mcp__rdstudio__list_concepts` if unsure. Create a new directory only when no
+   existing one fits, and mention it to the developer.
+
+## A good concept
+
+- **One idea per concept.** Split long material into linked concepts.
+- **Frontmatter:** `type` (required; e.g. `Design`, `Decision`, `Question`,
+  `Task`, `Procedure`, `Reference`, `Research`, `Experiment`), `title`, and a
+  one-sentence `description` (it appears in indexes and search results). Add
+  `tags` sparingly.
+- **Links** use bundle-absolute paths: `[model](/design/model.md)`. Linking to a
+  concept that does not exist yet is fine; it marks knowledge worth writing.
+- **Sources:** list external material under `sources` with a stable `id`, and
+  attribute claims with footnotes keyed by that id: `...text.[^tao-vu]`.
+- Prefer structure (headings, lists, tables) over long prose. Maths in `$...$`
+  and `$$...$$` renders in the dashboard.
+
+## Significance
+
+Set `significant: false` only for trivial edits (typos, formatting) or content
+the developer dictated verbatim. Everything else is significant: it updates
+`generated` and, if a human had reviewed the concept, flags it as changed since
+review. Never add `verified` entries yourself; only the developer verifies
+(`rdstudio verify <id>`).
+
+## Updating part of a concept
+
+Use `section_heading` with `body` to replace one section, or `append` to add to
+the end, instead of resending the whole body.
