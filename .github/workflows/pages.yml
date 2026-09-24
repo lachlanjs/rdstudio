@@ -1,0 +1,42 @@
+# Publish rdstudio's own knowledge base as a live preview of the dashboard.
+name: Publish preview to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # full history, for the Changes tab
+      - uses: astral-sh/setup-uv@v7
+      - run: uv run rdstudio check
+      # This repository does not install rdstudio into itself, so stage the
+      # bundled skills and agents for the Skills tab.
+      - name: Stage bundled skills and agents
+        run: |
+          mkdir -p .claude
+          cp -r src/rdstudio/templates/skills src/rdstudio/templates/agents .claude/
+          find .claude -name '*.md' -exec sed -i 's/{knowledge}/knowledge/g; s/{reports}/reports/g' {} +
+      - run: uv run rdstudio export _site
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

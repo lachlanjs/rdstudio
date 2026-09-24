@@ -5,6 +5,9 @@ add to any repository. You and your agents write notes, decisions, tasks and
 procedures as markdown in `knowledge/`, and a local dashboard lets you browse
 them.
 
+**[See a live preview](https://lachlanjs.github.io/rdstudio/)**: the dashboard
+for rdstudio's own knowledge base, rebuilt on every push to `main`.
+
 ## Requirements
 
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/)
