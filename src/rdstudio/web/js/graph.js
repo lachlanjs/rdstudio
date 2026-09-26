@@ -355,7 +355,7 @@ function controls(redraw) {
   const search = h("input", { type: "search", placeholder: "Highlight nodes", value: G.query, "aria-label": "Highlight nodes" });
   search.addEventListener("input", () => { G.query = search.value.trim(); redraw(); });
   const legend = h("div", { class: "legend" }, legendItems());
-  const narrow = matchMedia("(max-width: 760px)").matches;
+  const narrow = matchMedia("(max-width: 760px), (max-height: 560px)").matches; // start collapsed where space is short
   const sync = [];
   const sliders = [["repulsion", "Repulsion"], ["spacing", "Link length"], ["gravity", "Pull to centre"]].map(([key, text]) => {
     const input = h("input", { type: "range", min: 0.25, max: 3, step: 0.05, value: G.opts[key], "aria-label": text });

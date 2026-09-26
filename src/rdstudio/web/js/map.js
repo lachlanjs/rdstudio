@@ -614,7 +614,11 @@ export function mapView(focusRef = "") {
 
   const defs = svg.append("defs");
   const back = svg.append("rect").attr("class", "m-back");
-  const gRegions = svg.append("g");
+  // Everything drawn lives in one layer. During a gesture that layer is only
+  // moved and scaled (cheap for the GPU); the full redraw, which places routes
+  // and labels, happens when the gesture pauses, ends or has changed a lot.
+  const world = svg.append("g").attr("class", "m-world");
+  const gRegions = world.append("g");
   // Routes are drawn twice when a folder is in focus: faded everywhere, and at
   // full strength clipped to the focused folder, so the detail you are looking
   // at is clear while routes still show where they lead.
@@ -629,11 +633,11 @@ export function mapView(focusRef = "") {
     .attr("xChannelSelector", "R").attr("yChannelSelector", "G");
   filter("m-soft").append("feGaussianBlur").attr("stdDeviation", 3); // nebula: soft edges
   const gradients = defs.append("g"); // one per one-way route: direction as colour
-  const gLinks = svg.append("g").attr("class", "m-routes");
-  const gFocus = svg.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
-  const gImplied = svg.append("g").attr("class", "m-implied-links");
-  const gNotes = svg.append("g");
-  const gLabels = svg.append("g").attr("class", "m-labels");
+  const gLinks = world.append("g").attr("class", "m-routes");
+  const gFocus = world.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
+  const gImplied = world.append("g").attr("class", "m-implied-links");
+  const gNotes = world.append("g");
+  const gLabels = world.append("g").attr("class", "m-labels");
 
   let model = buildModel();
   let L = layout(model, o);
@@ -651,10 +655,19 @@ export function mapView(focusRef = "") {
     schedule();
   }
 
-  const zoom = d3.zoom().scaleExtent([0.2, 80]).on("zoom", (event) => {
-    M.transform = event.transform;
-    schedule();
-  }).on("end", persist);
+  let drawnAt = null, drawnWhen = 0; // the transform and time of the last full redraw
+  let moving = false;
+  const zoom = d3.zoom().scaleExtent([0.2, 80])
+    .on("start", () => { moving = true; svg.classed("moving", true); })
+    .on("zoom", (event) => {
+      const t = event.transform;
+      M.transform = t;
+      const s = drawnAt ? t.k / drawnAt.k : 0;
+      if (moving && drawnAt && s > 0.67 && s < 1.5 && performance.now() - drawnWhen < 350) {
+        world.attr("transform", `translate(${t.x - drawnAt.x * s},${t.y - drawnAt.y * s}) scale(${s})`);
+      } else schedule();
+    })
+    .on("end", () => { moving = false; svg.classed("moving", false); schedule(); persist(); });
   svg.call(zoom).on("dblclick.zoom", null);
 
   let queued = false;
@@ -755,6 +768,8 @@ export function mapView(focusRef = "") {
 
   function render() {
     const t = M.transform || d3.zoomIdentity;
+    drawnAt = t; drawnWhen = performance.now();
+    world.attr("transform", null);
     const sx = (n) => t.applyX(n.x), sy = (n) => t.applyY(n.y), sr = (n) => n.r * t.k;
     // Notes are drawn as places of bounded size.
     const dot = (n) => Math.max(2.5, Math.min(n.data.landmark ? o.dotMax + 3 : o.dotMax, n.r * o.dot * t.k));
@@ -1068,7 +1083,7 @@ export function mapView(focusRef = "") {
 // --------------------------------------------------------------- panel
 
 function controls({ view, tune, readout }) {
-  const narrow = matchMedia("(max-width: 760px)").matches;
+  const narrow = matchMedia("(max-width: 760px), (max-height: 560px)").matches; // start collapsed where space is short
   const o = effective();
   const slider = (key, text, min, max, step, onChange, help) => {
     const fmt = (v) => (step < 1 ? Number(v).toFixed(2) : String(v));

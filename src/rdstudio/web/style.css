@@ -11,7 +11,6 @@ body {
   background-color: var(--paper);
   background-image: var(--page-image, none);
   background-size: var(--page-size, auto);
-  background-attachment: fixed;
   color: var(--ink);
   font: 16px/1.5 var(--font-ui);
   -webkit-text-size-adjust: 100%;
@@ -43,7 +42,7 @@ button { font: inherit; color: inherit; }
   width: 36px; height: 36px; border-radius: var(--radius); cursor: pointer;
 }
 .menu svg { display: block; margin: auto; }
-.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; height: 100%; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; height: 100%; min-width: 0; flex: 0 1 auto; }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs a {
   display: flex; align-items: center; gap: 6px;
@@ -495,4 +494,22 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 @media (max-width: 760px) {
   .settings-link span { display: none; }
   .settings-link { height: 48px; }
+}
+
+/* A fixed page texture is cheap with a mouse but repaints on every scroll on phones. */
+@media (hover: hover) and (pointer: fine) {
+  body { background-attachment: fixed; }
+}
+
+/* While the map is being panned or zoomed, drop the costly effects (glows,
+   blurs, pencil wobble) and restore them when it comes to rest. */
+.map-wrap svg.moving .m-link, .map-wrap svg.moving .m-dir, .map-wrap svg.moving .m-place { filter: none; transition: none; }
+
+/* Short screens (a phone on its side) get the compact map and graph controls too. */
+@media (max-height: 560px) {
+  .graph-panel { top: 8px; left: 8px; max-width: min(360px, calc(100% - 16px)); padding: 6px 10px; }
+  .graph-options > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
+  .map-panel { max-height: calc(100% - 16px); }
+  .graph-hint { display: none; }
+  .map-crumbs { top: 8px; right: 8px; padding: 2px 6px; font-size: 12.5px; }
 }
