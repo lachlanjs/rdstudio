@@ -27,3 +27,7 @@ Shown on the note page, in a Learn tab and on the map.
 # Finding (differential geometry)
 
 The order is only as good as the requires links. Tangent space never links to smooth manifold, so it counts as a starting point; exterior derivative comes before differential forms for the same reason. The path view makes such gaps visible, which suggests an agent pass (or an exercise) to find missing prerequisites.
+
+Follow-up: an agent pass added the missing prerequisites (21 notes, each new
+link with a one-line reason under a Builds on heading); the longest path is now
+12 levels deep, from differentiability in Rⁿ up to the hyperbolic plane.
