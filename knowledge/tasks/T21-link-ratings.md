@@ -37,8 +37,17 @@ from 726 to 386; most of this comes from hiding `see also` links, and only 9
 implied links were culled, since most shortcuts had been rated `see also`.
 Focused folder only with levels 1 to 2 leaves 7 routes in Manifolds.
 
-# Not done
+# Revision (developer feedback)
 
-Lanes by direction (planned as an experiment) were not built: direction is
-shown by colour on hover instead. Revisit if overlapping parallel routes remain
-a problem.
+- The range filter was meant to count bubble walls, not the shared folder's
+  level. Replaced by a distance filter with two measures: steps out (the larger
+  of the two ends' walls out to the shared folder) and path length (all walls
+  crossed).
+- The two-thumb slider let overlapping thumbs block each other; rebuilt as a
+  custom control: the nearest thumb moves, overlapping thumbs are separated by
+  the drag direction, arrow keys move a focused thumb.
+- Lanes built as a setting: one-way links offset to one side by direction,
+  two-way links in the middle. Measured: they do not change route crossings
+  (782 with, 779 without, Manifolds view, all ratings shown); they separate
+  directions visually. The crossing readout now counts each physical route
+  once.

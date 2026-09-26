@@ -17,7 +17,11 @@ const SIZE = 1000; // layout units
 // View settings, shown in the Options panel.
 export const VIEW_DEFAULTS = {
   labels: 30, detail: 140, showLinks: true,
-  levelMin: 0, levelMax: 9, // depth of the lowest folder both ends share (0 = between top-level topics)
+  // How far apart a link's ends are in the folder tree, counted in bubble walls:
+  // "out" is the larger of the two ends' distances out to the lowest shared
+  // folder, "path" is the total crossed going out and back in.
+  distMeasure: "out", distMin: 0, distMax: 9,
+  lanes: false, // one-way links keep to one side of their route, two-way links take the middle
   rateMin: 2, rateMax: 3, // 1 see also, 2 uses (and unrated), 3 requires
   hideImplied: true, focusOnly: false,
 };
@@ -39,6 +43,7 @@ export const TUNING = [
   ["detour", "Avoid crossing bubbles", 1, 50, 1, 8, "Cost multiplier for a route segment that passes through a bubble."],
   ["bow", "Bow of direct links", 0, 0.3, 0.01, 0.12, "Sideways curve of a link with nothing in its way, as a fraction of its length."],
   ["width", "Line width", 0.5, 3, 0.1, 1.2, "Width of a route carrying one link, in pixels."],
+  ["laneGap", "Lane spacing", 1, 12, 0.5, 4, "With lanes on, how far one-way routes sit to each side of the middle, in pixels."],
 ];
 const TUNING_DEFAULTS = Object.fromEntries(TUNING.map((t) => [t[0], t[5]]));
 
@@ -325,6 +330,14 @@ function wrapWords(text, width, charW) {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+// Bubble walls between two notes: "out" is the larger of the two distances out
+// to the lowest folder they share, "path" the total out and back in.
+function wallsBetween(na, nb, measure) {
+  const shared = lowestCommon(na.parent, nb.parent);
+  const wa = na.parent.depth - shared.depth, wb = nb.parent.depth - shared.depth;
+  return measure === "path" ? wa + wb : Math.max(wa, wb);
 }
 
 function lowestCommon(a, b) {
@@ -662,7 +675,7 @@ export function mapView(focusRef = "") {
   // Routes for every link between shown items; recomputed only when the set of
   // open folders (or a setting) changes, so zooming stays cheap.
   function routesFor(open) {
-    const filters = ["showLinks", "levelMin", "levelMax", "rateMin", "rateMax", "hideImplied", "focusOnly"].map((k) => o[k]).join(",");
+    const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
     const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "");
     if (cache?.signature === signature) return cache;
     const shownRep = (leaf) => {
@@ -672,21 +685,31 @@ export function mapView(focusRef = "") {
     const merged = new Map();
     const inFocus = (n) => n.ancestors().includes(focus);
     let hidden = 0;
+    const kept = [];
     if (o.showLinks) {
       for (const [a, b, s] of model.edges) {
         if (s < o.rateMin || s > o.rateMax) continue;
         if (o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b)) { hidden++; continue; }
         const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
         if (!na || !nb) continue;
-        const level = lowestCommon(na.parent, nb.parent).depth;
-        if (level < o.levelMin || level > o.levelMax) continue;
+        const d = wallsBetween(na, nb, o.distMeasure);
+        if (d < o.distMin || d > o.distMax) continue;
         if (o.focusOnly && focus !== L.root && !inFocus(na) && !inFocus(nb)) continue;
+        kept.push([a, b, s, na, nb]);
+      }
+    }
+    const keptKeys = new Set(kept.map(([a, b]) => a + "\n" + b));
+    for (const [a, b, s, na, nb] of kept) {
+      {
         const within = na.parent === nb.parent;
         const ra = shownRep(na), rb = shownRep(nb);
         if (ra === rb) continue;
         const [p, q] = ra.data.id < rb.data.id ? [ra, rb] : [rb, ra];
-        const key = p.data.id + "|" + q.data.id;
-        const m = merged.get(key) || { key, p, q, count: 0, across: 0, strength: 0, ends: new Set(), links: [] };
+        // With lanes on, one-way links travel apart from two-way ones: +1 from p
+        // to q, -1 from q to p, 0 both ways.
+        const lane = !o.lanes || keptKeys.has(b + "\n" + a) ? 0 : ra === p ? 1 : -1;
+        const key = p.data.id + "|" + q.data.id + (o.lanes ? "|" + lane : "");
+        const m = merged.get(key) || { key, pair: p.data.id + "|" + q.data.id, lane, p, q, count: 0, across: 0, strength: 0, ends: new Set(), links: [] };
         m.count += 1;
         if (!within) m.across += 1;
         m.strength = Math.max(m.strength, s);
@@ -698,13 +721,19 @@ export function mapView(focusRef = "") {
     // Heavier bundles first, so lighter ones follow their corridors.
     const router = makeRouter(o);
     const routes = [...merged.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
-    for (const m of routes) m.pts = router.route(m.p, m.q);
+    const byPair = new Map(); // lanes of the same pair share one route
+    for (const m of routes) {
+      if (!byPair.has(m.pair)) byPair.set(m.pair, router.route(m.p, m.q));
+      m.pts = byPair.get(m.pair);
+    }
     const shown = [];
     L.root.each((n) => { if (n.parent && open.has(n.parent)) shown.push(n); });
-    const count = crossings(routes, shown, router.itemRadius);
+    // Measure each physical route once, however many lanes share it.
+    const physical = [...new Map(routes.map((m) => [m.pair, m])).values()];
+    const count = crossings(physical, shown, router.itemRadius);
     // Stretch: how much longer routes are than straight lines, on average.
     const len = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
-    const stretch = routes.length ? routes.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / routes.length : 1;
+    const stretch = physical.length ? physical.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / physical.length : 1;
     readout.textContent = `${routes.length} routes · ${hidden} implied links hidden · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
     Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length, hidden });
     cache = { signature, routes, shownRep };
@@ -753,21 +782,38 @@ export function mapView(focusRef = "") {
       const dx = toward[0] - from[0], dy = toward[1] - from[1], d = Math.hypot(dx, dy) || 1;
       return [from[0] + (dx / d) * (r + 2), from[1] + (dy / d) * (r + 2)];
     };
+    // Shift a polyline sideways (for lanes): each point moves along the average
+    // of its segments' normals.
+    const shift = (pts, by) => {
+      if (!by) return pts;
+      return pts.map((pt, i) => {
+        let nx = 0, ny = 0;
+        for (const [u, v] of [[pts[i - 1], pt], [pt, pts[i + 1]]]) {
+          if (!u || !v) continue;
+          const dx = v[0] - u[0], dy = v[1] - u[1], d = Math.hypot(dx, dy) || 1;
+          nx += -dy / d; ny += dx / d;
+        }
+        const n = Math.hypot(nx, ny) || 1;
+        return [pt[0] + (nx / n) * by, pt[1] + (ny / n) * by];
+      });
+    };
     const pathFor = (m) => {
       let s = toScreen(m.pts);
       const near = (pt, n) => Math.hypot(pt[0] - sx(n), pt[1] - sy(n)) < radius(n) + 14;
       s = [s[0], ...s.slice(1, -1).filter((pt) => !near(pt, m.p) && !near(pt, m.q)), s[s.length - 1]];
+      const offset = (m.lane || 0) * o.laneGap;
       if (s.length === 2) {
         if (Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) < radius(m.p) + radius(m.q) + 4) return "";
-        const f = trim(s[0], s[1], radius(m.p)), g = trim(s[1], s[0], radius(m.q));
+        let f = trim(s[0], s[1], radius(m.p)), g = trim(s[1], s[0], radius(m.q));
         const dx = g[0] - f[0], dy = g[1] - f[1], d = Math.hypot(dx, dy) || 1;
         const bow = Math.min(d * o.bow, 36);
-        const c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
+        let c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
+        [f, c, g] = [f, c, g].map((pt) => [pt[0] - (dy / d) * offset, pt[1] + (dx / d) * offset]);
         return `M${f[0]},${f[1]} Q${c[0]},${c[1]} ${g[0]},${g[1]}`;
       }
       s[0] = trim(s[0], s[1], radius(m.p));
       s[s.length - 1] = trim(s[s.length - 1], s[s.length - 2], radius(m.q));
-      return curve(s);
+      return curve(shift(s, offset));
     };
     const focused = focus !== L.root;
     const inFocus = (n) => n.ancestors().includes(focus);
@@ -1007,21 +1053,63 @@ function controls({ view, tune, readout }) {
     });
     return h("label", { class: "slider", title: help || null }, h("span", {}, text), input, out);
   };
-  // Two thumbs on one track: the lowest and highest value to show.
+  // Two thumbs on one track: the lowest and highest value to show. The thumb
+  // nearest the pointer moves; when they sit together, the direction of the
+  // drag decides which. Arrow keys move a focused thumb.
   const dual = ([kLo, kHi], text, min, max, label, help) => {
-    const lo = h("input", { type: "range", min, max, step: 1, value: Math.max(min, Math.min(o[kLo], max)), "aria-label": `${text}: from` });
-    const hi = h("input", { type: "range", min, max, step: 1, value: Math.max(min, Math.min(o[kHi], max)), "aria-label": `${text}: to` });
+    const clamp = (v) => Math.max(min, Math.min(max, Math.round(v)));
+    const now = effective();
+    let lo = clamp(now[kLo]), hi = Math.max(lo, clamp(now[kHi]));
+    const track = h("span", { class: "dual" });
+    const fill = h("span", { class: "dual-fill" });
+    const thumb = (end) => h("span", { class: "dual-thumb", role: "slider", tabindex: 0, "aria-label": `${text}: ${end}`,
+      "aria-valuemin": min, "aria-valuemax": max });
+    const tLo = thumb("from"), tHi = thumb("to");
+    track.append(fill, tLo, tHi);
     const out = h("output");
-    const show = () => { out.textContent = lo.value === hi.value ? label(+lo.value) : `${label(+lo.value)} to ${label(+hi.value)}`; };
-    const change = (moved) => () => {
-      if (+lo.value > +hi.value) { if (moved === lo) hi.value = lo.value; else lo.value = hi.value; }
-      M.user[kLo] = +lo.value; M.user[kHi] = +hi.value;
-      show(); persist(); view();
+    const pct = (v) => (max === min ? 0 : ((v - min) / (max - min)) * 100);
+    const draw = () => {
+      tLo.style.left = `${pct(lo)}%`; tHi.style.left = `${pct(hi)}%`;
+      fill.style.left = `${pct(lo)}%`; fill.style.width = `${pct(hi) - pct(lo)}%`;
+      for (const [t, v] of [[tLo, lo], [tHi, hi]]) { t.setAttribute("aria-valuenow", v); t.setAttribute("aria-valuetext", label(v)); }
+      out.textContent = lo === hi ? label(lo) : `${label(lo)} to ${label(hi)}`;
     };
-    lo.addEventListener("input", change(lo));
-    hi.addEventListener("input", change(hi));
-    show();
-    return h("label", { class: "slider dual-slider", title: help }, h("span", {}, text), h("span", { class: "dual" }, lo, hi), out);
+    const commit = () => {
+      if (M.user[kLo] === lo && M.user[kHi] === hi) return;
+      M.user[kLo] = lo; M.user[kHi] = hi; persist(); view();
+    };
+    const valueAt = (x) => { const r = track.getBoundingClientRect(); return clamp(min + Math.max(0, Math.min(1, (x - r.left) / r.width)) * (max - min)); };
+    let active = null, startX = 0;
+    const move = (v) => { if (active === "lo") lo = Math.min(v, hi); else if (active === "hi") hi = Math.max(v, lo); draw(); commit(); };
+    track.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      track.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      const v = valueAt(e.clientX);
+      if (lo === hi) active = v < lo ? "lo" : v > hi ? "hi" : null; // together: wait for the drag direction
+      else active = Math.abs(v - lo) <= Math.abs(v - hi) ? "lo" : "hi";
+      if (active) move(v);
+    });
+    track.addEventListener("pointermove", (e) => {
+      if (!track.hasPointerCapture(e.pointerId)) return;
+      if (!active) { if (Math.abs(e.clientX - startX) < 3) return; active = e.clientX < startX ? "lo" : "hi"; }
+      move(valueAt(e.clientX));
+    });
+    const release = (e) => { if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId); active = null; };
+    track.addEventListener("pointerup", release);
+    track.addEventListener("pointercancel", release);
+    for (const [t, end] of [[tLo, "lo"], [tHi, "hi"]]) {
+      t.addEventListener("keydown", (e) => {
+        const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        active = end;
+        move(clamp((end === "lo" ? lo : hi) + step));
+        active = null;
+      });
+    }
+    draw();
+    return h("div", { class: "slider dual-slider", title: help }, h("span", {}, text), track, out);
   };
   const toggle = (key, text, help) => {
     const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(!!o[key]), title: help }, text);
@@ -1030,7 +1118,30 @@ function controls({ view, tune, readout }) {
   };
   const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
   const rated = [...store.concepts.values()].some((c) => c.links.some((l) => l.rel));
-  const levelName = (v) => (v === 0 ? "between topics" : `level ${v}`);
+  const walls = (v) => (v === 0 ? "same folder" : `${v} bubble${v === 1 ? "" : "s"}`);
+  // The distance slider's range depends on how distance is counted.
+  const distance = h("div", { class: "dist" });
+  const drawDistance = () => {
+    const e = effective();
+    const max = e.distMeasure === "path" ? 2 * maxDepth : maxDepth;
+    const measure = h("div", { class: "row seg" }, h("span", {}, "Count"),
+      ...[["out", "Steps out", "The larger of the two ends' distances out to the lowest folder they share."],
+          ["path", "Path length", "All bubble walls crossed, out from one end and in to the other."]].map(([key, text, help]) => {
+        const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(e.distMeasure === key), title: help }, text);
+        b.addEventListener("click", () => {
+          if (effective().distMeasure === key) return;
+          M.user.distMeasure = key;
+          M.user.distMin = 0; M.user.distMax = key === "path" ? 2 * maxDepth : maxDepth;
+          persist(); drawDistance(); view();
+        });
+        return b;
+      }));
+    distance.replaceChildren(
+      dual(["distMin", "distMax"], "Distance", 0, max, walls,
+        "Which links to show by how many bubble walls separate their ends; 0 is links within one folder."),
+      measure);
+  };
+  drawDistance();
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
 
   // Tuning: every layout and routing parameter, with a way to keep the result.
@@ -1066,10 +1177,10 @@ function controls({ view, tune, readout }) {
       h("div", { class: "row" },
         toggle("showLinks", "Links", "Show links at all."),
         rated ? toggle("hideImplied", "Hide implied", "Hide a link when a chain of links at least as strong already connects its ends.") : "",
-        toggle("focusOnly", "Focused folder only", "When zoomed into a folder, show only links with an end inside it.")),
+        toggle("focusOnly", "Focused folder only", "When zoomed into a folder, show only links with an end inside it."),
+        toggle("lanes", "Lanes", "One-way links keep to one side of their route and two-way links take the middle, so opposite directions separate.")),
       h("div", { class: "sliders" },
-        dual(["levelMin", "levelMax"], "Shared folder", 0, maxDepth, levelName,
-          "Which links to show by the lowest folder both ends share: 0 is links between top-level topics, higher levels are links inside subtopics."),
+        distance,
         rated ? dual(["rateMin", "rateMax"], "Importance", 1, 3, (v) => STRENGTH_LABEL[v],
           "Which links to show by rating: see also, uses (and unrated links), requires.") : "",
         slider("labels", "Labels", 5, 120, 1, view, "Most labels shown at once, most important first."),
