@@ -43,13 +43,29 @@ Each is checkable by looking at a screenshot or reading the code.
 
 # Design
 
-- **Layout:** nested circle packing of the folder tree (d3 `pack`). Note
-  size grows with importance (landmark flag, then PageRank over links). Within
-  a folder, notes are ordered so linked notes are packed next to each other.
+- **Layout:** nested circle packing of the folder tree (d3 `pack`) with
+  generous padding. Each note gets a slot sized by importance (landmark flag,
+  then PageRank over links, in a narrow range) but is drawn as a dot about half
+  that size, capped on screen, so the gaps between items are open space.
+  Within a folder, notes are ordered so linked notes are packed next to each
+  other.
+- **Style:** cartographic. Notes are places (dots, labelled beside them;
+  landmarks outlined and bold); folders are territories (faint fill, thin
+  boundary, name letter-spaced along the top when open, in the middle when
+  closed); links are routes. Plain background.
 - **Detail:** a folder is open when its on-screen radius exceeds the detail
-  threshold; the root is always open.
-- **Links:** each end climbs to its highest ancestor that is visible (a note
-  or a closed folder); lines between the same pair are merged.
+  threshold; the root is always open. Items fade in as folders open.
+- **Links:** each end attaches to the child of the lowest folder containing
+  both ends (or a closed folder hiding it); pairs merge into one route.
+- **Routing:** within a folder, item centres are Delaunay-triangulated; a
+  waypoint sits in the middle of each gap between neighbouring items and one in
+  the open space of each triangle. Routes are shortest paths through that
+  network (corridors through an item heavily penalised), straightened where
+  nothing is in the way, and drawn as B-splines, which cannot loop. Corridors
+  already used get cheaper, so links heading the same way bundle. Unobstructed
+  links bow gently to one side. Routes are cached in layout space.
+- **Hover:** unrelated places and routes fade; the note's own links are drawn
+  as arcs to wherever their other ends are shown.
 - **Interaction:** click a note to open it, click a folder to zoom to it,
   click empty space to step out; the folder path at the top is clickable.
 

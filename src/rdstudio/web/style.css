@@ -299,29 +299,35 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 
 /* ----------------------------------------------------------------- map */
 
+.map-wrap { background-image: none; }
 .map-wrap .m-back { fill: transparent; }
-.m-dir { fill: var(--c); stroke: var(--c); cursor: zoom-in; transition: fill-opacity .2s; }
-.m-dir.open { fill-opacity: .05; stroke-opacity: .45; stroke-width: 1.2; }
-.m-dir.closed { fill-opacity: .16; stroke-opacity: .7; stroke-width: 1.4; }
-.m-dir.closed:hover { fill-opacity: .26; }
-.m-note { fill: var(--c); stroke: var(--paper); stroke-width: 1.2; cursor: pointer; }
+.m-dir { fill: var(--c); stroke: var(--c); cursor: zoom-in; transition: fill-opacity .2s, opacity .2s; }
+.m-dir.open { fill-opacity: .035; stroke-opacity: .5; stroke-width: .8; }
+.m-dir.open.depth-1 { stroke-width: 1.5; stroke-opacity: .6; }
+.m-dir.closed { fill-opacity: .11; stroke-opacity: .55; stroke-width: 1; }
+.m-dir.closed:hover { fill-opacity: .2; }
+.m-note { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; cursor: pointer; transition: opacity .2s; }
 .m-note.landmark { stroke: var(--ink); stroke-width: 2; }
-.m-note.unverified { fill-opacity: .85; }
 .m-note:focus-visible { outline: none; stroke: var(--accent); stroke-width: 3; }
-.m-link { stroke: var(--ink-soft); stroke-opacity: .45; stroke-linecap: round; pointer-events: stroke; }
-.m-link.across { stroke: var(--accent); stroke-opacity: .55; stroke-dasharray: 5 4; }
-.m-link.mixed { stroke: var(--accent); stroke-opacity: .5; }
-.m-link.hot { stroke: var(--ink); stroke-opacity: .85; stroke-width: 1.6; stroke-dasharray: none; pointer-events: none; }
-.m-link.hot.in { stroke: var(--accent); }
-g.muted .m-link { stroke-opacity: .12; }
+.m-link { fill: none; stroke: var(--ink-soft); stroke-opacity: .42; stroke-linecap: round; transition: opacity .2s; }
+.m-link.across { stroke: var(--accent); stroke-opacity: .5; }
+.m-link.mixed { stroke: var(--accent); stroke-opacity: .45; }
+.m-detail .m-link.hot { stroke: var(--ink); stroke-opacity: .8; stroke-width: 1.4; pointer-events: none; }
+.m-detail .m-link.hot.in { stroke: var(--accent); }
+svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
+svg.focusing .m-routes .m-link.hot { stroke-opacity: .85; }
+svg.focusing .m-note:not(.related) { opacity: .3; }
+svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .m-labels { pointer-events: none; }
 .m-text, .m-arc {
   font: 12px var(--font-ui); fill: var(--ink);
-  paint-order: stroke; stroke: var(--paper); stroke-width: 3.5px; stroke-linejoin: round;
+  paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round;
 }
-.m-text.dir { font-weight: 700; font-size: 12.5px; }
-.m-text.landmark { font-weight: 700; }
-.m-arc { font-weight: 700; font-size: 12.5px; fill: var(--ink-soft); letter-spacing: .02em; }
+.m-text.place { fill: var(--ink); }
+.m-text.landmark { font-weight: 700; font-size: 12.5px; }
+.m-text.territory { font-size: 14px; font-weight: 600; letter-spacing: .06em; fill: var(--ink-soft); }
+.m-text.territory .count { font-size: 11.5px; font-weight: 400; letter-spacing: 0; fill: var(--ink-faint); }
+.m-arc { font-size: 14px; font-weight: 600; letter-spacing: .08em; fill: var(--ink-soft); }
 .map-crumbs {
   position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
   max-width: calc(100% - 400px); justify-content: flex-end;
