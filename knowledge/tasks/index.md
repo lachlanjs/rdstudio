@@ -24,3 +24,5 @@
 * [T18 — Mermaid diagrams in concepts and reports](T18-mermaid.md) - Render Mermaid diagrams offline in the dashboard and in reports, themed, with agent guidance.
 * [T19 — AGENTS.md and OpenCode support](T19-harnesses.md) - Make rdstudio init set up OpenCode (and other AGENTS.md harnesses) alongside Claude Code.
 * [T20 — Map view (first version)](T20-map-view.md) - A Map tab showing folders as nested regions with links drawn at their scale, tested on a separate differential geometry bundle.
+* [T21 — Link ratings, implied-link culling and link filters](T21-link-ratings.md) - Rate links by how consequential they are, hide links implied by chains of others, and filter the map by folder level, rating and focus.
+* [T22 — Five themes, direction colours and a clearer range slider](T22-themes-and-direction.md) - Replace the themes with Studio, Notebook, Map, Space and Cyber, each restyling the map as well as the page; colour routes by direction only; make range-slider thumbs distinct.

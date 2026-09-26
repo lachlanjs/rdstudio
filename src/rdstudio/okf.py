@@ -23,7 +23,7 @@ RESERVED = {"index.md", "log.md"}
 _FENCE = re.compile(r"^\s*(```|~~~)")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _INLINE_CODE = re.compile(r"`[^`\n]*`")
-_LINK = re.compile(r"(?<!!)\[(?P<text>[^\]]*)\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+\"[^\"]*\")?\)")
+_LINK = re.compile(r"(?<!!)\[(?P<text>[^\]]*)\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+(?:\"(?P<title>[^\"]*)\"|'(?P<title2>[^']*)'))?\)")
 _REF_DEF = re.compile(r"^\s{0,3}\[(?!\^)[^\]]+\]:\s*(?P<target>\S+)", re.M)
 _SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 _LOG_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -198,10 +198,27 @@ def section(body: str, heading: str) -> str | None:
 
 
 def link_targets(body: str) -> list[str]:
+    return [target for target, _ in link_refs(body)]
+
+
+# How consequential a link is, given as the link's title:
+# [tangent space](/manifolds/tangent-space.md "requires").
+RATINGS = {"requires": 3, "uses": 2, "see also": 1}
+
+
+def rating(title: str | None) -> str | None:
+    """The rating a link title names, or None (unrated, or an ordinary title)."""
+    key = " ".join((title or "").lower().replace("-", " ").replace("_", " ").split())
+    key = {"seealso": "see also"}.get(key, key)
+    return key if key in RATINGS else None
+
+
+def link_refs(body: str) -> list[tuple[str, str | None]]:
+    """Link targets with their ratings, in order of appearance."""
     text = "\n".join(_strip_code(body))
-    targets = [m.group("target").strip("<>") for m in _LINK.finditer(text)]
-    targets += [m.group("target").strip("<>") for m in _REF_DEF.finditer(text)]
-    return targets
+    refs = [(m.group("target").strip("<>"), rating(m.group("title") or m.group("title2"))) for m in _LINK.finditer(text)]
+    refs += [(m.group("target").strip("<>"), None) for m in _REF_DEF.finditer(text)]
+    return refs
 
 
 # --------------------------------------------------------------------------- #
@@ -214,6 +231,7 @@ class Link:
     target: str  # concept id, or directory id with trailing '/'
     kind: str  # "concept" | "directory"
     broken: bool = False
+    rel: str | None = None  # "requires" | "uses" | "see also" | None (unrated)
 
 
 @dataclass
@@ -388,11 +406,19 @@ class Bundle:
                 continue
             self._load_concept(path, rel)
         for concept in self.concepts.values():
-            concept.links = [self._resolve(concept, t) for t in link_targets(concept.body)]
-            concept.links = [l for l in concept.links if l is not None]
+            links = []
+            for target, rel in link_refs(concept.body):
+                link = self._resolve(concept, target)
+                if link is not None:
+                    link.rel = rel
+                    links.append(link)
+            concept.links = links
             for link in concept.links:
                 if link.broken:
                     self.issues.append(Issue(concept.path, "warning", f"broken link to {link.target}"))
+        for group in self.requires_cycles():
+            first = self.concepts[group[0]]
+            self.issues.append(Issue(first.path, "warning", "requires cycle: " + ", ".join(group) + " require each other"))
 
     def _ensure_dir(self, directory: str) -> None:
         if directory in self.directories:
@@ -470,6 +496,46 @@ class Bundle:
         return None  # a non-markdown file: not a concept link
 
     # ------------------------------------------------------------- queries
+
+    def requires_cycles(self) -> list[list[str]]:
+        """Groups of concepts that require each other, directly or through a chain
+        (strongly connected components of the "requires" links, Tarjan's algorithm)."""
+        graph = {cid: sorted({l.target for l in c.links if l.rel == "requires" and l.kind == "concept"
+                              and not l.broken and l.target != cid}) for cid, c in self.concepts.items()}
+        index: dict[str, int] = {}
+        low: dict[str, int] = {}
+        stack: list[str] = []
+        on_stack: set[str] = set()
+        groups: list[list[str]] = []
+        counter = 0
+
+        def visit(v: str) -> None:
+            nonlocal counter
+            index[v] = low[v] = counter
+            counter += 1
+            stack.append(v)
+            on_stack.add(v)
+            for w in graph[v]:
+                if w not in index:
+                    visit(w)
+                    low[v] = min(low[v], low[w])
+                elif w in on_stack:
+                    low[v] = min(low[v], index[w])
+            if low[v] == index[v]:
+                group = []
+                while True:
+                    w = stack.pop()
+                    on_stack.discard(w)
+                    group.append(w)
+                    if w == v:
+                        break
+                if len(group) > 1:
+                    groups.append(sorted(group))
+
+        for v in sorted(graph):
+            if v not in index:
+                visit(v)
+        return sorted(groups)
 
     def backlinks(self, cid: str) -> list[str]:
         return sorted(c.id for c in self.concepts.values() if any(l.target == cid for l in c.links))

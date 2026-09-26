@@ -85,13 +85,14 @@ export function reviewItems() {
     expired: all.filter((c) => c.content_stale),
     errors: (store.site.issues || []).filter((i) => i.level === "error"),
     broken: (store.site.issues || []).filter((i) => i.level === "warning" && i.message.startsWith("broken link")),
+    cycles: (store.site.issues || []).filter((i) => i.level === "warning" && i.message.startsWith("requires cycle")),
     proposals: pendingProposals(),
   };
 }
 
 export function reviewCount() {
   const r = reviewItems();
-  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length + r.proposals.length;
+  return r.stale.length + r.unverified.length + r.questions.length + r.errors.length + r.proposals.length + r.cycles.length;
 }
 
 function conceptRow(c, extra) {
@@ -129,6 +130,9 @@ export function reviewView() {
     section("Unverified", "Concepts nobody has confirmed yet, newest first.", r.unverified, (c) => conceptRow(c, c.meta?.generated?.by ? h("span", {}, "by " + c.meta.generated.by) : "")),
     r.drafts.length ? section("Drafts", null, r.drafts, (c) => conceptRow(c)) : "",
     r.expired.length ? section("Past their stale date", "stale_after has passed.", r.expired, (c) => conceptRow(c)) : "",
+    r.cycles.length ? section("Notes that require each other",
+      "Prerequisites that loop back on themselves: either the ideas are tangled, or one of the \"requires\" ratings is wrong.",
+      r.cycles, issueRow) : "",
     section("Format errors", "Files that do not conform to OKF.", r.errors, issueRow),
     r.broken.length ? section("Links to unwritten knowledge", null, r.broken, issueRow) : "");
 }

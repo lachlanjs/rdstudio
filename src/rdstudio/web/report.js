@@ -6,11 +6,12 @@
   function applyTheme() {
     return new Promise((resolve) => {
       try {
-        const themes = ["notebook", "journal", "modern", "blueprint", "terminal"];
-        const theme = localStorage.getItem("rdstudio.theme");
+        const themes = ["studio", "notebook", "map", "space", "cyber"];
+        const former = { notebook: "studio", journal: "studio", modern: "studio", blueprint: "map", terminal: "cyber" };
+        const theme = localStorage.getItem("rdstudio.look") || former[localStorage.getItem("rdstudio.theme")];
         const mode = localStorage.getItem("rdstudio.mode");
         if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode;
-        if (SCRIPT_SRC && themes.includes(theme) && theme !== "notebook") {
+        if (SCRIPT_SRC && themes.includes(theme) && theme !== "studio") {
           const link = document.createElement("link");
           link.rel = "stylesheet";
           link.href = new URL(`themes/${theme}.css`, SCRIPT_SRC).href;

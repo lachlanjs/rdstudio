@@ -26,6 +26,15 @@ generated.
   `tags` sparingly.
 - **Links** use bundle-absolute paths: `[model](/design/model.md)`. Linking to a
   concept that does not exist yet is fine; it marks knowledge worth writing.
+- **Rate links** by how consequential they are, with the link's title:
+  `[model](/design/model.md "requires")`. `requires`: this concept cannot be
+  understood without that one (a prerequisite). `uses`: relies on it in a key
+  fact, example or proof, but not to define it. `see also`: a forward reference
+  (something that builds on this concept) or a tangent. Unrated links count as
+  `uses`. The map filters by rating and hides links implied by chains of
+  others, so honest ratings make it clearer. Do not rate a link `requires` in
+  both directions unless the concepts truly depend on each other; the Review
+  tab flags such cycles.
 - **Sources:** list external material under `sources` with a stable `id`, and
   attribute claims with footnotes keyed by that id: `...text.[^tao-vu]`.
 - Prefer structure (headings, lists, tables) over long prose. Maths in `$...$`

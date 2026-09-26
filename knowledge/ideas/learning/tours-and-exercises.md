@@ -34,6 +34,18 @@ Retrieval practice (the testing effect), cloze deletion and the generation
 effect, self-explanation and elaborative interrogation support these; Bjork's
 "desirable difficulties" is the umbrella.
 
+# Landmarks as a lesson
+
+- Name the landmarks from memory, with the map showing only folders.
+- Place each landmark in its folder.
+- Explain why each is central, checked against how many concepts depend on
+  it, directly or through chains of `requires` links ("you called X central;
+  23 concepts depend on it").
+
+The prerequisite graph from [link ratings](/design/conventions.md) also gives
+a reading order (a topological sort), the prerequisites of any concept (a study
+path), and how advanced a concept is (its longest prerequisite chain).
+
 # Catch-up views
 
 - **Changed since you looked:** a note verified earlier shows its diff since

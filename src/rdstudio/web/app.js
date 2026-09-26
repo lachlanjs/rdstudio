@@ -87,6 +87,17 @@ menu.addEventListener("click", () => {
   menu.setAttribute("aria-expanded", String(open));
 });
 document.querySelector(".scrim").addEventListener("click", closeDrawer);
+
+// Full screen (hides the phone's status and navigation bars), where supported.
+const fullscreen = document.querySelector(".fullscreen");
+if (document.fullscreenEnabled && !matchMedia("(display-mode: fullscreen)").matches) {
+  fullscreen.hidden = false;
+  fullscreen.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+  });
+  document.addEventListener("fullscreenchange", () => fullscreen.setAttribute("aria-pressed", String(!!document.fullscreenElement)));
+}
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 window.addEventListener("hashchange", () => route());
 

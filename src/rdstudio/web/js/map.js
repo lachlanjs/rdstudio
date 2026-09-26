@@ -15,8 +15,19 @@ const KEY = "rdstudio.map";
 const SIZE = 1000; // layout units
 
 // View settings, shown in the Options panel.
-export const VIEW_DEFAULTS = { labels: 30, detail: 140, links: "all" };
-const LINK_MODES = [["all", "All"], ["within", "Within folders"], ["across", "Across folders"], ["none", "None"]];
+export const VIEW_DEFAULTS = {
+  labels: 30, detail: 140, showLinks: true,
+  // How far apart a link's ends are in the folder tree, counted in bubble walls:
+  // "out" is the larger of the two ends' distances out to the lowest shared
+  // folder, "path" is the total crossed going out and back in.
+  distMeasure: "out", distMin: 0, distMax: 9,
+  lanes: false, // one-way links keep to one side of their route, two-way links take the middle
+  rateMin: 2, rateMax: 3, // 1 see also, 2 uses (and unrated), 3 requires
+  hideImplied: true, focusOnly: false,
+};
+// How consequential a link is, from its Markdown title ("requires", "uses", "see also").
+const STRENGTH = { requires: 3, uses: 2, "see also": 1 };
+const STRENGTH_LABEL = { 1: "see also", 2: "uses", 3: "requires" };
 
 // Tuning parameters, shown in the Tuning panel and settable per project under
 // [map] in rdstudio.toml. [key, label, min, max, step, default, what it does]
@@ -32,6 +43,7 @@ export const TUNING = [
   ["detour", "Avoid crossing bubbles", 1, 50, 1, 8, "Cost multiplier for a route segment that passes through a bubble."],
   ["bow", "Bow of direct links", 0, 0.3, 0.01, 0.12, "Sideways curve of a link with nothing in its way, as a fraction of its length."],
   ["width", "Line width", 0.5, 3, 0.1, 1.2, "Width of a route carrying one link, in pixels."],
+  ["laneGap", "Lane spacing", 1, 12, 0.5, 4, "With lanes on, how far one-way routes sit to each side of the middle, in pixels."],
 ];
 const TUNING_DEFAULTS = Object.fromEntries(TUNING.map((t) => [t[0], t[5]]));
 
@@ -123,20 +135,20 @@ function buildModel() {
   const concepts = [...store.concepts.values()];
   const ids = concepts.map((c) => c.id);
   const known = new Set(ids);
-  const edges = [];
-  const seen = new Set();
-  const adjacent = new Map(ids.map((id) => [id, new Set()]));
+  // Directed links, each with its strongest rating: [from, to, strength].
+  const strongest = new Map();
+  let hasRatings = false;
   for (const c of concepts) {
     for (const l of c.links) {
       if (l.broken || l.kind !== "concept" || !known.has(l.target) || l.target === c.id) continue;
+      if (l.rel) hasRatings = true;
       const key = c.id + "\n" + l.target;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push([c.id, l.target]);
-      adjacent.get(c.id).add(l.target);
-      adjacent.get(l.target).add(c.id);
+      strongest.set(key, Math.max(strongest.get(key) || 0, STRENGTH[l.rel] || 2));
     }
   }
+  const edges = [...strongest].map(([key, s]) => [...key.split("\n"), s]);
+  const adjacent = new Map(ids.map((id) => [id, new Set()]));
+  for (const [a, b] of edges) { adjacent.get(a).add(b); adjacent.get(b).add(a); }
   const rank = pagerank(ids, edges);
   const top = Math.max(...rank.values(), 1e-9);
 
@@ -165,7 +177,53 @@ function buildModel() {
   for (const node of dirs.values()) {
     node.children = [...node.subdirs.sort((a, b) => size(b) - size(a)), ...node.notes];
   }
-  return { root: dirs.get(""), edges };
+  const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
+  return { root: dirs.get(""), edges, implied: impliedLinks(ids, edges), hasRatings, maxDepth };
+}
+
+// Links implied by others: a → c is implied when c can also be reached from a
+// through a chain of links at least as strong (never through "see also"), as
+// in a transitive reduction. Links inside a group of notes that require each
+// other (a cycle) are left alone. Only the map hides them; notes keep them all.
+function impliedLinks(ids, edges) {
+  const out = new Map(ids.map((id) => [id, []]));
+  for (const [a, b, s] of edges) out.get(a).push([b, s]);
+  const component = stronglyConnected(ids, (v) => out.get(v).filter(([, s]) => s >= 2).map(([w]) => w));
+  const implied = new Set();
+  for (const [a, c, s] of edges) {
+    if (component.get(a) === component.get(c)) continue;
+    const need = Math.max(s, 2);
+    const seen = new Set([a]);
+    const stack = [];
+    for (const [b, sb] of out.get(a)) if (b !== c && sb >= need && !seen.has(b)) { seen.add(b); stack.push(b); }
+    while (stack.length) {
+      const v = stack.pop();
+      if (v === c) { implied.add(a + "\n" + c); break; }
+      for (const [w, sw] of out.get(v)) if (sw >= need && !seen.has(w)) { seen.add(w); stack.push(w); }
+    }
+  }
+  return implied;
+}
+
+// Tarjan's strongly connected components: node -> component number.
+function stronglyConnected(ids, next) {
+  const index = new Map(), low = new Map(), onStack = new Set(), stack = [], component = new Map();
+  let counter = 0, groups = 0;
+  const visit = (v) => {
+    index.set(v, counter); low.set(v, counter); counter++;
+    stack.push(v); onStack.add(v);
+    for (const w of next(v)) {
+      if (!index.has(w)) { visit(w); low.set(v, Math.min(low.get(v), low.get(w))); }
+      else if (onStack.has(w)) low.set(v, Math.min(low.get(v), index.get(w)));
+    }
+    if (low.get(v) === index.get(v)) {
+      let w;
+      do { w = stack.pop(); onStack.delete(w); component.set(w, groups); } while (w !== v);
+      groups++;
+    }
+  };
+  for (const v of ids) if (!index.has(v)) visit(v);
+  return component;
 }
 
 function layout(model, o) {
@@ -272,6 +330,14 @@ function wrapWords(text, width, charW) {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+// Bubble walls between two notes: "out" is the larger of the two distances out
+// to the lowest folder they share, "path" the total out and back in.
+function wallsBetween(na, nb, measure) {
+  const shared = lowestCommon(na.parent, nb.parent);
+  const wa = na.parent.depth - shared.depth, wb = nb.parent.depth - shared.depth;
+  return measure === "path" ? wa + wb : Math.max(wa, wb);
 }
 
 function lowestCommon(a, b) {
@@ -548,15 +614,30 @@ export function mapView(focusRef = "") {
 
   const defs = svg.append("defs");
   const back = svg.append("rect").attr("class", "m-back");
-  const gRegions = svg.append("g");
+  // Everything drawn lives in one layer. During a gesture that layer is only
+  // moved and scaled (cheap for the GPU); the full redraw, which places routes
+  // and labels, happens when the gesture pauses, ends or has changed a lot.
+  const world = svg.append("g").attr("class", "m-world");
+  const gRegions = world.append("g");
   // Routes are drawn twice when a folder is in focus: faded everywhere, and at
   // full strength clipped to the focused folder, so the detail you are looking
   // at is clear while routes still show where they lead.
   const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
-  const gLinks = svg.append("g").attr("class", "m-routes");
-  const gFocus = svg.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
-  const gNotes = svg.append("g");
-  const gLabels = svg.append("g").attr("class", "m-labels");
+  // Filters themes can use through --route-filter, --region-filter and
+  // --place-filter. User-space regions so thin, straight paths are not clipped.
+  const filter = (id) => defs.append("filter").attr("id", id).attr("filterUnits", "userSpaceOnUse")
+    .attr("x", -5000).attr("y", -5000).attr("width", 20000).attr("height", 20000);
+  const sketch = filter("m-sketch"); // pencil: a slightly wobbly line
+  sketch.append("feTurbulence").attr("type", "fractalNoise").attr("baseFrequency", 0.035).attr("numOctaves", 2).attr("seed", 7).attr("result", "noise");
+  sketch.append("feDisplacementMap").attr("in", "SourceGraphic").attr("in2", "noise").attr("scale", 3.2)
+    .attr("xChannelSelector", "R").attr("yChannelSelector", "G");
+  filter("m-soft").append("feGaussianBlur").attr("stdDeviation", 3); // nebula: soft edges
+  const gradients = defs.append("g"); // one per one-way route: direction as colour
+  const gLinks = world.append("g").attr("class", "m-routes");
+  const gFocus = world.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
+  const gImplied = world.append("g").attr("class", "m-implied-links");
+  const gNotes = world.append("g");
+  const gLabels = world.append("g").attr("class", "m-labels");
 
   let model = buildModel();
   let L = layout(model, o);
@@ -564,6 +645,7 @@ export function mapView(focusRef = "") {
   let w = 800, hgt = 600;
   let focus = L.root;
   let hovered = null;
+  let current = null; // screen helpers from the last render, for hover
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function rebuild() {
@@ -573,10 +655,19 @@ export function mapView(focusRef = "") {
     schedule();
   }
 
-  const zoom = d3.zoom().scaleExtent([0.2, 80]).on("zoom", (event) => {
-    M.transform = event.transform;
-    schedule();
-  }).on("end", persist);
+  let drawnAt = null, drawnWhen = 0; // the transform and time of the last full redraw
+  let moving = false;
+  const zoom = d3.zoom().scaleExtent([0.2, 80])
+    .on("start", () => { moving = true; svg.classed("moving", true); })
+    .on("zoom", (event) => {
+      const t = event.transform;
+      M.transform = t;
+      const s = drawnAt ? t.k / drawnAt.k : 0;
+      if (moving && drawnAt && s > 0.67 && s < 1.5 && performance.now() - drawnWhen < 350) {
+        world.attr("transform", `translate(${t.x - drawnAt.x * s},${t.y - drawnAt.y * s}) scale(${s})`);
+      } else schedule();
+    })
+    .on("end", () => { moving = false; svg.classed("moving", false); schedule(); persist(); });
   svg.call(zoom).on("dblclick.zoom", null);
 
   let queued = false;
@@ -607,48 +698,78 @@ export function mapView(focusRef = "") {
   // Routes for every link between shown items; recomputed only when the set of
   // open folders (or a setting) changes, so zooming stays cheap.
   function routesFor(open) {
-    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + o.links;
+    const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "");
     if (cache?.signature === signature) return cache;
     const shownRep = (leaf) => {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
       return leaf;
     };
     const merged = new Map();
-    if (o.links !== "none") {
-      for (const [a, b] of model.edges) {
+    const inFocus = (n) => n.ancestors().includes(focus);
+    let hidden = 0;
+    const kept = [];
+    // (m.dir: 1 if every link in a route runs p → q, -1 if q → p, 0 if both ways.)
+    if (o.showLinks) {
+      for (const [a, b, s] of model.edges) {
+        if (s < o.rateMin || s > o.rateMax) continue;
+        if (o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b)) { hidden++; continue; }
         const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
         if (!na || !nb) continue;
+        const d = wallsBetween(na, nb, o.distMeasure);
+        if (d < o.distMin || d > o.distMax) continue;
+        if (o.focusOnly && focus !== L.root && !inFocus(na) && !inFocus(nb)) continue;
+        kept.push([a, b, s, na, nb]);
+      }
+    }
+    const keptKeys = new Set(kept.map(([a, b]) => a + "\n" + b));
+    for (const [a, b, s, na, nb] of kept) {
+      {
         const within = na.parent === nb.parent;
-        if ((o.links === "within" && !within) || (o.links === "across" && within)) continue;
         const ra = shownRep(na), rb = shownRep(nb);
         if (ra === rb) continue;
         const [p, q] = ra.data.id < rb.data.id ? [ra, rb] : [rb, ra];
-        const key = p.data.id + "|" + q.data.id;
-        const m = merged.get(key) || { key, p, q, count: 0, across: 0, ends: new Set() };
+        // With lanes on, one-way links travel apart from two-way ones: +1 from p
+        // to q, -1 from q to p, 0 both ways.
+        const lane = !o.lanes || keptKeys.has(b + "\n" + a) ? 0 : ra === p ? 1 : -1;
+        const key = p.data.id + "|" + q.data.id + (o.lanes ? "|" + lane : "");
+        const m = merged.get(key) || { key, pair: p.data.id + "|" + q.data.id, lane, p, q, count: 0, across: 0, strength: 0, ends: new Set(), links: [] };
         m.count += 1;
         if (!within) m.across += 1;
+        m.strength = Math.max(m.strength, s);
         m.ends.add(na.data.id); m.ends.add(nb.data.id);
+        m.links.push([a, b, s]);
+        const way = ra === p ? 1 : -1; // this link runs p → q (1) or q → p (-1)
+        m.dir = m.count === 1 ? way : m.dir === way ? way : 0;
         merged.set(key, m);
       }
     }
     // Heavier bundles first, so lighter ones follow their corridors.
     const router = makeRouter(o);
     const routes = [...merged.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
-    for (const m of routes) m.pts = router.route(m.p, m.q);
+    const byPair = new Map(); // lanes of the same pair share one route
+    for (const m of routes) {
+      if (!byPair.has(m.pair)) byPair.set(m.pair, router.route(m.p, m.q));
+      m.pts = byPair.get(m.pair);
+    }
     const shown = [];
     L.root.each((n) => { if (n.parent && open.has(n.parent)) shown.push(n); });
-    const count = crossings(routes, shown, router.itemRadius);
+    // Measure each physical route once, however many lanes share it.
+    const physical = [...new Map(routes.map((m) => [m.pair, m])).values()];
+    const count = crossings(physical, shown, router.itemRadius);
     // Stretch: how much longer routes are than straight lines, on average.
     const len = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
-    const stretch = routes.length ? routes.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / routes.length : 1;
-    readout.textContent = `${routes.length} routes · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
-    Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length });
+    const stretch = physical.length ? physical.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / physical.length : 1;
+    readout.textContent = `${routes.length} routes · ${hidden} implied links hidden · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
+    Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length, hidden });
     cache = { signature, routes, shownRep };
     return cache;
   }
 
   function render() {
     const t = M.transform || d3.zoomIdentity;
+    drawnAt = t; drawnWhen = performance.now();
+    world.attr("transform", null);
     const sx = (n) => t.applyX(n.x), sy = (n) => t.applyY(n.y), sr = (n) => n.r * t.k;
     // Notes are drawn as places of bounded size.
     const dot = (n) => Math.max(2.5, Math.min(n.data.landmark ? o.dotMax + 3 : o.dotMax, n.r * o.dot * t.k));
@@ -689,30 +810,63 @@ export function mapView(focusRef = "") {
       const dx = toward[0] - from[0], dy = toward[1] - from[1], d = Math.hypot(dx, dy) || 1;
       return [from[0] + (dx / d) * (r + 2), from[1] + (dy / d) * (r + 2)];
     };
+    // Shift a polyline sideways (for lanes): each point moves along the average
+    // of its segments' normals.
+    const shift = (pts, by) => {
+      if (!by) return pts;
+      return pts.map((pt, i) => {
+        let nx = 0, ny = 0;
+        for (const [u, v] of [[pts[i - 1], pt], [pt, pts[i + 1]]]) {
+          if (!u || !v) continue;
+          const dx = v[0] - u[0], dy = v[1] - u[1], d = Math.hypot(dx, dy) || 1;
+          nx += -dy / d; ny += dx / d;
+        }
+        const n = Math.hypot(nx, ny) || 1;
+        return [pt[0] + (nx / n) * by, pt[1] + (ny / n) * by];
+      });
+    };
     const pathFor = (m) => {
       let s = toScreen(m.pts);
       const near = (pt, n) => Math.hypot(pt[0] - sx(n), pt[1] - sy(n)) < radius(n) + 14;
       s = [s[0], ...s.slice(1, -1).filter((pt) => !near(pt, m.p) && !near(pt, m.q)), s[s.length - 1]];
+      const offset = (m.lane || 0) * o.laneGap;
       if (s.length === 2) {
         if (Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) < radius(m.p) + radius(m.q) + 4) return "";
-        const f = trim(s[0], s[1], radius(m.p)), g = trim(s[1], s[0], radius(m.q));
+        let f = trim(s[0], s[1], radius(m.p)), g = trim(s[1], s[0], radius(m.q));
         const dx = g[0] - f[0], dy = g[1] - f[1], d = Math.hypot(dx, dy) || 1;
         const bow = Math.min(d * o.bow, 36);
-        const c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
+        let c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
+        [f, c, g] = [f, c, g].map((pt) => [pt[0] - (dy / d) * offset, pt[1] + (dx / d) * offset]);
         return `M${f[0]},${f[1]} Q${c[0]},${c[1]} ${g[0]},${g[1]}`;
       }
       s[0] = trim(s[0], s[1], radius(m.p));
       s[s.length - 1] = trim(s[s.length - 1], s[s.length - 2], radius(m.q));
-      return curve(s);
+      return curve(shift(s, offset));
     };
     const focused = focus !== L.root;
     const inFocus = (n) => n.ancestors().includes(focus);
+    // Direction as colour: a gradient running from the note that links to the
+    // note it links to; links both ways (or mixed) take the neutral colour.
+    const gradId = (m) => "rg-" + m.key.replace(/[^\w-]/g, "_");
+    const oneWay = routes.filter((m) => m.dir);
+    gradients.selectAll("linearGradient").data(oneWay, (m) => m.key).join((enter) => {
+      const g = enter.append("linearGradient").attr("gradientUnits", "userSpaceOnUse");
+      g.append("stop").attr("offset", "0").style("stop-color", "var(--route-from, var(--accent))");
+      g.append("stop").attr("offset", "1").style("stop-color", "var(--route-to, var(--stale))");
+      return g;
+    })
+      .attr("id", gradId)
+      .each(function (m) {
+        const [from, to] = m.dir > 0 ? [m.p, m.q] : [m.q, m.p];
+        d3.select(this).attr("x1", sx(from)).attr("y1", sy(from)).attr("x2", sx(to)).attr("y2", sy(to));
+      });
     const drawRoutes = (group, list) => group.selectAll("path").data(list, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
-      .attr("class", (m) => `m-link${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
+      .attr("class", (m) => `m-link s${m.strength}`)
+      .style("stroke", (m) => (m.dir ? `url(#${gradId(m)})` : "var(--route-both, var(--ink-faint))"))
       .attr("stroke-width", (m) => o.width * (1 + 0.9 * Math.log2(m.count)))
       .attr("d", pathFor)
       .selectAll("title").data((m) => [m]).join("title")
-      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label}`);
+      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label} (strongest: ${STRENGTH_LABEL[m.strength]})`);
     gLinks.classed("context", focused);
     drawRoutes(gLinks, routes);
     clip.attr("cx", sx(focus)).attr("cy", sy(focus)).attr("r", focused ? sr(focus) : 0);
@@ -741,6 +895,7 @@ export function mapView(focusRef = "") {
         g.select(".mark").attr("d", d3.symbol(SYMBOLS[n.data.marker], Math.PI * r * r)());
       });
 
+    current = { sx, sy, radius };
     drawLabels(open, visible, notes, sx, sy, sr, dot);
     if (hovered) hover(hovered);
   }
@@ -834,8 +989,9 @@ export function mapView(focusRef = "") {
     svg.classed("focusing", !!n);
     if (!n || !cache) {
       gNotes.selectAll("g.m-place").classed("related", false);
-      svg.selectAll(".m-routes path").classed("hot", false);
+      svg.selectAll(".m-routes path").classed("hot", false).classed("needs", false).classed("needed", false);
       gLabels.selectAll("text").classed("related", false);
+      gImplied.selectAll("path").remove();
       return;
     }
     const related = new Set([n.data.id]);
@@ -848,8 +1004,32 @@ export function mapView(focusRef = "") {
     }
     gNotes.selectAll("g.m-place").classed("related", (m) => related.has(m.data.id));
     gLabels.selectAll("text.m-text").classed("related", function () { return related.has(this.getAttribute("data-id")); });
-    svg.selectAll(".m-routes path").classed("hot", (m) => m.p === n || m.q === n || m.ends.has(n.data.id));
+    // Direction, by colour rather than arrows: what the note needs, and what needs it.
+    const mine = (m) => m.links.filter(([a, b]) => a === n.data.ref || b === n.data.ref);
+    svg.selectAll(".m-routes path")
+      .classed("hot", (m) => mine(m).length > 0)
+      .classed("needs", (m) => mine(m).some(([a]) => a === n.data.ref))
+      .classed("needed", (m) => mine(m).length > 0 && mine(m).every(([, b]) => b === n.data.ref));
     svg.selectAll(".m-routes path.hot").raise();
+    // Its implied links, hidden from the map, shown faintly.
+    const { sx, sy, radius } = current;
+    const hiddenEnds = [];
+    if (o.hideImplied && model.hasRatings) {
+      for (const [a, b] of model.edges) {
+        if (!model.implied.has(a + "\n" + b) || (a !== n.data.ref && b !== n.data.ref)) continue;
+        const on = L.byId.get("c:" + (a === n.data.ref ? b : a));
+        const r = on && cache.shownRep(on);
+        if (r && r !== n) hiddenEnds.push(r);
+      }
+    }
+    gImplied.selectAll("path").data(hiddenEnds).join("path").attr("class", "m-implied")
+      .attr("d", (r) => {
+        const x1 = sx(n), y1 = sy(n), x2 = sx(r), y2 = sy(r);
+        const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
+        const r1 = radius(n) + 2, r2 = radius(r) + 2;
+        const bow = Math.min(40, d * 0.15);
+        return `M${x1 + (dx / d) * r1},${y1 + (dy / d) * r1} Q${(x1 + x2) / 2 - (dy / d) * bow},${(y1 + y2) / 2 + (dx / d) * bow} ${x2 - (dx / d) * r2},${y2 - (dy / d) * r2}`;
+      });
   }
 
   function drawCrumbs() {
@@ -903,7 +1083,7 @@ export function mapView(focusRef = "") {
 // --------------------------------------------------------------- panel
 
 function controls({ view, tune, readout }) {
-  const narrow = matchMedia("(max-width: 760px)").matches;
+  const narrow = matchMedia("(max-width: 760px), (max-height: 560px)").matches; // start collapsed where space is short
   const o = effective();
   const slider = (key, text, min, max, step, onChange, help) => {
     const fmt = (v) => (step < 1 ? Number(v).toFixed(2) : String(v));
@@ -917,24 +1097,106 @@ function controls({ view, tune, readout }) {
     });
     return h("label", { class: "slider", title: help || null }, h("span", {}, text), input, out);
   };
-  const modes = LINK_MODES.map(([key, text]) => {
-    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(o.links === key) }, text);
-    b.addEventListener("click", () => {
-      M.user.links = key;
-      for (const other of modes) other.setAttribute("aria-pressed", String(other === b));
-      persist();
-      view();
+  // Two thumbs on one track: the lowest and highest value to show. The thumb
+  // nearest the pointer moves; when they sit together, the direction of the
+  // drag decides which. Arrow keys move a focused thumb.
+  const dual = ([kLo, kHi], text, min, max, label, help) => {
+    const clamp = (v) => Math.max(min, Math.min(max, Math.round(v)));
+    const now = effective();
+    let lo = clamp(now[kLo]), hi = Math.max(lo, clamp(now[kHi]));
+    const track = h("span", { class: "dual" });
+    const fill = h("span", { class: "dual-fill" });
+    const thumb = (end, cls) => h("span", { class: `dual-thumb ${cls}`, role: "slider", tabindex: 0, "aria-label": `${text}: ${end}`,
+      "aria-valuemin": min, "aria-valuemax": max });
+    const tLo = thumb("from", "lo"), tHi = thumb("to", "hi");
+    track.append(fill, tLo, tHi);
+    const out = h("output");
+    const pct = (v) => (max === min ? 0 : ((v - min) / (max - min)) * 100);
+    const draw = () => {
+      tLo.style.left = `${pct(lo)}%`; tHi.style.left = `${pct(hi)}%`;
+      fill.style.left = `${pct(lo)}%`; fill.style.width = `${pct(hi) - pct(lo)}%`;
+      for (const [t, v] of [[tLo, lo], [tHi, hi]]) { t.setAttribute("aria-valuenow", v); t.setAttribute("aria-valuetext", label(v)); }
+      out.textContent = lo === hi ? label(lo) : `${label(lo)} to ${label(hi)}`;
+    };
+    const commit = () => {
+      if (M.user[kLo] === lo && M.user[kHi] === hi) return;
+      M.user[kLo] = lo; M.user[kHi] = hi; persist(); view();
+    };
+    const valueAt = (x) => { const r = track.getBoundingClientRect(); return clamp(min + Math.max(0, Math.min(1, (x - r.left) / r.width)) * (max - min)); };
+    let active = null, startX = 0;
+    const move = (v) => { if (active === "lo") lo = Math.min(v, hi); else if (active === "hi") hi = Math.max(v, lo); draw(); commit(); };
+    track.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      track.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      const v = valueAt(e.clientX);
+      if (lo === hi) {
+        // Together: the half pressed (the lower thumb sits left of the value)
+        // decides, and dragging still works in either direction.
+        const r = track.getBoundingClientRect(), at = r.left + (pct(lo) / 100) * r.width;
+        active = v < lo ? "lo" : v > hi ? "hi" : Math.abs(e.clientX - at) > 1 ? (e.clientX < at ? "lo" : "hi") : null;
+      } else active = Math.abs(v - lo) <= Math.abs(v - hi) ? "lo" : "hi";
+      if (active) move(v);
     });
+    track.addEventListener("pointermove", (e) => {
+      if (!track.hasPointerCapture(e.pointerId)) return;
+      if (!active) { if (Math.abs(e.clientX - startX) < 3) return; active = e.clientX < startX ? "lo" : "hi"; }
+      move(valueAt(e.clientX));
+    });
+    const release = (e) => { if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId); active = null; };
+    track.addEventListener("pointerup", release);
+    track.addEventListener("pointercancel", release);
+    for (const [t, end] of [[tLo, "lo"], [tHi, "hi"]]) {
+      t.addEventListener("keydown", (e) => {
+        const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        active = end;
+        move(clamp((end === "lo" ? lo : hi) + step));
+        active = null;
+      });
+    }
+    draw();
+    return h("div", { class: "slider dual-slider", title: help }, h("span", {}, text), track, out);
+  };
+  const toggle = (key, text, help) => {
+    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(!!o[key]), title: help }, text);
+    b.addEventListener("click", () => { M.user[key] = !effective()[key]; b.setAttribute("aria-pressed", String(M.user[key])); persist(); view(); });
     return b;
-  });
+  };
+  const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
+  const rated = [...store.concepts.values()].some((c) => c.links.some((l) => l.rel));
+  const walls = (v) => (v === 0 ? "same folder" : `${v} bubble${v === 1 ? "" : "s"}`);
+  // The distance slider's range depends on how distance is counted.
+  const distance = h("div", { class: "dist" });
+  const drawDistance = () => {
+    const e = effective();
+    const max = e.distMeasure === "path" ? 2 * maxDepth : maxDepth;
+    const measure = h("div", { class: "row seg" }, h("span", {}, "Count"),
+      ...[["out", "Steps out", "The larger of the two ends' distances out to the lowest folder they share."],
+          ["path", "Path length", "All bubble walls crossed, out from one end and in to the other."]].map(([key, text, help]) => {
+        const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(e.distMeasure === key), title: help }, text);
+        b.addEventListener("click", () => {
+          if (effective().distMeasure === key) return;
+          M.user.distMeasure = key;
+          M.user.distMin = 0; M.user.distMax = key === "path" ? 2 * maxDepth : maxDepth;
+          persist(); drawDistance(); view();
+        });
+        return b;
+      }));
+    distance.replaceChildren(
+      dual(["distMin", "distMax"], "Distance", 0, max, walls,
+        "Which links to show by how many bubble walls separate their ends; 0 is links within one folder."),
+      measure);
+  };
+  drawDistance();
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
 
   // Tuning: every layout and routing parameter, with a way to keep the result.
   const snippet = h("pre", { class: "map-snippet", hidden: true });
   const showSnippet = () => {
     const e = effective();
-    const lines = ["[map]", ...["labels", "detail"].map((k) => `${k} = ${e[k]}`), `links = "${e.links}"`,
-      ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
+    const lines = ["[map]", ...Object.keys(VIEW_DEFAULTS).map((k) => `${k} = ${e[k]}`), ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
     snippet.textContent = lines.join("\n");
     snippet.hidden = !snippet.hidden;
   };
@@ -960,11 +1222,22 @@ function controls({ view, tune, readout }) {
   return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
-      h("div", { class: "legend" }, h("span", {}, "Links"), modes),
+      h("div", { class: "row" },
+        toggle("showLinks", "Links", "Show links at all."),
+        rated ? toggle("hideImplied", "Hide implied", "Hide a link when a chain of links at least as strong already connects its ends.") : "",
+        toggle("focusOnly", "Focused folder only", "When zoomed into a folder, show only links with an end inside it."),
+        toggle("lanes", "Lanes", "One-way links keep to one side of their route and two-way links take the middle, so opposite directions separate.")),
       h("div", { class: "sliders" },
+        distance,
+        rated ? dual(["rateMin", "rateMax"], "Importance", 1, 3, (v) => STRENGTH_LABEL[v],
+          "Which links to show by rating: see also, uses (and unrated links), requires.") : "",
         slider("labels", "Labels", 5, 120, 1, view, "Most labels shown at once, most important first."),
         slider("detail", "Open folders at", 60, 400, 10, view, "A folder opens when its radius on screen passes this many pixels.")),
       legend,
+      h("div", { class: "legend route-key" },
+        h("span", {}, h("i", { class: "key-dir" }), "from a note to what it links to"),
+        h("span", {}, h("i", { class: "key-both" }), "both ways"),
+        rated ? h("span", {}, h("i", { class: "key-dotted" }), "see also") : ""),
       h("div", { class: "row" },
         button("Show everything", () => M.reset?.()),
         button("Default view", () => { for (const k of Object.keys(VIEW_DEFAULTS)) delete M.user[k]; persist(); location.reload(); }))),

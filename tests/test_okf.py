@@ -71,3 +71,23 @@ def test_headings_and_sections(bundle_dir):
     assert "Tanh" in dyn and "Spectral radius" in dyn and "Genetic" not in dyn
     assert section(body, "## Stability").startswith("## Stability")
     assert section(body, "missing") is None
+
+
+def test_link_ratings_and_requires_cycles(tmp_path):
+    from rdstudio.okf import rating
+
+    assert rating("requires") == "requires" and rating("See-also") == "see also" and rating("seealso") == "see also"
+    assert rating("Uses") == "uses" and rating("a tooltip") is None and rating(None) is None
+
+    def note(cid, body):
+        write(tmp_path, f"{cid}.md", f"---\ntype: Definition\n---\n{body}\n")
+
+    note("a", 'Needs [b](/b.md "requires") and [c](/c.md \'uses\') and [d](/d.md "a tooltip").')
+    note("b", 'Needs [c](/c.md "requires").')
+    note("c", 'Needs [a](/a.md "requires"), see [d](/d.md "see also").')
+    note("d", "No links.")
+    b = Bundle.load(tmp_path)
+    rels = {(l.target, l.rel) for l in b.concepts["a"].links}
+    assert rels == {("b", "requires"), ("c", "uses"), ("d", None)}
+    assert b.requires_cycles() == [["a", "b", "c"]]
+    assert any(i.level == "warning" and "requires cycle: a, b, c" in i.message for i in b.lint())
