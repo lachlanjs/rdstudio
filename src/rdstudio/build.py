@@ -180,6 +180,14 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
 
     for name, text in payload.items():
         _write_if_changed(data / name, text)
+    # Installable as an app (add to home screen), opening full screen.
+    _write_if_changed(site / "manifest.webmanifest", _dump({
+        "name": cfg.title, "short_name": cfg.title[:24], "start_url": "./", "scope": "./",
+        "display": "fullscreen", "display_override": ["fullscreen", "standalone"],
+        "background_color": "#141a20", "theme_color": "#141a20",
+        "icons": [{"src": f"icon-{n}.png", "sizes": f"{n}x{n}", "type": "image/png", "purpose": "any maskable"}
+                  for n in (192, 512)],
+    }))
     vfile = data / "version.json"
     try:
         old = json.loads(vfile.read_text(encoding="utf-8")).get("version")

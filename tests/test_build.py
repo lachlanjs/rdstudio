@@ -41,6 +41,9 @@ def test_build_and_history(tmp_path, bundle_dir):
     subprocess.run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"], check=True)
     cfg = config.load(root)
     site = build(cfg)
+    manifest = json.loads((site / "manifest.webmanifest").read_text())
+    assert manifest["display"] == "fullscreen" and manifest["name"] == cfg.title
+    assert (site / "icon-512.png").is_file()
     data = site / "data"
     concepts = json.loads((data / "concepts.json").read_text())
     assert {c["id"] for c in concepts} >= {"design/model", "research/spectrum"}
