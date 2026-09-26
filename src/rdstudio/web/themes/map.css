@@ -1,0 +1,136 @@
+/* Map: a topographic chart. Folders are tinted land with dash-dot borders on a sea of contours, notes are town dots, routes are cased roads. Dark is a night navigation chart. */
+
+:root {
+  --font-text: "Source Serif 4", Georgia, serif;
+  --font-ui: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --text-size: 18px;
+  --radius: 2px;
+  --map-image: var(--contours);
+  --region-open-alpha: .28;
+  --region-closed-alpha: .45;
+  --region-dash: 7 3 1.5 3;
+  --territory-font: "Source Serif 4", Georgia, serif;
+  --territory-style: italic;
+  --territory-weight: 600;
+  --territory-spacing: 0.12em;
+  --territory-size: 15px;
+  --place-font: "Source Sans 3", sans-serif;
+  --route-opacity: .85;
+  --paper: #f3f5f0;
+  --paper-raised: #fbfcf9;
+  --paper-sunk: #e6ebe3;
+  --ink: #23291f;
+  --ink-soft: #4f5a4a;
+  --ink-faint: #838d7f;
+  --rule: #d3dbcf;
+  --grid: #e1e8dd;
+  --accent: #1d4e89;
+  --accent-soft: #dde7f3;
+  --contours: repeating-radial-gradient(circle at 18% 22%, transparent 0 22px, rgb(70 120 140 / .10) 22px 23px), repeating-radial-gradient(circle at 82% 78%, transparent 0 30px, rgb(70 120 140 / .08) 30px 31px);
+  --map-canvas: #d9e7ec;
+  --place-fill: #26302a;
+  --route-from: #1d4e89;
+  --route-to: #b8321f;
+  --route-both: #6c7466;
+  --route-filter: drop-shadow(0 0 1.2px #ffffff) drop-shadow(0 0 .6px #ffffff);
+  --territory-ink: #3d4a39;
+  color-scheme: light;
+  --reviewed: #2e7a58;
+  --machine: #5b6b7a;
+  --unverified: #a86f12;
+  --stale: #b0413e;
+  --cat-knowledge: #1d4e89;
+  --cat-code: #2f6b3a;
+  --cat-reports: #9a5a14;
+  --cat-agent: #6b5a1a;
+  --cat-other: #6c7466;
+  --g0: #8fb573;
+  --g1: #d8bf78;
+  --g2: #c79a8c;
+  --g3: #a9c28e;
+  --g4: #cdb38f;
+  --g5: #c2cc8a;
+  --g6: #d1a878;
+  --g7: #b8b08f;
+}
+
+:root[data-mode="dark"] {
+  --paper: #0f1822;
+  --paper-raised: #15212d;
+  --paper-sunk: #0b131b;
+  --ink: #e6edf2;
+  --ink-soft: #9fb3c2;
+  --ink-faint: #6d8292;
+  --rule: #233443;
+  --grid: #172533;
+  --accent: #f0b429;
+  --accent-soft: #3a2f12;
+  --contours: repeating-radial-gradient(circle at 18% 22%, transparent 0 22px, rgb(120 170 200 / .07) 22px 23px), repeating-radial-gradient(circle at 82% 78%, transparent 0 30px, rgb(120 170 200 / .05) 30px 31px);
+  --map-canvas: #0a1520;
+  --place-fill: #f3e7c4;
+  --route-from: #5fb3f0;
+  --route-to: #f07a5f;
+  --route-both: #7f93a3;
+  --route-filter: drop-shadow(0 0 1.2px #0a1520);
+  --territory-ink: #c9d6df;
+  color-scheme: dark;
+  --reviewed: #5fbf8f;
+  --machine: #93a4b3;
+  --unverified: #e0a847;
+  --stale: #ec7a73;
+  --cat-knowledge: #8fc1f0;
+  --cat-code: #8fd19e;
+  --cat-reports: #f0b429;
+  --cat-agent: #d8c27a;
+  --cat-other: #9fb3c2;
+  --g0: #3f6b4a;
+  --g1: #6b6040;
+  --g2: #6b4a45;
+  --g3: #4f5f3a;
+  --g4: #5d4c3a;
+  --g5: #5c6638;
+  --g6: #6e5638;
+  --g7: #57553f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #0f1822;
+    --paper-raised: #15212d;
+    --paper-sunk: #0b131b;
+    --ink: #e6edf2;
+    --ink-soft: #9fb3c2;
+    --ink-faint: #6d8292;
+    --rule: #233443;
+    --grid: #172533;
+    --accent: #f0b429;
+    --accent-soft: #3a2f12;
+    --contours: repeating-radial-gradient(circle at 18% 22%, transparent 0 22px, rgb(120 170 200 / .07) 22px 23px), repeating-radial-gradient(circle at 82% 78%, transparent 0 30px, rgb(120 170 200 / .05) 30px 31px);
+    --map-canvas: #0a1520;
+    --place-fill: #f3e7c4;
+    --route-from: #5fb3f0;
+    --route-to: #f07a5f;
+    --route-both: #7f93a3;
+    --route-filter: drop-shadow(0 0 1.2px #0a1520);
+    --territory-ink: #c9d6df;
+    color-scheme: dark;
+    --reviewed: #5fbf8f;
+    --machine: #93a4b3;
+    --unverified: #e0a847;
+    --stale: #ec7a73;
+    --cat-knowledge: #8fc1f0;
+    --cat-code: #8fd19e;
+    --cat-reports: #f0b429;
+    --cat-agent: #d8c27a;
+    --cat-other: #9fb3c2;
+    --g0: #3f6b4a;
+    --g1: #6b6040;
+    --g2: #6b4a45;
+    --g3: #4f5f3a;
+    --g4: #5d4c3a;
+    --g5: #5c6638;
+    --g6: #6e5638;
+    --g7: #57553f;
+  }
+}

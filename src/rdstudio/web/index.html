@@ -8,13 +8,15 @@
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <link id="code-light" rel="stylesheet" href="vendor/hljs/github.min.css" media="(prefers-color-scheme: light)">
 <link id="code-dark" rel="stylesheet" href="vendor/hljs/github-dark.min.css" media="(prefers-color-scheme: dark)">
-<link id="theme-css" rel="stylesheet" href="themes/notebook.css">
+<link id="theme-css" rel="stylesheet" href="themes/studio.css">
 <script>
   // Apply the saved theme before first paint (see js/settings.js).
   (function () {
     try {
-      var themes = ["notebook", "journal", "modern", "blueprint", "terminal"];
-      var theme = localStorage.getItem("rdstudio.theme"), mode = localStorage.getItem("rdstudio.mode");
+      var themes = ["studio", "notebook", "map", "space", "cyber"];
+      var former = { notebook: "studio", journal: "studio", modern: "studio", blueprint: "map", terminal: "cyber" };
+      var theme = localStorage.getItem("rdstudio.look") || former[localStorage.getItem("rdstudio.theme")];
+      var mode = localStorage.getItem("rdstudio.mode");
       if (themes.indexOf(theme) > 0) document.getElementById("theme-css").href = "themes/" + theme + ".css";
       if (mode === "light" || mode === "dark") {
         document.documentElement.dataset.mode = mode;

@@ -619,6 +619,16 @@ export function mapView(focusRef = "") {
   // full strength clipped to the focused folder, so the detail you are looking
   // at is clear while routes still show where they lead.
   const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
+  // Filters themes can use through --route-filter, --region-filter and
+  // --place-filter. User-space regions so thin, straight paths are not clipped.
+  const filter = (id) => defs.append("filter").attr("id", id).attr("filterUnits", "userSpaceOnUse")
+    .attr("x", -5000).attr("y", -5000).attr("width", 20000).attr("height", 20000);
+  const sketch = filter("m-sketch"); // pencil: a slightly wobbly line
+  sketch.append("feTurbulence").attr("type", "fractalNoise").attr("baseFrequency", 0.035).attr("numOctaves", 2).attr("seed", 7).attr("result", "noise");
+  sketch.append("feDisplacementMap").attr("in", "SourceGraphic").attr("in2", "noise").attr("scale", 3.2)
+    .attr("xChannelSelector", "R").attr("yChannelSelector", "G");
+  filter("m-soft").append("feGaussianBlur").attr("stdDeviation", 3); // nebula: soft edges
+  const gradients = defs.append("g"); // one per one-way route: direction as colour
   const gLinks = svg.append("g").attr("class", "m-routes");
   const gFocus = svg.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
   const gImplied = svg.append("g").attr("class", "m-implied-links");
@@ -686,6 +696,7 @@ export function mapView(focusRef = "") {
     const inFocus = (n) => n.ancestors().includes(focus);
     let hidden = 0;
     const kept = [];
+    // (m.dir: 1 if every link in a route runs p → q, -1 if q → p, 0 if both ways.)
     if (o.showLinks) {
       for (const [a, b, s] of model.edges) {
         if (s < o.rateMin || s > o.rateMax) continue;
@@ -715,6 +726,8 @@ export function mapView(focusRef = "") {
         m.strength = Math.max(m.strength, s);
         m.ends.add(na.data.id); m.ends.add(nb.data.id);
         m.links.push([a, b, s]);
+        const way = ra === p ? 1 : -1; // this link runs p → q (1) or q → p (-1)
+        m.dir = m.count === 1 ? way : m.dir === way ? way : 0;
         merged.set(key, m);
       }
     }
@@ -817,8 +830,24 @@ export function mapView(focusRef = "") {
     };
     const focused = focus !== L.root;
     const inFocus = (n) => n.ancestors().includes(focus);
+    // Direction as colour: a gradient running from the note that links to the
+    // note it links to; links both ways (or mixed) take the neutral colour.
+    const gradId = (m) => "rg-" + m.key.replace(/[^\w-]/g, "_");
+    const oneWay = routes.filter((m) => m.dir);
+    gradients.selectAll("linearGradient").data(oneWay, (m) => m.key).join((enter) => {
+      const g = enter.append("linearGradient").attr("gradientUnits", "userSpaceOnUse");
+      g.append("stop").attr("offset", "0").style("stop-color", "var(--route-from, var(--accent))");
+      g.append("stop").attr("offset", "1").style("stop-color", "var(--route-to, var(--stale))");
+      return g;
+    })
+      .attr("id", gradId)
+      .each(function (m) {
+        const [from, to] = m.dir > 0 ? [m.p, m.q] : [m.q, m.p];
+        d3.select(this).attr("x1", sx(from)).attr("y1", sy(from)).attr("x2", sx(to)).attr("y2", sy(to));
+      });
     const drawRoutes = (group, list) => group.selectAll("path").data(list, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
-      .attr("class", (m) => `m-link s${m.strength}${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
+      .attr("class", (m) => `m-link s${m.strength}`)
+      .style("stroke", (m) => (m.dir ? `url(#${gradId(m)})` : "var(--route-both, var(--ink-faint))"))
       .attr("stroke-width", (m) => o.width * (1 + 0.9 * Math.log2(m.count)))
       .attr("d", pathFor)
       .selectAll("title").data((m) => [m]).join("title")
@@ -1062,9 +1091,9 @@ function controls({ view, tune, readout }) {
     let lo = clamp(now[kLo]), hi = Math.max(lo, clamp(now[kHi]));
     const track = h("span", { class: "dual" });
     const fill = h("span", { class: "dual-fill" });
-    const thumb = (end) => h("span", { class: "dual-thumb", role: "slider", tabindex: 0, "aria-label": `${text}: ${end}`,
+    const thumb = (end, cls) => h("span", { class: `dual-thumb ${cls}`, role: "slider", tabindex: 0, "aria-label": `${text}: ${end}`,
       "aria-valuemin": min, "aria-valuemax": max });
-    const tLo = thumb("from"), tHi = thumb("to");
+    const tLo = thumb("from", "lo"), tHi = thumb("to", "hi");
     track.append(fill, tLo, tHi);
     const out = h("output");
     const pct = (v) => (max === min ? 0 : ((v - min) / (max - min)) * 100);
@@ -1086,8 +1115,12 @@ function controls({ view, tune, readout }) {
       track.setPointerCapture(e.pointerId);
       startX = e.clientX;
       const v = valueAt(e.clientX);
-      if (lo === hi) active = v < lo ? "lo" : v > hi ? "hi" : null; // together: wait for the drag direction
-      else active = Math.abs(v - lo) <= Math.abs(v - hi) ? "lo" : "hi";
+      if (lo === hi) {
+        // Together: the half pressed (the lower thumb sits left of the value)
+        // decides, and dragging still works in either direction.
+        const r = track.getBoundingClientRect(), at = r.left + (pct(lo) / 100) * r.width;
+        active = v < lo ? "lo" : v > hi ? "hi" : Math.abs(e.clientX - at) > 1 ? (e.clientX < at ? "lo" : "hi") : null;
+      } else active = Math.abs(v - lo) <= Math.abs(v - hi) ? "lo" : "hi";
       if (active) move(v);
     });
     track.addEventListener("pointermove", (e) => {
@@ -1186,7 +1219,10 @@ function controls({ view, tune, readout }) {
         slider("labels", "Labels", 5, 120, 1, view, "Most labels shown at once, most important first."),
         slider("detail", "Open folders at", 60, 400, 10, view, "A folder opens when its radius on screen passes this many pixels.")),
       legend,
-      rated ? h("p", { class: "map-hint" }, "On hover: dark routes lead to what a note needs, coloured routes to what needs it.") : "",
+      h("div", { class: "legend route-key" },
+        h("span", {}, h("i", { class: "key-dir" }), "from a note to what it links to"),
+        h("span", {}, h("i", { class: "key-both" }), "both ways"),
+        rated ? h("span", {}, h("i", { class: "key-dotted" }), "see also") : ""),
       h("div", { class: "row" },
         button("Show everything", () => M.reset?.()),
         button("Default view", () => { for (const k of Object.keys(VIEW_DEFAULTS)) delete M.user[k]; persist(); location.reload(); }))),
