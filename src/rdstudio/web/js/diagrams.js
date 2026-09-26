@@ -56,6 +56,14 @@ export function mermaidConfig() {
       actorTextColor: ink,
       signalColor: soft,
       signalTextColor: ink,
+      // xychart: bars muted, the first line in the accent, so both read.
+      xyChart: {
+        backgroundColor: paper,
+        titleColor: ink,
+        xAxisLabelColor: soft, xAxisTitleColor: soft, xAxisTickColor: faint, xAxisLineColor: faint,
+        yAxisLabelColor: soft, yAxisTitleColor: soft, yAxisTickColor: faint, yAxisLineColor: faint,
+        plotColorPalette: [faint, accent, soft, ink].join(", "),
+      },
     },
   };
 }

@@ -48,3 +48,12 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
+- Understanding layer (proposed; see the [manifesto](/ideas/manifesto/motivation.md)):
+  [where it lives](/ideas/learning/tool-boundary.md),
+  [PID feature map](/ideas/learning/pid-feature-map.md),
+  [professional mode](/ideas/learning/professional-mode.md),
+  [nested links](/ideas/learning/nested-links.md),
+  [learner record](/ideas/learning/learner-record.md),
+  [tours and exercises](/ideas/learning/tours-and-exercises.md),
+  [dashboard editing](/ideas/learning/dashboard-editing.md),
+  [alpha trials](/ideas/learning/alpha-trials.md)
