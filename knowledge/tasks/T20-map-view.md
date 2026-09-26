@@ -60,6 +60,15 @@ test bed. The label limit must be configurable.
   Parameter sweeps showed layout parameters move route crossings by only
   about 7%: most crossings come from the link structure itself.
 
+# Fourth pass (developer feedback: far more space, contents crowding the middle)
+
+- Top-down spreading layout: contents scaled to a share of each folder, then
+  spread evenly by a deterministic force simulation, drawn towards the side
+  where their links leave; new settings `room`, `spread`, `outward`.
+- Defaults: room 0.3, spacing 90, margin 60, dot 0.6. Crossings through
+  bubbles 0 in the three views checked; with subfolders smaller on screen,
+  each view shows less at once until zoomed.
+
 # Next
 
 Use it and tune. Open questions: straight region-to-region lines cross other

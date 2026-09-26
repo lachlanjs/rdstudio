@@ -43,11 +43,16 @@ Each is checkable by looking at a screenshot or reading the code.
 
 # Design
 
-- **Layout:** nested circle packing of the folder tree (d3 `pack`), then each
-  folder's contents are pulled in from its edge to leave a margin. Each note
-  gets a slot sized by importance (landmark flag, then PageRank over links, in
-  a narrow range) and is drawn as a marker about half that size, capped on
-  screen. Within a folder, notes are ordered so linked notes sit together.
+- **Layout:** circle packing of the folder tree gives a starting
+  arrangement. Then, from the top down, each folder's contents are scaled to
+  fill only a share of it (`room`) and spread out by a short, fixed-length
+  force simulation inside its wall: items push apart evenly, keep a minimum
+  gap (`spacing`), stay clear of the wall (`margin`), linked siblings are
+  drawn together, and each item is drawn towards the side of the folder where
+  its links leave (`outward`), which shortens routes and reduces crossings. A
+  final pass separates anything still overlapping. The simulation has no
+  randomness, so the same bundle always gives the same map. Note markers are
+  a fraction (`dot`) of their slot, capped on screen.
 - **Style:** cartographic. Notes are places, folders are territories (faint
   fill, thin boundary, name along the top when open, in the middle when
   closed), links are routes. Plain background.
@@ -92,9 +97,12 @@ current values in the right form to copy into a project.
 | `labels` | 30 | Most labels shown at once, most important first |
 | `detail` | 140 | A folder opens when its radius on screen passes this many pixels |
 | `links` | `"all"` | Which links to draw: `all`, `within` (same folder), `across`, `none` |
-| `spacing` | 44 | Gap between neighbouring bubbles, in layout units (the map is 1000 across) |
-| `margin` | 44 | Space between a folder's edge and its contents, where routes reach the gates |
-| `dot` | 0.45 | A note's marker as a fraction of its slot |
+| `room` | 0.3 | How much of a folder its contents fill; lower leaves more space between everything |
+| `spread` | 1 | How strongly items in a folder push apart to use its space evenly |
+| `outward` | 1 | How strongly an item moves to the side of its folder where its links leave |
+| `spacing` | 90 | Least gap between neighbouring items, in map units (the map is 1000 across), scaled down inside smaller folders |
+| `margin` | 60 | Space between a folder's edge and its contents, where routes reach the gates; scaled like spacing |
+| `dot` | 0.6 | A note's marker as a fraction of its slot |
 | `dotMax` | 10 | Cap on a marker's radius on screen, in pixels |
 | `bundle` | 0.1 | How much cheaper a corridor becomes each time a route uses it |
 | `detour` | 8 | Cost multiplier for a route segment through a bubble |
