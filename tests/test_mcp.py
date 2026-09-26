@@ -18,7 +18,7 @@ def test_tools(bundle_dir):
     server = create_server(config.load(root))
     names = {t.name for t in asyncio.run(server.list_tools())}
     assert names == {"brief", "search", "outline", "read", "list_concepts", "record", "backlinks", "review_queue",
-                     "procedure_next", "procedure_propose", "promote"}
+                     "study_path", "procedure_next", "procedure_propose", "promote"}
 
     assert "concepts in" in call(server, "brief")
 
@@ -40,4 +40,5 @@ def test_tools(bundle_dir):
 
     queue = json.loads(call(server, "review_queue"))
     assert [c["id"] for c in queue["changed_since_review"]] == ["design/model"]
+    assert json.loads(call(server, "study_path", id="design/model"))[-1]["id"] == "design/model"
     assert json.loads(call(server, "backlinks", id="design/model"))[0]["id"] in {"decisions/tanh", "design/overview"}

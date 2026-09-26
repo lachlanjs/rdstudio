@@ -220,6 +220,37 @@ def cmd_brief(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     return 0
 
 
+def cmd_learner(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    from . import learner
+
+    if args.action == "where":
+        state = "on" if learner.enabled(cfg) else "off (set [learner] enabled = true in " + str(config_mod.user_config_path()) + ")"
+        print(f"learner record: {state}")
+        print(f"project id:     {learner.project_id(cfg.root)}")
+        print(f"folder:         {learner.record_dir(cfg)}")
+        return 0
+    for e in learner.events(cfg)[-args.limit:]:
+        rest = {k: v for k, v in e.items() if k not in ("at", "event", "concept")}
+        print(f"{e.get('at', '')}  {e.get('event', ''):10} {e.get('concept', '') or ''}  {json.dumps(rest) if rest else ''}")
+    return 0
+
+
+def cmd_path(args: argparse.Namespace, cfg: config_mod.Config) -> int:
+    bundle = _bundle(cfg)
+    if args.concept:
+        cid = bundle.resolve_id(args.concept)
+        if not cid:
+            print(f"no such concept: {args.concept}", file=sys.stderr)
+            return 1
+        ids = bundle.prerequisites(cid) + [cid]
+    else:
+        ids = sorted(bundle.concepts, key=lambda c: bundle.prerequisite_order()[c]["order"])
+    order = bundle.prerequisite_order()
+    for i, cid in enumerate(ids, 1):
+        print(f"{i:3}. [{order[cid]['depth']}] {cid}  {bundle.concepts[cid].title}")
+    return 0
+
+
 def cmd_mcp(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .mcp_server import run
 
@@ -309,6 +340,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("brief", help="print a short orientation for an agent session")
     s.set_defaults(func=cmd_brief)
+
+    s = sub.add_parser("learner", help="where your private learner record is, or its recent events")
+    s.add_argument("action", choices=["where", "log"], nargs="?", default="where")
+    s.add_argument("-n", "--limit", type=int, default=30)
+    s.set_defaults(func=cmd_learner)
+
+    s = sub.add_parser("path", help="a concept's prerequisites in reading order, or the whole bundle's reading order")
+    s.add_argument("concept", nargs="?", help="concept id; omit for the whole bundle")
+    s.set_defaults(func=cmd_path)
 
     s = sub.add_parser("mcp", help="run the MCP server on stdio")
     s.add_argument("--agent", help="actor id stamped on the agent's writes (default: [actors] agent)")

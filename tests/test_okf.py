@@ -91,3 +91,28 @@ def test_link_ratings_and_requires_cycles(tmp_path):
     assert rels == {("b", "requires"), ("c", "uses"), ("d", None)}
     assert b.requires_cycles() == [["a", "b", "c"]]
     assert any(i.level == "warning" and "requires cycle: a, b, c" in i.message for i in b.lint())
+
+
+def test_reading_order_depth_and_study_path(tmp_path):
+    def note(cid, title, body=""):
+        write(tmp_path, f"{cid}.md", f"---\ntype: Definition\ntitle: {title}\n---\n{body}\n")
+
+    note("basics/sets", "Sets")
+    note("basics/maps", "Maps", '[sets](/basics/sets.md "requires")')
+    note("advanced/groups", "Groups", '[maps](/basics/maps.md "requires"), [rings](/advanced/rings.md "see also")')
+    note("advanced/rings", "Rings", '[groups](/advanced/groups.md "requires")')
+    note("advanced/fields", "Fields", '[rings](/advanced/rings.md "requires"), [modules](/advanced/modules.md "requires")')
+    note("advanced/modules", "Modules", '[fields](/advanced/fields.md "requires")')  # a cycle with fields
+    b = Bundle.load(tmp_path)
+    order = b.prerequisite_order()
+    pos = {cid: v["order"] for cid, v in order.items()}
+    assert sorted(pos.values()) == list(range(6))
+    for cid, needs in b.requires_graph().items():
+        for dep in needs:
+            if cid not in ("advanced/fields", "advanced/modules"):
+                assert pos[dep] < pos[cid], (dep, cid)
+    assert [order[c]["depth"] for c in ("basics/sets", "basics/maps", "advanced/groups", "advanced/rings")] == [0, 1, 2, 3]
+    assert order["advanced/fields"]["depth"] == order["advanced/modules"]["depth"] == 4
+    assert b.prerequisites("advanced/rings") == ["basics/sets", "basics/maps", "advanced/groups"]
+    assert b.prerequisites("advanced/fields") == ["basics/sets", "basics/maps", "advanced/groups", "advanced/rings", "advanced/modules"]
+    assert b.prerequisites("basics/sets") == []

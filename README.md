@@ -46,6 +46,7 @@ knowledge base with you and fills in the first notes.
 rdstudio serve --host 0.0.0.0    # reachable from other devices (e.g. over Tailscale)
 rdstudio verify <concept-id>     # mark a note as checked by you
 rdstudio check                   # check the knowledge base's format
+rdstudio path <concept-id>       # what to read first, from links rated "requires"
 rdstudio --help                  # everything else
 ```
 
@@ -63,6 +64,16 @@ rdstudio --help                  # everything else
 - **Map settings:** the Map tab's Tuning panel adjusts layout and routing;
   put values you like under `[map]` in `rdstudio.toml` to make them the
   project's defaults (see `knowledge/design/map-view.md`).
+- **Learner record:** a private record of what you study, kept outside the
+  project (`rdstudio learner` shows where). Off until you add this to
+  `~/.config/rdstudio/config.toml`:
+
+  ```toml
+  [learner]
+  enabled = true
+  # path = "~/knowledge/learning"   # optional: somewhere versioned and private
+  ```
+
 - **Static site:** `rdstudio export <dir>` writes a snapshot that any static
   host can serve (see below).
 
