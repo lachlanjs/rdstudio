@@ -23,3 +23,4 @@
 * [T17 — Graph dragging, graph options, themes and CI publishing](T17-settings-themes-ci.md) - Fix node dragging, add persistent force options, a Settings tab with five themes, and CI export guidance.
 * [T18 — Mermaid diagrams in concepts and reports](T18-mermaid.md) - Render Mermaid diagrams offline in the dashboard and in reports, themed, with agent guidance.
 * [T19 — AGENTS.md and OpenCode support](T19-harnesses.md) - Make rdstudio init set up OpenCode (and other AGENTS.md harnesses) alongside Claude Code.
+* [T20 — Map view (first version)](T20-map-view.md) - A Map tab showing folders as nested regions with links drawn at their scale, tested on a separate differential geometry bundle.
