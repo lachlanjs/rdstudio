@@ -1,9 +1,10 @@
-// Map tab: the folder tree as nested regions (circle packing), with each link
-// drawn at the scale where it lives. See knowledge/design/map-view.md.
+// Map tab: the folder tree as nested territories (circle packing), notes as
+// places, and links as routes that travel through the hierarchy: out of each
+// folder by a gate on its edge, across the lowest folder containing both ends,
+// and in again. See knowledge/design/map-view.md.
 //
-// Everything is drawn in screen coordinates on every zoom frame: the packed
-// layout is fixed, and what is open, which links are merged and which labels
-// fit all depend on the current zoom.
+// Layout and routes are computed in layout units and cached; every zoom frame
+// only transforms them to the screen and decides what is open and labelled.
 
 import { store } from "./data.js";
 import { h, conceptHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
@@ -12,23 +13,67 @@ import { h, conceptHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
 
 const KEY = "rdstudio.map";
 const SIZE = 1000; // layout units
-export const MAP_DEFAULTS = { labels: 30, detail: 140, links: "all" };
+
+// View settings, shown in the Options panel.
+export const VIEW_DEFAULTS = { labels: 30, detail: 140, links: "all" };
 const LINK_MODES = [["all", "All"], ["within", "Within folders"], ["across", "Across folders"], ["none", "None"]];
+
+// Tuning parameters, shown in the Tuning panel and settable per project under
+// [map] in rdstudio.toml. [key, label, min, max, step, default, what it does]
+export const TUNING = [
+  ["spacing", "Space between items", 4, 80, 1, 44, "Gap between neighbouring bubbles, in layout units (the map is 1000 across)."],
+  ["margin", "Margin inside folders", 0, 80, 1, 44, "Space between a folder's edge and its contents, where routes reach the gates."],
+  ["dot", "Dot size", 0.25, 0.9, 0.05, 0.45, "A note's dot as a fraction of the space the layout gives it."],
+  ["dotMax", "Largest dot", 5, 24, 1, 10, "Cap on a dot's radius on screen, in pixels."],
+  ["bundle", "Bundling", 0, 0.5, 0.05, 0.1, "How much cheaper a corridor becomes each time a route uses it; higher gathers routes into trunks."],
+  ["detour", "Avoid crossing bubbles", 1, 50, 1, 8, "Cost multiplier for a route segment that passes through a bubble."],
+  ["bow", "Bow of direct links", 0, 0.3, 0.01, 0.12, "Sideways curve of a link with nothing in its way, as a fraction of its length."],
+  ["width", "Line width", 0.5, 3, 0.1, 1.2, "Width of a route carrying one link, in pixels."],
+];
+const TUNING_DEFAULTS = Object.fromEntries(TUNING.map((t) => [t[0], t[5]]));
+
+// Marker shape per concept type (lower case). Projects override or extend this
+// under [map.markers] in rdstudio.toml; unknown types are circles.
+export const MARKERS = {
+  definition: "circle", theorem: "diamond", lemma: "diamond", proposition: "diamond", corollary: "diamond",
+  example: "triangle", trick: "square", reference: "ring", overview: "star",
+  decision: "square", task: "triangle", question: "cross", idea: "wye", procedure: "star",
+};
+const SYMBOLS = {
+  circle: d3.symbolCircle, diamond: d3.symbolDiamond, triangle: d3.symbolTriangle, square: d3.symbolSquare,
+  star: d3.symbolStar, cross: d3.symbolCross, wye: d3.symbolWye, ring: d3.symbolCircle,
+};
 const PALETTE = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `var(--g${i})`);
 
 const saved = (() => {
   try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
 })();
 
+// User choices (this browser) layered over project defaults over built-in defaults.
 const M = {
-  opts: Object.assign({}, MAP_DEFAULTS, saved.opts || {}),
+  user: saved.user || saved.opts || {},
   transform: saved.transform ? d3.zoomIdentity.translate(saved.transform.x, saved.transform.y).scale(saved.transform.k) : null,
 };
+
+function projectMap() {
+  return store.site.map || {};
+}
+
+function effective() {
+  const project = Object.fromEntries(Object.entries(projectMap()).filter(([k]) => k !== "markers"));
+  return Object.assign({}, VIEW_DEFAULTS, TUNING_DEFAULTS, project, M.user);
+}
+
+function markerFor(type) {
+  const custom = Object.fromEntries(Object.entries(projectMap().markers || {}).map(([k, v]) => [k.toLowerCase(), v]));
+  const shape = custom[String(type || "").toLowerCase()] || MARKERS[String(type || "").toLowerCase()] || "circle";
+  return SYMBOLS[shape] ? shape : "circle";
+}
 
 function persist() {
   const t = M.transform;
   try {
-    localStorage.setItem(KEY, JSON.stringify({ opts: M.opts, transform: t ? { x: t.x, y: t.y, k: t.k } : null }));
+    localStorage.setItem(KEY, JSON.stringify({ user: M.user, transform: t ? { x: t.x, y: t.y, k: t.k } : null }));
   } catch { /* storage unavailable */ }
 }
 
@@ -102,31 +147,43 @@ function buildModel() {
   const leaves = new Map();
   for (const c of concepts) {
     const landmark = c.meta?.landmark === true;
-    const leaf = {
-      kind: "concept", id: "c:" + c.id, ref: c.id, label: c.title, c, landmark,
+    leaves.set(c.id, {
+      kind: "concept", id: "c:" + c.id, ref: c.id, label: c.title, c, landmark, marker: markerFor(c.type),
       weight: 1 + 2.5 * (rank.get(c.id) / top) + (landmark ? 1.5 : 0),
-    };
-    leaves.set(c.id, leaf);
+    });
   }
   for (const d of Object.values(store.tree)) {
     const node = dirs.get(d.id);
-    const subdirs = d.children.map((id) => dirs.get(id)).filter(Boolean);
-    const notes = d.concepts.map((id) => leaves.get(id)).filter(Boolean);
-    node.subdirs = subdirs;
-    node.notes = chainOrder(notes, adjacent);
+    node.subdirs = d.children.map((id) => dirs.get(id)).filter(Boolean);
+    node.notes = chainOrder(d.concepts.map((id) => leaves.get(id)).filter(Boolean), adjacent);
   }
   // Larger folders first packs more tidily; notes follow in link order.
   const size = (d) => d.notes.length + d.subdirs.reduce((s, x) => s + size(x), 0);
   for (const node of dirs.values()) {
     node.children = [...node.subdirs.sort((a, b) => size(b) - size(a)), ...node.notes];
   }
-  return { root: dirs.get(""), edges, leaves };
+  return { root: dirs.get(""), edges };
 }
 
-function layout(model) {
+function layout(model, o) {
   const root = d3.hierarchy(model.root, (d) => (d.kind === "dir" ? d.children : null))
     .sum((d) => (d.kind === "concept" ? d.weight : d.children.length ? 0 : 1));
-  d3.pack().size([SIZE, SIZE]).padding((d) => (d.depth === 0 ? 30 : 16))(root);
+  d3.pack().size([SIZE, SIZE]).padding((d) => (d.depth === 0 ? o.spacing * 1.4 : o.spacing))(root);
+  // Pull each folder's contents in from its edge, leaving a margin for routes.
+  const shrink = (node) => {
+    if (!node.children) return;
+    if (node.depth > 0) {
+      const m = Math.min(o.margin, node.r * 0.2);
+      const s = (node.r - m) / node.r;
+      for (const d of node.descendants().slice(1)) {
+        d.x = node.x + (d.x - node.x) * s;
+        d.y = node.y + (d.y - node.y) * s;
+        d.r *= s;
+      }
+    }
+    node.children.forEach(shrink);
+  };
+  shrink(root);
   const byId = new Map();
   const groups = [...new Set((root.children || []).map((c) => c.data.ref))].sort();
   root.each((n) => {
@@ -157,131 +214,249 @@ function lowestCommon(a, b) {
 
 // --------------------------------------------------------------- routing
 //
-// Links run through the gaps between the items of the folder they belong to.
-// The items' centres are triangulated (Delaunay); each triangle edge between two
-// items has a waypoint in the middle of the gap between them, and the
-// waypoints of one triangle are joined to each other. That network of
-// corridors is routed with shortest paths, and corridors already used get a
-// little cheaper, so links heading the same way bundle together.
+// Each folder has a network of corridors through the open space inside it:
+// a waypoint in the middle of each gap between neighbouring items (from a
+// Delaunay triangulation of their centres), one in the open space of each
+// triangle, and a gate on the folder's edge directly outward from each item.
+// Gates next to each other are joined, like a ring road inside the wall.
+// Routes are shortest paths through these networks, straightened where clear.
 
-const DOT = 0.55; // a note's dot, as a fraction of the space the packing gives it
-
-function itemRadius(n) {
-  return n.data.kind === "concept" ? n.r * DOT : n.r;
-}
-
-// Does the segment p–q pass through circle c (shrunk by a small margin)?
+// Does the segment p–q pass through circle c of radius r?
 function crosses(p, q, c, r) {
   const dx = q.x - p.x, dy = q.y - p.y, len2 = dx * dx + dy * dy || 1;
   const t = Math.max(0, Math.min(1, ((c.x - p.x) * dx + (c.y - p.y) * dy) / len2));
   return Math.hypot(p.x + t * dx - c.x, p.y + t * dy - c.y) < r * 0.98;
 }
 
-function corridors(folder) {
-  const items = folder.children || [];
-  const nodes = []; // waypoints: { x, y }
-  const adj = []; // waypoint index -> [{ to, w, key }]
-  const touching = new Map(); // item index -> [waypoint index]
-  if (items.length < 2) return { items, nodes, adj, touching };
-  const index = new Map(items.map((n, i) => [n, i]));
-  const add = (i, wp) => { if (!touching.has(i)) touching.set(i, []); touching.get(i).push(wp); };
-  const edgeWaypoint = new Map();
-  const waypoint = (i, j) => {
-    const key = i < j ? `${i}-${j}` : `${j}-${i}`;
-    if (edgeWaypoint.has(key)) return edgeWaypoint.get(key);
-    const a = items[i], b = items[j];
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
-    const gap = d - itemRadius(a) - itemRadius(b);
-    let id = -1;
-    if (gap > 1) {
-      const t = (itemRadius(a) + gap / 2) / d;
-      id = nodes.push({ x: a.x + dx * t, y: a.y + dy * t }) - 1;
-      adj.push([]);
-      add(i, id); add(j, id);
+function makeRouter(o) {
+  const itemRadius = (n) => (n.data.kind === "concept" ? n.r * o.dot : n.r);
+  const nets = new Map();
+
+  function network(folder) {
+    if (nets.has(folder)) return nets.get(folder);
+    const items = folder.children || [];
+    const nodes = [], adj = [];
+    const touching = new Map(items.map((_, i) => [i, []]));
+    const index = new Map(items.map((n, i) => [n, i]));
+    const discount = new Map();
+    const node = (x, y) => { adj.push([]); return nodes.push({ x, y }) - 1; };
+    const blockedBy = (p, q, skip) => items.some((m) => !skip.includes(m) && crosses(p, q, m, itemRadius(m)));
+    const link = (u, v, skip = []) => {
+      const p = nodes[u], q = nodes[v];
+      const w = Math.hypot(p.x - q.x, p.y - q.y) * (blockedBy(p, q, skip) ? o.detour : 1);
+      const key = u < v ? `${u}-${v}` : `${v}-${u}`;
+      adj[u].push({ to: v, w, key });
+      adj[v].push({ to: u, w, key });
+    };
+    const gapWaypoint = new Map();
+    const waypoint = (i, j) => {
+      const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+      if (gapWaypoint.has(key)) return gapWaypoint.get(key);
+      const a = items[i], b = items[j];
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+      const gap = d - itemRadius(a) - itemRadius(b);
+      let id = -1;
+      if (gap > 1) {
+        const t = (itemRadius(a) + gap / 2) / d;
+        id = node(a.x + dx * t, a.y + dy * t);
+        touching.get(i).push(id); touching.get(j).push(id);
+      }
+      gapWaypoint.set(key, id);
+      return id;
+    };
+    if (items.length === 2) waypoint(0, 1);
+    if (items.length >= 3) {
+      const tri = d3.Delaunay.from(items, (n) => n.x, (n) => n.y).triangles;
+      for (let t = 0; t < tri.length; t += 3) {
+        const ws = [waypoint(tri[t], tri[t + 1]), waypoint(tri[t + 1], tri[t + 2]), waypoint(tri[t + 2], tri[t])].filter((x) => x >= 0);
+        if (ws.length < 2) continue;
+        // Start from the centroid of the gaps and push it out of any item it
+        // falls in, so the middle waypoint sits in open space.
+        let mx = ws.reduce((s, x) => s + nodes[x].x, 0) / ws.length, my = ws.reduce((s, x) => s + nodes[x].y, 0) / ws.length;
+        for (let round = 0; round < 4; round++) {
+          for (const m of [items[tri[t]], items[tri[t + 1]], items[tri[t + 2]]]) {
+            const dx = mx - m.x, dy = my - m.y, d = Math.hypot(dx, dy) || 1e-6, r = itemRadius(m) * 1.04;
+            if (d < r) { mx = m.x + (dx / d) * r; my = m.y + (dy / d) * r; }
+          }
+        }
+        const mid = node(mx, my);
+        for (const x of ws) link(x, mid);
+      }
     }
-    edgeWaypoint.set(key, id);
-    return id;
-  };
-  if (items.length === 2) {
-    waypoint(0, 1);
-    return { items, nodes, adj, touching, index };
+    // Gates on the folder's edge (the root has no edge to cross).
+    const gates = [];
+    const firstGate = nodes.length; // nodes before this are corridors between items
+    if (folder.parent) {
+      const R = folder.r * 0.995;
+      items.forEach((item, i) => {
+        const dx = item.x - folder.x, dy = item.y - folder.y, d = Math.hypot(dx, dy);
+        const angle = d > 1e-6 ? Math.atan2(dy, dx) : (i / items.length) * 2 * Math.PI;
+        const g = node(folder.x + R * Math.cos(angle), folder.y + R * Math.sin(angle));
+        gates.push({ id: g, angle, item: i });
+        touching.get(i).push(g);
+      });
+      gates.sort((a, b) => a.angle - b.angle);
+      // The ring road follows the wall in short steps rather than long chords.
+      for (let k = 0; k < gates.length && gates.length > 1; k++) {
+        const g0 = gates[k], g1 = gates[(k + 1) % gates.length];
+        let span = g1.angle - g0.angle;
+        if (span <= 0) span += 2 * Math.PI;
+        const steps = Math.max(1, Math.ceil(span / (Math.PI / 12)));
+        let prev = g0.id;
+        for (let st = 1; st < steps; st++) {
+          const a = g0.angle + (span * st) / steps;
+          const id = node(folder.x + R * Math.cos(a), folder.y + R * Math.sin(a));
+          link(prev, id);
+          prev = id;
+        }
+        link(prev, g1.id);
+      }
+      // Join each gate to the nearest corridors inside.
+      const inner = nodes.map((_, id) => id).slice(0, firstGate);
+      for (const g of gates) {
+        const p = nodes[g.id];
+        inner.sort((a, b) => Math.hypot(nodes[a].x - p.x, nodes[a].y - p.y) - Math.hypot(nodes[b].x - p.x, nodes[b].y - p.y));
+        for (const id of inner.slice(0, 3)) link(g.id, id);
+      }
+    }
+    const net = { folder, items, nodes, adj, touching, index, gates, discount, itemRadius, blockedBy };
+    nets.set(folder, net);
+    return net;
   }
-  const delaunay = d3.Delaunay.from(items, (n) => n.x, (n) => n.y);
-  const tri = delaunay.triangles;
-  const link = (u, v) => {
-    const p = nodes[u], q = nodes[v];
-    // A corridor through an item is a last resort.
-    const blocked = items.some((m) => crosses(p, q, m, itemRadius(m)));
-    const w = Math.hypot(p.x - q.x, p.y - q.y) * (blocked ? 20 : 1);
-    const key = u < v ? `${u}-${v}` : `${v}-${u}`;
-    adj[u].push({ to: v, w, key });
-    adj[v].push({ to: u, w, key });
-  };
-  for (let t = 0; t < tri.length; t += 3) {
-    const [i, j, k] = [tri[t], tri[t + 1], tri[t + 2]];
-    const ws = [waypoint(i, j), waypoint(j, k), waypoint(k, i)].filter((x) => x >= 0);
-    if (ws.length < 2) continue;
-    // The open space in the middle of the triangle joins its gaps, so routes
-    // bend around the items instead of cutting across them.
-    const mid = nodes.push({
-      x: ws.reduce((sum, x) => sum + nodes[x].x, 0) / ws.length,
-      y: ws.reduce((sum, x) => sum + nodes[x].y, 0) / ws.length,
-    }) - 1;
-    adj.push([]);
-    for (const x of ws) link(x, mid);
+
+  // Dijkstra from a set of start nodes to a set of end nodes (with the cost of
+  // stepping off the network added); the networks are small.
+  function shortest(net, starts, ends) {
+    const dist = new Map(), prev = new Map(), done = new Set();
+    for (const [id, c] of starts) if (c < (dist.get(id) ?? Infinity)) dist.set(id, c);
+    let best = null, bestCost = Infinity;
+    while (true) {
+      let u = -1, du = Infinity;
+      for (const [k, v] of dist) if (!done.has(k) && v < du) { u = k; du = v; }
+      if (u < 0 || du >= bestCost) break;
+      done.add(u);
+      if (ends.has(u) && du + ends.get(u) < bestCost) { best = u; bestCost = du + ends.get(u); }
+      for (const e of net.adj[u]) {
+        const nd = du + e.w * (net.discount.get(e.key) || 1);
+        if (nd < (dist.get(e.to) ?? Infinity)) { dist.set(e.to, nd); prev.set(e.to, { from: u, key: e.key }); }
+      }
+    }
+    if (best === null) return null;
+    const path = [];
+    for (let u = best; u !== undefined; u = prev.get(u)?.from) {
+      path.push(u);
+      const step = prev.get(u);
+      if (step && o.bundle > 0) net.discount.set(step.key, Math.max(0.3, (net.discount.get(step.key) || 1) * (1 - o.bundle)));
+    }
+    return path.reverse();
   }
-  return { items, nodes, adj, touching, index };
+
+  // How a route gets on or off the network at an item or at a point.
+  function attachItem(net, item) {
+    const i = net.index.get(item);
+    const out = new Map();
+    for (const id of net.touching.get(i) || []) {
+      const p = net.nodes[id];
+      const c = Math.hypot(p.x - item.x, p.y - item.y) * (net.blockedBy(item, p, [item]) ? o.detour : 1);
+      out.set(id, c);
+    }
+    return out;
+  }
+  function attachPoint(net, pt) {
+    const out = new Map();
+    const near = net.nodes.map((p, id) => [id, Math.hypot(p.x - pt.x, p.y - pt.y)]).sort((a, b) => a[1] - b[1]).slice(0, 4);
+    for (const [id, d] of near) out.set(id, d * (net.blockedBy(pt, net.nodes[id], []) ? o.detour : 1));
+    return out;
+  }
+
+  // Straighten a route: keep only the waypoints needed to get around obstacles.
+  function pull(points, obstacles) {
+    const clear = (p, q) => !obstacles.some((m) => crosses(p, q, m, itemRadius(m)));
+    const out = [points[0]];
+    let i = 0;
+    while (i < points.length - 1) {
+      let j = points.length - 1;
+      while (j > i + 1 && !clear(points[i], points[j])) j--;
+      out.push(points[j]);
+      i = j;
+    }
+    return out;
+  }
+
+  // Inside `folder`: from item a to item b, or from item a to a point on the edge.
+  function within(folder, a, b, pt) {
+    const net = network(folder);
+    const end = pt || { x: b.x, y: b.y };
+    const obstacles = net.items.filter((n) => n !== a && n !== b);
+    const start = { x: a.x, y: a.y };
+    if (!obstacles.some((m) => crosses(start, end, m, itemRadius(m)))) return [start, end];
+    const starts = attachItem(net, a);
+    const ends = b ? attachItem(net, b) : attachPoint(net, pt);
+    const path = starts.size && ends.size ? shortest(net, starts, ends) : null;
+    return pull([start, ...(path || []).map((id) => net.nodes[id]), end], obstacles);
+  }
+
+  // Where a route leaves circle c heading for point q.
+  const edgeToward = (c, q) => {
+    const dx = q.x - c.x, dy = q.y - c.y, d = Math.hypot(dx, dy) || 1;
+    return { x: c.x + (dx / d) * c.r, y: c.y + (dy / d) * c.r };
+  };
+  const childToward = (folder, rep) => rep.ancestors().find((n) => n.parent === folder);
+
+  // From rep out to the point `exit` on the edge of `folder` (which contains rep).
+  function climb(folder, rep, exit) {
+    const child = childToward(folder, rep);
+    const path = within(folder, child, null, exit);
+    if (child === rep) return path;
+    const inner = climb(child, rep, edgeToward(child, path[1]));
+    return [...inner, ...path.slice(1)];
+  }
+
+  // The full route between two shown items, through their folders.
+  function route(ra, rb) {
+    const lca = lowestCommon(ra, rb);
+    const ca = childToward(lca, ra), cb = childToward(lca, rb);
+    const middle = within(lca, ca, cb);
+    const left = ca === ra ? [middle[0]] : climb(ca, ra, edgeToward(ca, middle[1]));
+    const right = cb === rb ? [middle[middle.length - 1]] : climb(cb, rb, edgeToward(cb, middle[middle.length - 2])).reverse();
+    return [...left, ...middle.slice(1, -1), ...right].map((p) => [p.x, p.y]);
+  }
+
+  return { route, itemRadius };
 }
 
-// Shortest path from item a to item b through the corridors (Dijkstra; the
-// networks are small). Returns layout-space points from a's centre to b's.
-function route(net, a, b, discount) {
-  const ia = net.index?.get(a), ib = net.index?.get(b);
-  const straight = [[a.x, a.y], [b.x, b.y]];
-  if (ia === undefined || ib === undefined) return straight;
-  const starts = net.touching.get(ia) || [], ends = new Set(net.touching.get(ib) || []);
-  if (!starts.length || !ends.size) return straight;
-  const dist = new Map(), prev = new Map(), done = new Set();
-  for (const s of starts) dist.set(s, Math.hypot(net.nodes[s].x - a.x, net.nodes[s].y - a.y));
-  let best = null, bestCost = Infinity;
-  while (true) {
-    let u = -1, du = Infinity;
-    for (const [k, v] of dist) if (!done.has(k) && v < du) { u = k; du = v; }
-    if (u < 0 || du >= bestCost) break;
-    done.add(u);
-    if (ends.has(u)) {
-      const total = du + Math.hypot(net.nodes[u].x - b.x, net.nodes[u].y - b.y);
-      if (total < bestCost) { best = u; bestCost = total; }
-    }
-    for (const e of net.adj[u]) {
-      const nd = du + e.w * (discount.get(e.key) || 1);
-      if (nd < (dist.get(e.to) ?? Infinity)) { dist.set(e.to, nd); prev.set(e.to, { from: u, key: e.key }); }
+// Crossings, for tuning: routes through bubbles they do not belong to, and
+// routes crossing each other.
+function crossings(routes, shown, itemRadius) {
+  let bubbles = 0, lines = 0;
+  const seg = (a, b, c, d) => {
+    const o1 = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    const o2 = (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]);
+    const o3 = (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0]);
+    const o4 = (d[0] - c[0]) * (b[1] - c[1]) - (d[1] - c[1]) * (b[0] - c[0]);
+    return o1 * o2 < 0 && o3 * o4 < 0;
+  };
+  for (const r of routes) {
+    const own = new Set([...r.p.ancestors(), ...r.q.ancestors()]);
+    for (const n of shown) {
+      if (own.has(n)) continue;
+      const rad = itemRadius(n);
+      for (let i = 0; i < r.pts.length - 1; i++) {
+        if (crosses({ x: r.pts[i][0], y: r.pts[i][1] }, { x: r.pts[i + 1][0], y: r.pts[i + 1][1] }, n, rad)) { bubbles++; break; }
+      }
     }
   }
-  if (best === null) return straight;
-  const path = [];
-  for (let u = best; u !== undefined; u = prev.get(u)?.from) {
-    path.push(u);
-    const step = prev.get(u);
-    if (step) discount.set(step.key, Math.max(0.5, (discount.get(step.key) || 1) * 0.85));
+  for (let i = 0; i < routes.length; i++) {
+    for (let j = i + 1; j < routes.length; j++) {
+      const A = routes[i].pts, B = routes[j].pts;
+      let hit = false;
+      for (let a = 0; a < A.length - 1 && !hit; a++) {
+        for (let b = 0; b < B.length - 1 && !hit; b++) hit = seg(A[a], A[a + 1], B[b], B[b + 1]);
+      }
+      if (hit) lines++;
+    }
   }
-  path.reverse();
-  return pull([{ x: a.x, y: a.y }, ...path.map((i) => net.nodes[i]), { x: b.x, y: b.y }],
-    net.items.filter((n) => n !== a && n !== b));
-}
-
-// Straighten a route: keep only the waypoints needed to get around obstacles.
-function pull(points, obstacles) {
-  const clear = (p, q) => !obstacles.some((o) => crosses(p, q, o, itemRadius(o)));
-  const out = [points[0]];
-  let i = 0;
-  while (i < points.length - 1) {
-    let j = points.length - 1;
-    while (j > i + 1 && !clear(points[i], points[j])) j--;
-    out.push(points[j]);
-    i = j;
-  }
-  return out.map((p) => [p.x, p.y]);
+  return { bubbles, lines };
 }
 
 // --------------------------------------------------------------- view
@@ -290,30 +465,45 @@ const curve = d3.line().curve(d3.curveBasis); // stays within its waypoints: no 
 
 export function mapView(focusRef = "") {
   document.title = `Map · ${store.site.title}`;
+  let o = effective();
   const wrap = h("div", { class: "graph-wrap map-wrap" });
   const svg = d3.select(wrap).append("svg").attr("role", "img").attr("aria-label", "Knowledge map");
   const tip = h("div", { class: "graph-tip", hidden: true });
   const crumbs = h("nav", { class: "map-crumbs", "aria-label": "Current folder" });
-  const panel = controls(() => { routes.clear(); schedule(); });
+  const readout = h("p", { class: "map-readout" });
+  const panel = controls({
+    view: () => { o = effective(); cache = null; schedule(); },
+    tune: () => { o = effective(); rebuild(); },
+    readout,
+  });
   wrap.append(panel, crumbs, tip, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
 
   const defs = svg.append("defs");
   const back = svg.append("rect").attr("class", "m-back");
   const gRegions = svg.append("g");
+  // Routes are drawn twice when a folder is in focus: faded everywhere, and at
+  // full strength clipped to the focused folder, so the detail you are looking
+  // at is clear while routes still show where they lead.
+  const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
   const gLinks = svg.append("g").attr("class", "m-routes");
-  const gDetail = svg.append("g").attr("class", "m-detail");
+  const gFocus = svg.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
   const gNotes = svg.append("g");
   const gLabels = svg.append("g").attr("class", "m-labels");
 
   let model = buildModel();
-  let L = layout(model);
+  let L = layout(model, o);
+  let cache = null; // routes for the current set of open folders
   let w = 800, hgt = 600;
   let focus = L.root;
-  let current = null; // state from the last render, for hover
   let hovered = null;
-  const nets = new Map(); // folder id -> corridor network (layout space)
-  const routes = new Map(); // merged-line key -> layout-space points
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function rebuild() {
+    L = layout(model, o);
+    cache = null;
+    focus = L.root;
+    schedule();
+  }
 
   const zoom = d3.zoom().scaleExtent([0.2, 80]).on("zoom", (event) => {
     M.transform = event.transform;
@@ -346,18 +536,55 @@ export function mapView(focusRef = "") {
     return enter;
   };
 
-  function netFor(folder) {
-    if (!nets.has(folder.data.id)) nets.set(folder.data.id, corridors(folder));
-    return nets.get(folder.data.id);
+  // Routes for every link between shown items; recomputed only when the set of
+  // open folders (or a setting) changes, so zooming stays cheap.
+  function routesFor(open) {
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + o.links;
+    if (cache?.signature === signature) return cache;
+    const shownRep = (leaf) => {
+      for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
+      return leaf;
+    };
+    const merged = new Map();
+    if (o.links !== "none") {
+      for (const [a, b] of model.edges) {
+        const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
+        if (!na || !nb) continue;
+        const within = na.parent === nb.parent;
+        if ((o.links === "within" && !within) || (o.links === "across" && within)) continue;
+        const ra = shownRep(na), rb = shownRep(nb);
+        if (ra === rb) continue;
+        const [p, q] = ra.data.id < rb.data.id ? [ra, rb] : [rb, ra];
+        const key = p.data.id + "|" + q.data.id;
+        const m = merged.get(key) || { key, p, q, count: 0, across: 0, ends: new Set() };
+        m.count += 1;
+        if (!within) m.across += 1;
+        m.ends.add(na.data.id); m.ends.add(nb.data.id);
+        merged.set(key, m);
+      }
+    }
+    // Heavier bundles first, so lighter ones follow their corridors.
+    const router = makeRouter(o);
+    const routes = [...merged.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
+    for (const m of routes) m.pts = router.route(m.p, m.q);
+    const shown = [];
+    L.root.each((n) => { if (n.parent && open.has(n.parent)) shown.push(n); });
+    const count = crossings(routes, shown, router.itemRadius);
+    // Stretch: how much longer routes are than straight lines, on average.
+    const len = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
+    const stretch = routes.length ? routes.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / routes.length : 1;
+    readout.textContent = `${routes.length} routes · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
+    Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length });
+    cache = { signature, routes, shownRep };
+    return cache;
   }
 
   function render() {
     const t = M.transform || d3.zoomIdentity;
-    const o = M.opts;
     const sx = (n) => t.applyX(n.x), sy = (n) => t.applyY(n.y), sr = (n) => n.r * t.k;
-    // Notes are drawn as dots of bounded size, like places on a map.
-    const dot = (n) => Math.max(2.5, Math.min(n.data.landmark ? 13 : 10, n.r * DOT * t.k));
-    const radius = (n) => (n.data.kind === "concept" ? dot(n) : sr(n));
+    // Notes are drawn as places of bounded size.
+    const dot = (n) => Math.max(2.5, Math.min(n.data.landmark ? o.dotMax + 3 : o.dotMax, n.r * o.dot * t.k));
+    const radius = (n) => (n.data.kind === "concept" ? dot(n) + (n.data.landmark ? 3 : 0) : sr(n));
     const onScreen = (n) => sx(n) + sr(n) > 0 && sx(n) - sr(n) < w && sy(n) + sr(n) > 0 && sy(n) - sr(n) < hgt;
 
     // What is open: the root, and any folder big enough on screen whose parent is open.
@@ -387,104 +614,74 @@ export function mapView(focusRef = "") {
       .on("pointerenter", (event, n) => showTip(event, n))
       .on("pointerleave", () => { tip.hidden = true; });
 
-    // Places (notes).
+    // Routes.
+    const { routes } = routesFor(open);
+    const toScreen = (pts) => pts.map(([x, y]) => [t.applyX(x), t.applyY(y)]);
+    const trim = (from, toward, r) => {
+      const dx = toward[0] - from[0], dy = toward[1] - from[1], d = Math.hypot(dx, dy) || 1;
+      return [from[0] + (dx / d) * (r + 2), from[1] + (dy / d) * (r + 2)];
+    };
+    const pathFor = (m) => {
+      let s = toScreen(m.pts);
+      const near = (pt, n) => Math.hypot(pt[0] - sx(n), pt[1] - sy(n)) < radius(n) + 14;
+      s = [s[0], ...s.slice(1, -1).filter((pt) => !near(pt, m.p) && !near(pt, m.q)), s[s.length - 1]];
+      if (s.length === 2) {
+        if (Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) < radius(m.p) + radius(m.q) + 4) return "";
+        const f = trim(s[0], s[1], radius(m.p)), g = trim(s[1], s[0], radius(m.q));
+        const dx = g[0] - f[0], dy = g[1] - f[1], d = Math.hypot(dx, dy) || 1;
+        const bow = Math.min(d * o.bow, 36);
+        const c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
+        return `M${f[0]},${f[1]} Q${c[0]},${c[1]} ${g[0]},${g[1]}`;
+      }
+      s[0] = trim(s[0], s[1], radius(m.p));
+      s[s.length - 1] = trim(s[s.length - 1], s[s.length - 2], radius(m.q));
+      return curve(s);
+    };
+    const focused = focus !== L.root;
+    const inFocus = (n) => n.ancestors().includes(focus);
+    const drawRoutes = (group, list) => group.selectAll("path").data(list, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
+      .attr("class", (m) => `m-link${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
+      .attr("stroke-width", (m) => o.width * (1 + 0.9 * Math.log2(m.count)))
+      .attr("d", pathFor)
+      .selectAll("title").data((m) => [m]).join("title")
+      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label}`);
+    gLinks.classed("context", focused);
+    drawRoutes(gLinks, routes);
+    clip.attr("cx", sx(focus)).attr("cy", sy(focus)).attr("r", focused ? sr(focus) : 0);
+    drawRoutes(gFocus, focused ? routes.filter((m) => inFocus(m.p) || inFocus(m.q)) : []);
+
+    // Places (notes): a marker shaped by type, with a ring for landmarks.
     const notes = visible.filter((n) => n.data.kind === "concept");
-    gNotes.selectAll("circle").data(notes, (n) => n.data.id).join(
-      (enter) => fadeIn(enter.append("circle").attr("tabindex", 0).attr("role", "link")),
-    )
-      .attr("class", (n) => `m-note${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}`)
+    gNotes.selectAll("g.m-place").data(notes, (n) => n.data.id).join((enter) => {
+      const g = enter.append("g").attr("tabindex", 0).attr("role", "link");
+      g.append("circle").attr("class", "ring");
+      g.append("path").attr("class", "mark");
+      return fadeIn(g);
+    })
+      .attr("class", (n) => `m-place ${n.data.marker}${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}`)
       .attr("aria-label", (n) => n.data.label)
-      .attr("cx", sx).attr("cy", sy).attr("r", dot)
+      .attr("transform", (n) => `translate(${sx(n)},${sy(n)})`)
       .style("--c", (n) => (n.group >= 0 ? PALETTE[n.group % PALETTE.length] : "var(--ink-soft)"))
       .on("click", (event, n) => { event.stopPropagation(); persist(); location.hash = conceptHref(n.data.ref); })
       .on("keydown", (event, n) => { if (event.key === "Enter") { persist(); location.hash = conceptHref(n.data.ref); } })
       .on("pointerenter", (event, n) => { showTip(event, n); hover(n); })
-      .on("pointerleave", () => { tip.hidden = true; hover(null); });
+      .on("pointerleave", () => { tip.hidden = true; hover(null); })
+      .each(function (n) {
+        const r = dot(n);
+        const g = d3.select(this);
+        g.select(".ring").attr("r", n.data.landmark ? r + 3.5 : 0);
+        g.select(".mark").attr("d", d3.symbol(SYMBOLS[n.data.marker], Math.PI * r * r)());
+      });
 
-    // Links at their scale: each end attaches to the child of the lowest folder
-    // containing both ends (or to a closed folder hiding it); equal pairs merge.
-    const visibleRep = (leaf) => {
-      for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
-      return leaf;
-    };
-    const scaleRep = (leaf, lca) => {
-      for (const a of leaf.ancestors().reverse()) {
-        if (a.depth === lca.depth + 1 || !(a.data.kind === "dir" && open.has(a))) return a;
-      }
-      return leaf;
-    };
-    const merged = new Map();
-    if (o.links !== "none") {
-      for (const [a, b] of model.edges) {
-        const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
-        if (!na || !nb) continue;
-        const within = na.parent === nb.parent;
-        if ((o.links === "within" && !within) || (o.links === "across" && within)) continue;
-        const lca = within ? na.parent : lowestCommon(na, nb);
-        const ra = scaleRep(na, lca), rb = scaleRep(nb, lca);
-        if (ra === rb) continue;
-        const [p, q] = ra.data.id < rb.data.id ? [ra, rb] : [rb, ra];
-        const key = p.data.id + "|" + q.data.id;
-        const m = merged.get(key) || { key, p, q, lca, count: 0, across: 0, ends: new Set() };
-        m.count += 1;
-        if (!within) m.across += 1;
-        m.ends.add(na.data.id); m.ends.add(nb.data.id);
-        merged.set(key, m);
-      }
-    }
-    // Route heavier bundles first so lighter ones follow their corridors.
-    const lines = [...merged.values()].filter((m) => onScreen(m.lca) && (onScreen(m.p) || onScreen(m.q)))
-      .sort((a, b) => b.count - a.count);
-    const discounts = new Map();
-    for (const m of lines) {
-      if (routes.has(m.key)) continue;
-      const net = netFor(m.lca);
-      if (!discounts.has(m.lca)) discounts.set(m.lca, new Map());
-      routes.set(m.key, route(net, m.p, m.q, discounts.get(m.lca)));
-    }
-    const screenPath = (pts, a, b) => {
-      let s = pts.map(([x, y]) => [t.applyX(x), t.applyY(y)]);
-      // Waypoints just outside an end make the curve hook; drop them.
-      const near = (pt, n, r) => Math.hypot(pt[0] - sx(n), pt[1] - sy(n)) < r + 14;
-      s = [s[0], ...s.slice(1, -1).filter((pt) => !near(pt, a, radius(a)) && !near(pt, b, radius(b))), s[s.length - 1]];
-      // Trim the ends to the edges of what they connect.
-      const trim = (from, toward, r) => {
-        const dx = toward[0] - from[0], dy = toward[1] - from[1], d = Math.hypot(dx, dy) || 1;
-        return [from[0] + (dx / d) * (r + 2), from[1] + (dy / d) * (r + 2)];
-      };
-      if (s.length === 2) {
-        // Nothing in the way: a gentle bow, always to the same side, so
-        // parallel links stay apart and the map does not read as a wiring diagram.
-        // The bow is sized from the visible part of the link, not the centres.
-        const f = trim(s[0], s[1], radius(a)), g = trim(s[1], s[0], radius(b));
-        const dx = g[0] - f[0], dy = g[1] - f[1], d = Math.hypot(dx, dy) || 1;
-        if (Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]) < radius(a) + radius(b) + 4) return "";
-        const bow = Math.min(d * 0.12, 36);
-        const c = [(f[0] + g[0]) / 2 - (dy / d) * bow, (f[1] + g[1]) / 2 + (dx / d) * bow];
-        return `M${f[0]},${f[1]} Q${c[0]},${c[1]} ${g[0]},${g[1]}`;
-      }
-      s[0] = trim(s[0], s[1], radius(a));
-      s[s.length - 1] = trim(s[s.length - 1], s[s.length - 2], radius(b));
-      return curve(s);
-    };
-    gLinks.selectAll("path").data(lines, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
-      .attr("class", (m) => `m-link${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
-      .attr("stroke-width", (m) => 1 + 1.4 * Math.log2(m.count))
-      .attr("d", (m) => screenPath(routes.get(m.key), m.p, m.q))
-      .selectAll("title").data((m) => [m]).join("title")
-      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label}` +
-        (m.across ? ` (${m.across} across folders)` : ""));
-
-    current = { visibleRep, sx, sy, dot, radius, notes, lines };
     drawLabels(open, visible, notes, sx, sy, sr, dot);
     if (hovered) hover(hovered);
   }
 
   function drawLabels(open, visible, notes, sx, sy, sr, dot) {
-    const budget = M.opts.labels;
+    const budget = o.labels;
     const placed = [];
-    // Dots are obstacles too, so labels do not cover other places.
-    const dots = notes.map((n) => [sx(n) - dot(n), sy(n) - dot(n), sx(n) + dot(n), sy(n) + dot(n)]);
+    // Places are obstacles too, so labels do not cover other places.
+    const dots = notes.map((n) => { const r = dot(n) + (n.data.landmark ? 4 : 0); return [sx(n) - r, sy(n) - r, sx(n) + r, sy(n) + r]; });
     const clash = (box, list) => list.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
     const fits = (box, own) => box[0] > -40 && box[2] < w + 40 && box[1] > -20 && box[3] < hgt + 20 &&
       !clash(box, placed) && !clash(box, dots.filter((d) => d !== own));
@@ -514,11 +711,11 @@ export function mapView(focusRef = "") {
       placed.push(box);
       texts.push({ n, x: sx(n), y: sy(n) - 1, lines, anchor: "middle", cls: "territory" });
     }
-    // Places: beside the dot, trying right, left, above and below.
+    // Places: beside the marker, trying right, left, above and below.
     const ranked = [...notes].sort((a, b) => b.data.weight - a.data.weight || sr(b) - sr(a));
     for (const n of ranked) {
       if (arcs.length + texts.length >= budget) break;
-      const r = dot(n), x = sx(n), y = sy(n);
+      const r = dot(n) + (n.data.landmark ? 4 : 0), x = sx(n), y = sy(n);
       const charW = n.data.landmark ? 6.9 : 6.4;
       const lines = wrapWords(n.data.label, 150, charW);
       if (lines.length > 3) continue;
@@ -563,46 +760,28 @@ export function mapView(focusRef = "") {
       .text((s) => s.line);
   }
 
-  // Hover: fade what is unrelated, show the note's routes and its own links.
+  // Hover: fade what is unrelated and bring forward the note's own routes.
   function hover(n) {
     hovered = n;
     svg.classed("focusing", !!n);
-    if (!n || !current) {
-      gDetail.selectAll("path").remove();
-      gNotes.selectAll("circle").classed("related", false);
-      gLinks.selectAll("path").classed("hot", false);
+    if (!n || !cache) {
+      gNotes.selectAll("g.m-place").classed("related", false);
+      svg.selectAll(".m-routes path").classed("hot", false);
       gLabels.selectAll("text").classed("related", false);
       return;
     }
-    const { visibleRep, sx, sy, radius } = current;
     const related = new Set([n.data.id]);
-    const ends = [];
     for (const [a, b] of model.edges) {
       const other = a === n.data.ref ? b : b === n.data.ref ? a : null;
-      if (!other) continue;
-      const on = L.byId.get("c:" + other);
+      const on = other && L.byId.get("c:" + other);
       if (!on) continue;
       related.add(on.data.id);
-      const r = visibleRep(on);
-      related.add(r.data.id);
-      if (r !== n) ends.push({ r, out: a === n.data.ref });
+      related.add(cache.shownRep(on).data.id);
     }
-    gNotes.selectAll("circle").classed("related", (m) => related.has(m.data.id));
+    gNotes.selectAll("g.m-place").classed("related", (m) => related.has(m.data.id));
     gLabels.selectAll("text.m-text").classed("related", function () { return related.has(this.getAttribute("data-id")); });
-    gLinks.selectAll("path").classed("hot", (m) => m.ends.has(n.data.id));
-    // Its own links, as gentle arcs from the note to wherever the other end is shown.
-    gDetail.selectAll("path").data(ends).join("path")
-      .attr("class", (e) => `m-link hot${e.out ? "" : " in"}`)
-      .attr("d", (e) => {
-        const x1 = sx(n), y1 = sy(n), x2 = sx(e.r), y2 = sy(e.r);
-        const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
-        const bow = Math.min(60, d * 0.18);
-        const cx = (x1 + x2) / 2 - (dy / d) * bow, cy = (y1 + y2) / 2 + (dx / d) * bow;
-        const r1 = radius(n) + 2, r2 = radius(e.r) + 2;
-        const s = [x1 + ((cx - x1) / Math.hypot(cx - x1, cy - y1)) * r1, y1 + ((cy - y1) / Math.hypot(cx - x1, cy - y1)) * r1];
-        const f = [x2 + ((cx - x2) / Math.hypot(cx - x2, cy - y2)) * r2, y2 + ((cy - y2) / Math.hypot(cx - x2, cy - y2)) * r2];
-        return `M${s[0]},${s[1]} Q${cx},${cy} ${f[0]},${f[1]}`;
-      });
+    svg.selectAll(".m-routes path").classed("hot", (m) => m.p === n || m.q === n || m.ends.has(n.data.id));
+    svg.selectAll(".m-routes path.hot").raise();
   }
 
   function drawCrumbs() {
@@ -646,48 +825,79 @@ export function mapView(focusRef = "") {
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
   wrap.leave = () => { window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = buildModel(); L = layout(model); nets.clear(); routes.clear(); schedule(); };
+  wrap.refresh = () => { model = buildModel(); o = effective(); rebuild(); };
   M.reset = () => zoomTo(L.root);
+  wrap.routes = () => cache?.routes || []; // for tests and inspection
   return wrap;
 }
 
-function controls(redraw) {
+// --------------------------------------------------------------- panel
+
+function controls({ view, tune, readout }) {
   const narrow = matchMedia("(max-width: 760px)").matches;
-  const slider = (key, text, min, max, step, fmt) => {
-    const input = h("input", { type: "range", min, max, step, value: M.opts[key], "aria-label": text });
-    const out = h("output", {}, fmt(M.opts[key]));
+  const o = effective();
+  const slider = (key, text, min, max, step, onChange, help) => {
+    const fmt = (v) => (step < 1 ? Number(v).toFixed(2) : String(v));
+    const input = h("input", { type: "range", min, max, step, value: o[key], "aria-label": text });
+    const out = h("output", {}, fmt(o[key]));
     input.addEventListener("input", () => {
-      M.opts[key] = Number(input.value);
-      out.textContent = fmt(M.opts[key]);
+      M.user[key] = Number(input.value);
+      out.textContent = fmt(M.user[key]);
       persist();
-      redraw();
+      onChange();
     });
-    return h("label", { class: "slider" }, h("span", {}, text), input, out);
+    return h("label", { class: "slider", title: help || null }, h("span", {}, text), input, out);
   };
   const modes = LINK_MODES.map(([key, text]) => {
-    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(M.opts.links === key) }, text);
+    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(o.links === key) }, text);
     b.addEventListener("click", () => {
-      M.opts.links = key;
+      M.user.links = key;
       for (const other of modes) other.setAttribute("aria-pressed", String(other === b));
       persist();
-      redraw();
+      view();
     });
     return b;
   });
-  const reset = h("button", { class: "toggle", type: "button" }, "Show everything");
-  reset.addEventListener("click", () => M.reset?.());
-  const defaults = h("button", { class: "toggle", type: "button" }, "Default settings");
-  defaults.addEventListener("click", () => { Object.assign(M.opts, MAP_DEFAULTS); persist(); location.reload(); });
-  return h("div", { class: "graph-panel" },
+  const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
+
+  // Tuning: every layout and routing parameter, with a way to keep the result.
+  const snippet = h("pre", { class: "map-snippet", hidden: true });
+  const showSnippet = () => {
+    const e = effective();
+    const lines = ["[map]", ...["labels", "detail"].map((k) => `${k} = ${e[k]}`), `links = "${e.links}"`,
+      ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
+    snippet.textContent = lines.join("\n");
+    snippet.hidden = !snippet.hidden;
+  };
+  const tuning = h("details", { class: "graph-options map-tuning" },
+    h("summary", {}, "Tuning"),
+    h("div", { class: "sliders" }, TUNING.map(([key, text, min, max, step, , help]) => slider(key, text, min, max, step, tune, help))),
+    readout,
+    h("div", { class: "row" },
+      button("Reset tuning", () => { for (const [k] of TUNING) delete M.user[k]; persist(); location.reload(); }),
+      button("Show as rdstudio.toml", showSnippet)),
+    snippet);
+
+  const legend = h("div", { class: "legend map-legend" });
+  const types = new Map();
+  for (const c of store.concepts.values()) if (c.type && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+  for (const [type, shape] of [...types].sort()) {
+    const icon = d3.select(h("svg:svg", { width: 14, height: 14, viewBox: "-7 -7 14 14", class: `m-key ${shape}` }));
+    icon.append("path").attr("d", d3.symbol(SYMBOLS[shape], 36)());
+    legend.append(h("span", {}, icon.node(), type));
+  }
+  legend.append(h("span", {}, h("i", { class: "key-landmark" }), "Landmark"));
+
+  return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
       h("div", { class: "legend" }, h("span", {}, "Links"), modes),
       h("div", { class: "sliders" },
-        slider("labels", "Labels", 5, 120, 1, (v) => String(v)),
-        slider("detail", "Open folders at", 60, 400, 10, (v) => `${v}px`)),
-      h("div", { class: "legend" },
-        h("span", {}, h("i", { class: "key-landmark" }), "Landmark"),
-        h("span", {}, h("i", { class: "key-across" }), "Across folders"),
-        h("span", {}, "Thicker: more links")),
-      h("div", { class: "row" }, reset, defaults)));
+        slider("labels", "Labels", 5, 120, 1, view, "Most labels shown at once, most important first."),
+        slider("detail", "Open folders at", 60, 400, 10, view, "A folder opens when its radius on screen passes this many pixels.")),
+      legend,
+      h("div", { class: "row" },
+        button("Show everything", () => M.reset?.()),
+        button("Default view", () => { for (const k of Object.keys(VIEW_DEFAULTS)) delete M.user[k]; persist(); location.reload(); }))),
+    tuning);
 }

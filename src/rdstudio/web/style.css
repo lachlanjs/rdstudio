@@ -306,17 +306,21 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .m-dir.open.depth-1 { stroke-width: 1.5; stroke-opacity: .6; }
 .m-dir.closed { fill-opacity: .11; stroke-opacity: .55; stroke-width: 1; }
 .m-dir.closed:hover { fill-opacity: .2; }
-.m-note { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; cursor: pointer; transition: opacity .2s; }
-.m-note.landmark { stroke: var(--ink); stroke-width: 2; }
-.m-note:focus-visible { outline: none; stroke: var(--accent); stroke-width: 3; }
+.m-place { cursor: pointer; transition: opacity .2s; }
+.m-place .mark { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; }
+.m-place.ring .mark { fill: var(--paper); stroke: var(--c); stroke-width: 2; }
+.m-place .ring { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.m-place.landmark .mark { stroke: var(--ink); stroke-width: 1.4; }
+.m-place:focus-visible { outline: none; }
+.m-place:focus-visible .mark { stroke: var(--accent); stroke-width: 3; }
 .m-link { fill: none; stroke: var(--ink-soft); stroke-opacity: .42; stroke-linecap: round; transition: opacity .2s; }
 .m-link.across { stroke: var(--accent); stroke-opacity: .5; }
 .m-link.mixed { stroke: var(--accent); stroke-opacity: .45; }
-.m-detail .m-link.hot { stroke: var(--ink); stroke-opacity: .8; stroke-width: 1.4; pointer-events: none; }
-.m-detail .m-link.hot.in { stroke: var(--accent); }
 svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
+.m-routes.context .m-link { opacity: .22; }
+.m-routes.context .m-link.hot { opacity: 1; }
 svg.focusing .m-routes .m-link.hot { stroke-opacity: .85; }
-svg.focusing .m-note:not(.related) { opacity: .3; }
+svg.focusing .m-place:not(.related) { opacity: .3; }
 svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .m-labels { pointer-events: none; }
 .m-text, .m-arc {
@@ -336,7 +340,14 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .map-crumbs button { border: 0; background: none; color: var(--accent); font: inherit; padding: 2px 3px; cursor: pointer; }
 .map-crumbs button[aria-current] { color: var(--ink); font-weight: 700; cursor: default; }
 .map-crumbs span { color: var(--ink-faint); }
-.legend .key-landmark { background: var(--paper-raised); border: 2px solid var(--ink); }
+.legend .key-landmark { background: var(--paper-raised); border: 1.5px solid var(--ink); box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 3.5px var(--ink); width: 8px; height: 8px; margin: 0 3px; }
+.m-key path { fill: var(--ink-soft); }
+.m-key.ring path { fill: none; stroke: var(--ink-soft); stroke-width: 1.6; }
+.map-panel { max-height: calc(100% - 24px); overflow: auto; }
+.map-tuning > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
+.map-tuning .slider { grid-template-columns: 150px 1fr 44px; }
+.map-readout { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.map-snippet { margin: 0; font-size: 12px; padding: 8px; background: var(--paper-sunk); border-radius: 4px; user-select: all; white-space: pre; overflow: auto; }
 .legend .key-across { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--accent); }
 
 /* ------------------------------------------------------------ narrow */

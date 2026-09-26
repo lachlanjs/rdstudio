@@ -45,6 +45,21 @@ test bed. The label limit must be configurable.
   hooked when a note sat next to a large region; both fixed.
 - Hover fades unrelated items; items fade in as folders open.
 
+# Third pass (developer feedback: routes through the hierarchy)
+
+- Every link is drawn to the items showing its ends, routed through the
+  hierarchy by gates on each folder's edge (the developer's "nearest point on
+  the enclosing perimeter"), with a ring road inside each wall.
+- Focus: routes full strength inside the focused folder, faded outside.
+- Type markers (Definition, Theorem, Example, Trick, ...) configurable per
+  project; landmarks ringed. Examples and tricks added to the test bed.
+- Every layout and routing parameter is in a Tuning panel and settable under
+  `[map]` in rdstudio.toml; see [map view](/design/map-view.md).
+- A crossing and stretch readout. A bug had made every "is the straight line
+  clear?" check pass (82 crossings through bubbles); fixed, 1 to 3 remain.
+  Parameter sweeps showed layout parameters move route crossings by only
+  about 7%: most crossings come from the link structure itself.
+
 # Next
 
 Use it and tune. Open questions: straight region-to-region lines cross other

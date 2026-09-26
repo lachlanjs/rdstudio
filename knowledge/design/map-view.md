@@ -43,33 +43,76 @@ Each is checkable by looking at a screenshot or reading the code.
 
 # Design
 
-- **Layout:** nested circle packing of the folder tree (d3 `pack`) with
-  generous padding. Each note gets a slot sized by importance (landmark flag,
-  then PageRank over links, in a narrow range) but is drawn as a dot about half
-  that size, capped on screen, so the gaps between items are open space.
-  Within a folder, notes are ordered so linked notes are packed next to each
-  other.
-- **Style:** cartographic. Notes are places (dots, labelled beside them;
-  landmarks outlined and bold); folders are territories (faint fill, thin
-  boundary, name letter-spaced along the top when open, in the middle when
-  closed); links are routes. Plain background.
+- **Layout:** nested circle packing of the folder tree (d3 `pack`), then each
+  folder's contents are pulled in from its edge to leave a margin. Each note
+  gets a slot sized by importance (landmark flag, then PageRank over links, in
+  a narrow range) and is drawn as a marker about half that size, capped on
+  screen. Within a folder, notes are ordered so linked notes sit together.
+- **Style:** cartographic. Notes are places, folders are territories (faint
+  fill, thin boundary, name along the top when open, in the middle when
+  closed), links are routes. Plain background.
+- **Markers:** a note's shape comes from its `type` (see Settings); landmarks
+  get an outer ring, whatever their shape.
 - **Detail:** a folder is open when its on-screen radius exceeds the detail
   threshold; the root is always open. Items fade in as folders open.
-- **Links:** each end attaches to the child of the lowest folder containing
-  both ends (or a closed folder hiding it); pairs merge into one route.
-- **Routing:** within a folder, item centres are Delaunay-triangulated; a
-  waypoint sits in the middle of each gap between neighbouring items and one in
-  the open space of each triangle. Routes are shortest paths through that
-  network (corridors through an item heavily penalised), straightened where
-  nothing is in the way, and drawn as B-splines, which cannot loop. Corridors
-  already used get cheaper, so links heading the same way bundle. Unobstructed
-  links bow gently to one side. Routes are cached in layout space.
-- **Hover:** unrelated places and routes fade; the note's own links are drawn
-  as arcs to wherever their other ends are shown.
+- **Links through the hierarchy:** every link is drawn between the items
+  that currently show its two ends (a note, or the closed folder hiding it).
+  Links between the same pair merge into one thicker route.
+- **Routing:** each folder has a corridor network: a waypoint in the middle of
+  each gap between neighbouring items (Delaunay triangulation of their
+  centres), one in the open space of each triangle, and a *gate* on the
+  folder's edge directly outward from each item, with gates joined by a ring
+  road that follows the wall. A route is planned top-down: across the lowest
+  folder containing both ends, then, in each folder on the way down, from the
+  point where it crosses that folder's edge to the next item inward. Routes
+  are shortest paths (segments through an item cost more), straightened where
+  clear and drawn as B-splines. Corridors already used get cheaper, so links
+  heading the same way share gates and form trunks. Routes are computed in
+  layout units and cached until the set of open folders or a setting changes.
+- **Focus:** when zoomed into a folder, routes are drawn at full strength
+  inside it and faded outside it, so the detail in view is clear while routes
+  still show where they lead.
+- **Hover:** unrelated places and routes fade; the note's routes come forward.
 - **Interaction:** click a note to open it, click a folder to zoom to it,
   click empty space to step out; the folder path at the top is clickable.
+- **Measurement:** the Tuning panel reports routes, crossings through bubbles
+  that are not the route's own, crossings between routes, and stretch (route
+  length over straight-line distance). Defaults were chosen by sweeping the
+  parameters on the differential geometry bundle and minimising these.
 
 # Settings
 
-Label budget, detail threshold, which links to show (all, within folders,
-across folders, none). Stored per browser, like the graph's.
+Three layers, each overriding the one before: built-in defaults, the
+project's `[map]` table in `rdstudio.toml`, and choices made in the browser
+(stored per browser). The Tuning panel's "Show as rdstudio.toml" prints the
+current values in the right form to copy into a project.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `labels` | 30 | Most labels shown at once, most important first |
+| `detail` | 140 | A folder opens when its radius on screen passes this many pixels |
+| `links` | `"all"` | Which links to draw: `all`, `within` (same folder), `across`, `none` |
+| `spacing` | 44 | Gap between neighbouring bubbles, in layout units (the map is 1000 across) |
+| `margin` | 44 | Space between a folder's edge and its contents, where routes reach the gates |
+| `dot` | 0.45 | A note's marker as a fraction of its slot |
+| `dotMax` | 10 | Cap on a marker's radius on screen, in pixels |
+| `bundle` | 0.1 | How much cheaper a corridor becomes each time a route uses it |
+| `detour` | 8 | Cost multiplier for a route segment through a bubble |
+| `bow` | 0.12 | Sideways curve of an unobstructed link, as a fraction of its length |
+| `width` | 1.2 | Width of a route carrying one link, in pixels |
+
+Marker shapes by type (case-insensitive; unknown types are circles):
+definition circle; theorem, lemma, proposition, corollary diamond; example
+triangle; trick square; reference open ring; overview star; decision square;
+task triangle; question cross; idea wye; procedure star. Available shapes:
+`circle`, `ring`, `diamond`, `triangle`, `square`, `star`, `cross`, `wye`.
+
+```toml
+[map]
+detail = 180
+spacing = 50
+
+[map.markers]
+Module = "square"
+Interface = "diamond"
+```
