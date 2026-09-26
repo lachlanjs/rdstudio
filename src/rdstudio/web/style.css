@@ -322,6 +322,11 @@ svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
 svg.focusing .m-routes .m-link.hot { stroke-opacity: .85; }
 svg.focusing .m-place:not(.related) { opacity: .3; }
 svg.focusing .m-text.place:not(.related) { opacity: .3; }
+.m-link.s1 { stroke-opacity: .28; stroke-dasharray: 2 4; }
+.m-link.s3 { stroke-opacity: .6; }
+svg.focusing .m-routes .m-link.hot.needs { stroke: var(--ink); stroke-opacity: .85; stroke-dasharray: none; }
+svg.focusing .m-routes .m-link.hot.needed { stroke: var(--accent); stroke-opacity: .95; stroke-dasharray: none; }
+.m-implied { fill: none; stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
 .m-labels { pointer-events: none; }
 .m-text, .m-arc {
   font: 12px var(--font-ui); fill: var(--ink);
@@ -346,6 +351,16 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .map-panel { max-height: calc(100% - 24px); overflow: auto; }
 .map-tuning > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
 .map-tuning .slider { grid-template-columns: 150px 1fr 44px; }
+.dual-slider { grid-template-columns: 104px 1fr; }
+.dual-slider output { grid-column: 2; text-align: left; }
+.dual { position: relative; height: 18px; }
+.dual::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 3px; border-radius: 2px; background: var(--rule); }
+.dual input { position: absolute; left: 0; top: 0; width: 100%; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.dual input::-webkit-slider-runnable-track { background: none; }
+.dual input::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); margin-top: 1px; }
+.dual input::-moz-range-thumb { pointer-events: auto; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 2px solid var(--paper-raised); }
+.dual input::-moz-range-track { background: none; }
+.map-hint { margin: 0; font-size: 12.5px; color: var(--ink-faint); }
 .map-readout { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .map-snippet { margin: 0; font-size: 12px; padding: 8px; background: var(--paper-sunk); border-radius: 4px; user-select: all; white-space: pre; overflow: auto; }
 .legend .key-across { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--accent); }

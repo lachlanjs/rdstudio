@@ -49,7 +49,7 @@ def concept_record(bundle: Bundle, cid: str) -> dict[str, Any]:
     rec.update({
         "meta": jsonable(c.meta),
         "directory": c.directory,
-        "links": [{"target": l.target, "kind": l.kind, "broken": l.broken} for l in c.links],
+        "links": [{"target": l.target, "kind": l.kind, "broken": l.broken, "rel": l.rel} for l in c.links],
         "backlinks": bundle.backlinks(cid),
         "headings": [{"level": h.level, "text": h.text, "slug": h.slug} for h in headings(c.body)],
         "generated_at": iso(c.generated_at) if c.generated_at else None,

@@ -63,6 +63,14 @@ Each is checkable by looking at a screenshot or reading the code.
 - **Links through the hierarchy:** every link is drawn between the items
   that currently show its two ends (a note, or the closed folder hiding it).
   Links between the same pair merge into one thicker route.
+- **Which links:** filtered by the level of the lowest folder both ends share
+  (0 is between top-level topics), by rating (see
+  [link ratings](/design/conventions.md)), optionally only those touching the
+  focused folder, and with implied links hidden: a → c is hidden when c is
+  reachable from a through a chain of links at least as strong, never through
+  `see also` (a transitive reduction; links inside a cycle of `requires` are
+  kept). Routes are styled by their strongest rating: `requires` stronger,
+  `see also` dotted.
 - **Routing:** each folder has a corridor network: a waypoint in the middle of
   each gap between neighbouring items (Delaunay triangulation of their
   centres), one in the open space of each triangle, and a *gate* on the
@@ -77,7 +85,10 @@ Each is checkable by looking at a screenshot or reading the code.
 - **Focus:** when zoomed into a folder, routes are drawn at full strength
   inside it and faded outside it, so the detail in view is clear while routes
   still show where they lead.
-- **Hover:** unrelated places and routes fade; the note's routes come forward.
+- **Hover:** unrelated places and routes fade; the note's routes come
+  forward, dark towards what the note needs and in the accent colour from what
+  needs it (direction by colour, not arrows), and its hidden implied links
+  appear faintly.
 - **Interaction:** click a note to open it, click a folder to zoom to it,
   click empty space to step out; the folder path at the top is clickable.
 - **Measurement:** the Tuning panel reports routes, crossings through bubbles
@@ -96,7 +107,11 @@ current values in the right form to copy into a project.
 |---|---|---|
 | `labels` | 30 | Most labels shown at once, most important first |
 | `detail` | 140 | A folder opens when its radius on screen passes this many pixels |
-| `links` | `"all"` | Which links to draw: `all`, `within` (same folder), `across`, `none` |
+| `showLinks` | true | Draw links at all |
+| `levelMin`, `levelMax` | 0, 9 | Range of the lowest shared folder's level (0 = between top-level topics) |
+| `rateMin`, `rateMax` | 2, 3 | Range of ratings to show: 1 see also, 2 uses (and unrated), 3 requires |
+| `hideImplied` | true | Hide links implied by chains of links at least as strong (only when the bundle has ratings) |
+| `focusOnly` | false | When zoomed into a folder, show only links with an end inside it |
 | `room` | 0.3 | How much of a folder its contents fill; lower leaves more space between everything |
 | `spread` | 1 | How strongly items in a folder push apart to use its space evenly |
 | `outward` | 1 | How strongly an item moves to the side of its folder where its links leave |

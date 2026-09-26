@@ -48,6 +48,7 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 # M7 — Understanding layer
 
 - [ ] [T20 Map view](/tasks/T20-map-view.md)
+- [x] [T21 Link ratings, implied-link culling and link filters](/tasks/T21-link-ratings.md)
 
 # Future
 

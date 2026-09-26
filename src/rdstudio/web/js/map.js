@@ -15,8 +15,15 @@ const KEY = "rdstudio.map";
 const SIZE = 1000; // layout units
 
 // View settings, shown in the Options panel.
-export const VIEW_DEFAULTS = { labels: 30, detail: 140, links: "all" };
-const LINK_MODES = [["all", "All"], ["within", "Within folders"], ["across", "Across folders"], ["none", "None"]];
+export const VIEW_DEFAULTS = {
+  labels: 30, detail: 140, showLinks: true,
+  levelMin: 0, levelMax: 9, // depth of the lowest folder both ends share (0 = between top-level topics)
+  rateMin: 2, rateMax: 3, // 1 see also, 2 uses (and unrated), 3 requires
+  hideImplied: true, focusOnly: false,
+};
+// How consequential a link is, from its Markdown title ("requires", "uses", "see also").
+const STRENGTH = { requires: 3, uses: 2, "see also": 1 };
+const STRENGTH_LABEL = { 1: "see also", 2: "uses", 3: "requires" };
 
 // Tuning parameters, shown in the Tuning panel and settable per project under
 // [map] in rdstudio.toml. [key, label, min, max, step, default, what it does]
@@ -123,20 +130,20 @@ function buildModel() {
   const concepts = [...store.concepts.values()];
   const ids = concepts.map((c) => c.id);
   const known = new Set(ids);
-  const edges = [];
-  const seen = new Set();
-  const adjacent = new Map(ids.map((id) => [id, new Set()]));
+  // Directed links, each with its strongest rating: [from, to, strength].
+  const strongest = new Map();
+  let hasRatings = false;
   for (const c of concepts) {
     for (const l of c.links) {
       if (l.broken || l.kind !== "concept" || !known.has(l.target) || l.target === c.id) continue;
+      if (l.rel) hasRatings = true;
       const key = c.id + "\n" + l.target;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push([c.id, l.target]);
-      adjacent.get(c.id).add(l.target);
-      adjacent.get(l.target).add(c.id);
+      strongest.set(key, Math.max(strongest.get(key) || 0, STRENGTH[l.rel] || 2));
     }
   }
+  const edges = [...strongest].map(([key, s]) => [...key.split("\n"), s]);
+  const adjacent = new Map(ids.map((id) => [id, new Set()]));
+  for (const [a, b] of edges) { adjacent.get(a).add(b); adjacent.get(b).add(a); }
   const rank = pagerank(ids, edges);
   const top = Math.max(...rank.values(), 1e-9);
 
@@ -165,7 +172,53 @@ function buildModel() {
   for (const node of dirs.values()) {
     node.children = [...node.subdirs.sort((a, b) => size(b) - size(a)), ...node.notes];
   }
-  return { root: dirs.get(""), edges };
+  const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
+  return { root: dirs.get(""), edges, implied: impliedLinks(ids, edges), hasRatings, maxDepth };
+}
+
+// Links implied by others: a → c is implied when c can also be reached from a
+// through a chain of links at least as strong (never through "see also"), as
+// in a transitive reduction. Links inside a group of notes that require each
+// other (a cycle) are left alone. Only the map hides them; notes keep them all.
+function impliedLinks(ids, edges) {
+  const out = new Map(ids.map((id) => [id, []]));
+  for (const [a, b, s] of edges) out.get(a).push([b, s]);
+  const component = stronglyConnected(ids, (v) => out.get(v).filter(([, s]) => s >= 2).map(([w]) => w));
+  const implied = new Set();
+  for (const [a, c, s] of edges) {
+    if (component.get(a) === component.get(c)) continue;
+    const need = Math.max(s, 2);
+    const seen = new Set([a]);
+    const stack = [];
+    for (const [b, sb] of out.get(a)) if (b !== c && sb >= need && !seen.has(b)) { seen.add(b); stack.push(b); }
+    while (stack.length) {
+      const v = stack.pop();
+      if (v === c) { implied.add(a + "\n" + c); break; }
+      for (const [w, sw] of out.get(v)) if (sw >= need && !seen.has(w)) { seen.add(w); stack.push(w); }
+    }
+  }
+  return implied;
+}
+
+// Tarjan's strongly connected components: node -> component number.
+function stronglyConnected(ids, next) {
+  const index = new Map(), low = new Map(), onStack = new Set(), stack = [], component = new Map();
+  let counter = 0, groups = 0;
+  const visit = (v) => {
+    index.set(v, counter); low.set(v, counter); counter++;
+    stack.push(v); onStack.add(v);
+    for (const w of next(v)) {
+      if (!index.has(w)) { visit(w); low.set(v, Math.min(low.get(v), low.get(w))); }
+      else if (onStack.has(w)) low.set(v, Math.min(low.get(v), index.get(w)));
+    }
+    if (low.get(v) === index.get(v)) {
+      let w;
+      do { w = stack.pop(); onStack.delete(w); component.set(w, groups); } while (w !== v);
+      groups++;
+    }
+  };
+  for (const v of ids) if (!index.has(v)) visit(v);
+  return component;
 }
 
 function layout(model, o) {
@@ -555,6 +608,7 @@ export function mapView(focusRef = "") {
   const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
   const gLinks = svg.append("g").attr("class", "m-routes");
   const gFocus = svg.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
+  const gImplied = svg.append("g").attr("class", "m-implied-links");
   const gNotes = svg.append("g");
   const gLabels = svg.append("g").attr("class", "m-labels");
 
@@ -564,6 +618,7 @@ export function mapView(focusRef = "") {
   let w = 800, hgt = 600;
   let focus = L.root;
   let hovered = null;
+  let current = null; // screen helpers from the last render, for hover
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function rebuild() {
@@ -607,27 +662,36 @@ export function mapView(focusRef = "") {
   // Routes for every link between shown items; recomputed only when the set of
   // open folders (or a setting) changes, so zooming stays cheap.
   function routesFor(open) {
-    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + o.links;
+    const filters = ["showLinks", "levelMin", "levelMax", "rateMin", "rateMax", "hideImplied", "focusOnly"].map((k) => o[k]).join(",");
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "");
     if (cache?.signature === signature) return cache;
     const shownRep = (leaf) => {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
       return leaf;
     };
     const merged = new Map();
-    if (o.links !== "none") {
-      for (const [a, b] of model.edges) {
+    const inFocus = (n) => n.ancestors().includes(focus);
+    let hidden = 0;
+    if (o.showLinks) {
+      for (const [a, b, s] of model.edges) {
+        if (s < o.rateMin || s > o.rateMax) continue;
+        if (o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b)) { hidden++; continue; }
         const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
         if (!na || !nb) continue;
+        const level = lowestCommon(na.parent, nb.parent).depth;
+        if (level < o.levelMin || level > o.levelMax) continue;
+        if (o.focusOnly && focus !== L.root && !inFocus(na) && !inFocus(nb)) continue;
         const within = na.parent === nb.parent;
-        if ((o.links === "within" && !within) || (o.links === "across" && within)) continue;
         const ra = shownRep(na), rb = shownRep(nb);
         if (ra === rb) continue;
         const [p, q] = ra.data.id < rb.data.id ? [ra, rb] : [rb, ra];
         const key = p.data.id + "|" + q.data.id;
-        const m = merged.get(key) || { key, p, q, count: 0, across: 0, ends: new Set() };
+        const m = merged.get(key) || { key, p, q, count: 0, across: 0, strength: 0, ends: new Set(), links: [] };
         m.count += 1;
         if (!within) m.across += 1;
+        m.strength = Math.max(m.strength, s);
         m.ends.add(na.data.id); m.ends.add(nb.data.id);
+        m.links.push([a, b, s]);
         merged.set(key, m);
       }
     }
@@ -641,8 +705,8 @@ export function mapView(focusRef = "") {
     // Stretch: how much longer routes are than straight lines, on average.
     const len = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
     const stretch = routes.length ? routes.reduce((s, r) => s + len(r.pts) / Math.max(1, Math.hypot(r.p.x - r.q.x, r.p.y - r.q.y)), 0) / routes.length : 1;
-    readout.textContent = `${routes.length} routes · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
-    Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length });
+    readout.textContent = `${routes.length} routes · ${hidden} implied links hidden · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
+    Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length, hidden });
     cache = { signature, routes, shownRep };
     return cache;
   }
@@ -708,11 +772,11 @@ export function mapView(focusRef = "") {
     const focused = focus !== L.root;
     const inFocus = (n) => n.ancestors().includes(focus);
     const drawRoutes = (group, list) => group.selectAll("path").data(list, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
-      .attr("class", (m) => `m-link${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
+      .attr("class", (m) => `m-link s${m.strength}${m.across === m.count ? " across" : m.across ? " mixed" : ""}`)
       .attr("stroke-width", (m) => o.width * (1 + 0.9 * Math.log2(m.count)))
       .attr("d", pathFor)
       .selectAll("title").data((m) => [m]).join("title")
-      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label}`);
+      .text((m) => `${m.count} link${m.count > 1 ? "s" : ""} between ${m.p.data.label} and ${m.q.data.label} (strongest: ${STRENGTH_LABEL[m.strength]})`);
     gLinks.classed("context", focused);
     drawRoutes(gLinks, routes);
     clip.attr("cx", sx(focus)).attr("cy", sy(focus)).attr("r", focused ? sr(focus) : 0);
@@ -741,6 +805,7 @@ export function mapView(focusRef = "") {
         g.select(".mark").attr("d", d3.symbol(SYMBOLS[n.data.marker], Math.PI * r * r)());
       });
 
+    current = { sx, sy, radius };
     drawLabels(open, visible, notes, sx, sy, sr, dot);
     if (hovered) hover(hovered);
   }
@@ -834,8 +899,9 @@ export function mapView(focusRef = "") {
     svg.classed("focusing", !!n);
     if (!n || !cache) {
       gNotes.selectAll("g.m-place").classed("related", false);
-      svg.selectAll(".m-routes path").classed("hot", false);
+      svg.selectAll(".m-routes path").classed("hot", false).classed("needs", false).classed("needed", false);
       gLabels.selectAll("text").classed("related", false);
+      gImplied.selectAll("path").remove();
       return;
     }
     const related = new Set([n.data.id]);
@@ -848,8 +914,32 @@ export function mapView(focusRef = "") {
     }
     gNotes.selectAll("g.m-place").classed("related", (m) => related.has(m.data.id));
     gLabels.selectAll("text.m-text").classed("related", function () { return related.has(this.getAttribute("data-id")); });
-    svg.selectAll(".m-routes path").classed("hot", (m) => m.p === n || m.q === n || m.ends.has(n.data.id));
+    // Direction, by colour rather than arrows: what the note needs, and what needs it.
+    const mine = (m) => m.links.filter(([a, b]) => a === n.data.ref || b === n.data.ref);
+    svg.selectAll(".m-routes path")
+      .classed("hot", (m) => mine(m).length > 0)
+      .classed("needs", (m) => mine(m).some(([a]) => a === n.data.ref))
+      .classed("needed", (m) => mine(m).length > 0 && mine(m).every(([, b]) => b === n.data.ref));
     svg.selectAll(".m-routes path.hot").raise();
+    // Its implied links, hidden from the map, shown faintly.
+    const { sx, sy, radius } = current;
+    const hiddenEnds = [];
+    if (o.hideImplied && model.hasRatings) {
+      for (const [a, b] of model.edges) {
+        if (!model.implied.has(a + "\n" + b) || (a !== n.data.ref && b !== n.data.ref)) continue;
+        const on = L.byId.get("c:" + (a === n.data.ref ? b : a));
+        const r = on && cache.shownRep(on);
+        if (r && r !== n) hiddenEnds.push(r);
+      }
+    }
+    gImplied.selectAll("path").data(hiddenEnds).join("path").attr("class", "m-implied")
+      .attr("d", (r) => {
+        const x1 = sx(n), y1 = sy(n), x2 = sx(r), y2 = sy(r);
+        const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
+        const r1 = radius(n) + 2, r2 = radius(r) + 2;
+        const bow = Math.min(40, d * 0.15);
+        return `M${x1 + (dx / d) * r1},${y1 + (dy / d) * r1} Q${(x1 + x2) / 2 - (dy / d) * bow},${(y1 + y2) / 2 + (dx / d) * bow} ${x2 - (dx / d) * r2},${y2 - (dy / d) * r2}`;
+      });
   }
 
   function drawCrumbs() {
@@ -917,24 +1007,37 @@ function controls({ view, tune, readout }) {
     });
     return h("label", { class: "slider", title: help || null }, h("span", {}, text), input, out);
   };
-  const modes = LINK_MODES.map(([key, text]) => {
-    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(o.links === key) }, text);
-    b.addEventListener("click", () => {
-      M.user.links = key;
-      for (const other of modes) other.setAttribute("aria-pressed", String(other === b));
-      persist();
-      view();
-    });
+  // Two thumbs on one track: the lowest and highest value to show.
+  const dual = ([kLo, kHi], text, min, max, label, help) => {
+    const lo = h("input", { type: "range", min, max, step: 1, value: Math.max(min, Math.min(o[kLo], max)), "aria-label": `${text}: from` });
+    const hi = h("input", { type: "range", min, max, step: 1, value: Math.max(min, Math.min(o[kHi], max)), "aria-label": `${text}: to` });
+    const out = h("output");
+    const show = () => { out.textContent = lo.value === hi.value ? label(+lo.value) : `${label(+lo.value)} to ${label(+hi.value)}`; };
+    const change = (moved) => () => {
+      if (+lo.value > +hi.value) { if (moved === lo) hi.value = lo.value; else lo.value = hi.value; }
+      M.user[kLo] = +lo.value; M.user[kHi] = +hi.value;
+      show(); persist(); view();
+    };
+    lo.addEventListener("input", change(lo));
+    hi.addEventListener("input", change(hi));
+    show();
+    return h("label", { class: "slider dual-slider", title: help }, h("span", {}, text), h("span", { class: "dual" }, lo, hi), out);
+  };
+  const toggle = (key, text, help) => {
+    const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(!!o[key]), title: help }, text);
+    b.addEventListener("click", () => { M.user[key] = !effective()[key]; b.setAttribute("aria-pressed", String(M.user[key])); persist(); view(); });
     return b;
-  });
+  };
+  const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
+  const rated = [...store.concepts.values()].some((c) => c.links.some((l) => l.rel));
+  const levelName = (v) => (v === 0 ? "between topics" : `level ${v}`);
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
 
   // Tuning: every layout and routing parameter, with a way to keep the result.
   const snippet = h("pre", { class: "map-snippet", hidden: true });
   const showSnippet = () => {
     const e = effective();
-    const lines = ["[map]", ...["labels", "detail"].map((k) => `${k} = ${e[k]}`), `links = "${e.links}"`,
-      ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
+    const lines = ["[map]", ...Object.keys(VIEW_DEFAULTS).map((k) => `${k} = ${e[k]}`), ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
     snippet.textContent = lines.join("\n");
     snippet.hidden = !snippet.hidden;
   };
@@ -960,11 +1063,19 @@ function controls({ view, tune, readout }) {
   return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
-      h("div", { class: "legend" }, h("span", {}, "Links"), modes),
+      h("div", { class: "row" },
+        toggle("showLinks", "Links", "Show links at all."),
+        rated ? toggle("hideImplied", "Hide implied", "Hide a link when a chain of links at least as strong already connects its ends.") : "",
+        toggle("focusOnly", "Focused folder only", "When zoomed into a folder, show only links with an end inside it.")),
       h("div", { class: "sliders" },
+        dual(["levelMin", "levelMax"], "Shared folder", 0, maxDepth, levelName,
+          "Which links to show by the lowest folder both ends share: 0 is links between top-level topics, higher levels are links inside subtopics."),
+        rated ? dual(["rateMin", "rateMax"], "Importance", 1, 3, (v) => STRENGTH_LABEL[v],
+          "Which links to show by rating: see also, uses (and unrated links), requires.") : "",
         slider("labels", "Labels", 5, 120, 1, view, "Most labels shown at once, most important first."),
         slider("detail", "Open folders at", 60, 400, 10, view, "A folder opens when its radius on screen passes this many pixels.")),
       legend,
+      rated ? h("p", { class: "map-hint" }, "On hover: dark routes lead to what a note needs, coloured routes to what needs it.") : "",
       h("div", { class: "row" },
         button("Show everything", () => M.reset?.()),
         button("Default view", () => { for (const k of Object.keys(VIEW_DEFAULTS)) delete M.user[k]; persist(); location.reload(); }))),

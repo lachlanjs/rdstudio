@@ -104,3 +104,20 @@ flowchart LR
   B -->|lazy import| C[(vendor/mermaid)]
   C --> D[SVG in theme colours]
 ```
+
+# Link ratings
+
+A link's Markdown title rates how consequential it is:
+`[tangent space](/manifolds/tangent/tangent-space.md "requires")`. This is plain
+CommonMark, so it stays valid OKF and works for any subject.
+
+| Rating | Meaning |
+|---|---|
+| `requires` | a prerequisite: this concept cannot be understood without that one |
+| `uses` | relied on in a key fact, example or proof, but not needed to define it |
+| `see also` | a forward reference (it builds on this concept) or a tangent |
+
+Unrated links count as `uses`. Direction matters: A `requires` B means B comes
+first. "requires" links form a prerequisite graph: the map hides links implied
+by chains of others (a transitive reduction), and `rdstudio check` warns about
+groups of concepts that require each other, which the Review tab lists.
