@@ -142,6 +142,7 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
         "human": cfg.human,
         "okf_version": bundle.root_meta.get("okf_version"),
         "static": export,
+        "map": cfg.raw.get("map", {}),  # project defaults for the Map tab ([map] in rdstudio.toml)
         "issues": issues,
         "counts": {"concepts": len(concepts), "reports": len(report_items),
                    "skills": len(skills["skills"]), "agents": len(skills["agents"])},

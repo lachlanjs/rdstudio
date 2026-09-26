@@ -19,6 +19,11 @@ automatically, and how the knowledge is structured.
 | Mathematics | **differential geometry** | a strongly prerequisite-ordered subject; reading order and pathfinding; exercises and problem-solving over recall; KaTeX rendering |
 | Outside expertise | **music theory (harmony)**, the developer's choice | a subject that is partly a skill (hearing, playing) as well as knowledge, with nested structure (intervals, chords, progressions, form) and no code: whether the model generalises beyond technical work, and where it stops |
 
+A fifth trial, deferred until the code settles: **the rdstudio codebase
+itself**. The developer did none of the coding and is not a web developer, so
+it tests the core scenario of the [motivation](/ideas/manifesto/motivation.md)
+directly: understanding a codebase an agent wrote.
+
 Immunology was also suggested (nomenclature-heavy, clearly nested scales) and
 remains an option.
 

@@ -60,6 +60,9 @@ rdstudio --help                  # everything else
   library = "<library name>"
   ```
 
+- **Map settings:** the Map tab's Tuning panel adjusts layout and routing;
+  put values you like under `[map]` in `rdstudio.toml` to make them the
+  project's defaults (see `knowledge/design/map-view.md`).
 - **Static site:** `rdstudio export <dir>` writes a snapshot that any static
   host can serve (see below).
 

@@ -297,6 +297,59 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .graph-tip strong { display: block; font: 600 14px/1.3 var(--font-text); }
 .graph-tip span { color: var(--ink-faint); }
 
+/* ----------------------------------------------------------------- map */
+
+.map-wrap { background-image: none; }
+.map-wrap .m-back { fill: transparent; }
+.m-dir { fill: var(--c); stroke: var(--c); cursor: zoom-in; transition: fill-opacity .2s, opacity .2s; }
+.m-dir.open { fill-opacity: .035; stroke-opacity: .5; stroke-width: .8; }
+.m-dir.open.depth-1 { stroke-width: 1.5; stroke-opacity: .6; }
+.m-dir.closed { fill-opacity: .11; stroke-opacity: .55; stroke-width: 1; }
+.m-dir.closed:hover { fill-opacity: .2; }
+.m-place { cursor: pointer; transition: opacity .2s; }
+.m-place .mark { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; }
+.m-place.ring .mark { fill: var(--paper); stroke: var(--c); stroke-width: 2; }
+.m-place .ring { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+.m-place.landmark .mark { stroke: var(--ink); stroke-width: 1.4; }
+.m-place:focus-visible { outline: none; }
+.m-place:focus-visible .mark { stroke: var(--accent); stroke-width: 3; }
+.m-link { fill: none; stroke: var(--ink-soft); stroke-opacity: .42; stroke-linecap: round; transition: opacity .2s; }
+.m-link.across { stroke: var(--accent); stroke-opacity: .5; }
+.m-link.mixed { stroke: var(--accent); stroke-opacity: .45; }
+svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
+.m-routes.context .m-link { opacity: .22; }
+.m-routes.context .m-link.hot { opacity: 1; }
+svg.focusing .m-routes .m-link.hot { stroke-opacity: .85; }
+svg.focusing .m-place:not(.related) { opacity: .3; }
+svg.focusing .m-text.place:not(.related) { opacity: .3; }
+.m-labels { pointer-events: none; }
+.m-text, .m-arc {
+  font: 12px var(--font-ui); fill: var(--ink);
+  paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round;
+}
+.m-text.place { fill: var(--ink); }
+.m-text.landmark { font-weight: 700; font-size: 12.5px; }
+.m-text.territory { font-size: 14px; font-weight: 600; letter-spacing: .06em; fill: var(--ink-soft); }
+.m-text.territory .count { font-size: 11.5px; font-weight: 400; letter-spacing: 0; fill: var(--ink-faint); }
+.m-arc { font-size: 14px; font-weight: 600; letter-spacing: .08em; fill: var(--ink-soft); }
+.map-crumbs {
+  position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  max-width: calc(100% - 400px); justify-content: flex-end;
+  background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); padding: 4px 8px; font-size: 13.5px;
+}
+.map-crumbs button { border: 0; background: none; color: var(--accent); font: inherit; padding: 2px 3px; cursor: pointer; }
+.map-crumbs button[aria-current] { color: var(--ink); font-weight: 700; cursor: default; }
+.map-crumbs span { color: var(--ink-faint); }
+.legend .key-landmark { background: var(--paper-raised); border: 1.5px solid var(--ink); box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 3.5px var(--ink); width: 8px; height: 8px; margin: 0 3px; }
+.m-key path { fill: var(--ink-soft); }
+.m-key.ring path { fill: none; stroke: var(--ink-soft); stroke-width: 1.6; }
+.map-panel { max-height: calc(100% - 24px); overflow: auto; }
+.map-tuning > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
+.map-tuning .slider { grid-template-columns: 150px 1fr 44px; }
+.map-readout { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.map-snippet { margin: 0; font-size: 12px; padding: 8px; background: var(--paper-sunk); border-radius: 4px; user-select: all; white-space: pre; overflow: auto; }
+.legend .key-across { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--accent); }
+
 /* ------------------------------------------------------------ narrow */
 
 .scrim { display: none; }
@@ -337,6 +390,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
   .graph-panel { top: 8px; left: 8px; right: 8px; max-width: none; }
   .graph-options > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
   .graph-hint { display: none; }
+  .map-crumbs { top: auto; bottom: 10px; left: 8px; right: 8px; max-width: none; justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

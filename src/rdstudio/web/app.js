@@ -3,6 +3,7 @@
 import { store, load, watch } from "./js/data.js";
 import { conceptView, dirView } from "./js/knowledge.js";
 import { graphView, leaveGraph } from "./js/graph.js";
+import { mapView } from "./js/map.js";
 import { changesView, reviewView, reviewCount, reportsView, reportView, skillsView, skillView } from "./js/pages.js";
 import { proceduresView, procedureView, procedures } from "./js/procedures.js";
 import { settingsView } from "./js/settings.js";
@@ -22,6 +23,7 @@ function parse() {
     case "d": return { tab: "knowledge", key: "d:" + tail, render: () => dirView(tail) };
     case "k": return { tab: "knowledge", key: "k:" + tail, render: () => conceptView(tail) };
     case "graph": return { tab: "graph", key: "graph", render: graphView };
+    case "map": return { tab: "map", key: "map:" + tail, render: () => mapView(tail) };
     case "changes": return { tab: "changes", key: "changes", render: changesView };
     case "review": return { tab: "review", key: "review", render: reviewView };
     case "reports": return { tab: "reports", key: "reports", render: reportsView };
@@ -58,6 +60,7 @@ function updateChrome(tab) {
 async function route({ keepScroll = false } = {}) {
   const next = parse();
   if (current?.tab === "graph" && next.tab !== "graph") leaveGraph();
+  current?.node?.leave?.();
   closeDrawer();
   const scroll = keepScroll ? window.scrollY : 0;
   const node = await next.render();
@@ -89,9 +92,9 @@ window.addEventListener("hashchange", () => route());
 
 async function refresh() {
   // Live update: the graph merges new data in place; other views re-render keeping scroll.
-  if (current?.tab === "graph" && current.node?.refresh) {
+  if ((current?.tab === "graph" || current?.tab === "map") && current.node?.refresh) {
     current.node.refresh();
-    updateChrome("graph");
+    updateChrome(current.tab);
     return;
   }
   await route({ keepScroll: true });
