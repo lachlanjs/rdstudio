@@ -26,3 +26,11 @@
 * [T20 — Map view (first version)](T20-map-view.md) - A Map tab showing folders as nested regions with links drawn at their scale, tested on a separate differential geometry bundle.
 * [T21 — Link ratings, implied-link culling and link filters](T21-link-ratings.md) - Rate links by how consequential they are, hide links implied by chains of others, and filter the map by folder level, rating and focus.
 * [T22 — Five themes, direction colours and a clearer range slider](T22-themes-and-direction.md) - Replace the themes with Studio, Notebook, Map, Space and Cyber, each restyling the map as well as the page; colour routes by direction only; make range-slider thumbs distinct.
+* [T23 — Learner record and landmarks](T23-learner-record.md) - A private, append-only record of learning events per project, written by the dashboard, the CLI and later agents; landmarks from frontmatter.
+* [T24 — Study paths and reading order](T24-study-paths.md) - Use requires links to give each note its prerequisites in reading order, the whole bundle in reading order, and how advanced each note is.
+* [T25 — Tours](T25-tours.md) - Ordered walks through notes with narration; your own tours private, shared tours as Tour notes kept off the map; following one highlights its route.
+* [T26 — Interactive exercises](T26-exercises.md) - Offline exercises checked by the dashboard: fill the gap, placement, landmarks named and placed, recall with a self-grade.
+* [T27 — Coverage and review](T27-coverage-review.md) - Show on the map what you have shown you understand; a capped spaced-review queue; a quiet load indicator.
+* [T28 — Explain-back and AI marking](T28-explain-back.md) - AI-driven tasks: a skill and MCP tools to set and mark explain-back questions, answered in the harness or queued from the dashboard.
+* [T29 — Catching up on change](T29-catch-up.md) - What changed in each note since you last looked, from git history and the hashes in your record; notes going stale when their sources change.
+* [T30 — Editing from the dashboard](T30-dashboard-editing.md) - Let the dashboard edit notes through the same path as the MCP tools, with conflict checks, for a map you can reshape.

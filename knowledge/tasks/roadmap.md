@@ -51,6 +51,19 @@ Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
 - [x] [T21 Link ratings, implied-link culling and link filters](/tasks/T21-link-ratings.md)
 - [x] [T22 Five themes, direction colours and a clearer range slider](/tasks/T22-themes-and-direction.md)
 
+# M8 — Understanding layer: learning features
+
+See the [understanding layer design](/design/understanding-layer.md).
+
+- [ ] [T23 Learner record and landmarks](/tasks/T23-learner-record.md)
+- [ ] [T24 Study paths and reading order](/tasks/T24-study-paths.md)
+- [ ] [T25 Tours](/tasks/T25-tours.md)
+- [ ] [T26 Interactive exercises](/tasks/T26-exercises.md)
+- [ ] [T27 Coverage and review](/tasks/T27-coverage-review.md)
+- [ ] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
+- [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
+- [ ] [T30 Editing from the dashboard](/tasks/T30-dashboard-editing.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
