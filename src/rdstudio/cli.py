@@ -99,7 +99,7 @@ def cmd_export(args: argparse.Namespace, cfg: config_mod.Config) -> int:
 def cmd_serve(args: argparse.Namespace, cfg: config_mod.Config) -> int:
     from .serve import serve
 
-    serve(cfg, host=args.host, port=args.port, watch=not args.no_watch)
+    serve(cfg, host=args.host, port=args.port, watch=not args.no_watch, allow_hosts=tuple(args.allow_host))
     return 0
 
 
@@ -306,6 +306,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--no-watch", action="store_true")
+    s.add_argument("--allow-host", action="append", default=[], metavar="NAME",
+                   help="a host name a reverse proxy passes through (Tailscale's *.ts.net names are allowed already)")
     s.set_defaults(func=cmd_serve)
 
     s = sub.add_parser("procedure", help="list procedures; show, apply or reject proposed edits")

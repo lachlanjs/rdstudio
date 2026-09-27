@@ -28,15 +28,18 @@ class _Handler(SimpleHTTPRequestHandler):
     Writes are accepted only from the dashboard's own pages: the Origin must
     match the Host, the body must be JSON, and the request must carry the token
     handed out by GET (which other sites cannot read). When bound to localhost,
-    only localhost host names are served the API, against DNS rebinding."""
+    the API answers only to localhost names, Tailscale names (``*.ts.net``, as
+    ``tailscale serve`` passes them through) and ``--allow-host`` names, against
+    DNS rebinding."""
 
     cfg: Config
     token: str
     loopback: bool
+    allowed: frozenset[str] = frozenset()
 
     def _host_ok(self) -> bool:
         host = urlsplit("//" + (self.headers.get("Host") or "")).hostname or ""
-        return not self.loopback or host in LOOPBACK
+        return not self.loopback or host in LOOPBACK or host.endswith(".ts.net") or host in self.allowed
 
     def _json(self, status: int, value: object) -> None:
         body = json.dumps(value, ensure_ascii=False).encode()
@@ -128,10 +131,12 @@ def _watch(cfg: Config, stop: threading.Event) -> None:
         last = _fingerprint(cfg)  # the build may regenerate index.md files
 
 
-def serve(cfg: Config, *, host: str = "127.0.0.1", port: int = 8000, watch: bool = True) -> None:
+def serve(cfg: Config, *, host: str = "127.0.0.1", port: int = 8000, watch: bool = True,
+          allow_hosts: tuple[str, ...] = ()) -> None:
     site = build(cfg)
     handler_cls = type("Handler", (_Handler,), {
-        "cfg": cfg, "token": secrets.token_urlsafe(24), "loopback": host in LOOPBACK})
+        "cfg": cfg, "token": secrets.token_urlsafe(24), "loopback": host in LOOPBACK,
+        "allowed": frozenset(h.lower() for h in allow_hosts)})
     handler = functools.partial(handler_cls, directory=str(site))
     server = ThreadingHTTPServer((host, port), handler)
     stop = threading.Event()

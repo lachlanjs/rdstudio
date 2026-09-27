@@ -71,8 +71,10 @@ def test_server_accepts_writes_only_from_its_own_pages(cfg, tmp_path):
         assert post({**good, "X-Rdstudio-Token": "wrong"}) == 403
         assert post({**good, "Content-Type": "text/plain"}) == 415
         assert post({**good, "Host": "evil.example", "Origin": "http://evil.example"}) == 403  # DNS rebinding
+        ts = "me.tail1234.ts.net:8003"
+        assert post({**good, "Host": ts, "Origin": f"https://{ts}"}) == 200  # behind tailscale serve
         assert post(good, b"not json") == 400
         assert post(good) == 200
-        assert [e["event"] for e in learner.events(cfg)] == ["seen"]
+        assert [e["event"] for e in learner.events(cfg)] == ["seen", "seen"]
     finally:
         server.shutdown()

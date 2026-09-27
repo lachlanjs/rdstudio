@@ -43,12 +43,27 @@ knowledge base with you and fills in the first notes.
 ## Everyday commands
 
 ```bash
-rdstudio serve --host 0.0.0.0    # reachable from other devices (e.g. over Tailscale)
 rdstudio verify <concept-id>     # mark a note as checked by you
 rdstudio check                   # check the knowledge base's format
 rdstudio path <concept-id>       # what to read first, from links rated "requires"
 rdstudio --help                  # everything else
 ```
+
+## Open the dashboard on your other devices
+
+Keep `rdstudio serve` on localhost and let Tailscale put it on your tailnet
+over HTTPS, where only your devices can reach it (and a phone can install it as
+a full-screen app):
+
+```bash
+rdstudio serve --port 8003
+tailscale serve --bg --https=8003 http://127.0.0.1:8003
+# open https://<machine>.<tailnet>.ts.net:8003/ on any device signed in to your tailnet
+```
+
+`--bg` keeps it across restarts; `tailscale serve --https=8003 off` removes it.
+Use one port per project. `rdstudio serve --host 0.0.0.0` also works, but
+serves plain HTTP to your whole network.
 
 ## Optional
 
