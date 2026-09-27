@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import email.utils
 import functools
+import gzip
+import io
 import json
 import os
 import secrets
@@ -20,6 +23,10 @@ POLL_SECONDS = 1.0
 
 
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+# Text worth compressing: on a slow link (a VS Code tunnel, say) the dashboard's
+# 1.3 MB of scripts and data shrink to about 0.5 MB.
+COMPRESSIBLE = (".html", ".js", ".mjs", ".css", ".json", ".md", ".svg", ".txt", ".webmanifest", ".map")
+_gzipped: dict[tuple[str, int, int], bytes] = {}
 
 
 class _Handler(SimpleHTTPRequestHandler):
@@ -84,10 +91,54 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._json(400, {"error": str(exc)})
         self._json(200, event)
 
+    def _cache_control(self) -> str | None:
+        path = urlsplit(self.path).path
+        if path.startswith("/vendor/"):
+            return "public, max-age=604800"  # changes only when rdstudio is upgraded
+        if path.startswith("/data/") or path.endswith((".html", ".js", ".css")) or path == "/":
+            return "no-cache"  # revalidate (cheap: 304 when unchanged)
+        return None
+
     def end_headers(self) -> None:
-        if self.path.startswith("/data/") or self.path.endswith((".html", ".js", ".css")) or self.path == "/":
-            self.send_header("Cache-Control", "no-cache")
+        if cc := self._cache_control():
+            self.send_header("Cache-Control", cc)
         super().end_headers()
+
+    def send_head(self):  # type: ignore[override]
+        """Serve text gzipped when the browser accepts it; everything else as usual."""
+        path = self.translate_path(self.path)
+        if os.path.isdir(path) and urlsplit(self.path).path.endswith("/"):
+            path = os.path.join(path, "index.html")
+        if ("gzip" not in (self.headers.get("Accept-Encoding") or "") or not path.endswith(COMPRESSIBLE)
+                or not os.path.isfile(path)):
+            return super().send_head()
+        st = os.stat(path)
+        since = self.headers.get("If-Modified-Since")
+        if since:
+            try:
+                if int(st.st_mtime) <= email.utils.parsedate_to_datetime(since).timestamp():
+                    self.send_response(304)
+                    self.send_header("Vary", "Accept-Encoding")
+                    self.end_headers()
+                    return None
+            except (TypeError, ValueError, OverflowError):
+                pass
+        key = (path, st.st_mtime_ns, st.st_size)
+        body = _gzipped.get(key)
+        if body is None:
+            with open(path, "rb") as fh:
+                body = gzip.compress(fh.read(), compresslevel=6)
+            if len(_gzipped) > 512:
+                _gzipped.clear()
+            _gzipped[key] = body
+        self.send_response(200)
+        self.send_header("Content-Type", self.guess_type(path))
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Last-Modified", self.date_time_string(int(st.st_mtime)))
+        self.send_header("Vary", "Accept-Encoding")
+        self.end_headers()
+        return io.BytesIO(body)
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib signature
         pass

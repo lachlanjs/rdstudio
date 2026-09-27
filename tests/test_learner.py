@@ -78,3 +78,39 @@ def test_server_accepts_writes_only_from_its_own_pages(cfg, tmp_path):
         assert [e["event"] for e in learner.events(cfg)] == ["seen", "seen"]
     finally:
         server.shutdown()
+
+
+def test_server_compresses_text_and_caches_vendor_files(cfg, tmp_path):
+    import gzip as gz
+
+    site = tmp_path / "site"
+    (site / "vendor").mkdir(parents=True)
+    (site / "index.html").write_text("<p>hello</p>" * 100)
+    (site / "vendor" / "lib.js").write_text("var x = 1;" * 100)
+    (site / "icon.png").write_bytes(b"\x89PNG" + b"0" * 100)
+    handler = type("H", (_Handler,), {"cfg": cfg, "token": "tok", "loopback": True})
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(handler, directory=str(site)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_port}"
+
+    def get(path, **headers):
+        req = urllib.request.Request(base + path, headers=headers)
+        try:
+            with urllib.request.urlopen(req) as res:
+                return res.status, dict(res.headers), res.read()
+        except urllib.error.HTTPError as err:
+            return err.code, dict(err.headers), b""
+
+    try:
+        status, headers, body = get("/", **{"Accept-Encoding": "gzip"})
+        assert status == 200 and headers["Content-Encoding"] == "gzip" and headers["Cache-Control"] == "no-cache"
+        assert gz.decompress(body).decode() == "<p>hello</p>" * 100
+        assert get("/", **{"Accept-Encoding": "gzip", "If-Modified-Since": headers["Last-Modified"]})[0] == 304
+        status, headers, body = get("/vendor/lib.js", **{"Accept-Encoding": "gzip"})
+        assert headers["Cache-Control"].startswith("public, max-age=")
+        status, headers, body = get("/vendor/lib.js")
+        assert "Content-Encoding" not in headers and body.decode() == "var x = 1;" * 100
+        status, headers, _ = get("/icon.png", **{"Accept-Encoding": "gzip"})
+        assert status == 200 and "Content-Encoding" not in headers
+    finally:
+        server.shutdown()
