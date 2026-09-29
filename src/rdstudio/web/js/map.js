@@ -630,15 +630,6 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   // full strength clipped to the focused folder, so the detail you are looking
   // at is clear while routes still show where they lead.
   const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
-  // Filters themes can use through --route-filter, --region-filter and
-  // --place-filter. User-space regions so thin, straight paths are not clipped.
-  const filter = (id) => defs.append("filter").attr("id", id).attr("filterUnits", "userSpaceOnUse")
-    .attr("x", -5000).attr("y", -5000).attr("width", 20000).attr("height", 20000);
-  const sketch = filter("m-sketch"); // pencil: a slightly wobbly line
-  sketch.append("feTurbulence").attr("type", "fractalNoise").attr("baseFrequency", 0.035).attr("numOctaves", 2).attr("seed", 7).attr("result", "noise");
-  sketch.append("feDisplacementMap").attr("in", "SourceGraphic").attr("in2", "noise").attr("scale", 3.2)
-    .attr("xChannelSelector", "R").attr("yChannelSelector", "G");
-  filter("m-soft").append("feGaussianBlur").attr("stdDeviation", 3); // nebula: soft edges
   const gradients = defs.append("g"); // one per one-way route: direction as colour
   const gLinks = world.append("g").attr("class", "m-routes");
   const gFocus = world.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");

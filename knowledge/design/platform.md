@@ -129,7 +129,7 @@ not for every screen.
 | B2 | **Layout and routing in a Web Worker** | Moves the heavy work off the main thread; results cached by bundle hash and settings, so a reload does not recompute. No renderer change needed. |
 | B3 | **A renderer interface** | Separate "what to draw" (regions, routes, places, badges, labels) from "how", so SVG, Canvas 2D and WebGL can be swapped and compared. |
 | B4 | **WebGL renderer** | PixiJS (WebGL, with WebGPU where available) for regions, routes and markers. Labels, badges and tooltips stay in a thin DOM overlay: the label budget keeps them few. Try Canvas 2D first behind the same interface; it may be enough at this scale. |
-| B5 | **Theme parity** | Each theme's map tokens become renderer parameters; the pencil (`#m-sketch`) and nebula (`#m-soft`) filters become shaders or pre-rendered textures; direction gradients become per-vertex colours. |
+| B5 | **Theme parity** | Each theme's map tokens become renderer parameters; direction gradients become per-vertex colours. (The filters are gone: see the baseline.) |
 | B6 | **Interaction and accessibility** | Hit-testing with a quadtree; hover, focus, study paths. A canvas has no DOM semantics, so keep an off-screen list of places for keyboards and screen readers. |
 | B7 | **Level of detail** | Draw only what is on screen; folders only when zoomed out; route what is visible first. |
 | B8 | **Graph view** | The same renderer, later. |

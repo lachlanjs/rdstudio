@@ -62,6 +62,13 @@ What it says:
    bundles (Studio: under 0.7 s). Headless Chromium paints in software, so
    check this on real hardware before acting; if it holds, pre-rendered glows
    (B5) are the fix.
+
+   Follow-up: every theme with a filter paid for it, not only Space. Total
+   long tasks during the gesture on the field bundle (desktop): Studio 0.2 s,
+   Cyber 5.7 s, Space 6.0 s, Map 12 s, Notebook 19 s. The developer decided
+   the effects were not worth it, so all map filters were removed; Notebook's
+   pencil wobble became an irregular dashed outline. Every theme now measures
+   0.22 to 0.26 s.
 5. **The Python build grew faster than the bundle** (1.3 s at 1,186 notes, 9.8 s
    at 3,885), and `rdstudio serve` rebuilds on every save. Fixed here: LibYAML
    for frontmatter, the requires graph and backlinks computed once instead of
