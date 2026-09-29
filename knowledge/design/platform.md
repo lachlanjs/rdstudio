@@ -190,7 +190,13 @@ found that layout, not drawing, is the cost: it is most of the time to first
 map and is repeated on every reload, while closed folders keep the SVG to a
 few hundred elements. So the worker and layout cache (B2) and laying out only
 the open bubble (B7) come before a GPU renderer (B4), which waits for
-measurements on a real phone. Phase 1 is the long one; the Python package
+measurements on a real phone.
+
+Phase 0 is done (T31 to T33). On the phone profile a subject's map is usable
+in about 0.3 s and reopens in 0.15 s; a field of 1,186 notes in 0.4 s and
+0.24 s; over a slow link a reload fell from 1.3 s to 0.2 s. What remains
+costly: the first visit's 0.5 MB download, rerouting while zooming at field
+size, and the Python build at the ceiling. Phase 1 is the long one; the Python package
 keeps shipping throughout.
 
 # Decisions this makes
