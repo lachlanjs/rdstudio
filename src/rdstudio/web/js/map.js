@@ -7,6 +7,7 @@
 // only transforms them to the screen and decides what is open and labelled.
 
 import { store } from "./data.js";
+import { prerequisites } from "./learn.js";
 import { h, conceptHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
 
 /* global d3 */
@@ -597,9 +598,14 @@ function crossings(routes, shown, itemRadius) {
 
 const curve = d3.line().curve(d3.curveBasis); // stays within its waypoints: no loops
 
-export function mapView(focusRef = "") {
+export function mapView(focusRef = "", { path = "" } = {}) {
   document.title = `Map · ${store.site.title}`;
   let o = effective();
+  // A study path: a note and everything it requires, numbered in reading order.
+  // Only requires links between them are drawn, and everything else fades.
+  const goal = path && store.concepts.get(path);
+  const trail = goal ? [...prerequisites(goal.id), goal].map((c) => c.id) : null;
+  const step = new Map((trail || []).map((id, i) => [id, i + 1]));
   const wrap = h("div", { class: "graph-wrap map-wrap" });
   const svg = d3.select(wrap).append("svg").attr("role", "img").attr("aria-label", "Knowledge map");
   const tip = h("div", { class: "graph-tip", hidden: true });
@@ -611,6 +617,7 @@ export function mapView(focusRef = "") {
     readout,
   });
   wrap.append(panel, crumbs, tip, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
+  if (trail) wrap.append(trailCard());
 
   const defs = svg.append("defs");
   const back = svg.append("rect").attr("class", "m-back");
@@ -637,6 +644,7 @@ export function mapView(focusRef = "") {
   const gFocus = world.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
   const gImplied = world.append("g").attr("class", "m-implied-links");
   const gNotes = world.append("g");
+  const gSteps = world.append("g").attr("class", "m-steps");
   const gLabels = world.append("g").attr("class", "m-labels");
 
   let model = buildModel();
@@ -699,7 +707,7 @@ export function mapView(focusRef = "") {
   // open folders (or a setting) changes, so zooming stays cheap.
   function routesFor(open) {
     const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
-    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "");
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "") + (trail ? "|" + path : "");
     if (cache?.signature === signature) return cache;
     const shownRep = (leaf) => {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
@@ -710,7 +718,14 @@ export function mapView(focusRef = "") {
     let hidden = 0;
     const kept = [];
     // (m.dir: 1 if every link in a route runs p → q, -1 if q → p, 0 if both ways.)
-    if (o.showLinks) {
+    if (trail) {
+      for (const [a, b, s] of model.edges) {
+        if (s !== 3 || !step.has(a) || !step.has(b)) continue;
+        if (o.hideImplied && model.implied.has(a + "\n" + b)) { hidden++; continue; }
+        const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
+        if (na && nb) kept.push([a, b, s, na, nb]);
+      }
+    } else if (o.showLinks) {
       for (const [a, b, s] of model.edges) {
         if (s < o.rateMin || s > o.rateMax) continue;
         if (o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b)) { hidden++; continue; }
@@ -880,7 +895,7 @@ export function mapView(focusRef = "") {
       g.append("path").attr("class", "mark");
       return fadeIn(g);
     })
-      .attr("class", (n) => `m-place ${n.data.marker}${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}`)
+      .attr("class", (n) => `m-place ${n.data.marker}${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}${step.has(n.data.ref) ? " on-trail" : ""}`)
       .attr("aria-label", (n) => n.data.label)
       .attr("transform", (n) => `translate(${sx(n)},${sy(n)})`)
       .style("--c", (n) => (n.group >= 0 ? PALETTE[n.group % PALETTE.length] : "var(--ink-soft)"))
@@ -896,6 +911,8 @@ export function mapView(focusRef = "") {
       });
 
     current = { sx, sy, radius };
+    svg.classed("trail", !!trail);
+    if (trail) drawSteps(visible, open, sx, sy, sr, dot);
     drawLabels(open, visible, notes, sx, sy, sr, dot);
     if (hovered) hover(hovered);
   }
@@ -935,7 +952,7 @@ export function mapView(focusRef = "") {
       texts.push({ n, x: sx(n), y: sy(n) - 1, lines, anchor: "middle", cls: "territory" });
     }
     // Places: beside the marker, trying right, left, above and below.
-    const ranked = [...notes].sort((a, b) => b.data.weight - a.data.weight || sr(b) - sr(a));
+    const ranked = [...notes].sort((a, b) => step.has(b.data.ref) - step.has(a.data.ref) || b.data.weight - a.data.weight || sr(b) - sr(a));
     for (const n of ranked) {
       if (arcs.length + texts.length >= budget) break;
       const r = dot(n) + (n.data.landmark ? 4 : 0), x = sx(n), y = sy(n);
@@ -954,7 +971,7 @@ export function mapView(focusRef = "") {
       const spot = spots.find((s) => fits(s.box, own));
       if (!spot) continue;
       placed.push(spot.box);
-      texts.push({ n, x: spot.tx, y: spot.box[1] + 11, lines, anchor: spot.anchor, cls: n.data.landmark ? "place landmark" : "place" });
+      texts.push({ n, x: spot.tx, y: spot.box[1] + 11, lines, anchor: spot.anchor, cls: (n.data.landmark ? "place landmark" : "place") + (step.has(n.data.ref) ? " on-trail" : "") });
     }
 
     defs.selectAll("path").data(arcs, (a) => a.n.data.id).join("path")
@@ -1032,6 +1049,83 @@ export function mapView(focusRef = "") {
       });
   }
 
+  // Step numbers: on each note of the path, and on each closed folder holding
+  // some of it (as the steps inside, e.g. 3–5).
+  function drawSteps(visible, open, sx, sy, sr, dot) {
+    const badges = [];
+    for (const n of visible) {
+      if (n.data.kind === "concept") {
+        if (!step.has(n.data.ref)) continue;
+        const r = dot(n) + (n.data.landmark ? 3.5 : 0);
+        badges.push({ id: n.data.id, x: sx(n) - r * 0.75, y: sy(n) - r * 0.75, text: String(step.get(n.data.ref)), last: n.data.ref === path });
+      } else if (!open.has(n)) {
+        const inside = n.leaves().map((l) => step.get(l.data.ref)).filter(Boolean).sort((a, b) => a - b);
+        if (!inside.length) continue;
+        badges.push({ id: n.data.id, x: sx(n) + sr(n) * 0.62, y: sy(n) - sr(n) * 0.62, text: spans(inside), last: inside.includes(trail.length) });
+      }
+    }
+    gSteps.selectAll("g").data(badges, (b) => b.id).join((enter) => {
+      const g = enter.append("g");
+      g.append("rect");
+      g.append("text");
+      return g;
+    })
+      .attr("class", (b) => `m-step${b.last ? " goal" : ""}`)
+      .attr("transform", (b) => `translate(${b.x},${b.y})`)
+      .each(function (b) {
+        const g = d3.select(this);
+        const width = Math.max(16, b.text.length * 6.6 + 8);
+        g.select("rect").attr("x", -width / 2).attr("y", -8).attr("width", width).attr("height", 16).attr("rx", 8);
+        g.select("text").attr("y", 4).text(b.text);
+      });
+  }
+
+  function spans(nums) {
+    const out = [];
+    for (let i = 0; i < nums.length; i++) {
+      let j = i;
+      while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+      out.push(j > i ? `${nums[i]}–${nums[j]}` : String(nums[i]));
+      i = j;
+    }
+    return out.length > 3 ? out.slice(0, 3).join(", ") + "…" : out.join(", ");
+  }
+
+  // The list of steps beside the map; choosing one zooms to where it is.
+  function trailCard() {
+    const narrowNow = matchMedia("(max-width: 760px), (max-height: 560px)").matches;
+    const list = h("ol", { class: "trail-steps" }, trail.map((id) => {
+      const c = store.concepts.get(id);
+      const b = h("button", { type: "button", title: "Show on the map" }, c.title);
+      b.addEventListener("click", () => {
+        const n = L.byId.get("c:" + id);
+        if (!n) return;
+        zoomTo(n.parent);
+        hover(n);
+      });
+      return h("li", { class: id === path ? "goal" : null }, b,
+        h("a", { href: conceptHref(id), "aria-label": `Open ${c.title}`, title: "Open the note" }, "open"));
+    }));
+    const close = h("a", { class: "trail-close", href: "#/map", "aria-label": "Close the study path" }, "×");
+    return h("details", { class: "trail-card", open: !narrowNow },
+      h("summary", {}, `Study path to ${goal.title}`, h("span", { class: "count" }, trail.length)),
+      h("p", { class: "section-note" }, trail.length > 1
+        ? "Read in this order: each note comes after the notes it requires."
+        : "Nothing is marked as required before this note."),
+      list, close);
+  }
+
+  // A view that holds every note on the path.
+  function trailTransform() {
+    const nodes = trail.map((id) => L.byId.get("c:" + id)).filter(Boolean);
+    if (!nodes.length) return null;
+    const x0 = d3.min(nodes, (n) => n.x - n.r), x1 = d3.max(nodes, (n) => n.x + n.r);
+    const y0 = d3.min(nodes, (n) => n.y - n.r), y1 = d3.max(nodes, (n) => n.y + n.r);
+    const pad = 70; // screen pixels, for labels and badges
+    const k = Math.min(80, (w - 2 * pad) / (x1 - x0), (hgt - 2 * pad) / (y1 - y0));
+    return d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, hgt / 2 - k * (y0 + y1) / 2).scale(k);
+  }
+
   function drawCrumbs() {
     const path = focus.ancestors().reverse();
     crumbs.replaceChildren(...path.flatMap((n, i) => {
@@ -1067,7 +1161,9 @@ export function mapView(focusRef = "") {
   requestAnimationFrame(() => {
     size();
     const target = focusRef ? L.byId.get("d:" + focusRef) : null;
-    if (target) svg.call(zoom.transform, fitTransform(target));
+    const onTrail = trail && trailTransform();
+    if (onTrail) svg.call(zoom.transform, onTrail);
+    else if (target) svg.call(zoom.transform, fitTransform(target));
     else svg.call(zoom.transform, M.transform || fitTransform(L.root));
   });
   const onResize = () => { size(); schedule(); };

@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from . import gitlog, reports
+from . import gitlog, learner, reports
 from .config import Config
 from .okf import Bundle, FrontmatterError, headings, iso, jsonable, now, split_frontmatter
 
@@ -46,7 +46,12 @@ def _dump(value: Any) -> str:
 def concept_record(bundle: Bundle, cid: str) -> dict[str, Any]:
     c = bundle.concepts[cid]
     rec = c.summary()
+    place = bundle.prerequisite_order()[cid]
     rec.update({
+        "hash": learner.content_hash(c.body),  # the version learner-record events refer to
+        "order": place["order"],  # reading order from requires links
+        "depth": place["depth"],  # longest chain of prerequisites below this note
+        "requires": bundle.requires_graph()[cid],
         "meta": jsonable(c.meta),
         "directory": c.directory,
         "links": [{"target": l.target, "kind": l.kind, "broken": l.broken, "rel": l.rel} for l in c.links],

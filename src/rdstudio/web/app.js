@@ -1,12 +1,13 @@
 // rdstudio dashboard: hash router and shell.
 
-import { store, load, watch } from "./js/data.js";
+import { store, load, watch, loadLearner } from "./js/data.js";
 import { conceptView, dirView } from "./js/knowledge.js";
 import { graphView, leaveGraph } from "./js/graph.js";
 import { mapView } from "./js/map.js";
 import { changesView, reviewView, reviewCount, reportsView, reportView, skillsView, skillView } from "./js/pages.js";
 import { proceduresView, procedureView, procedures } from "./js/procedures.js";
 import { settingsView } from "./js/settings.js";
+import { learnView } from "./js/learn.js";
 import { renderDiagrams } from "./js/diagrams.js";
 import { h } from "./js/util.js";
 
@@ -24,6 +25,8 @@ function parse() {
     case "k": return { tab: "knowledge", key: "k:" + tail, render: () => conceptView(tail) };
     case "graph": return { tab: "graph", key: "graph", render: graphView };
     case "map": return { tab: "map", key: "map:" + tail, render: () => mapView(tail) };
+    case "path": return { tab: "map", key: "path:" + tail, render: () => mapView("", { path: tail }) };
+    case "learn": return { tab: "learn", key: "learn", render: learnView };
     case "changes": return { tab: "changes", key: "changes", render: changesView };
     case "review": return { tab: "review", key: "review", render: reviewView };
     case "reports": return { tab: "reports", key: "reports", render: reportsView };
@@ -113,6 +116,7 @@ async function refresh() {
 
 try {
   await load();
+  await loadLearner();
   await route();
   const live = document.querySelector(".live");
   if (store.site.static) {

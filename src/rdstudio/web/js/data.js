@@ -74,3 +74,36 @@ export function watch(onChange, onStatus) {
   }
   setTimeout(tick, POLL_MS);
 }
+
+// ------------------------------------------------------- learner record
+// Private to the person running `rdstudio serve`; absent from static exports.
+
+export const learner = { enabled: false, dir: null, events: [], token: null };
+
+export async function loadLearner() {
+  if (store.site.static) return;
+  try {
+    const res = await fetch("api/learner", { cache: "no-store" });
+    if (res.ok) Object.assign(learner, await res.json());
+  } catch { /* an older server, or no server: the record is off */ }
+}
+
+// Appends one event ({event, concept, kind, ...}); resolves to the stored event, or null.
+export async function record(event) {
+  if (!learner.enabled) return null;
+  const c = event.concept ? store.concepts.get(event.concept) : null;
+  if (c && !event.hash) event = { ...event, hash: c.hash };
+  try {
+    const res = await fetch("api/learner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Rdstudio-Token": learner.token },
+      body: JSON.stringify(event),
+    });
+    if (!res.ok) return null;
+    const stored = await res.json();
+    learner.events.push(stored);
+    return stored;
+  } catch {
+    return null;
+  }
+}

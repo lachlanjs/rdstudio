@@ -15,6 +15,10 @@ questions.
 
 # Tours
 
+Decided: tours stay off the map and graph (following one highlights its
+route), and tasks are sorted into autodidactic, interactive and AI-driven; see
+the [understanding layer](/design/understanding-layer.md).
+
 An ordered path through notes with one sentence of narration per stop, written
 by the developer or an agent and stored as a concept. The dashboard steps
 through it and pans the graph. Covers journeying, touring a colleague

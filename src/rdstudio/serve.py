@@ -2,24 +2,143 @@
 
 from __future__ import annotations
 
+import email.utils
 import functools
+import gzip
+import io
+import json
 import os
+import secrets
 import sys
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
+from . import learner
 from .build import WEB_DIR, build
 from .config import Config
 
 POLL_SECONDS = 1.0
 
 
+LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+# Text worth compressing: on a slow link (a VS Code tunnel, say) the dashboard's
+# 1.3 MB of scripts and data shrink to about 0.5 MB.
+COMPRESSIBLE = (".html", ".js", ".mjs", ".css", ".json", ".md", ".svg", ".txt", ".webmanifest", ".map")
+_gzipped: dict[tuple[str, int, int], bytes] = {}
+
+
 class _Handler(SimpleHTTPRequestHandler):
+    """Static files, plus ``/api/learner`` for the private learner record.
+
+    Writes are accepted only from the dashboard's own pages: the Origin must
+    match the Host, the body must be JSON, and the request must carry the token
+    handed out by GET (which other sites cannot read). When bound to localhost,
+    the API answers only to localhost names, Tailscale names (``*.ts.net``, as
+    ``tailscale serve`` passes them through) and ``--allow-host`` names, against
+    DNS rebinding."""
+
+    cfg: Config
+    token: str
+    loopback: bool
+    allowed: frozenset[str] = frozenset()
+
+    def _host_ok(self) -> bool:
+        host = urlsplit("//" + (self.headers.get("Host") or "")).hostname or ""
+        return not self.loopback or host in LOOPBACK or host.endswith(".ts.net") or host in self.allowed
+
+    def _json(self, status: int, value: object) -> None:
+        body = json.dumps(value, ensure_ascii=False).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:
+        if urlsplit(self.path).path != "/api/learner":
+            return super().do_GET()
+        if not self._host_ok():
+            return self._json(403, {"error": "host not allowed"})
+        on = learner.enabled(self.cfg)
+        self._json(200, {
+            "enabled": on,
+            "token": self.token if on else None,
+            "dir": str(learner.record_dir(self.cfg)) if on else None,
+            "events": learner.events(self.cfg) if on else [],
+        })
+
+    def do_POST(self) -> None:
+        if urlsplit(self.path).path != "/api/learner":
+            return self._json(404, {"error": "not found"})
+        origin = urlsplit(self.headers.get("Origin") or "").netloc
+        if not self._host_ok() or origin != self.headers.get("Host"):
+            return self._json(403, {"error": "cross-origin request refused"})
+        if self.headers.get("X-Rdstudio-Token") != self.token:
+            return self._json(403, {"error": "bad token"})
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            return self._json(415, {"error": "JSON only"})
+        if not learner.enabled(self.cfg):
+            return self._json(409, {"error": "the learner record is off ([learner] enabled in the user config)"})
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > learner.MAX_EVENT_BYTES:
+            return self._json(413, {"error": "event too large"})
+        try:
+            event = learner.append(self.cfg, json.loads(self.rfile.read(length) or b"null"))
+        except (ValueError, learner.LearnerError) as exc:
+            return self._json(400, {"error": str(exc)})
+        self._json(200, event)
+
+    def _cache_control(self) -> str | None:
+        path = urlsplit(self.path).path
+        if path.startswith("/vendor/"):
+            return "public, max-age=604800"  # changes only when rdstudio is upgraded
+        if path.startswith("/data/") or path.endswith((".html", ".js", ".css")) or path == "/":
+            return "no-cache"  # revalidate (cheap: 304 when unchanged)
+        return None
+
     def end_headers(self) -> None:
-        if self.path.startswith("/data/") or self.path.endswith((".html", ".js", ".css")) or self.path == "/":
-            self.send_header("Cache-Control", "no-cache")
+        if cc := self._cache_control():
+            self.send_header("Cache-Control", cc)
         super().end_headers()
+
+    def send_head(self):  # type: ignore[override]
+        """Serve text gzipped when the browser accepts it; everything else as usual."""
+        path = self.translate_path(self.path)
+        if os.path.isdir(path) and urlsplit(self.path).path.endswith("/"):
+            path = os.path.join(path, "index.html")
+        if ("gzip" not in (self.headers.get("Accept-Encoding") or "") or not path.endswith(COMPRESSIBLE)
+                or not os.path.isfile(path)):
+            return super().send_head()
+        st = os.stat(path)
+        since = self.headers.get("If-Modified-Since")
+        if since:
+            try:
+                if int(st.st_mtime) <= email.utils.parsedate_to_datetime(since).timestamp():
+                    self.send_response(304)
+                    self.send_header("Vary", "Accept-Encoding")
+                    self.end_headers()
+                    return None
+            except (TypeError, ValueError, OverflowError):
+                pass
+        key = (path, st.st_mtime_ns, st.st_size)
+        body = _gzipped.get(key)
+        if body is None:
+            with open(path, "rb") as fh:
+                body = gzip.compress(fh.read(), compresslevel=6)
+            if len(_gzipped) > 512:
+                _gzipped.clear()
+            _gzipped[key] = body
+        self.send_response(200)
+        self.send_header("Content-Type", self.guess_type(path))
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Last-Modified", self.date_time_string(int(st.st_mtime)))
+        self.send_header("Vary", "Accept-Encoding")
+        self.end_headers()
+        return io.BytesIO(body)
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib signature
         pass
@@ -63,9 +182,13 @@ def _watch(cfg: Config, stop: threading.Event) -> None:
         last = _fingerprint(cfg)  # the build may regenerate index.md files
 
 
-def serve(cfg: Config, *, host: str = "127.0.0.1", port: int = 8000, watch: bool = True) -> None:
+def serve(cfg: Config, *, host: str = "127.0.0.1", port: int = 8000, watch: bool = True,
+          allow_hosts: tuple[str, ...] = ()) -> None:
     site = build(cfg)
-    handler = functools.partial(_Handler, directory=str(site))
+    handler_cls = type("Handler", (_Handler,), {
+        "cfg": cfg, "token": secrets.token_urlsafe(24), "loopback": host in LOOPBACK,
+        "allowed": frozenset(h.lower() for h in allow_hosts)})
+    handler = functools.partial(handler_cls, directory=str(site))
     server = ThreadingHTTPServer((host, port), handler)
     stop = threading.Event()
     if watch:

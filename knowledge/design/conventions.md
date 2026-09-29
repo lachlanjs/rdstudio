@@ -121,3 +121,8 @@ Unrated links count as `uses`. Direction matters: A `requires` B means B comes
 first. "requires" links form a prerequisite graph: the map hides links implied
 by chains of others (a transitive reduction), and `rdstudio check` warns about
 groups of concepts that require each other, which the Review tab lists.
+They also give a reading order, each note's study path (everything it
+requires, in order) and its level (the longest chain of prerequisites below
+it), shown in the Learn tab, on note pages and on the map, and by
+`rdstudio path`. A study path is only as good as the requires links: a note
+that uses a concept without linking to it looks like a starting point.

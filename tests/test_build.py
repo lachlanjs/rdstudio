@@ -47,6 +47,8 @@ def test_build_and_history(tmp_path, bundle_dir):
     data = site / "data"
     concepts = json.loads((data / "concepts.json").read_text())
     assert {c["id"] for c in concepts} >= {"design/model", "research/spectrum"}
+    assert all(len(c["hash"]) == 12 and c["depth"] >= 0 and isinstance(c["requires"], list) for c in concepts)
+    assert sorted(c["order"] for c in concepts) == list(range(len(concepts)))
     assert (data / "k/design/model.md").read_text().startswith("# Dynamics")
     assert (data / "k/research/fig.png").exists()
     assert (site / "index.html").exists() and (site / "vendor/d3.min.js").exists()

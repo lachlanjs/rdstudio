@@ -197,6 +197,19 @@ def create_server(cfg: Config) -> MCPServer:
         return _fmt([{"id": x, "title": b.concepts[x].title} for x in b.backlinks(cid)])
 
     @server.tool()
+    def study_path(id: str) -> str:
+        """What to read before a concept: everything it requires (links titled
+        "requires"), directly or through a chain, in reading order. ``depth`` is the
+        longest chain of prerequisites below each concept."""
+        b = bundle()
+        cid = b.resolve_id(id)
+        if cid is None:
+            return f"No concept {id!r}."
+        order = b.prerequisite_order()
+        return _fmt([{"id": x, "title": b.concepts[x].title, "depth": order[x]["depth"]}
+                     for x in [*b.prerequisites(cid), cid]])
+
+    @server.tool()
     def review_queue(limit: int = 10) -> str:
         """What needs human attention: concepts changed since human review, open
         questions, unverified concepts, and format errors."""

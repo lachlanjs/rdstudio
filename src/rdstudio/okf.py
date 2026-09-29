@@ -372,6 +372,7 @@ class Bundle:
         self.directories: dict[str, Directory] = {}
         self.issues: list[Issue] = []
         self.root_meta: dict[str, Any] = {}
+        self._prereq: dict[str, dict[str, int]] | None = None
 
     # ----------------------------------------------------------------- load
 
@@ -497,11 +498,16 @@ class Bundle:
 
     # ------------------------------------------------------------- queries
 
-    def requires_cycles(self) -> list[list[str]]:
-        """Groups of concepts that require each other, directly or through a chain
-        (strongly connected components of the "requires" links, Tarjan's algorithm)."""
-        graph = {cid: sorted({l.target for l in c.links if l.rel == "requires" and l.kind == "concept"
-                              and not l.broken and l.target != cid}) for cid, c in self.concepts.items()}
+    def requires_graph(self) -> dict[str, list[str]]:
+        """Each concept's direct prerequisites: the concepts it links to as ``requires``."""
+        return {cid: sorted({l.target for l in c.links if l.rel == "requires" and l.kind == "concept"
+                             and not l.broken and l.target != cid and l.target in self.concepts})
+                for cid, c in self.concepts.items()}
+
+    def _components(self) -> list[list[str]]:
+        """Strongly connected components of the requires graph (Tarjan's algorithm),
+        singletons included; a component is a group that require each other."""
+        graph = self.requires_graph()
         index: dict[str, int] = {}
         low: dict[str, int] = {}
         stack: list[str] = []
@@ -529,13 +535,80 @@ class Bundle:
                     group.append(w)
                     if w == v:
                         break
-                if len(group) > 1:
-                    groups.append(sorted(group))
+                groups.append(sorted(group))
 
         for v in sorted(graph):
             if v not in index:
                 visit(v)
-        return sorted(groups)
+        return groups
+
+    def requires_cycles(self) -> list[list[str]]:
+        """Groups of concepts that require each other, directly or through a chain."""
+        return sorted(g for g in self._components() if len(g) > 1)
+
+    def prerequisite_order(self) -> dict[str, dict[str, int]]:
+        """For every concept, its place in a reading order (``order``) and how advanced
+        it is (``depth``: the longest chain of prerequisites below it).
+
+        The order is a topological sort of the requires graph with cycles treated
+        as one step; among the concepts that are ready, it prefers staying in the
+        folder just read, then shallower concepts, then titles."""
+        if self._prereq is not None:
+            return self._prereq
+        graph = self.requires_graph()
+        comps = self._components()
+        comp_of = {cid: i for i, g in enumerate(comps) for cid in g}
+        needs = [sorted({comp_of[w] for v in g for w in graph[v]} - {i}) for i, g in enumerate(comps)]
+        depth: list[int] = [-1] * len(comps)
+        # Tarjan emits a component only after everything it reaches, so this order is safe.
+        for i in range(len(comps)):
+            depth[i] = 1 + max((depth[j] for j in needs[i]), default=-1)
+        waiting = [len(n) for n in needs]
+        unlocks: list[list[int]] = [[] for _ in comps]
+        for i, n in enumerate(needs):
+            for j in n:
+                unlocks[j].append(i)
+        ready = {i for i, w in enumerate(waiting) if w == 0}
+        title = {i: min(self.concepts[c].title.lower() for c in g) for i, g in enumerate(comps)}
+        folder = {i: self.concepts[comps[i][0]].directory for i in range(len(comps))}
+
+        def shared(a: str, b: str) -> int:
+            pa, pb = a.split("/") if a else [], b.split("/") if b else []
+            n = 0
+            while n < min(len(pa), len(pb)) and pa[n] == pb[n]:
+                n += 1
+            return n
+
+        out: dict[str, dict[str, int]] = {}
+        last = None
+        while ready:
+            i = min(ready, key=lambda k: (-(shared(folder[k], folder[last]) if last is not None else 0),
+                                          depth[k], folder[k], title[k]))
+            ready.discard(i)
+            for cid in sorted(comps[i], key=lambda c: self.concepts[c].title.lower()):
+                out[cid] = {"order": len(out), "depth": depth[i]}
+            last = i
+            for k in unlocks[i]:
+                waiting[k] -= 1
+                if waiting[k] == 0:
+                    ready.add(k)
+        self._prereq = out
+        return out
+
+    def prerequisites(self, cid: str) -> list[str]:
+        """Everything ``cid`` requires, directly or through a chain, in reading order
+        (``cid`` itself excluded)."""
+        graph = self.requires_graph()
+        seen: set[str] = set()
+        todo = list(graph.get(cid, []))
+        while todo:
+            v = todo.pop()
+            if v not in seen:
+                seen.add(v)
+                todo.extend(graph[v])
+        seen.discard(cid)
+        order = self.prerequisite_order()
+        return sorted(seen, key=lambda c: order[c]["order"])
 
     def backlinks(self, cid: str) -> list[str]:
         return sorted(c.id for c in self.concepts.values() if any(l.target == cid for l in c.links))

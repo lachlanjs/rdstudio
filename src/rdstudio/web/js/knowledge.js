@@ -1,6 +1,7 @@
 // Knowledge tab: directory tree, concept and directory pages, frontmatter panel.
 
-import { store, body } from "./data.js";
+import { store, body, learner, record } from "./data.js";
+import { hasRequires, prerequisites, depthLabel } from "./learn.js";
 import { render, wireAnchors } from "./markdown.js";
 import { h, conceptHref, dirHref, trustState, trustBadge, timeEl, titleCase, fmtDateTime } from "./util.js";
 
@@ -122,8 +123,31 @@ function metaPanel(c) {
       outline.length > 1 ? [h("h2", {}, "On this page"),
         h("ul", { class: "outline" }, outline.map((x) => h("li", { class: `l${x.level}` },
           h("a", { href: "javascript:void(0)", "data-anchor": "h-" + x.slug }, x.text))))] : "",
+      studyPath(c),
       back.length ? [h("h2", {}, "Linked from"), linkList(uniq(back))] : "",
       out.length ? [h("h2", {}, "Links to"), linkList(uniq(out))] : ""));
+}
+
+// What to read first: everything this note requires, in reading order.
+function studyPath(c) {
+  if (!hasRequires()) return "";
+  const before = prerequisites(c.id);
+  if (!before.length) return [h("h2", {}, "Study path"), h("p", { class: "section-note" }, "Nothing is marked as required before this note.")];
+  const list = h("ol", { class: "linklist study" }, before.map((p) => h("li", {}, h("a", { href: conceptHref(p.id) }, p.title), depthLabel(p))));
+  return [
+    h("h2", {}, "Study path"),
+    h("p", { class: "section-note" }, `${before.length} ${before.length === 1 ? "note comes" : "notes come"} before this one. `,
+      h("a", { href: "#/path/" + encodeURIComponent(c.id) }, "Show on map")),
+    before.length > 8 ? h("details", {}, h("summary", {}, "In reading order"), list) : list,
+  ];
+}
+
+// Opening a note is recorded once per version per half hour, when the record is on.
+function noteSeen(c) {
+  if (!learner.enabled) return;
+  const recent = learner.events.findLast((e) => e.event === "seen" && e.concept === c.id);
+  if (recent && recent.hash === c.hash && Date.now() - Date.parse(recent.at) < 30 * 60e3) return;
+  record({ event: "seen", concept: c.id });
 }
 
 function linkList(concepts) {
@@ -154,6 +178,7 @@ export async function conceptView(id) {
       c.description ? h("p", { class: "description" }, c.description) : ""),
     h("div", { class: "prose", html: render(text, { dir: c.directory }) }));
   document.title = `${c.title} · ${store.site.title}`;
+  noteSeen(c);
   return layout("k:" + id, article, metaPanel(c));
 }
 
