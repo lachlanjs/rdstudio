@@ -144,3 +144,28 @@ def test_events_written_before_ids_get_the_same_id_everywhere(cfg):
     first = learner.events(cfg)
     assert [e["id"] for e in first] == [e["id"] for e in learner.events(cfg)]
     assert first[0]["id"] < first[1]["id"] and all(learner.ID_RE.match(e["id"]) for e in first)
+
+
+def test_connections_are_kept_open_and_survive_a_refused_post(cfg, tmp_path):
+    import http.client
+
+    (tmp_path / "a.js").write_text("x" * 5000)
+    handler = type("H", (_Handler,), {"cfg": cfg, "token": "tok", "loopback": True})
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(handler, directory=str(tmp_path)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", server.server_port)
+        for enc in ("gzip", "identity", "gzip"):  # three requests, one connection
+            conn.request("GET", "/a.js", headers={"Accept-Encoding": enc})
+            res = conn.getresponse()
+            assert res.status == 200 and res.read()
+        conn.request("POST", "/api/learner", body=b'{"event": "x"}', headers={"Content-Type": "application/json"})
+        res = conn.getresponse()
+        assert res.status == 403 and res.getheader("Connection") == "close"
+        res.read()
+        conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", server.server_port)
+        conn.request("GET", "/missing.js")
+        assert conn.getresponse().status == 404
+    finally:
+        server.shutdown()

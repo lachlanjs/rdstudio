@@ -39,3 +39,26 @@ Platform A1; works with today's server.
 The first visit is unchanged (about 2 s over the slow link): it still
 downloads 0.5 to 0.7 MB. Delta updates (A2) and a smaller build (T38) are what
 shorten it.
+
+# Follow-up: a flaky tunnel
+
+Over the developer's VS Code dev tunnel the dashboard still failed to start:
+the tunnel answered some of the page's 40 requests with 504 (its gateway
+timing out), while the server itself answered each in under 3 ms. A few failed
+scripts stop the app. Fixes:
+
+- The service worker retries 502, 503 and 504 responses and network errors
+  (after 0.4 s and 1.5 s).
+- It is registered from `index.html`, before anything else loads, with
+  retries, so it installs even when app scripts fail; if a script or style
+  fails, the page reloads once (then served through the worker).
+- The manifest is fetched with credentials (`crossorigin="use-credentials"`);
+  without them the tunnel sent it to its login page, which Edge blocked.
+- `rdstudio serve` keeps connections open (HTTP/1.1), so fewer new connections
+  go through the tunnel; a POST closes its connection, since a refused body is
+  never read.
+
+Tested through a proxy that fails 30% of requests with a 504: whenever the
+page itself arrived, the map appeared (at most one automatic reload), and every
+later visit worked, being served from the cache. When the page itself fails,
+only a manual reload helps, and only on the first visit.

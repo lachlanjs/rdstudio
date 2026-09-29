@@ -54,6 +54,21 @@ self.addEventListener("message", (event) => {
   })));
 });
 
+// Tunnels (a VS Code dev tunnel, say) sometimes drop a request with a 502, 503
+// or 504, or fail outright. Try again a couple of times before giving up.
+const RETRY_MS = [400, 1500];
+async function fetchRetry(req) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(req);
+      if (![502, 503, 504].includes(res.status) || attempt >= RETRY_MS.length) return res;
+    } catch (err) {
+      if (attempt >= RETRY_MS.length) throw err;
+    }
+    await new Promise((r) => setTimeout(r, RETRY_MS[attempt]));
+  }
+}
+
 function timeout(promise) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS))]);
 }
@@ -66,7 +81,7 @@ async function shell(req) {
   const key = page ? scope.href : req; // every page load is the one app page
   const hit = await cache.match(key, { ignoreSearch: page });
   if (hit) return hit;
-  const res = await fetch(req);
+  const res = await fetchRetry(req);
   if (res.ok && res.type === "basic") cache.put(key, res.clone());
   return res;
 }
@@ -74,7 +89,7 @@ async function shell(req) {
 async function networkFirst(req) {
   const cache = await caches.open(SHELL_CACHE);
   try {
-    const res = await timeout(fetch(req));
+    const res = await timeout(fetchRetry(req));
     if (res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {
@@ -138,7 +153,7 @@ async function data(req) {
     if (hit) return hit;
   }
   try {
-    const res = await fetch(req);
+    const res = await fetchRetry(req);
     if (res.ok && version) await (await caches.open(DATA + version)).put(req, res.clone());
     return res;
   } catch (err) {

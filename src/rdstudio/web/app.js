@@ -130,18 +130,11 @@ try {
     h("pre", {}, String(err))));
 }
 
-// Instant reopening and offline reading (sw.js). Browsers allow it only on
-// https or localhost; everything works without it. ?nosw skips it, for debugging.
-if ("serviceWorker" in navigator && !new URLSearchParams(location.search).has("nosw")) {
-  const had = Boolean(navigator.serviceWorker.controller);
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-  if (!had) {
-    navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({
-      warm: [location.href.split("#")[0], ...performance.getEntriesByType("resource").map((e) => e.name)],
-    }));
-  }
-  // A new rdstudio took over just as this page opened: show the new version.
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (had && performance.now() < 10000) location.reload();
-  });
+// The service worker is registered in index.html. The first time, hand it the
+// files this page loaded before it was in control, so the next visit is served
+// from the cache.
+if ("serviceWorker" in navigator && !navigator.serviceWorker.controller) {
+  navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({
+    warm: [location.href.split("#")[0], ...performance.getEntriesByType("resource").map((e) => e.name)],
+  }));
 }
