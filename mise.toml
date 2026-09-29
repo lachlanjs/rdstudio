@@ -63,3 +63,7 @@ run = "uv run python fixtures/agree_build.py"
 [tasks."writes:agree"]
 description = "Check the Python and Node stores leave notes that read the same"
 run = "uv run python fixtures/agree_writes.py"
+
+[tasks."scaffold:agree"]
+description = "Compare init, global, promote and skills between the Python and Node command lines (in a temporary home)"
+run = "uv run python fixtures/agree_scaffold.py"

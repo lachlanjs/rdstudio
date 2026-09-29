@@ -22,7 +22,7 @@ compares their output on every ported command.
    API with its checks, rebuilding on change); OpenAPI for the learner API.
    Done.
 3. **Writes:** store and verify (with the significance rules), procedures
-   (and their lint), the global bundle and promote, `init` and skills.
+   (and their lint), the global bundle and promote, `init` and skills. Done.
 4. **The MCP server** on the official TypeScript SDK, the same tools.
 5. **papis and the classifier** by subprocess, `brief`.
 6. **The launcher:** the wheel carries the bundled Node program and the
@@ -82,3 +82,11 @@ compares their output on every ported command.
   broken one (`edge`). `agree_writes` now also proposes (valid, invalid, bad
   op, not a procedure) and applies and rejects: the notes read the same.
   A missing knowledge folder is an empty bundle, as in Python.
+- Slice 3c: `init`, `global init|status`, `promote` and `skills
+  list|to-user|to-project` in Node, from the same templates.
+  `fixtures/agree_scaffold.py` (`mise run scaffold:agree`) runs 17 commands
+  with each command line in a temporary home (fresh `init`, again, with
+  `--force`, over existing instructions and settings; the global base;
+  promotion refused, kept and forced; skills moved both ways) and compares
+  the output and all 121 files: the same. Found on the way: the default
+  actor comes from `$LOGNAME`/`$USER` first, as Python's `getpass` does.

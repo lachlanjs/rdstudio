@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
+import { init } from "./scaffold.ts";
+import { ScopeError, globalConfig, initGlobal, moveSkill, promote, skillDirs } from "./scopes.ts";
 import { StoreError, verify } from "./store.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
 import * as learner from "./learner.ts";
@@ -32,9 +34,19 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["init", "refs", "global", "promote", "skills", "brief", "mcp"];
+const PENDING = ["refs", "brief", "mcp"];
 
 const COMMANDS: Record<string, Command> = {
+  init: {
+    help: "scaffold rdstudio into a repository",
+    usage: "[path] [--title TITLE] [--human HUMAN] [--force]",
+    options: { title: { type: "string" }, human: { type: "string" }, force: { type: "boolean" } },
+    run(_cfg, v, [path = "."]) {
+      for (const line of init(path, { title: v.title as string | undefined, human: v.human as string | undefined, force: Boolean(v.force) })) console.log(line);
+      return 0;
+    },
+  },
+
   check: {
     help: "check OKF conformance of the knowledge bundle",
     options: { warnings: { type: "boolean", short: "w" } },
@@ -172,6 +184,67 @@ const COMMANDS: Record<string, Command> = {
         console.log(`proposal ${result.proposal} on ${cid}: ${result.state}`);
       } catch (err) {
         if (!(err instanceof ProcedureError)) throw err;
+        console.error(err.message);
+        return 1;
+      }
+      return 0;
+    },
+  },
+
+  global: {
+    help: "set up or show the global knowledge base",
+    usage: "{init,status} [path] [--human HUMAN]",
+    options: { human: { type: "string" } },
+    run(cfg, v, [action, path = "~/knowledge"]) {
+      if (action !== "init" && action !== "status") {
+        return usageError("global", `argument action: invalid choice: ${pyRepr(action ?? "")} (choose from 'init', 'status')`);
+      }
+      if (action === "init") {
+        for (const line of initGlobal(path, v.human as string | undefined)) console.log(line);
+        return 0;
+      }
+      const g = globalConfig(cfg);
+      if (!g) { console.log("no global knowledge base; run `rdstudio global init [~/knowledge]`"); return 1; }
+      console.log(`global knowledge base: ${g.root} (${bundle(g).concepts.size} concepts)`);
+      return 0;
+    },
+  },
+
+  promote: {
+    help: "move a project concept into the global knowledge base",
+    usage: "concept [--as ID] [--keep] [--force]",
+    options: { as: { type: "string" }, keep: { type: "boolean" }, force: { type: "boolean" } },
+    run(cfg, v, [concept]) {
+      if (!concept) return usageError("promote", "the following arguments are required: concept");
+      let result;
+      try {
+        result = promote(cfg, concept, { asId: v.as as string | undefined, keep: Boolean(v.keep), force: Boolean(v.force) });
+      } catch (err) {
+        if (!(err instanceof ScopeError || err instanceof StoreError)) throw err;
+        console.error(err.message);
+        return 1;
+      }
+      console.log(`${result.moved ? "moved" : "copied"} ${result.from} to the global knowledge base as ${result.to}`);
+      if (result.broken_links_in_global.length) console.log("links that do not resolve in the global base: " + result.broken_links_in_global.join(", "));
+      return 0;
+    },
+  },
+
+  skills: {
+    help: "list skills by scope, or move one between project and user scope",
+    usage: "{list,to-user,to-project} [name]",
+    run(cfg, _v, [action, name]) {
+      if (!action || !["list", "to-user", "to-project"].includes(action)) {
+        return usageError("skills", `argument action: invalid choice: ${pyRepr(action ?? "")} (choose from 'list', 'to-user', 'to-project')`);
+      }
+      if (action === "list") {
+        for (const [scope, skills] of Object.entries(skillDirs(cfg))) console.log(`${scope}: ${[...skills.keys()].join(", ") || "(none)"}`);
+        return 0;
+      }
+      try {
+        console.log(moveSkill(cfg, name ?? "", action === "to-user" ? "user" : "project"));
+      } catch (err) {
+        if (!(err instanceof ScopeError)) throw err;
         console.error(err.message);
         return 1;
       }
