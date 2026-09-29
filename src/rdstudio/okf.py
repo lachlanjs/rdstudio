@@ -365,6 +365,9 @@ class Issue:
     path: str
     level: str  # "error" | "warning"
     message: str
+    # A stable name for the kind of issue, which other implementations match
+    # (fixtures/); the message is for people and may differ.
+    code: str = ""
 
 
 class Bundle:
@@ -424,10 +427,10 @@ class Bundle:
             concept.links = links
             for link in concept.links:
                 if link.broken:
-                    self.issues.append(Issue(concept.path, "warning", f"broken link to {link.target}"))
+                    self.issues.append(Issue(concept.path, "warning", f"broken link to {link.target}", "broken-link"))
         for group in self.requires_cycles():
             first = self.concepts[group[0]]
-            self.issues.append(Issue(first.path, "warning", "requires cycle: " + ", ".join(group) + " require each other"))
+            self.issues.append(Issue(first.path, "warning", "requires cycle: " + ", ".join(group) + " require each other", "requires-cycle"))
 
     def _ensure_dir(self, directory: str) -> None:
         if directory in self.directories:
@@ -443,19 +446,19 @@ class Bundle:
         try:
             meta, body = split_frontmatter(text)
         except FrontmatterError as exc:
-            self.issues.append(Issue(rel, "error", str(exc)))
+            self.issues.append(Issue(rel, "error", str(exc), "frontmatter-invalid"))
             meta, body = {}, text
         concept = Concept(cid, rel, meta or {}, body, path.stat().st_mtime)
         if meta is None:
-            self.issues.append(Issue(rel, "error", "missing YAML frontmatter"))
+            self.issues.append(Issue(rel, "error", "missing YAML frontmatter", "frontmatter-missing"))
         elif not concept.type:
-            self.issues.append(Issue(rel, "error", "frontmatter has no non-empty 'type'"))
+            self.issues.append(Issue(rel, "error", "frontmatter has no non-empty 'type'", "type-missing"))
         for key in ("generated",):
             if key in concept.meta and "by" not in concept.generated:
-                self.issues.append(Issue(rel, "warning", "'generated' should record 'by'"))
+                self.issues.append(Issue(rel, "warning", "'generated' should record 'by'", "generated-without-by"))
         for event in concept.verified:
             if "by" not in event:
-                self.issues.append(Issue(rel, "warning", "'verified' entry without 'by'"))
+                self.issues.append(Issue(rel, "warning", "'verified' entry without 'by'", "verified-without-by"))
         self.concepts[cid] = concept
         self.directories[posixpath.dirname(rel)].concepts.append(cid)
 
@@ -463,21 +466,21 @@ class Bundle:
         try:
             meta, _ = split_frontmatter(path.read_text(encoding="utf-8"))
         except FrontmatterError as exc:
-            self.issues.append(Issue(rel, "error", str(exc)))
+            self.issues.append(Issue(rel, "error", str(exc), "frontmatter-invalid"))
             return
         if meta is None:
             return
         if directory != "":
-            self.issues.append(Issue(rel, "error", "index.md below the root must not have frontmatter"))
+            self.issues.append(Issue(rel, "error", "index.md below the root must not have frontmatter", "index-frontmatter"))
         elif set(meta) - {"okf_version"}:
-            self.issues.append(Issue(rel, "error", "root index.md frontmatter may only carry okf_version"))
+            self.issues.append(Issue(rel, "error", "root index.md frontmatter may only carry okf_version", "root-index-frontmatter"))
         else:
             self.root_meta = meta
 
     def _check_log(self, path: Path, rel: str) -> None:
         for line in path.read_text(encoding="utf-8").split("\n"):
             if line.startswith("## ") and not _LOG_DATE.match(line[3:].strip()):
-                self.issues.append(Issue(rel, "warning", f"log heading is not YYYY-MM-DD: {line.strip()}"))
+                self.issues.append(Issue(rel, "warning", f"log heading is not YYYY-MM-DD: {line.strip()}", "log-heading-date"))
 
     def _resolve(self, concept: Concept, target: str) -> Link | None:
         if not target or target.startswith("#") or _SCHEME.match(target):
@@ -639,7 +642,7 @@ class Bundle:
     def lint(self) -> list[Issue]:
         from .procedures import lint as lint_procedures  # procedures builds on this module
 
-        return list(self.issues) + [Issue(path, "error", msg) for path, msg in lint_procedures(self)]
+        return list(self.issues) + [Issue(path, "error", msg, "procedure") for path, msg in lint_procedures(self)]
 
     def resolve_id(self, ref: str) -> str | None:
         """Accept an id, a bundle path, or a bundle-absolute link."""

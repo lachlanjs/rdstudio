@@ -1,0 +1,533 @@
+{
+ "concepts": {
+  "design/model": {
+   "backlinks": [
+    "design/overview"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "The recurrent network model with random matrices.",
+   "directory": "design",
+   "generated_at": "2026-09-22T00:00:00Z",
+   "hash": "ba5f7dc0bfe4",
+   "headings": [
+    [
+     1,
+     "Dynamics",
+     "dynamics",
+     0
+    ],
+    [
+     2,
+     "Stability",
+     "stability",
+     4
+    ],
+    [
+     2,
+     "Stability",
+     "stability",
+     8
+    ],
+    [
+     3,
+     "Café, naïve & co.",
+     "café-naïve-co",
+     12
+    ],
+    [
+     1,
+     "Evolution",
+     "evolution",
+     14
+    ]
+   ],
+   "last_human_verification": "2026-09-21T00:00:00Z",
+   "links": [
+    [
+     "research/spectrum",
+     "concept",
+     false,
+     null
+    ]
+   ],
+   "meta": {
+    "custom_key": "kept",
+    "description": "The recurrent network model with random matrices.",
+    "generated": {
+     "at": "2026-09-22",
+     "by": "agent/x"
+    },
+    "nested": {
+     "flag": true,
+     "list": [
+      1,
+      "two",
+      3.5
+     ]
+    },
+    "status": "draft",
+    "tags": [
+     "model",
+     "rnn"
+    ],
+    "title": "Model",
+    "type": "Design",
+    "verified": [
+     {
+      "at": "2026-09-21T00:00:00Z",
+      "by": "human:alice"
+     },
+     {
+      "at": "2026-09-23T00:00:00Z",
+      "by": "process:ci"
+     }
+    ]
+   },
+   "order": 1,
+   "path": "design/model.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "draft",
+   "tags": [
+    "model",
+    "rnn"
+   ],
+   "title": "Model",
+   "trust": "human-reviewed",
+   "type": "Design",
+   "verification_stale": true
+  },
+  "design/overview": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "How the system is designed, across two lines.",
+   "directory": "design",
+   "generated_at": "2026-09-20T00:00:00Z",
+   "hash": "d014307f1404",
+   "headings": [
+    [
+     1,
+     "Summary",
+     "summary",
+     0
+    ]
+   ],
+   "last_human_verification": "2026-09-21T00:00:00Z",
+   "links": [
+    [
+     "research/spectrum",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "design/model",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "research/stale",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "research/",
+     "directory",
+     false,
+     null
+    ],
+    [
+     "research/",
+     "directory",
+     false,
+     null
+    ],
+    [
+     "/",
+     "directory",
+     false,
+     null
+    ],
+    [
+     "nowhere",
+     "concept",
+     true,
+     null
+    ],
+    [
+     "research/spectrum",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "design/model",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "research/two words",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "research/fresh",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "research/fresh",
+     "concept",
+     false,
+     null
+    ]
+   ],
+   "meta": {
+    "description": "How the system is designed, across two lines.",
+    "generated": {
+     "at": "2026-09-20T00:00:00Z",
+     "by": "agent/x"
+    },
+    "tags": [
+     "design",
+     "overview"
+    ],
+    "title": "Design overview",
+    "type": "Overview",
+    "verified": {
+     "at": "2026-09-21T00:00:00Z",
+     "by": "human:alice"
+    }
+   },
+   "order": 0,
+   "path": "design/overview.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "design",
+    "overview"
+   ],
+   "title": "Design overview",
+   "trust": "human-reviewed",
+   "type": "Overview",
+   "verification_stale": false
+  },
+  "research/fresh": {
+   "backlinks": [
+    "design/overview"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "Checked by a person after it last changed; stale only in the far future.",
+   "directory": "research",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "0ac82d5f3632",
+   "headings": [],
+   "last_human_verification": "2026-02-01T00:00:00Z",
+   "links": [],
+   "meta": {
+    "description": "Checked by a person after it last changed; stale only in the far future.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "agent/x"
+    },
+    "stale_after": "2999-01-01T00:00:00Z",
+    "title": "Fresh",
+    "type": "Research",
+    "verified": {
+     "at": "2026-02-01T00:00:00Z",
+     "by": "human:bob"
+    }
+   },
+   "order": 2,
+   "path": "research/fresh.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Fresh",
+   "trust": "human-reviewed",
+   "type": "Research",
+   "verification_stale": false
+  },
+  "research/snake_and-kebab": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "research",
+   "generated_at": null,
+   "hash": "2a811ee89b76",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "type": "Concept"
+   },
+   "order": 3,
+   "path": "research/snake_and-kebab.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Snake and kebab",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "research/spectrum": {
+   "backlinks": [
+    "design/model",
+    "design/overview"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "Eigenvalue spectra of random matrices.",
+   "directory": "research",
+   "generated_at": null,
+   "hash": "fc03a97dc9f6",
+   "headings": [
+    [
+     1,
+     "Circular law",
+     "circular-law",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "Eigenvalue spectra of random matrices.",
+    "tags": "rmt",
+    "type": "Research",
+    "verified": [
+     {
+      "at": "2026-09-23T00:00:00Z",
+      "by": "process:ci"
+     }
+    ]
+   },
+   "order": 4,
+   "path": "research/spectrum.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "rmt"
+   ],
+   "title": "Spectrum",
+   "trust": "machine-confirmed",
+   "type": "Research",
+   "verification_stale": false
+  },
+  "research/stale": {
+   "backlinks": [
+    "design/overview"
+   ],
+   "content_stale": true,
+   "depth": 0,
+   "description": "Changed after its last human check, and past its stale_after date.",
+   "directory": "research",
+   "generated_at": "2026-02-01T00:00:00Z",
+   "hash": "91ac666eb9ff",
+   "headings": [],
+   "last_human_verification": "2026-01-01T00:00:00Z",
+   "links": [],
+   "meta": {
+    "description": "Changed after its last human check, and past its stale_after date.",
+    "generated": {
+     "at": "2026-02-01T00:00:00Z",
+     "by": "agent/x"
+    },
+    "stale_after": "2000-01-01",
+    "title": "Stale",
+    "type": "Research",
+    "verified": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "human:bob"
+    }
+   },
+   "order": 5,
+   "path": "research/stale.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Stale",
+   "trust": "human-reviewed",
+   "type": "Research",
+   "verification_stale": true
+  },
+  "research/two words": {
+   "backlinks": [
+    "design/overview"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A file name with a space in it.",
+   "directory": "research",
+   "generated_at": null,
+   "hash": "370c6e6bdfe2",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "A file name with a space in it.",
+    "type": "Concept"
+   },
+   "order": 6,
+   "path": "research/two words.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Two words",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  }
+ },
+ "directories": {
+  "": {
+   "children": [
+    "design",
+    "media",
+    "research"
+   ],
+   "concepts": [],
+   "has_index": true,
+   "has_log": false
+  },
+  "design": {
+   "children": [],
+   "concepts": [
+    "design/model",
+    "design/overview"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "media": {
+   "children": [],
+   "concepts": [],
+   "has_index": false,
+   "has_log": false
+  },
+  "research": {
+   "children": [],
+   "concepts": [
+    "research/fresh",
+    "research/snake_and-kebab",
+    "research/spectrum",
+    "research/stale",
+    "research/two words"
+   ],
+   "has_index": false,
+   "has_log": true
+  }
+ },
+ "format": 1,
+ "indexes": {
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Directories\n\n* [design](design/) - How the system is designed, across two lines.\n* [media](media/)\n* [research](research/)\n",
+  "design": "# Overview\n\n* [Design overview](overview.md) - How the system is designed, across two lines.\n\n# Design\n\n* [Model](model.md) - The recurrent network model with random matrices.\n",
+  "media": "# Contents\n",
+  "research": "# Concept\n\n* [Snake and kebab](snake_and-kebab.md)\n* [Two words](two words.md) - A file name with a space in it.\n\n# Research\n\n* [Fresh](fresh.md) - Checked by a person after it last changed; stale only in the far future.\n* [Spectrum](spectrum.md) - Eigenvalue spectra of random matrices.\n* [Stale](stale.md) - Changed after its last human check, and past its stale_after date.\n"
+ },
+ "issues": [
+  [
+   "design/overview.md",
+   "warning",
+   "broken-link"
+  ],
+  [
+   "research/log.md",
+   "warning",
+   "log-heading-date"
+  ]
+ ],
+ "requires_cycles": [],
+ "root_meta": {
+  "okf_version": "0.2"
+ },
+ "search": {
+  "circular law disc": [
+   [
+    "research/spectrum",
+    6.28,
+    "# Circular law"
+   ],
+   [
+    "design/overview",
+    1.29,
+    "…a [section](/research/spectrum.md#circular-law), a"
+   ]
+  ],
+  "design": [
+   [
+    "design/overview",
+    1.892,
+    "How the system is designed, across two lines."
+   ],
+   [
+    "design/model",
+    0.935,
+    "The recurrent network model with random matrices."
+   ]
+  ],
+  "nothing matches this": [],
+  "random matrices": [
+   [
+    "research/spectrum",
+    4.078,
+    "The circular law describes the spectrum of random matrices. Eigenvalues fill a disc."
+   ],
+   [
+    "design/model",
+    3.08,
+    "Genetic programming over block matrices. See [the spectrum](../research/spectrum.md)."
+   ]
+  ],
+  "spectrum eigenvalues": [
+   [
+    "research/spectrum",
+    4.559,
+    "The circular law describes the spectrum of random matrices. Eigenvalues fill a disc."
+   ],
+   [
+    "design/model",
+    0.995,
+    "Genetic programming over block matrices. See [the spectrum](../research/spectrum.md)."
+   ],
+   [
+    "design/overview",
+    0.94,
+    "Absolute [spectrum](/research/spectrum.md), relative [model](./model.md) and"
+   ]
+  ],
+  "stale": [
+   [
+    "research/stale",
+    1.71,
+    "Changed after its last human check, and past its stale_after date."
+   ],
+   [
+    "research/fresh",
+    1.34,
+    "Checked by a person after it last changed; stale only in the far future."
+   ],
+   [
+    "design/overview",
+    0.458,
+    "[parent](../research/stale.md), a [folder](/research/), a [folder index](/research/index.md),"
+   ]
+  ]
+ }
+}

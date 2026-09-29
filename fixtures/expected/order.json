@@ -1,0 +1,815 @@
+{
+ "concepts": {
+  "algebra/fields": {
+   "backlinks": [
+    "algebra/rings"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "",
+   "directory": "algebra",
+   "generated_at": null,
+   "hash": "cbd0125c7147",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "algebra/rings",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Fields",
+    "type": "Definition"
+   },
+   "order": 11,
+   "path": "algebra/fields.md",
+   "prerequisites": [
+    "foundations/sets",
+    "foundations/functions",
+    "algebra/groups",
+    "algebra/rings"
+   ],
+   "requires": [
+    "algebra/rings"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Fields",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "algebra/groups": {
+   "backlinks": [
+    "algebra/modules",
+    "algebra/rings",
+    "topology/continuity"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "",
+   "directory": "algebra",
+   "generated_at": null,
+   "hash": "8538ee171797",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "foundations/functions",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "foundations/sets",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Groups",
+    "type": "Definition"
+   },
+   "order": 9,
+   "path": "algebra/groups.md",
+   "prerequisites": [
+    "foundations/sets",
+    "foundations/functions"
+   ],
+   "requires": [
+    "foundations/functions",
+    "foundations/sets"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Groups",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "algebra/modules": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 4,
+   "description": "",
+   "directory": "algebra",
+   "generated_at": null,
+   "hash": "6ba5c2e68634",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "algebra/rings",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "algebra/groups",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "title": "Modules",
+    "type": "Definition"
+   },
+   "order": 12,
+   "path": "algebra/modules.md",
+   "prerequisites": [
+    "foundations/sets",
+    "foundations/functions",
+    "algebra/groups",
+    "algebra/rings"
+   ],
+   "requires": [
+    "algebra/rings"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Modules",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "algebra/rings": {
+   "backlinks": [
+    "algebra/fields",
+    "algebra/modules"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "",
+   "directory": "algebra",
+   "generated_at": null,
+   "hash": "333f142ffd33",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "algebra/groups",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "algebra/fields",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "title": "Rings",
+    "type": "Definition"
+   },
+   "order": 10,
+   "path": "algebra/rings.md",
+   "prerequisites": [
+    "foundations/sets",
+    "foundations/functions",
+    "algebra/groups"
+   ],
+   "requires": [
+    "algebra/groups"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Rings",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "cycle/chicken": {
+   "backlinks": [
+    "cycle/egg"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "cycle",
+   "generated_at": null,
+   "hash": "ef3352f1a6f1",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "cycle/egg",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Chicken",
+    "type": "Definition"
+   },
+   "order": 0,
+   "path": "cycle/chicken.md",
+   "prerequisites": [
+    "cycle/egg"
+   ],
+   "requires": [
+    "cycle/egg"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Chicken",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "cycle/egg": {
+   "backlinks": [
+    "cycle/chicken",
+    "cycle/omelette"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "cycle",
+   "generated_at": null,
+   "hash": "0853d97aab1d",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "cycle/chicken",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "foundations/sets",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "title": "Egg",
+    "type": "Definition"
+   },
+   "order": 1,
+   "path": "cycle/egg.md",
+   "prerequisites": [
+    "cycle/chicken"
+   ],
+   "requires": [
+    "cycle/chicken"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Egg",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "cycle/omelette": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 1,
+   "description": "",
+   "directory": "cycle",
+   "generated_at": null,
+   "hash": "ef3352f1a6f1",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "cycle/egg",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Omelette",
+    "type": "Definition"
+   },
+   "order": 2,
+   "path": "cycle/omelette.md",
+   "prerequisites": [
+    "cycle/chicken",
+    "cycle/egg"
+   ],
+   "requires": [
+    "cycle/egg"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Omelette",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "foundations/functions": {
+   "backlinks": [
+    "algebra/groups",
+    "foundations/relations",
+    "topology/continuity"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "",
+   "directory": "foundations",
+   "generated_at": null,
+   "hash": "5341ef289430",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "foundations/sets",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Functions",
+    "type": "Definition"
+   },
+   "order": 4,
+   "path": "foundations/functions.md",
+   "prerequisites": [
+    "foundations/sets"
+   ],
+   "requires": [
+    "foundations/sets"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Functions",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "foundations/relations": {
+   "backlinks": [
+    "topology/spaces"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "",
+   "directory": "foundations",
+   "generated_at": null,
+   "hash": "b161e8990d0f",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "foundations/sets",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "foundations/functions",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "title": "Relations",
+    "type": "Definition"
+   },
+   "order": 5,
+   "path": "foundations/relations.md",
+   "prerequisites": [
+    "foundations/sets"
+   ],
+   "requires": [
+    "foundations/sets"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Relations",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "foundations/sets": {
+   "backlinks": [
+    "algebra/groups",
+    "cycle/egg",
+    "foundations/functions",
+    "foundations/relations",
+    "topology/spaces"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "foundations",
+   "generated_at": null,
+   "hash": "adbb14005c31",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Sets",
+    "type": "Definition"
+   },
+   "order": 3,
+   "path": "foundations/sets.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Sets",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "topology/compactness": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 2,
+   "description": "",
+   "directory": "topology",
+   "generated_at": null,
+   "hash": "7307bd65a265",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [
+    [
+     "topology/spaces",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "topology/continuity",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "topology/",
+     "directory",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Compactness",
+    "type": "Theorem"
+   },
+   "order": 7,
+   "path": "topology/compactness.md",
+   "prerequisites": [
+    "foundations/sets",
+    "topology/spaces"
+   ],
+   "requires": [
+    "topology/spaces"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Compactness",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "topology/continuity": {
+   "backlinks": [
+    "topology/compactness"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "",
+   "directory": "topology",
+   "generated_at": null,
+   "hash": "f653920b296f",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "topology/spaces",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "foundations/functions",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "algebra/groups",
+     "concept",
+     false,
+     null
+    ]
+   ],
+   "meta": {
+    "title": "Continuity",
+    "type": "Definition"
+   },
+   "order": 8,
+   "path": "topology/continuity.md",
+   "prerequisites": [
+    "foundations/sets",
+    "foundations/functions",
+    "topology/spaces"
+   ],
+   "requires": [
+    "foundations/functions",
+    "topology/spaces"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Continuity",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "topology/spaces": {
+   "backlinks": [
+    "topology/compactness",
+    "topology/continuity"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "",
+   "directory": "topology",
+   "generated_at": null,
+   "hash": "3fadacac2ac2",
+   "headings": [
+    [
+     1,
+     "Links",
+     "links",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "foundations/sets",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "foundations/relations",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "title": "Topological spaces",
+    "type": "Definition"
+   },
+   "order": 6,
+   "path": "topology/spaces.md",
+   "prerequisites": [
+    "foundations/sets"
+   ],
+   "requires": [
+    "foundations/sets"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Topological spaces",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  }
+ },
+ "directories": {
+  "": {
+   "children": [
+    "algebra",
+    "cycle",
+    "foundations",
+    "topology"
+   ],
+   "concepts": [],
+   "has_index": false,
+   "has_log": false
+  },
+  "algebra": {
+   "children": [],
+   "concepts": [
+    "algebra/fields",
+    "algebra/groups",
+    "algebra/modules",
+    "algebra/rings"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "cycle": {
+   "children": [],
+   "concepts": [
+    "cycle/chicken",
+    "cycle/egg",
+    "cycle/omelette"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "foundations": {
+   "children": [],
+   "concepts": [
+    "foundations/functions",
+    "foundations/relations",
+    "foundations/sets"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "topology": {
+   "children": [],
+   "concepts": [
+    "topology/compactness",
+    "topology/continuity",
+    "topology/spaces"
+   ],
+   "has_index": false,
+   "has_log": false
+  }
+ },
+ "format": 1,
+ "indexes": {
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Directories\n\n* [algebra](algebra/)\n* [cycle](cycle/)\n* [foundations](foundations/)\n* [topology](topology/)\n",
+  "algebra": "# Definition\n\n* [Fields](fields.md)\n* [Groups](groups.md)\n* [Modules](modules.md)\n* [Rings](rings.md)\n",
+  "cycle": "# Definition\n\n* [Chicken](chicken.md)\n* [Egg](egg.md)\n* [Omelette](omelette.md)\n",
+  "foundations": "# Definition\n\n* [Functions](functions.md)\n* [Relations](relations.md)\n* [Sets](sets.md)\n",
+  "topology": "# Definition\n\n* [Continuity](continuity.md)\n* [Topological spaces](spaces.md)\n\n# Theorem\n\n* [Compactness](compactness.md)\n"
+ },
+ "issues": [
+  [
+   "cycle/chicken.md",
+   "warning",
+   "requires-cycle"
+  ]
+ ],
+ "requires_cycles": [
+  [
+   "cycle/chicken",
+   "cycle/egg"
+  ]
+ ],
+ "root_meta": {},
+ "search": {
+  "continuity spaces": [
+   [
+    "topology/continuity",
+    4.679,
+    "- [spaces](/topology/spaces.md \"requires\")"
+   ],
+   [
+    "topology/compactness",
+    3.944,
+    "Needs [spaces](/topology/spaces.md 'requires') (single quotes), [continuity](continuity.md \"Some ordinary title\"),"
+   ],
+   [
+    "topology/spaces",
+    2.326,
+    ""
+   ]
+  ],
+  "egg": [
+   [
+    "cycle/egg",
+    2.432,
+    ""
+   ],
+   [
+    "cycle/chicken",
+    2.106,
+    "- [egg](/cycle/egg.md \"requires\")"
+   ],
+   [
+    "cycle/omelette",
+    2.106,
+    "- [egg](/cycle/egg.md \"requires\")"
+   ]
+  ],
+  "groups": [
+   [
+    "algebra/groups",
+    1.991,
+    ""
+   ],
+   [
+    "algebra/modules",
+    1.569,
+    "- [groups](/algebra/groups.md \"uses\")"
+   ],
+   [
+    "algebra/rings",
+    1.541,
+    "- [groups](/algebra/groups.md \"requires\")"
+   ],
+   [
+    "topology/continuity",
+    1.464,
+    "- [groups](/algebra/groups.md)"
+   ]
+  ],
+  "rings fields": [
+   [
+    "algebra/fields",
+    5.311,
+    "- [rings](/algebra/rings.md \"Requires\")"
+   ],
+   [
+    "algebra/rings",
+    4.744,
+    "- [fields](/algebra/fields.md \"see-also\")"
+   ],
+   [
+    "algebra/modules",
+    1.917,
+    "- [rings](/algebra/rings.md \"requires\")"
+   ]
+  ]
+ }
+}

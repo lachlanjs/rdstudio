@@ -1,0 +1,570 @@
+{
+ "concepts": {
+  "bad-yaml": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "de410d74a612",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {},
+   "order": 1,
+   "path": "bad-yaml.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Bad yaml",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "blank-type": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Blank type",
+    "type": ""
+   },
+   "order": 2,
+   "path": "blank-type.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Blank type",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "bom": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "fab9d5d23bff",
+   "headings": [
+    [
+     1,
+     "Heading",
+     "heading",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Starts with a byte order mark",
+    "type": "Concept"
+   },
+   "order": 8,
+   "path": "bom.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Starts with a byte order mark",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "crlf": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 1,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "51c58839df54",
+   "headings": [
+    [
+     1,
+     "First",
+     "first",
+     0
+    ],
+    [
+     2,
+     "Second",
+     "second",
+     4
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "sub/child",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "title": "Windows line endings",
+    "type": "Concept"
+   },
+   "order": 12,
+   "path": "crlf.md",
+   "prerequisites": [
+    "sub/child"
+   ],
+   "requires": [
+    "sub/child"
+   ],
+   "status": "stable",
+   "tags": [],
+   "title": "Windows line endings",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "empty-frontmatter": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "0e44fff8e282",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {},
+   "order": 3,
+   "path": "empty-frontmatter.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Empty frontmatter",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "géométrie": {
+   "backlinks": [
+    "sub/child"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "Unicode in the file name, title and headings.",
+   "directory": "",
+   "generated_at": null,
+   "hash": "f268a3ca6250",
+   "headings": [
+    [
+     1,
+     "Théorème de Gauss–Bonnet",
+     "théorème-de-gaussbonnet",
+     0
+    ],
+    [
+     2,
+     "Ω-limits & ℝⁿ",
+     "ω-limits-ℝⁿ",
+     2
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "Unicode in the file name, title and headings.",
+    "title": "Géométrie différentielle",
+    "type": "Concept"
+   },
+   "order": 4,
+   "path": "géométrie.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Géométrie différentielle",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "list-frontmatter": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "7e8e4f338695",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {},
+   "order": 5,
+   "path": "list-frontmatter.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "List frontmatter",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "no-by": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": "2026-09-01T00:00:00Z",
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "generated": {
+     "at": "2026-09-01T00:00:00Z"
+    },
+    "type": "Concept",
+    "verified": [
+     {
+      "at": "2026-09-02T00:00:00Z"
+     },
+     "not a mapping"
+    ]
+   },
+   "order": 6,
+   "path": "no-by.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "No by",
+   "trust": "machine-confirmed",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "no-frontmatter": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "7c4809282919",
+   "headings": [
+    [
+     1,
+     "Just Markdown",
+     "just-markdown",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {},
+   "order": 7,
+   "path": "no-frontmatter.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "No frontmatter",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "numeric-title": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "42",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": 42,
+    "tags": [
+     1,
+     2
+    ],
+    "title": 2026,
+    "type": "Concept"
+   },
+   "order": 0,
+   "path": "numeric-title.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "1",
+    "2"
+   ],
+   "title": "2026",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "sub/child": {
+   "backlinks": [
+    "crlf"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "sub",
+   "generated_at": null,
+   "hash": "cebe57ba94c9",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [
+    [
+     "géométrie",
+     "concept",
+     false,
+     null
+    ]
+   ],
+   "meta": {
+    "title": "Child",
+    "type": "Concept"
+   },
+   "order": 11,
+   "path": "sub/child.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Child",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "unclosed": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "2e4b2d1ef041",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {},
+   "order": 9,
+   "path": "unclosed.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Unclosed",
+   "trust": "unverified",
+   "type": "",
+   "verification_stale": false
+  },
+  "yaml-quirks": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "What PyYAML makes of values YAML 1.2 reads differently.",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "country": false,
+    "description": "What PyYAML makes of values YAML 1.2 reads differently.",
+    "flag": true,
+    "octal": 8,
+    "off_switch": false,
+    "sexagesimal": 90,
+    "tags": [
+     true,
+     2026,
+     null,
+     "quoted"
+    ],
+    "title": "YAML 1.1 quirks",
+    "type": "Concept",
+    "version": 0.1,
+    "when": "2026-09-01"
+   },
+   "order": 10,
+   "path": "yaml-quirks.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "True",
+    "2026",
+    "None",
+    "quoted"
+   ],
+   "title": "YAML 1.1 quirks",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  }
+ },
+ "directories": {
+  "": {
+   "children": [
+    "sub"
+   ],
+   "concepts": [
+    "bad-yaml",
+    "blank-type",
+    "bom",
+    "crlf",
+    "empty-frontmatter",
+    "géométrie",
+    "list-frontmatter",
+    "no-by",
+    "no-frontmatter",
+    "numeric-title",
+    "unclosed",
+    "yaml-quirks"
+   ],
+   "has_index": true,
+   "has_log": false
+  },
+  "sub": {
+   "children": [],
+   "concepts": [
+    "sub/child"
+   ],
+   "has_index": true,
+   "has_log": false
+  }
+ },
+ "format": 1,
+ "indexes": {
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [2026](numeric-title.md) - 42\n* [Bad yaml](bad-yaml.md)\n* [Blank type](blank-type.md)\n* [Empty frontmatter](empty-frontmatter.md)\n* [Géométrie différentielle](géométrie.md) - Unicode in the file name, title and headings.\n* [List frontmatter](list-frontmatter.md)\n* [No by](no-by.md)\n* [No frontmatter](no-frontmatter.md)\n* [Starts with a byte order mark](bom.md)\n* [Unclosed](unclosed.md)\n* [Windows line endings](crlf.md)\n* [YAML 1.1 quirks](yaml-quirks.md) - What PyYAML makes of values YAML 1.2 reads differently.\n\n# Directories\n\n* [sub](sub/)\n",
+  "sub": "# Concept\n\n* [Child](child.md)\n"
+ },
+ "issues": [
+  [
+   "bad-yaml.md",
+   "error",
+   "frontmatter-invalid"
+  ],
+  [
+   "bad-yaml.md",
+   "error",
+   "type-missing"
+  ],
+  [
+   "blank-type.md",
+   "error",
+   "type-missing"
+  ],
+  [
+   "empty-frontmatter.md",
+   "error",
+   "type-missing"
+  ],
+  [
+   "index.md",
+   "error",
+   "root-index-frontmatter"
+  ],
+  [
+   "list-frontmatter.md",
+   "error",
+   "frontmatter-invalid"
+  ],
+  [
+   "list-frontmatter.md",
+   "error",
+   "type-missing"
+  ],
+  [
+   "no-by.md",
+   "warning",
+   "generated-without-by"
+  ],
+  [
+   "no-by.md",
+   "warning",
+   "verified-without-by"
+  ],
+  [
+   "no-frontmatter.md",
+   "error",
+   "frontmatter-missing"
+  ],
+  [
+   "sub/index.md",
+   "error",
+   "index-frontmatter"
+  ],
+  [
+   "unclosed.md",
+   "error",
+   "frontmatter-invalid"
+  ],
+  [
+   "unclosed.md",
+   "error",
+   "type-missing"
+  ]
+ ],
+ "requires_cycles": [],
+ "root_meta": {},
+ "search": {
+  "gauss bonnet": [
+   [
+    "géométrie",
+    5.28,
+    "# Théorème de Gauss–Bonnet"
+   ]
+  ],
+  "unicode": [
+   [
+    "sub/child",
+    2.046,
+    "Back to the [unicode note](/géométrie.md)."
+   ],
+   [
+    "géométrie",
+    1.624,
+    "Unicode in the file name, title and headings."
+   ]
+  ],
+  "windows": [
+   [
+    "crlf",
+    3.73,
+    ""
+   ]
+  ],
+  "yaml": [
+   [
+    "bad-yaml",
+    3.257,
+    ""
+   ],
+   [
+    "yaml-quirks",
+    2.763,
+    "What PyYAML makes of values YAML 1.2 reads differently."
+   ]
+  ]
+ }
+}

@@ -1,0 +1,5375 @@
+{
+ "concepts": {
+  "anan-1/delbun-measure-form-9": {
+   "backlinks": [
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4",
+    "anan-1/quolindel-map-operator-0",
+    "andel-3/genprobun-tensor-6",
+    "surcormor-7/tanmor-0",
+    "surcormor-7/velbunjec-operator-chart-4",
+    "tercorce-0/tanex-4"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the limit of delbun measure form.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "6ce76bc350b9",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "A synthetic note about the limit of delbun measure form.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Delbun measure form",
+    "type": "Theorem"
+   },
+   "order": 0,
+   "path": "anan-1/delbun-measure-form-9.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Delbun measure form",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-1/exquo-surface-vector-7": {
+   "backlinks": [
+    "anan-1/phiex-chart-manifold-2",
+    "anan-4/prodle-1",
+    "anan-4/progen-sequence-4",
+    "anan-4/radlequo-limit-measure-2",
+    "linta-2/expro-2"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the sequence of exquo surface vector.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "0b0f8cf27a9e",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/quolindel-map-operator-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/phisin-surface-section-7",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/cenu-class-6",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/prodle-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the sequence of exquo surface vector.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Exquo surface vector",
+    "type": "Theorem"
+   },
+   "order": 50,
+   "path": "anan-1/exquo-surface-vector-7.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/cenu-class-6",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "requires": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/cenu-class-6",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Exquo surface vector",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-1/fabun-tensor-1": {
+   "backlinks": [
+    "anan-1/phicorfa-4",
+    "anan-1/quoprophi-metric-8",
+    "anan-1/tanrara-surface-space-6"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the tensor of fabun tensor.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "1c6d7862f98f",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/quolindel-map-operator-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the tensor of fabun tensor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Fabun tensor",
+    "type": "Example"
+   },
+   "order": 48,
+   "path": "anan-1/fabun-tensor-1.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3"
+   ],
+   "requires": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Fabun tensor",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "anan-1/genlinter-3": {
+   "backlinks": [
+    "anan-1/exquo-surface-vector-7",
+    "anan-1/fabun-tensor-1",
+    "anan-1/tanrara-surface-space-6",
+    "anan-4/prodle-1",
+    "morta-5/genterdle-class-0",
+    "quobungon-6/promi-chart-1"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the metric of genlinter.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "2eca9bdf8587",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/phiex-chart-manifold-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the metric of genlinter.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Genlinter",
+    "type": "Example"
+   },
+   "order": 1,
+   "path": "anan-1/genlinter-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Genlinter",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "anan-1/loansur-sequence-sequence-5": {
+   "backlinks": [
+    "anan-1/quolindel-map-operator-0",
+    "anan-1/quoprophi-metric-8",
+    "andel-3/falinvel-tensor-space-1"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the limit of loansur sequence sequence.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "0eee8d7d6196",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/terbunjec-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the limit of loansur sequence sequence.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Loansur sequence sequence",
+    "type": "Concept"
+   },
+   "order": 2,
+   "path": "anan-1/loansur-sequence-sequence-5.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Loansur sequence sequence",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "anan-1/phicorfa-4": {
+   "backlinks": [
+    "anan-1/quoprophi-metric-8",
+    "anan-1/tanrara-surface-space-6",
+    "andel-3/falinvel-tensor-space-1",
+    "linta-2/miquo-4",
+    "morta-5/phimormor-5"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the surface of phicorfa.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "cc65256b9a3b",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/fabun-tensor-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/quolindel-map-operator-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the surface of phicorfa.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Phicorfa",
+    "type": "Example"
+   },
+   "order": 51,
+   "path": "anan-1/phicorfa-4.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "anan-1/fabun-tensor-1"
+   ],
+   "requires": [
+    "anan-1/fabun-tensor-1",
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Phicorfa",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "anan-1/phiex-chart-manifold-2": {
+   "backlinks": [
+    "anan-1/genlinter-3",
+    "surcormor-7/morjec-bundle-3"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the surface of phiex chart manifold.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "de4fdf7c67a8",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/quolindel-map-operator-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/taphika-class-limit-0",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/exquo-surface-vector-7",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the surface of phiex chart manifold.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Phiex chart manifold",
+    "type": "Example"
+   },
+   "order": 49,
+   "path": "anan-1/phiex-chart-manifold-2.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3"
+   ],
+   "requires": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Phiex chart manifold",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "anan-1/quolindel-map-operator-0": {
+   "backlinks": [
+    "anan-1/exquo-surface-vector-7",
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4",
+    "anan-1/phiex-chart-manifold-2",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the surface of quolindel map operator.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "7a66238212b9",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/loansur-sequence-sequence-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the surface of quolindel map operator.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Quolindel map operator",
+    "type": "Concept"
+   },
+   "order": 3,
+   "path": "anan-1/quolindel-map-operator-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Quolindel map operator",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "anan-1/quoprophi-metric-8": {
+   "backlinks": [
+    "morta-5/dlegenex-class-1"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the space of quoprophi metric.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "ea9248883636",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/loansur-sequence-sequence-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/fabun-tensor-1",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "anan-1/phicorfa-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the space of quoprophi metric.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Quoprophi metric",
+    "type": "Definition"
+   },
+   "order": 52,
+   "path": "anan-1/quoprophi-metric-8.md",
+   "prerequisites": [
+    "anan-1/loansur-sequence-sequence-5",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "requires": [
+    "anan-1/loansur-sequence-sequence-5",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Quoprophi metric",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "anan-1/tanrara-surface-space-6": {
+   "backlinks": [
+    "andel-3/lintan-5"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "A synthetic note about the vector of tanrara surface space.",
+   "directory": "anan-1",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "41b8ab1622d6",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/phicorfa-4",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/fabun-tensor-1",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/kacece-surface-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the vector of tanrara surface space.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Tanrara surface space",
+    "type": "Example"
+   },
+   "order": 53,
+   "path": "anan-1/tanrara-surface-space-6.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4"
+   ],
+   "requires": [
+    "anan-1/phicorfa-4"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Tanrara surface space",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "anan-4/corter-vector-group-5": {
+   "backlinks": [
+    "anan-4/kamorjec-group-6",
+    "andel-3/faan-7",
+    "morta-5/dlegenex-class-1",
+    "morta-5/torce-limit-4",
+    "quobungon-6/proexter-metric-2"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the manifold of corter vector group.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "697572ea566e",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/radlequo-limit-measure-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/prodle-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/delvel-bundle-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/bunlo-space-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/faan-7",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the manifold of corter vector group.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Corter vector group",
+    "type": "Definition"
+   },
+   "order": 8,
+   "path": "anan-4/corter-vector-group-5.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "anan-4/delvel-bundle-3",
+    "anan-4/prodle-1",
+    "anan-4/radlequo-limit-measure-2"
+   ],
+   "requires": [
+    "anan-4/delvel-bundle-3",
+    "anan-4/prodle-1",
+    "anan-4/radlequo-limit-measure-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Corter vector group",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "anan-4/delvel-bundle-3": {
+   "backlinks": [
+    "anan-4/corter-vector-group-5",
+    "anan-4/radlequo-limit-measure-2",
+    "linta-2/anmira-7",
+    "surcormor-7/raexvel-curve-5"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the metric of delvel bundle.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "7f924df51502",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the metric of delvel bundle.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Delvel bundle",
+    "type": "Theorem"
+   },
+   "order": 5,
+   "path": "anan-4/delvel-bundle-3.md",
+   "prerequisites": [
+    "anan-4/protorgon-0"
+   ],
+   "requires": [
+    "anan-4/protorgon-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Delvel bundle",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-4/kamorjec-group-6": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the measure of kamorjec group.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "89e488052761",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/radlequo-limit-measure-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/prodle-1",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "anan-4/corter-vector-group-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/progen-sequence-4",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/dlegenex-class-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of kamorjec group.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Kamorjec group",
+    "type": "Theorem"
+   },
+   "order": 9,
+   "path": "anan-4/kamorjec-group-6.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "anan-4/radlequo-limit-measure-2"
+   ],
+   "requires": [
+    "anan-4/radlequo-limit-measure-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Kamorjec group",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-4/prodle-1": {
+   "backlinks": [
+    "anan-1/exquo-surface-vector-7",
+    "anan-4/corter-vector-group-5",
+    "anan-4/kamorjec-group-6",
+    "quobungon-6/mita-4"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the group of prodle.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "3efbbe0804bf",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "anan-4/progen-sequence-4",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/exquo-surface-vector-7",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the group of prodle.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Prodle",
+    "type": "Theorem"
+   },
+   "order": 6,
+   "path": "anan-4/prodle-1.md",
+   "prerequisites": [
+    "anan-4/protorgon-0"
+   ],
+   "requires": [
+    "anan-4/protorgon-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Prodle",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-4/progen-sequence-4": {
+   "backlinks": [
+    "anan-4/kamorjec-group-6",
+    "anan-4/prodle-1",
+    "linta-2/bunex-map-3"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the flow of progen sequence.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "249615b82669",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/surnu-surface-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/terbunjec-6",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "andel-3/lintan-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/exquo-surface-vector-7",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the flow of progen sequence.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Progen sequence",
+    "type": "Theorem"
+   },
+   "order": 59,
+   "path": "anan-4/progen-sequence-4.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/surnu-surface-2"
+   ],
+   "requires": [
+    "anan-4/protorgon-0",
+    "tercorce-0/surnu-surface-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Progen sequence",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "anan-4/protorgon-0": {
+   "backlinks": [
+    "anan-1/genlinter-3",
+    "anan-4/delvel-bundle-3",
+    "anan-4/prodle-1",
+    "anan-4/progen-sequence-4",
+    "anan-4/radlequo-limit-measure-2",
+    "morta-5/phimormor-5",
+    "tercorce-0/tandelbun-0"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the manifold of protorgon.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "f0605dd90874",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the manifold of protorgon.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Protorgon",
+    "type": "Definition"
+   },
+   "order": 4,
+   "path": "anan-4/protorgon-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Protorgon",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "anan-4/radlequo-limit-measure-2": {
+   "backlinks": [
+    "anan-4/corter-vector-group-5",
+    "anan-4/kamorjec-group-6",
+    "linta-2/terbunjec-6"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the map of radlequo limit measure.",
+   "directory": "anan-4",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "d0cafbb717dd",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/mifa-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/delvel-bundle-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/exquo-surface-vector-7",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "tercorce-0/cenu-class-6",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the map of radlequo limit measure.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Radlequo limit measure",
+    "type": "Definition"
+   },
+   "order": 7,
+   "path": "anan-4/radlequo-limit-measure-2.md",
+   "prerequisites": [
+    "anan-4/protorgon-0"
+   ],
+   "requires": [
+    "anan-4/protorgon-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Radlequo limit measure",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "andel-3/bunveltor-0": {
+   "backlinks": [
+    "andel-3/exdlesin-measure-section-4",
+    "andel-3/falinvel-tensor-space-1",
+    "andel-3/kadel-2",
+    "andel-3/lintan-5"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the bundle of bunveltor.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "9f3f7c318b09",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/gonra-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "surcormor-7/morjec-bundle-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/lintan-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/sinquojec-operator-form-6",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the bundle of bunveltor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Bunveltor",
+    "type": "Definition"
+   },
+   "order": 10,
+   "path": "andel-3/bunveltor-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Bunveltor",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "andel-3/exdlesin-measure-section-4": {
+   "backlinks": [
+    "linta-2/terbunjec-6"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the class of exdlesin measure section.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "0695e28450d9",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/bunveltor-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/kadel-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/falinvel-tensor-space-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the class of exdlesin measure section.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Exdlesin measure section",
+    "type": "Theorem"
+   },
+   "order": 14,
+   "path": "andel-3/exdlesin-measure-section-4.md",
+   "prerequisites": [
+    "anan-1/loansur-sequence-sequence-5",
+    "andel-3/bunveltor-0",
+    "andel-3/falinvel-tensor-space-1",
+    "andel-3/kadel-2"
+   ],
+   "requires": [
+    "andel-3/bunveltor-0",
+    "andel-3/falinvel-tensor-space-1",
+    "andel-3/kadel-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Exdlesin measure section",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "andel-3/faan-7": {
+   "backlinks": [
+    "anan-4/corter-vector-group-5"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the sequence of faan.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "465115ce6d9c",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/genprobun-tensor-6",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/katadle-bundle-field-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/corter-vector-group-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "tercorce-0/surnu-surface-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/kadel-2",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the sequence of faan.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Faan",
+    "type": "Definition"
+   },
+   "order": 55,
+   "path": "andel-3/faan-7.md",
+   "prerequisites": [
+    "anan-1/delbun-measure-form-9",
+    "andel-3/fara-measure-3",
+    "linta-2/terbunjec-6",
+    "andel-3/genprobun-tensor-6"
+   ],
+   "requires": [
+    "andel-3/genprobun-tensor-6"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Faan",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "andel-3/falinvel-tensor-space-1": {
+   "backlinks": [
+    "andel-3/exdlesin-measure-section-4",
+    "andel-3/kadel-2",
+    "andel-3/lintan-5",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the map of falinvel tensor space.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "035014caced3",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/loansur-sequence-sequence-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/bunveltor-0",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "anan-1/phicorfa-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the map of falinvel tensor space.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Falinvel tensor space",
+    "type": "Definition"
+   },
+   "order": 12,
+   "path": "andel-3/falinvel-tensor-space-1.md",
+   "prerequisites": [
+    "anan-1/loansur-sequence-sequence-5"
+   ],
+   "requires": [
+    "anan-1/loansur-sequence-sequence-5"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Falinvel tensor space",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "andel-3/fara-measure-3": {
+   "backlinks": [
+    "anan-1/genlinter-3",
+    "anan-1/loansur-sequence-sequence-5",
+    "andel-3/exdlesin-measure-section-4",
+    "andel-3/genprobun-tensor-6",
+    "andel-3/lintan-5",
+    "surcormor-7/velbunjec-operator-chart-4"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the vector of fara measure.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "3bc4c04690ba",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "A synthetic note about the vector of fara measure.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Fara measure",
+    "type": "Concept"
+   },
+   "order": 11,
+   "path": "andel-3/fara-measure-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Fara measure",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "andel-3/genprobun-tensor-6": {
+   "backlinks": [
+    "andel-3/faan-7",
+    "linta-2/nujecka-1",
+    "morta-5/phimormor-5",
+    "quobungon-6/promi-chart-1"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the chart of genprobun tensor.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "2d580f0cb896",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/terbunjec-6",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the chart of genprobun tensor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Genprobun tensor",
+    "type": "Theorem"
+   },
+   "order": 54,
+   "path": "andel-3/genprobun-tensor-6.md",
+   "prerequisites": [
+    "anan-1/delbun-measure-form-9",
+    "andel-3/fara-measure-3",
+    "linta-2/terbunjec-6"
+   ],
+   "requires": [
+    "anan-1/delbun-measure-form-9",
+    "andel-3/fara-measure-3",
+    "linta-2/terbunjec-6"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Genprobun tensor",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "andel-3/kadel-2": {
+   "backlinks": [
+    "andel-3/exdlesin-measure-section-4",
+    "andel-3/faan-7",
+    "andel-3/lintan-5"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the limit of kadel.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "a77c28b770ce",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/bunveltor-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/falinvel-tensor-space-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the limit of kadel.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Kadel",
+    "type": "Concept"
+   },
+   "order": 13,
+   "path": "andel-3/kadel-2.md",
+   "prerequisites": [
+    "anan-1/loansur-sequence-sequence-5",
+    "andel-3/bunveltor-0",
+    "andel-3/falinvel-tensor-space-1"
+   ],
+   "requires": [
+    "andel-3/bunveltor-0",
+    "andel-3/falinvel-tensor-space-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Kadel",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "andel-3/lintan-5": {
+   "backlinks": [
+    "anan-4/progen-sequence-4",
+    "andel-3/bunveltor-0",
+    "linta-2/expro-2"
+   ],
+   "content_stale": false,
+   "depth": 5,
+   "description": "A synthetic note about the section of lintan.",
+   "directory": "andel-3",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "2a7dfcbf1f2c",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/falinvel-tensor-space-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/tanrara-surface-space-6",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/kadel-2",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/bunveltor-0",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the section of lintan.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Lintan",
+    "type": "Concept"
+   },
+   "order": 56,
+   "path": "andel-3/lintan-5.md",
+   "prerequisites": [
+    "anan-1/loansur-sequence-sequence-5",
+    "anan-1/quolindel-map-operator-0",
+    "andel-3/falinvel-tensor-space-1",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4",
+    "anan-1/tanrara-surface-space-6"
+   ],
+   "requires": [
+    "anan-1/tanrara-surface-space-6",
+    "andel-3/falinvel-tensor-space-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Lintan",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "linta-2/anmira-7": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the metric of anmira.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "579666cf82be",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/expro-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/kacece-surface-5",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/delvel-bundle-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/terbunjec-6",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the metric of anmira.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Anmira",
+    "type": "Definition"
+   },
+   "order": 21,
+   "path": "linta-2/anmira-7.md",
+   "prerequisites": [
+    "linta-2/taphika-class-limit-0",
+    "linta-2/nujecka-1",
+    "linta-2/expro-2"
+   ],
+   "requires": [
+    "linta-2/expro-2",
+    "linta-2/nujecka-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Anmira",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "linta-2/bunex-map-3": {
+   "backlinks": [
+    "linta-2/kacece-surface-5",
+    "morta-5/genterdle-class-0",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the section of bunex map.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "67d7ba530e5e",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "anan-4/progen-sequence-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the section of bunex map.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Bunex map",
+    "type": "Definition"
+   },
+   "order": 15,
+   "path": "linta-2/bunex-map-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Bunex map",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "linta-2/expro-2": {
+   "backlinks": [
+    "linta-2/anmira-7",
+    "linta-2/kacece-surface-5"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the flow of expro.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "fd68aab38a93",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/taphika-class-limit-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-1/exquo-surface-vector-7",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/lintan-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the flow of expro.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Expro",
+    "type": "Concept"
+   },
+   "order": 20,
+   "path": "linta-2/expro-2.md",
+   "prerequisites": [
+    "linta-2/taphika-class-limit-0",
+    "linta-2/nujecka-1"
+   ],
+   "requires": [
+    "linta-2/nujecka-1",
+    "linta-2/taphika-class-limit-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Expro",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "linta-2/kacece-surface-5": {
+   "backlinks": [
+    "anan-1/tanrara-surface-space-6",
+    "linta-2/anmira-7",
+    "quobungon-6/velsin-tensor-field-5",
+    "tercorce-0/tandelbun-0"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the sequence of kacece surface.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "c59d95ee101b",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/bunex-map-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/expro-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the sequence of kacece surface.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Kacece surface",
+    "type": "Concept"
+   },
+   "order": 16,
+   "path": "linta-2/kacece-surface-5.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Kacece surface",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "linta-2/linragen-group-8": {
+   "backlinks": [
+    "anan-1/genlinter-3",
+    "anan-4/protorgon-0",
+    "linta-2/anmira-7",
+    "linta-2/expro-2",
+    "linta-2/kacece-surface-5",
+    "quobungon-6/mita-4",
+    "surcormor-7/nudelmor-manifold-2"
+   ],
+   "content_stale": false,
+   "depth": 5,
+   "description": "A synthetic note about the class of linragen group.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "7dce3b218039",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/miquo-4",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/katadle-bundle-field-8",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "tercorce-0/corka-tensor-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/terbunjec-6",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the class of linragen group.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Linragen group",
+    "type": "Definition"
+   },
+   "order": 61,
+   "path": "linta-2/linragen-group-8.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "tercorce-0/tanex-4",
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4",
+    "linta-2/miquo-4"
+   ],
+   "requires": [
+    "linta-2/miquo-4"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Linragen group",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "linta-2/miquo-4": {
+   "backlinks": [
+    "linta-2/linragen-group-8"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "A synthetic note about the measure of miquo.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "6716381ab01a",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/phicorfa-4",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/tanex-4",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of miquo.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Miquo",
+    "type": "Example"
+   },
+   "order": 60,
+   "path": "linta-2/miquo-4.md",
+   "prerequisites": [
+    "anan-1/quolindel-map-operator-0",
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "tercorce-0/tanex-4",
+    "anan-1/fabun-tensor-1",
+    "anan-1/phicorfa-4"
+   ],
+   "requires": [
+    "anan-1/phicorfa-4",
+    "tercorce-0/tanex-4"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Miquo",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "linta-2/nujecka-1": {
+   "backlinks": [
+    "anan-1/loansur-sequence-sequence-5",
+    "linta-2/anmira-7",
+    "linta-2/bunex-map-3",
+    "linta-2/expro-2",
+    "linta-2/terbunjec-6",
+    "morta-5/genterdle-class-0",
+    "quobungon-6/bunlo-space-3"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the measure of nujecka.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "8291c91d1bbc",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/taphika-class-limit-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "andel-3/genprobun-tensor-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/terjecpro-manifold-0",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of nujecka.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Nujecka",
+    "type": "Concept"
+   },
+   "order": 19,
+   "path": "linta-2/nujecka-1.md",
+   "prerequisites": [
+    "linta-2/taphika-class-limit-0"
+   ],
+   "requires": [
+    "linta-2/taphika-class-limit-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Nujecka",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "linta-2/taphika-class-limit-0": {
+   "backlinks": [
+    "anan-1/phiex-chart-manifold-2",
+    "linta-2/expro-2",
+    "linta-2/nujecka-1",
+    "linta-2/terbunjec-6",
+    "morta-5/dlegenex-class-1"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the measure of taphika class limit.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "21a524c52f24",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/tanex-4",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of taphika class limit.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Taphika class limit",
+    "type": "Example"
+   },
+   "order": 17,
+   "path": "linta-2/taphika-class-limit-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Taphika class limit",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "linta-2/terbunjec-6": {
+   "backlinks": [
+    "anan-1/loansur-sequence-sequence-5",
+    "anan-4/progen-sequence-4",
+    "andel-3/genprobun-tensor-6",
+    "linta-2/anmira-7",
+    "linta-2/linragen-group-8"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the manifold of terbunjec.",
+   "directory": "linta-2",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "babb4c0d8b52",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/taphika-class-limit-0",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "andel-3/exdlesin-measure-section-4",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-4/radlequo-limit-measure-2",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the manifold of terbunjec.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Terbunjec",
+    "type": "Example"
+   },
+   "order": 18,
+   "path": "linta-2/terbunjec-6.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Terbunjec",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "morta-5/dlegenex-class-1": {
+   "backlinks": [
+    "anan-4/kamorjec-group-6",
+    "morta-5/mifa-2",
+    "morta-5/torce-limit-4",
+    "surcormor-7/tanmor-0"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the class of dlegenex class.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "e0b255626e26",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/genterdle-class-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/corter-vector-group-5",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/taphika-class-limit-0",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/quoprophi-metric-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/torce-limit-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the class of dlegenex class.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Dlegenex class",
+    "type": "Concept"
+   },
+   "order": 24,
+   "path": "morta-5/dlegenex-class-1.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0"
+   ],
+   "requires": [
+    "morta-5/genterdle-class-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Dlegenex class",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "morta-5/genterdle-class-0": {
+   "backlinks": [
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2",
+    "morta-5/phimormor-5",
+    "morta-5/sinquojec-operator-form-6",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the curve of genterdle class.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "d6216f5d67e0",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/bunex-map-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the curve of genterdle class.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Genterdle class",
+    "type": "Definition"
+   },
+   "order": 22,
+   "path": "morta-5/genterdle-class-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Genterdle class",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "morta-5/gonra-3": {
+   "backlinks": [
+    "andel-3/bunveltor-0"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the class of gonra.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "be85c4542586",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "A synthetic note about the class of gonra.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Gonra",
+    "type": "Example"
+   },
+   "order": 23,
+   "path": "morta-5/gonra-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Gonra",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "morta-5/mifa-2": {
+   "backlinks": [
+    "anan-4/radlequo-limit-measure-2",
+    "morta-5/torce-limit-4",
+    "quobungon-6/terjecpro-manifold-0",
+    "surcormor-7/tanmor-0",
+    "tercorce-0/tanex-4"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the curve of mifa.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "7797620329b7",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/dlegenex-class-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "surcormor-7/nudelmor-manifold-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/genterdle-class-0",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the curve of mifa.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Mifa",
+    "type": "Definition"
+   },
+   "order": 26,
+   "path": "morta-5/mifa-2.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1"
+   ],
+   "requires": [
+    "morta-5/dlegenex-class-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Mifa",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "morta-5/phimormor-5": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the chart of phimormor.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "704d5d1dcb6b",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/genterdle-class-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/genprobun-tensor-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/phicorfa-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the chart of phimormor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Phimormor",
+    "type": "Theorem"
+   },
+   "order": 25,
+   "path": "morta-5/phimormor-5.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "morta-5/genterdle-class-0"
+   ],
+   "requires": [
+    "anan-4/protorgon-0",
+    "morta-5/genterdle-class-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Phimormor",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "morta-5/sinquojec-operator-form-6": {
+   "backlinks": [
+    "andel-3/bunveltor-0",
+    "surcormor-7/kabun-limit-1"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "A synthetic note about the operator of sinquojec operator form.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "6023a49ccca5",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/torce-limit-4",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/genterdle-class-0",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the operator of sinquojec operator form.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Sinquojec operator form",
+    "type": "Concept"
+   },
+   "order": 28,
+   "path": "morta-5/sinquojec-operator-form-6.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2",
+    "morta-5/torce-limit-4"
+   ],
+   "requires": [
+    "morta-5/genterdle-class-0",
+    "morta-5/torce-limit-4"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Sinquojec operator form",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "morta-5/torce-limit-4": {
+   "backlinks": [
+    "morta-5/dlegenex-class-1",
+    "morta-5/sinquojec-operator-form-6",
+    "surcormor-7/nudelmor-manifold-2",
+    "surcormor-7/velbunjec-operator-chart-4",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the space of torce limit.",
+   "directory": "morta-5",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "fade48723ada",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/mifa-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/dlegenex-class-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/corter-vector-group-5",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the space of torce limit.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Torce limit",
+    "type": "Theorem"
+   },
+   "order": 27,
+   "path": "morta-5/torce-limit-4.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2"
+   ],
+   "requires": [
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Torce limit",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "quobungon-6/bunlo-space-3": {
+   "backlinks": [
+    "anan-4/corter-vector-group-5",
+    "quobungon-6/mita-4",
+    "quobungon-6/nura-surface-field-6",
+    "surcormor-7/tanmor-0",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the vector of bunlo space.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "3d8cecc86d43",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "linta-2/nujecka-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/mita-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the vector of bunlo space.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Bunlo space",
+    "type": "Concept"
+   },
+   "order": 29,
+   "path": "quobungon-6/bunlo-space-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Bunlo space",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "quobungon-6/mita-4": {
+   "backlinks": [
+    "quobungon-6/bunlo-space-3"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the limit of mita.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "007192906822",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "quobungon-6/bunlo-space-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/prodle-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "quobungon-6/nura-surface-field-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/velsin-tensor-field-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/proexter-metric-2",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the limit of mita.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Mita",
+    "type": "Definition"
+   },
+   "order": 31,
+   "path": "quobungon-6/mita-4.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "anan-4/prodle-1",
+    "quobungon-6/bunlo-space-3"
+   ],
+   "requires": [
+    "anan-4/prodle-1",
+    "quobungon-6/bunlo-space-3"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Mita",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "quobungon-6/nura-surface-field-6": {
+   "backlinks": [
+    "quobungon-6/mita-4",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the bundle of nura surface field.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "631e43a28287",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/katadle-bundle-field-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/bunlo-space-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the bundle of nura surface field.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Nura surface field",
+    "type": "Definition"
+   },
+   "order": 30,
+   "path": "quobungon-6/nura-surface-field-6.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Nura surface field",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "quobungon-6/proexter-metric-2": {
+   "backlinks": [
+    "quobungon-6/mita-4",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "content_stale": false,
+   "depth": 5,
+   "description": "A synthetic note about the measure of proexter metric.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "3b576602e8fc",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "anan-4/corter-vector-group-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of proexter metric.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Proexter metric",
+    "type": "Definition"
+   },
+   "order": 34,
+   "path": "quobungon-6/proexter-metric-2.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2",
+    "quobungon-6/terjecpro-manifold-0",
+    "quobungon-6/promi-chart-1"
+   ],
+   "requires": [
+    "quobungon-6/promi-chart-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Proexter metric",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "quobungon-6/promi-chart-1": {
+   "backlinks": [
+    "andel-3/kadel-2",
+    "morta-5/phimormor-5",
+    "quobungon-6/mita-4",
+    "quobungon-6/proexter-metric-2",
+    "surcormor-7/velbunjec-operator-chart-4",
+    "tercorce-0/corka-tensor-1"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "A synthetic note about the measure of promi chart.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "93b1a1609508",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "quobungon-6/terjecpro-manifold-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "surcormor-7/raexvel-curve-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/genlinter-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "andel-3/genprobun-tensor-6",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the measure of promi chart.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Promi chart",
+    "type": "Definition"
+   },
+   "order": 33,
+   "path": "quobungon-6/promi-chart-1.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2",
+    "quobungon-6/terjecpro-manifold-0"
+   ],
+   "requires": [
+    "quobungon-6/terjecpro-manifold-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Promi chart",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "quobungon-6/terjecpro-manifold-0": {
+   "backlinks": [
+    "linta-2/nujecka-1",
+    "quobungon-6/promi-chart-1",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the section of terjecpro manifold.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "0e6d80198401",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "morta-5/mifa-2",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "surcormor-7/tanmor-0",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the section of terjecpro manifold.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Terjecpro manifold",
+    "type": "Definition"
+   },
+   "order": 32,
+   "path": "quobungon-6/terjecpro-manifold-0.md",
+   "prerequisites": [
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2"
+   ],
+   "requires": [
+    "morta-5/mifa-2"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Terjecpro manifold",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "quobungon-6/velsin-tensor-field-5": {
+   "backlinks": [
+    "quobungon-6/mita-4"
+   ],
+   "content_stale": false,
+   "depth": 4,
+   "description": "A synthetic note about the limit of velsin tensor field.",
+   "directory": "quobungon-6",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "994102174046",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "quobungon-6/terjecpro-manifold-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "linta-2/kacece-surface-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/proexter-metric-2",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "quobungon-6/nura-surface-field-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/bunex-map-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/quolindel-map-operator-0",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the limit of velsin tensor field.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Velsin tensor field",
+    "type": "Example"
+   },
+   "order": 62,
+   "path": "quobungon-6/velsin-tensor-field-5.md",
+   "prerequisites": [
+    "linta-2/kacece-surface-5",
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "morta-5/mifa-2",
+    "quobungon-6/terjecpro-manifold-0",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "requires": [
+    "linta-2/kacece-surface-5",
+    "quobungon-6/terjecpro-manifold-0",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Velsin tensor field",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "surcormor-7/kabun-limit-1": {
+   "backlinks": [
+    "surcormor-7/tanmor-0"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the vector of kabun limit.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "b6d709ca3195",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "surcormor-7/tanmor-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/sinquojec-operator-form-6",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "surcormor-7/raexvel-curve-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the vector of kabun limit.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Kabun limit",
+    "type": "Theorem"
+   },
+   "order": 38,
+   "path": "surcormor-7/kabun-limit-1.md",
+   "prerequisites": [
+    "anan-1/delbun-measure-form-9",
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1",
+    "surcormor-7/tanmor-0"
+   ],
+   "requires": [
+    "surcormor-7/tanmor-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Kabun limit",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "surcormor-7/morjec-bundle-3": {
+   "backlinks": [
+    "andel-3/bunveltor-0",
+    "surcormor-7/nudelmor-manifold-2",
+    "surcormor-7/velbunjec-operator-chart-4"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the field of morjec bundle.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "b043bcbef004",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/phiex-chart-manifold-2",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the field of morjec bundle.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Morjec bundle",
+    "type": "Theorem"
+   },
+   "order": 35,
+   "path": "surcormor-7/morjec-bundle-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Morjec bundle",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "surcormor-7/nudelmor-manifold-2": {
+   "backlinks": [
+    "morta-5/mifa-2"
+   ],
+   "content_stale": false,
+   "depth": 3,
+   "description": "A synthetic note about the tensor of nudelmor manifold.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "2b4a111f8d34",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/genvelta-space-measure-5",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "linta-2/linragen-group-8",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "surcormor-7/morjec-bundle-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/torce-limit-4",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "surcormor-7/raexvel-curve-5",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the tensor of nudelmor manifold.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Nudelmor manifold",
+    "type": "Example"
+   },
+   "order": 58,
+   "path": "surcormor-7/nudelmor-manifold-2.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "requires": [
+    "tercorce-0/genvelta-space-measure-5"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Nudelmor manifold",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "surcormor-7/raexvel-curve-5": {
+   "backlinks": [
+    "quobungon-6/promi-chart-1",
+    "surcormor-7/kabun-limit-1",
+    "surcormor-7/nudelmor-manifold-2"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the form of raexvel curve.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "59e3530b1896",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/delvel-bundle-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/cenu-class-6",
+     "concept",
+     false,
+     "uses"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the form of raexvel curve.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Raexvel curve",
+    "type": "Theorem"
+   },
+   "order": 36,
+   "path": "surcormor-7/raexvel-curve-5.md",
+   "prerequisites": [
+    "anan-4/protorgon-0",
+    "anan-4/delvel-bundle-3"
+   ],
+   "requires": [
+    "anan-4/delvel-bundle-3"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Raexvel curve",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "surcormor-7/tanmor-0": {
+   "backlinks": [
+    "quobungon-6/terjecpro-manifold-0",
+    "surcormor-7/kabun-limit-1"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the curve of tanmor.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "a63519186be7",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/dlegenex-class-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/bunlo-space-3",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/mifa-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "surcormor-7/kabun-limit-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the curve of tanmor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Tanmor",
+    "type": "Concept"
+   },
+   "order": 37,
+   "path": "surcormor-7/tanmor-0.md",
+   "prerequisites": [
+    "anan-1/delbun-measure-form-9",
+    "morta-5/genterdle-class-0",
+    "morta-5/dlegenex-class-1"
+   ],
+   "requires": [
+    "anan-1/delbun-measure-form-9",
+    "morta-5/dlegenex-class-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Tanmor",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "surcormor-7/velbunjec-operator-chart-4": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the vector of velbunjec operator chart.",
+   "directory": "surcormor-7",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "2c84db89c471",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "andel-3/fara-measure-3",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/phisin-surface-section-7",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "surcormor-7/morjec-bundle-3",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "morta-5/torce-limit-4",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the vector of velbunjec operator chart.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Velbunjec operator chart",
+    "type": "Definition"
+   },
+   "order": 57,
+   "path": "surcormor-7/velbunjec-operator-chart-4.md",
+   "prerequisites": [
+    "andel-3/fara-measure-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "requires": [
+    "andel-3/fara-measure-3",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Velbunjec operator chart",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "tercorce-0/cenu-class-6": {
+   "backlinks": [
+    "anan-1/exquo-surface-vector-7",
+    "anan-4/radlequo-limit-measure-2",
+    "surcormor-7/raexvel-curve-5",
+    "tercorce-0/katadle-bundle-field-8"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the vector of cenu class.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "ccaa603eb62b",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/morka-3",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the vector of cenu class.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Cenu class",
+    "type": "Definition"
+   },
+   "order": 41,
+   "path": "tercorce-0/cenu-class-6.md",
+   "prerequisites": [
+    "tercorce-0/morka-3"
+   ],
+   "requires": [
+    "tercorce-0/morka-3"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Cenu class",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "tercorce-0/corka-tensor-1": {
+   "backlinks": [
+    "linta-2/linragen-group-8",
+    "tercorce-0/genvelta-space-measure-5",
+    "tercorce-0/surnu-surface-2",
+    "tercorce-0/tanex-4"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the class of corka tensor.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "97a7b7ef6dea",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/tandelbun-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "quobungon-6/promi-chart-1",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the class of corka tensor.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Corka tensor",
+    "type": "Example"
+   },
+   "order": 42,
+   "path": "tercorce-0/corka-tensor-1.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0"
+   ],
+   "requires": [
+    "tercorce-0/tandelbun-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Corka tensor",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "tercorce-0/genvelta-space-measure-5": {
+   "backlinks": [
+    "anan-1/phicorfa-4",
+    "anan-1/quoprophi-metric-8",
+    "linta-2/miquo-4",
+    "quobungon-6/velsin-tensor-field-5",
+    "surcormor-7/morjec-bundle-3",
+    "surcormor-7/nudelmor-manifold-2"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the manifold of genvelta space measure.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "272a3707a1d4",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/corka-tensor-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/genterdle-class-0",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "morta-5/torce-limit-4",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the manifold of genvelta space measure.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Genvelta space measure",
+    "type": "Example"
+   },
+   "order": 44,
+   "path": "tercorce-0/genvelta-space-measure-5.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1"
+   ],
+   "requires": [
+    "tercorce-0/corka-tensor-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Genvelta space measure",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "tercorce-0/katadle-bundle-field-8": {
+   "backlinks": [
+    "andel-3/faan-7",
+    "linta-2/linragen-group-8",
+    "quobungon-6/nura-surface-field-6",
+    "tercorce-0/morka-3"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the map of katadle bundle field.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "016e2b57a3b2",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/phisin-surface-section-7",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/cenu-class-6",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the map of katadle bundle field.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Katadle bundle field",
+    "type": "Definition"
+   },
+   "order": 45,
+   "path": "tercorce-0/katadle-bundle-field-8.md",
+   "prerequisites": [
+    "tercorce-0/morka-3",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/cenu-class-6",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "requires": [
+    "tercorce-0/cenu-class-6",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Katadle bundle field",
+   "trust": "unverified",
+   "type": "Definition",
+   "verification_stale": false
+  },
+  "tercorce-0/morka-3": {
+   "backlinks": [
+    "anan-1/fabun-tensor-1",
+    "anan-1/loansur-sequence-sequence-5",
+    "anan-1/phiex-chart-manifold-2",
+    "anan-4/delvel-bundle-3",
+    "surcormor-7/morjec-bundle-3",
+    "surcormor-7/nudelmor-manifold-2",
+    "tercorce-0/cenu-class-6"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the tensor of morka.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "68d5693aba05",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/phisin-surface-section-7",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "tercorce-0/katadle-bundle-field-8",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the tensor of morka.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Morka",
+    "type": "Theorem"
+   },
+   "order": 39,
+   "path": "tercorce-0/morka-3.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Morka",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "tercorce-0/phisin-surface-section-7": {
+   "backlinks": [
+    "anan-1/exquo-surface-vector-7",
+    "surcormor-7/velbunjec-operator-chart-4",
+    "tercorce-0/katadle-bundle-field-8",
+    "tercorce-0/morka-3"
+   ],
+   "content_stale": false,
+   "depth": 1,
+   "description": "A synthetic note about the bundle of phisin surface section.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "280860f79d7f",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/tandelbun-0",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "tercorce-0/tanex-4",
+     "concept",
+     false,
+     "uses"
+    ],
+    [
+     "andel-3/falinvel-tensor-space-1",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "quobungon-6/bunlo-space-3",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the bundle of phisin surface section.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Phisin surface section",
+    "type": "Example"
+   },
+   "order": 43,
+   "path": "tercorce-0/phisin-surface-section-7.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0"
+   ],
+   "requires": [
+    "tercorce-0/tandelbun-0"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Phisin surface section",
+   "trust": "unverified",
+   "type": "Example",
+   "verification_stale": false
+  },
+  "tercorce-0/surnu-surface-2": {
+   "backlinks": [
+    "anan-4/progen-sequence-4",
+    "andel-3/faan-7",
+    "tercorce-0/tandelbun-0"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the flow of surnu surface.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "f0be4ff107e1",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/corka-tensor-1",
+     "concept",
+     false,
+     "requires"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the flow of surnu surface.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Surnu surface",
+    "type": "Concept"
+   },
+   "order": 46,
+   "path": "tercorce-0/surnu-surface-2.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1"
+   ],
+   "requires": [
+    "tercorce-0/corka-tensor-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Surnu surface",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "tercorce-0/tandelbun-0": {
+   "backlinks": [
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A synthetic note about the metric of tandelbun.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "70671b8c72dd",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "anan-4/protorgon-0",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "linta-2/kacece-surface-5",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "tercorce-0/surnu-surface-2",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the metric of tandelbun.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Tandelbun",
+    "type": "Theorem"
+   },
+   "order": 40,
+   "path": "tercorce-0/tandelbun-0.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Tandelbun",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  },
+  "tercorce-0/tanex-4": {
+   "backlinks": [
+    "linta-2/miquo-4",
+    "linta-2/taphika-class-limit-0",
+    "tercorce-0/phisin-surface-section-7"
+   ],
+   "content_stale": false,
+   "depth": 2,
+   "description": "A synthetic note about the form of tanex.",
+   "directory": "tercorce-0",
+   "generated_at": "2026-01-01T00:00:00Z",
+   "hash": "dfee43219c7c",
+   "headings": [
+    [
+     1,
+     "Definition",
+     "definition",
+     0
+    ],
+    [
+     1,
+     "Key facts",
+     "key-facts",
+     6
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [
+    [
+     "tercorce-0/corka-tensor-1",
+     "concept",
+     false,
+     "requires"
+    ],
+    [
+     "morta-5/mifa-2",
+     "concept",
+     false,
+     "see also"
+    ],
+    [
+     "anan-1/delbun-measure-form-9",
+     "concept",
+     false,
+     "see also"
+    ]
+   ],
+   "meta": {
+    "description": "A synthetic note about the form of tanex.",
+    "generated": {
+     "at": "2026-01-01T00:00:00Z",
+     "by": "bench/synth"
+    },
+    "tags": [
+     "synthetic"
+    ],
+    "title": "Tanex",
+    "type": "Theorem"
+   },
+   "order": 47,
+   "path": "tercorce-0/tanex-4.md",
+   "prerequisites": [
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/corka-tensor-1"
+   ],
+   "requires": [
+    "tercorce-0/corka-tensor-1"
+   ],
+   "status": "stable",
+   "tags": [
+    "synthetic"
+   ],
+   "title": "Tanex",
+   "trust": "unverified",
+   "type": "Theorem",
+   "verification_stale": false
+  }
+ },
+ "directories": {
+  "": {
+   "children": [
+    "anan-1",
+    "anan-4",
+    "andel-3",
+    "linta-2",
+    "morta-5",
+    "quobungon-6",
+    "surcormor-7",
+    "tercorce-0"
+   ],
+   "concepts": [],
+   "has_index": false,
+   "has_log": false
+  },
+  "anan-1": {
+   "children": [],
+   "concepts": [
+    "anan-1/delbun-measure-form-9",
+    "anan-1/exquo-surface-vector-7",
+    "anan-1/fabun-tensor-1",
+    "anan-1/genlinter-3",
+    "anan-1/loansur-sequence-sequence-5",
+    "anan-1/phicorfa-4",
+    "anan-1/phiex-chart-manifold-2",
+    "anan-1/quolindel-map-operator-0",
+    "anan-1/quoprophi-metric-8",
+    "anan-1/tanrara-surface-space-6"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "anan-4": {
+   "children": [],
+   "concepts": [
+    "anan-4/corter-vector-group-5",
+    "anan-4/delvel-bundle-3",
+    "anan-4/kamorjec-group-6",
+    "anan-4/prodle-1",
+    "anan-4/progen-sequence-4",
+    "anan-4/protorgon-0",
+    "anan-4/radlequo-limit-measure-2"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "andel-3": {
+   "children": [],
+   "concepts": [
+    "andel-3/bunveltor-0",
+    "andel-3/exdlesin-measure-section-4",
+    "andel-3/faan-7",
+    "andel-3/falinvel-tensor-space-1",
+    "andel-3/fara-measure-3",
+    "andel-3/genprobun-tensor-6",
+    "andel-3/kadel-2",
+    "andel-3/lintan-5"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "linta-2": {
+   "children": [],
+   "concepts": [
+    "linta-2/anmira-7",
+    "linta-2/bunex-map-3",
+    "linta-2/expro-2",
+    "linta-2/kacece-surface-5",
+    "linta-2/linragen-group-8",
+    "linta-2/miquo-4",
+    "linta-2/nujecka-1",
+    "linta-2/taphika-class-limit-0",
+    "linta-2/terbunjec-6"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "morta-5": {
+   "children": [],
+   "concepts": [
+    "morta-5/dlegenex-class-1",
+    "morta-5/genterdle-class-0",
+    "morta-5/gonra-3",
+    "morta-5/mifa-2",
+    "morta-5/phimormor-5",
+    "morta-5/sinquojec-operator-form-6",
+    "morta-5/torce-limit-4"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "quobungon-6": {
+   "children": [],
+   "concepts": [
+    "quobungon-6/bunlo-space-3",
+    "quobungon-6/mita-4",
+    "quobungon-6/nura-surface-field-6",
+    "quobungon-6/proexter-metric-2",
+    "quobungon-6/promi-chart-1",
+    "quobungon-6/terjecpro-manifold-0",
+    "quobungon-6/velsin-tensor-field-5"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "surcormor-7": {
+   "children": [],
+   "concepts": [
+    "surcormor-7/kabun-limit-1",
+    "surcormor-7/morjec-bundle-3",
+    "surcormor-7/nudelmor-manifold-2",
+    "surcormor-7/raexvel-curve-5",
+    "surcormor-7/tanmor-0",
+    "surcormor-7/velbunjec-operator-chart-4"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
+  "tercorce-0": {
+   "children": [],
+   "concepts": [
+    "tercorce-0/cenu-class-6",
+    "tercorce-0/corka-tensor-1",
+    "tercorce-0/genvelta-space-measure-5",
+    "tercorce-0/katadle-bundle-field-8",
+    "tercorce-0/morka-3",
+    "tercorce-0/phisin-surface-section-7",
+    "tercorce-0/surnu-surface-2",
+    "tercorce-0/tandelbun-0",
+    "tercorce-0/tanex-4"
+   ],
+   "has_index": false,
+   "has_log": false
+  }
+ },
+ "format": 1,
+ "indexes": {
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Directories\n\n* [anan-1](anan-1/)\n* [anan-4](anan-4/)\n* [andel-3](andel-3/)\n* [linta-2](linta-2/)\n* [morta-5](morta-5/)\n* [quobungon-6](quobungon-6/)\n* [surcormor-7](surcormor-7/)\n* [tercorce-0](tercorce-0/)\n",
+  "anan-1": "# Concept\n\n* [Loansur sequence sequence](loansur-sequence-sequence-5.md) - A synthetic note about the limit of loansur sequence sequence.\n* [Quolindel map operator](quolindel-map-operator-0.md) - A synthetic note about the surface of quolindel map operator.\n\n# Definition\n\n* [Quoprophi metric](quoprophi-metric-8.md) - A synthetic note about the space of quoprophi metric.\n\n# Example\n\n* [Fabun tensor](fabun-tensor-1.md) - A synthetic note about the tensor of fabun tensor.\n* [Genlinter](genlinter-3.md) - A synthetic note about the metric of genlinter.\n* [Phicorfa](phicorfa-4.md) - A synthetic note about the surface of phicorfa.\n* [Phiex chart manifold](phiex-chart-manifold-2.md) - A synthetic note about the surface of phiex chart manifold.\n* [Tanrara surface space](tanrara-surface-space-6.md) - A synthetic note about the vector of tanrara surface space.\n\n# Theorem\n\n* [Delbun measure form](delbun-measure-form-9.md) - A synthetic note about the limit of delbun measure form.\n* [Exquo surface vector](exquo-surface-vector-7.md) - A synthetic note about the sequence of exquo surface vector.\n",
+  "anan-4": "# Definition\n\n* [Corter vector group](corter-vector-group-5.md) - A synthetic note about the manifold of corter vector group.\n* [Protorgon](protorgon-0.md) - A synthetic note about the manifold of protorgon.\n* [Radlequo limit measure](radlequo-limit-measure-2.md) - A synthetic note about the map of radlequo limit measure.\n\n# Theorem\n\n* [Delvel bundle](delvel-bundle-3.md) - A synthetic note about the metric of delvel bundle.\n* [Kamorjec group](kamorjec-group-6.md) - A synthetic note about the measure of kamorjec group.\n* [Prodle](prodle-1.md) - A synthetic note about the group of prodle.\n* [Progen sequence](progen-sequence-4.md) - A synthetic note about the flow of progen sequence.\n",
+  "andel-3": "# Concept\n\n* [Fara measure](fara-measure-3.md) - A synthetic note about the vector of fara measure.\n* [Kadel](kadel-2.md) - A synthetic note about the limit of kadel.\n* [Lintan](lintan-5.md) - A synthetic note about the section of lintan.\n\n# Definition\n\n* [Bunveltor](bunveltor-0.md) - A synthetic note about the bundle of bunveltor.\n* [Faan](faan-7.md) - A synthetic note about the sequence of faan.\n* [Falinvel tensor space](falinvel-tensor-space-1.md) - A synthetic note about the map of falinvel tensor space.\n\n# Theorem\n\n* [Exdlesin measure section](exdlesin-measure-section-4.md) - A synthetic note about the class of exdlesin measure section.\n* [Genprobun tensor](genprobun-tensor-6.md) - A synthetic note about the chart of genprobun tensor.\n",
+  "linta-2": "# Concept\n\n* [Expro](expro-2.md) - A synthetic note about the flow of expro.\n* [Kacece surface](kacece-surface-5.md) - A synthetic note about the sequence of kacece surface.\n* [Nujecka](nujecka-1.md) - A synthetic note about the measure of nujecka.\n\n# Definition\n\n* [Anmira](anmira-7.md) - A synthetic note about the metric of anmira.\n* [Bunex map](bunex-map-3.md) - A synthetic note about the section of bunex map.\n* [Linragen group](linragen-group-8.md) - A synthetic note about the class of linragen group.\n\n# Example\n\n* [Miquo](miquo-4.md) - A synthetic note about the measure of miquo.\n* [Taphika class limit](taphika-class-limit-0.md) - A synthetic note about the measure of taphika class limit.\n* [Terbunjec](terbunjec-6.md) - A synthetic note about the manifold of terbunjec.\n",
+  "morta-5": "# Concept\n\n* [Dlegenex class](dlegenex-class-1.md) - A synthetic note about the class of dlegenex class.\n* [Sinquojec operator form](sinquojec-operator-form-6.md) - A synthetic note about the operator of sinquojec operator form.\n\n# Definition\n\n* [Genterdle class](genterdle-class-0.md) - A synthetic note about the curve of genterdle class.\n* [Mifa](mifa-2.md) - A synthetic note about the curve of mifa.\n\n# Example\n\n* [Gonra](gonra-3.md) - A synthetic note about the class of gonra.\n\n# Theorem\n\n* [Phimormor](phimormor-5.md) - A synthetic note about the chart of phimormor.\n* [Torce limit](torce-limit-4.md) - A synthetic note about the space of torce limit.\n",
+  "quobungon-6": "# Concept\n\n* [Bunlo space](bunlo-space-3.md) - A synthetic note about the vector of bunlo space.\n\n# Definition\n\n* [Mita](mita-4.md) - A synthetic note about the limit of mita.\n* [Nura surface field](nura-surface-field-6.md) - A synthetic note about the bundle of nura surface field.\n* [Proexter metric](proexter-metric-2.md) - A synthetic note about the measure of proexter metric.\n* [Promi chart](promi-chart-1.md) - A synthetic note about the measure of promi chart.\n* [Terjecpro manifold](terjecpro-manifold-0.md) - A synthetic note about the section of terjecpro manifold.\n\n# Example\n\n* [Velsin tensor field](velsin-tensor-field-5.md) - A synthetic note about the limit of velsin tensor field.\n",
+  "surcormor-7": "# Concept\n\n* [Tanmor](tanmor-0.md) - A synthetic note about the curve of tanmor.\n\n# Definition\n\n* [Velbunjec operator chart](velbunjec-operator-chart-4.md) - A synthetic note about the vector of velbunjec operator chart.\n\n# Example\n\n* [Nudelmor manifold](nudelmor-manifold-2.md) - A synthetic note about the tensor of nudelmor manifold.\n\n# Theorem\n\n* [Kabun limit](kabun-limit-1.md) - A synthetic note about the vector of kabun limit.\n* [Morjec bundle](morjec-bundle-3.md) - A synthetic note about the field of morjec bundle.\n* [Raexvel curve](raexvel-curve-5.md) - A synthetic note about the form of raexvel curve.\n",
+  "tercorce-0": "# Concept\n\n* [Surnu surface](surnu-surface-2.md) - A synthetic note about the flow of surnu surface.\n\n# Definition\n\n* [Cenu class](cenu-class-6.md) - A synthetic note about the vector of cenu class.\n* [Katadle bundle field](katadle-bundle-field-8.md) - A synthetic note about the map of katadle bundle field.\n\n# Example\n\n* [Corka tensor](corka-tensor-1.md) - A synthetic note about the class of corka tensor.\n* [Genvelta space measure](genvelta-space-measure-5.md) - A synthetic note about the manifold of genvelta space measure.\n* [Phisin surface section](phisin-surface-section-7.md) - A synthetic note about the bundle of phisin surface section.\n\n# Theorem\n\n* [Morka](morka-3.md) - A synthetic note about the tensor of morka.\n* [Tandelbun](tandelbun-0.md) - A synthetic note about the metric of tandelbun.\n* [Tanex](tanex-4.md) - A synthetic note about the form of tanex.\n"
+ },
+ "issues": [],
+ "requires_cycles": [],
+ "root_meta": {},
+ "search": {
+  "bundle vector": [
+   [
+    "surcormor-7/velbunjec-operator-chart-4",
+    2.303,
+    "…its curve vanishes. A manifold is smooth when its bundle vanishes. A vector is closed when its bundle vanishes."
+   ],
+   [
+    "anan-4/corter-vector-group-5",
+    2.042,
+    "…when its class vanishes. A chart is exact when its bundle vanishes. A form is closed when its manifold vanishes. A field is exact when its class vanishes."
+   ],
+   [
+    "surcormor-7/raexvel-curve-5",
+    2.003,
+    "A chart is closed when its vector vanishes. A tensor is exact when its chart vanishes. A class is compact when its curve vanishes. A manifold is compact when it…"
+   ],
+   [
+    "surcormor-7/kabun-limit-1",
+    1.949,
+    "A vector is compact when its space vanishes. A vector is closed when its limit vanishes. A limit is compact when its surface vanishes. A manifold is flat when i…"
+   ],
+   [
+    "anan-4/delvel-bundle-3",
+    1.867,
+    "…its section vanishes. A limit is exact when its vector vanishes. A manifold is exact when its surface vanishes. A operator is closed when its field vanishes. A …"
+   ],
+   [
+    "anan-4/kamorjec-group-6",
+    1.822,
+    "A measure is closed when its flow vanishes. A bundle is compact when its vector vanishes. A map is closed when its limit vanishes. A curve is smooth when its su…"
+   ],
+   [
+    "andel-3/fara-measure-3",
+    1.803,
+    "…its operator vanishes. A flow is compact when its vector vanishes. A tensor is smooth when its bundle vanishes."
+   ],
+   [
+    "quobungon-6/velsin-tensor-field-5",
+    1.799,
+    "…its section vanishes. A form is smooth when its bundle vanishes. A tensor is smooth when its section vanishes. A form is closed when its class vanishes. A flow …"
+   ],
+   [
+    "andel-3/faan-7",
+    1.797,
+    "…its group vanishes. A manifold is exact when its bundle vanishes. A measure is compact when its limit vanishes. A metric is exact when its chart vanishes. A sur…"
+   ],
+   [
+    "quobungon-6/mita-4",
+    1.79,
+    "…its flow vanishes. A section is closed when its bundle vanishes. A vector is smooth when its section vanishes."
+   ]
+  ],
+  "manifold": [
+   [
+    "quobungon-6/terjecpro-manifold-0",
+    1.145,
+    "A synthetic note about the section of terjecpro manifold."
+   ],
+   [
+    "anan-4/corter-vector-group-5",
+    1.109,
+    "…its metric vanishes. A operator is closed when its manifold vanishes. A tensor is compact when its class vanishes. A chart is exact when its bundle vanishes. A …"
+   ],
+   [
+    "anan-1/phiex-chart-manifold-2",
+    1.083,
+    "A synthetic note about the surface of phiex chart manifold."
+   ],
+   [
+    "surcormor-7/nudelmor-manifold-2",
+    1.043,
+    "A synthetic note about the tensor of nudelmor manifold."
+   ],
+   [
+    "morta-5/genterdle-class-0",
+    1.035,
+    "…when its form vanishes. A field is compact when its manifold vanishes."
+   ],
+   [
+    "surcormor-7/morjec-bundle-3",
+    1.016,
+    "…sequence vanishes. A operator is smooth when its manifold vanishes. A form is flat when its operator vanishes. A sequence is compact when its curve vanishes."
+   ],
+   [
+    "anan-1/genlinter-3",
+    1.001,
+    "…A tensor is smooth when its space vanishes. A manifold is compact when its section vanishes. A vector is flat when its group vanishes."
+   ],
+   [
+    "morta-5/gonra-3",
+    0.944,
+    "A form is exact when its manifold vanishes. A measure is closed when its sequence vanishes. A group is flat when its flow vanishes. A sequence is smooth when it…"
+   ],
+   [
+    "anan-4/protorgon-0",
+    0.93,
+    "A synthetic note about the manifold of protorgon."
+   ],
+   [
+    "tercorce-0/tanex-4",
+    0.916,
+    "A sequence is smooth when its chart vanishes. A manifold is smooth when its bundle vanishes. A group is closed when its surface vanishes. A metric is flat when …"
+   ]
+  ],
+  "smooth compact": [
+   [
+    "anan-4/radlequo-limit-measure-2",
+    1.168,
+    "A form is smooth when its section vanishes. A form is compact when its map vanishes. A group is closed when its map vanishes. A sequence is smooth when its sect…"
+   ],
+   [
+    "anan-1/fabun-tensor-1",
+    1.157,
+    "…is closed when its flow vanishes. A section is compact when its limit vanishes. A measure is compact when its map vanishes. A flow is smooth when its measure va…"
+   ],
+   [
+    "andel-3/fara-measure-3",
+    1.117,
+    "…is closed when its metric vanishes. A group is smooth when its limit vanishes. A map is exact when its section vanishes. A chart is compact when its measure van…"
+   ],
+   [
+    "anan-4/prodle-1",
+    1.105,
+    "…is flat when its metric vanishes. A surface is compact when its curve vanishes. A vector is smooth when its surface vanishes. A class is exact when its map vani…"
+   ],
+   [
+    "anan-1/loansur-sequence-sequence-5",
+    1.099,
+    "A class is smooth when its surface vanishes. A vector is exact when its bundle vanishes. A sequence is smooth when its vector vanishes. A manifold is flat when …"
+   ],
+   [
+    "andel-3/exdlesin-measure-section-4",
+    1.09,
+    "…A group is flat when its map vanishes. A curve is smooth when its flow vanishes. A bundle is smooth when its form vanishes. A group is exact when its limit vani…"
+   ],
+   [
+    "tercorce-0/morka-3",
+    1.084,
+    "A space is smooth when its group vanishes. A limit is compact when its manifold vanishes. A surface is closed when its flow vanishes. A metric is flat when its …"
+   ],
+   [
+    "anan-1/genlinter-3",
+    1.081,
+    "A form is smooth when its vector vanishes. A tensor is smooth when its space vanishes. A manifold is compact when its section vanishes. A vector is flat when it…"
+   ],
+   [
+    "andel-3/falinvel-tensor-space-1",
+    1.053,
+    "A curve is compact when its section vanishes. A group is compact when its operator vanishes. A measure is closed when its flow vanishes. A vector is smooth when…"
+   ],
+   [
+    "surcormor-7/kabun-limit-1",
+    1.049,
+    "A vector is compact when its space vanishes. A vector is closed when its limit vanishes. A limit is compact when its surface vanishes. A manifold is flat when i…"
+   ]
+  ],
+  "tensor field section": [
+   [
+    "quobungon-6/velsin-tensor-field-5",
+    2.836,
+    "…its curve vanishes. A surface is compact when its section vanishes. A form is smooth when its bundle vanishes. A tensor is smooth when its section vanishes. A f…"
+   ],
+   [
+    "quobungon-6/mita-4",
+    2.792,
+    "A field is smooth when its class vanishes. A map is smooth when its class vanishes. A surface is exact when its flow vanishes. A section is closed when its bund…"
+   ],
+   [
+    "linta-2/linragen-group-8",
+    2.675,
+    "…its measure vanishes. A form is smooth when its section vanishes. A chart is smooth when its space vanishes. A flow is exact when its field vanishes. A class is…"
+   ],
+   [
+    "linta-2/nujecka-1",
+    2.554,
+    "A tensor is closed when its tensor vanishes. A vector is closed when its operator vanishes. A bundle is compact when its field vanishes. A class is smooth when …"
+   ],
+   [
+    "tercorce-0/morka-3",
+    2.521,
+    "- Relates to [Phisin surface section](/tercorce-0/phisin-surface-section-7.md \"see also\"): A limit is compact when its manifold vanishes."
+   ],
+   [
+    "anan-1/fabun-tensor-1",
+    2.52,
+    "A chart is closed when its flow vanishes. A section is compact when its limit vanishes. A measure is compact when its map vanishes. A flow is smooth when its me…"
+   ],
+   [
+    "andel-3/exdlesin-measure-section-4",
+    2.372,
+    "…A flow is compact when its space vanishes. A field is flat when its sequence vanishes."
+   ],
+   [
+    "linta-2/terbunjec-6",
+    2.364,
+    "A section is closed when its measure vanishes. A class is smooth when its field vanishes. A flow is closed when its curve vanishes. A form is flat when its form…"
+   ],
+   [
+    "quobungon-6/nura-surface-field-6",
+    2.25,
+    "A field is exact when its form vanishes. A section is smooth when its class vanishes. A bundle is flat when its flow vanishes. A flow is exact when its class va…"
+   ],
+   [
+    "surcormor-7/nudelmor-manifold-2",
+    2.227,
+    "…its metric vanishes. A curve is compact when its field vanishes. A field is flat when its field vanishes. A form is smooth when its section vanishes. A sequence…"
+   ]
+  ]
+ }
+}

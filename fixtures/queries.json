@@ -1,0 +1,7 @@
+{
+  "basics": ["random matrices", "spectrum eigenvalues", "stale", "design", "circular law disc", "nothing matches this"],
+  "order": ["groups", "rings fields", "egg", "continuity spaces"],
+  "edge": ["unicode", "gauss bonnet", "windows", "yaml"],
+  "markdown": ["link", "heading syntax"],
+  "synthetic": ["manifold", "bundle vector", "smooth compact", "tensor field section"]
+}

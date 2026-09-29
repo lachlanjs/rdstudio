@@ -1,0 +1,4 @@
+---
+type: ""
+title: Blank type
+---
