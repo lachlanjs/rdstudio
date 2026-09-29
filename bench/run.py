@@ -223,7 +223,7 @@ def _frames_since(page, start: float) -> dict:
     }
 
 
-def run_case(browser, url: str, theme: str, profile: str, timeout_s: float) -> dict:
+def run_case(browser, url: str, theme: str, profile: str, timeout_s: float, sw: bool = True) -> dict:
     p = PROFILES[profile]
     look, mode = THEMES[theme]
     ctx = browser.new_context(viewport=dict(zip(("width", "height"), p["viewport"])),
@@ -239,7 +239,7 @@ def run_case(browser, url: str, theme: str, profile: str, timeout_s: float) -> d
         cdp.send("Network.emulateNetworkConditions", {"offline": False, "latency": net["latency"],
                                                       "downloadThroughput": net["down"], "uploadThroughput": net["up"]})
     try:
-        page.goto(url + "/?perf#/map")
+        page.goto(url + ("/?perf#/map" if sw else "/?perf&nosw#/map"))
         wait_for_map(page, timeout_s)
         page.wait_for_timeout(300)
         cold = load_metrics(page)
@@ -297,6 +297,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--profiles", default="desktop,phone", help=", ".join(PROFILES))
     ap.add_argument("--label", help="a name for this run, kept in the results")
     ap.add_argument("--fresh", action="store_true", help="regenerate the synthetic bundles")
+    ap.add_argument("--no-sw", action="store_true", help="without the service worker (offline cache)")
     ap.add_argument("--timeout", type=float, default=180, help="seconds to wait for a map")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
@@ -317,11 +318,11 @@ def main(argv: list[str] | None = None) -> int:
                     for profile in args.profiles.split(","):
                         print(f"{name} ({built['notes']} notes) · {theme} · {profile} …", file=sys.stderr, flush=True)
                         runs.append({"bundle": name, "theme": theme, "profile": profile, "build": built,
-                                     **run_case(browser, url, theme, profile, args.timeout)})
+                                     **run_case(browser, url, theme, profile, args.timeout, not args.no_sw)})
             finally:
                 server.terminate()
                 server.wait()
-        result = {"meta": {**meta(args.label), "chromium": browser.version}, "runs": runs}
+        result = {"meta": {**meta(args.label), "chromium": browser.version, "service_worker": not args.no_sw}, "runs": runs}
         browser.close()
 
     out = args.out or WORK / "results" / f"{datetime.now():%Y%m%d-%H%M%S}-{result['meta']['commit']}.json"

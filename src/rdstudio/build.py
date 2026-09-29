@@ -15,10 +15,13 @@ from .okf import Bundle, FrontmatterError, headings, iso, jsonable, now, split_f
 WEB_DIR = Path(__file__).parent / "web"
 
 
-def _sync_tree(src: Path, dst: Path) -> None:
-    """Copy ``src`` into ``dst``, skipping files whose size and mtime already match."""
+def _sync_tree(src: Path, dst: Path, *, skip: frozenset[str] = frozenset()) -> None:
+    """Copy ``src`` into ``dst``, skipping files whose size and mtime already match
+    and the relative paths in ``skip``."""
     for path in src.rglob("*"):
         rel = path.relative_to(src)
+        if rel.as_posix() in skip:
+            continue
         target = dst / rel
         if path.is_dir():
             target.mkdir(parents=True, exist_ok=True)
@@ -30,6 +33,17 @@ def _sync_tree(src: Path, dst: Path) -> None:
                 continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
+
+
+def service_worker() -> str:
+    """The service worker, stamped with a fingerprint of the app's files, so a
+    new rdstudio (or an edited app file) replaces what browsers have cached."""
+    digest = hashlib.sha256()
+    for path in sorted(WEB_DIR.rglob("*")):
+        if path.is_file():
+            st = path.stat()
+            digest.update(f"{path.relative_to(WEB_DIR).as_posix()}:{st.st_size}:{st.st_mtime_ns}\n".encode())
+    return (WEB_DIR / "sw.js").read_text(encoding="utf-8").replace("__SHELL__", digest.hexdigest()[:16])
 
 
 def _write_if_changed(path: Path, content: str) -> None:
@@ -116,7 +130,8 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
     site = site or cfg.site_dir
     data = site / "data"
     site.mkdir(parents=True, exist_ok=True)
-    _sync_tree(WEB_DIR, site)
+    _sync_tree(WEB_DIR, site, skip=frozenset({"sw.js"}))
+    _write_if_changed(site / "sw.js", service_worker())
 
     auto_index = cfg.raw.get("index", {}).get("auto", True) if write_indexes is None else write_indexes
     bundle = Bundle.load(cfg.knowledge_dir)
