@@ -149,7 +149,8 @@ def start_server(root: Path) -> tuple[subprocess.Popen, str]:
 # ------------------------------------------------------------------ browser
 
 def wait_for_map(page, timeout_s: float) -> None:
-    page.wait_for_function("() => performance.getEntriesByName('rd:map-render').length > 0",
+    """Until the map has settled: drawn with its full layout, not the quick start."""
+    page.wait_for_function("() => performance.getEntriesByName('rd:map-settled').length > 0",
                            timeout=timeout_s * 1000, polling=50)
 
 
@@ -160,8 +161,11 @@ def first(measures: list[dict], name: str) -> dict | None:
 def load_metrics(page) -> dict:
     ms = page.evaluate(MEASURES)
     render = first(ms, "map-render")
-    out = {"first_map_ms": r1(render["start"] + render["duration"]) if render else None}
-    for step in ("data", "map-model", "map-layout", "map-routes", "map-render"):
+    settled = first(ms, "map-settled")
+    out = {"first_map_ms": r1(render["start"] + render["duration"]) if render else None,
+           # the measure runs from when the page opened
+           "settled_ms": r1(settled["duration"]) if settled else None}
+    for step in ("data", "map-model", "map-place", "map-layout", "map-routes", "map-render"):
         m = first(ms, step)
         out[step.replace("map-", "") + "_ms"] = r1(m["duration"]) if m else None
     info = page.evaluate(PAGE)
@@ -245,7 +249,7 @@ def run_case(browser, url: str, theme: str, profile: str, timeout_s: float) -> d
         page.wait_for_timeout(300)
         warm = load_metrics(page)
         return {"load": cold, "interact": motion,
-                "reload": {k: warm[k] for k in ("first_map_ms", "data_ms", "layout_ms", "routes_ms", "render_ms", "transfer_kb")}}
+                "reload": {k: warm[k] for k in ("first_map_ms", "settled_ms", "data_ms", "layout_ms", "routes_ms", "render_ms", "transfer_kb")}}
     except Exception as exc:  # a timeout on the largest bundle is a result too
         return {"error": f"{type(exc).__name__}: {str(exc).splitlines()[0]}"}
     finally:
@@ -269,13 +273,14 @@ def table(runs: list[dict]) -> str:
             ("theme", lambda r: r["theme"]), ("profile", lambda r: r["profile"]),
             ("build ms", lambda r: r["build"]["build_ms"]),
             ("first map ms", lambda r: r.get("load", {}).get("first_map_ms")),
+            ("settled ms", lambda r: r.get("load", {}).get("settled_ms")),
             ("layout", lambda r: r.get("load", {}).get("layout_ms")),
             ("routes", lambda r: r.get("load", {}).get("routes_ms")),
             ("render", lambda r: r.get("load", {}).get("render_ms")),
             ("fps", lambda r: r.get("interact", {}).get("fps")),
             ("frame p95", lambda r: r.get("interact", {}).get("frame_p95_ms")),
             ("jank %", lambda r: r.get("interact", {}).get("janky_pct")),
-            ("reload ms", lambda r: r.get("reload", {}).get("first_map_ms")),
+            ("reload ms", lambda r: r.get("reload", {}).get("settled_ms") or r.get("reload", {}).get("first_map_ms")),
             ("error", lambda r: r.get("error", ""))]
     rows = [[str(f(r) if f(r) is not None else "–") for _, f in cols] for r in runs]
     if not any(r[-1] for r in rows):

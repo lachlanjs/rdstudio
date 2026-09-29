@@ -16,6 +16,7 @@ from pathlib import Path
 METRICS = [  # (section, key, label, higher is better)
     ("build", "build_ms", "build ms", False),
     ("load", "first_map_ms", "first map ms", False),
+    ("load", "settled_ms", "settled ms", False),
     ("load", "layout_ms", "layout ms", False),
     ("load", "routes_ms", "routes ms", False),
     ("load", "render_ms", "render ms", False),
@@ -25,6 +26,7 @@ METRICS = [  # (section, key, label, higher is better)
     ("interact", "janky_pct", "jank %", False),
     ("interact", "render_p95_ms", "render p95 ms", False),
     ("reload", "first_map_ms", "reload ms", False),
+    ("reload", "settled_ms", "reload settled", False),
 ]
 NOISE = 0.10
 
