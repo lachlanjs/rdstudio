@@ -8,7 +8,14 @@
    "directory": "",
    "generated_at": null,
    "hash": "de410d74a612",
-   "headings": [],
+   "headings": [
+    [
+     2,
+     "type: [unclosed\ntitle: x",
+     "type-unclosed-title-x",
+     1
+    ]
+   ],
    "last_human_verification": null,
    "links": [],
    "meta": {},
@@ -388,14 +395,14 @@
    "last_human_verification": null,
    "links": [],
    "meta": {
-    "country": false,
+    "country": "NO",
     "description": "What PyYAML makes of values YAML 1.2 reads differently.",
-    "flag": true,
-    "octal": 8,
-    "off_switch": false,
-    "sexagesimal": 90,
+    "flag": "yes",
+    "octal": 10,
+    "off_switch": "off",
+    "sexagesimal": "1:30",
     "tags": [
-     true,
+     "on",
      2026,
      null,
      "quoted"
@@ -411,9 +418,8 @@
    "requires": [],
    "status": "stable",
    "tags": [
-    "True",
+    "on",
     "2026",
-    "None",
     "quoted"
    ],
    "title": "YAML 1.1 quirks",
@@ -531,38 +537,38 @@
   "gauss bonnet": [
    [
     "géométrie",
-    5.28,
+    5.3,
     "# Théorème de Gauss–Bonnet"
    ]
   ],
   "unicode": [
    [
     "sub/child",
-    2.046,
+    2.051,
     "Back to the [unicode note](/géométrie.md)."
    ],
    [
     "géométrie",
-    1.624,
+    1.631,
     "Unicode in the file name, title and headings."
    ]
   ],
   "windows": [
    [
     "crlf",
-    3.73,
+    3.737,
     ""
    ]
   ],
   "yaml": [
    [
     "bad-yaml",
-    3.257,
+    2.999,
     ""
    ],
    [
     "yaml-quirks",
-    2.763,
+    2.876,
     "What PyYAML makes of values YAML 1.2 reads differently."
    ]
   ]

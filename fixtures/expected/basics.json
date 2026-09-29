@@ -75,7 +75,7 @@
     "type": "Design",
     "verified": [
      {
-      "at": "2026-09-21T00:00:00Z",
+      "at": "2026-09-21T10:00:00+10:00",
       "by": "human:alice"
      },
      {
@@ -172,12 +172,6 @@
     ],
     [
      "research/two words",
-     "concept",
-     false,
-     null
-    ],
-    [
-     "research/fresh",
      "concept",
      false,
      null

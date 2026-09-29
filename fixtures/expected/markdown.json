@@ -10,6 +10,18 @@
    "hash": "5e492f06be4c",
    "headings": [
     [
+     3,
+     "Indented three spaces",
+     "indented-three-spaces",
+     2
+    ],
+    [
+     1,
+     "Setext heading",
+     "setext-heading",
+     4
+    ],
+    [
      1,
      "Closing hashes",
      "closing-hashes",
@@ -45,7 +57,13 @@
    "last_human_verification": null,
    "links": [
     [
-     "target-c",
+     "target-a",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "target(b)",
      "concept",
      false,
      null
@@ -57,13 +75,7 @@
      null
     ],
     [
-     "target-h",
-     "concept",
-     false,
-     null
-    ],
-    [
-     "target-j",
+     "target-e",
      "concept",
      false,
      null
@@ -92,7 +104,9 @@
    "verification_stale": false
   },
   "target(b)": {
-   "backlinks": [],
+   "backlinks": [
+    "links"
+   ],
    "content_stale": false,
    "depth": 0,
    "description": "",
@@ -118,7 +132,9 @@
    "verification_stale": false
   },
   "target-a": {
-   "backlinks": [],
+   "backlinks": [
+    "links"
+   ],
    "content_stale": false,
    "depth": 0,
    "description": "",
@@ -170,9 +186,7 @@
    "verification_stale": false
   },
   "target-c": {
-   "backlinks": [
-    "links"
-   ],
+   "backlinks": [],
    "content_stale": false,
    "depth": 0,
    "description": "",
@@ -306,9 +320,7 @@
    "verification_stale": false
   },
   "target-h": {
-   "backlinks": [
-    "links"
-   ],
+   "backlinks": [],
    "content_stale": false,
    "depth": 0,
    "description": "",
@@ -360,9 +372,7 @@
    "verification_stale": false
   },
   "target-j": {
-   "backlinks": [
-    "links"
-   ],
+   "backlinks": [],
    "content_stale": false,
    "depth": 0,
    "description": "",
@@ -421,19 +431,19 @@
   "heading syntax": [
    [
     "headings",
-    6.874,
+    6.69,
     "#Not a heading (no space)"
    ],
    [
     "links",
-    1.574,
+    1.615,
     "Cases where a Markdown parser and simple patterns may disagree."
    ]
   ],
   "link": [
    [
     "links",
-    2.779,
+    2.834,
     "- Escaped bracket: \\[not a link](/target-c.md)"
    ]
   ]

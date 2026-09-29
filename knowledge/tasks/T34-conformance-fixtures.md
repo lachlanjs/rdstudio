@@ -36,3 +36,6 @@ and left for [T35](/tasks/T35-core-okf.md) to decide:
    headings are missed.
 3. Frontmatter is read as YAML 1.1: `yes`, `no`, `on`, `off` become booleans,
    `010` is 8 and `1:30` is 90.
+
+Decided in [T35](/tasks/T35-core-okf.md): CommonMark (markdown-it) for links and
+headings, YAML 1.2 for frontmatter; the Python core changed to match first.

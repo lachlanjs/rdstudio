@@ -43,19 +43,23 @@ folder, and search results (id, score to 3 places, snippet).
 Nothing depends on the clock or file times: `stale_after` dates are far in the
 past or future.
 
-## Known differences (to decide in T35)
+## Decisions the fixtures pin down
 
-The expected output records what the Python core does today. Where that is
-arguably wrong, the Rust core should do the right thing and the Python core be
-changed to match, with the fixtures recorded again.
+Decided in T35 (2026-09-29), after T34 found the first core reading Markdown
+and YAML by pattern:
 
-- **Links are found by pattern, not by a Markdown parser.** `markdown/links.md`:
-  a link after an escaped bracket (`\[not a link](…)`), inside double-backtick
-  code and inside an indented code block are counted; a label with nested
-  brackets and a target with parentheses are missed.
-- **Headings are found by pattern.** `markdown/headings.md`: headings indented
-  by up to three spaces and setext headings (underlined with `===`) are missed.
-- **YAML 1.1.** PyYAML reads `yes`, `no`, `on` and `off` (any case) as booleans,
-  `010` as octal 8 and `1:30` as 90 (`edge/yaml-quirks.md`). YAML 1.2, which
-  most Rust parsers follow, reads them as strings and 10. The OKF spec names no
-  YAML version; 1.2's core schema is the likely choice.
+- **Links and headings come from a CommonMark parser** (markdown-it, in both
+  the Python and TypeScript cores, and the dashboard renders with it). No link
+  in code, after an escaped bracket or in an image; nested brackets and
+  parentheses in targets work; indented and setext headings count
+  (`markdown/`). The links of a note are every link in order, then each
+  reference definition that no link used.
+- **Frontmatter is YAML 1.2** (core schema): `yes`, `on` and `NO` are text,
+  `010` is ten, `1:30` is text, and dates stay as written
+  (`edge/yaml-quirks.md`). Dates are read by one pattern: `YYYY-MM-DD`,
+  optionally with a time, seconds, fraction and an offset; no offset is UTC.
+- **Values as text** (titles, types, tags): `true`/`false`, whole-number
+  floats without `.0`, and nulls dropped from tag lists.
+
+Neither changed anything in the two real bundles (differential geometry and
+this repository's own).
