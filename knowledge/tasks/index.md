@@ -34,3 +34,15 @@
 * [T28 — Explain-back and AI marking](T28-explain-back.md) - AI-driven tasks: a skill and MCP tools to set and mark explain-back questions, answered in the harness or queued from the dashboard.
 * [T29 — Catching up on change](T29-catch-up.md) - What changed in each note since you last looked, from git history and the hashes in your record; notes going stale when their sources change.
 * [T30 — Editing from the dashboard](T30-dashboard-editing.md) - Let the dashboard edit notes through the same path as the MCP tools, with conflict checks, for a map you can reshape.
+* [T31 — Benchmarks and learner event ids](T31-benchmarks-and-event-ids.md) - Measure map frame times and load times on real and generated bundles; give learner events unique ids before any sync exists.
+* [T32 — Offline app shell](T32-offline-shell.md) - A service worker that caches the app and data, so reloads are instant and reading works offline.
+* [T33 — Map layout and routing in a Web Worker](T33-map-worker.md) - Move layout and routing off the main thread and cache the results by bundle and settings.
+* [T34 — Conformance fixtures](T34-conformance-fixtures.md) - Test bundles with the Python core's output recorded as expected JSON, which every implementation must match.
+* [T35 — Rust core: OKF parsing and lint](T35-rust-okf.md) - Frontmatter, links and ratings through a CommonMark parser, headings, trust and staleness, lint and index generation, matching the fixtures.
+* [T36 — Rust core: graph, search and learner record](T36-rust-graph-search-record.md) - Requires graph, reading order, implied links, PageRank, BM25 search and record merging in the Rust core.
+* [T37 — Core bindings: WASM and Python](T37-core-bindings.md) - Ship the core to the browser as WASM with TypeScript types and to the Python package through PyO3.
+* [T38 — TypeScript UI with a build step](T38-typescript-ui.md) - Move the dashboard to TypeScript built with Vite at release time, still vendored and offline.
+* [T39 — GPU map renderer](T39-gpu-map.md) - A renderer interface, then a Canvas 2D or WebGL renderer with theme parity, hit-testing, accessibility and level of detail.
+* [T40 — Tauri desktop app](T40-tauri-desktop.md) - A desktop app with the UI bundled and the core linked natively, released through CI with signed updates.
+* [T41 — Local-first sync](T41-local-first-sync.md) - Delta updates, derivation on the device, git and home-server sync, and learner record merging.
+* [T42 — Mobile apps](T42-mobile-apps.md) - Android then iOS builds of the Tauri app, edits with merging, and several projects per device.
