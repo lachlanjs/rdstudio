@@ -74,11 +74,21 @@ layers, branching 8), `area` (3, 6), `field` (4, 6) and `ceiling` (4, 8).
 | UI | **Svelte 5 and TypeScript, in SvelteKit as a single-page app** (`adapter-static`, no server rendering) | Compiles to small, fast JavaScript with no virtual DOM; one build runs from `rdstudio serve`, a static export and inside Tauri (its documented setup). |
 | UI state | Svelte runes (`$state`, `$derived`) for local state; **TanStack Query** where data is genuinely remote (sync status, a hosted service, AI calls) | Most state here is on the device, which runes handle without a cache layer. |
 | Core | **TypeScript** (`packages/core`): `yaml` for frontmatter (YAML 1.2), `markdown-it` for links and headings (CommonMark, and the parser the dashboard already renders with) | Runs unchanged in the browser, Node and Tauri; one language for the whole project, which the developer is learning anyway. Fast enough at the target scale (the Python core already builds 3,885 notes in 0.9 s). |
-| Command line, MCP, server | **Node** (`packages/cli`): the official MCP TypeScript SDK; `rdstudio serve` on Hono | Replace the Python internals; distributed through npm and as a single binary (`bun build --compile`). |
+| Command line, MCP, server | **Node** (`packages/cli`): the official MCP TypeScript SDK; `rdstudio serve` on Hono | Replace the Python internals. Installed as now with `uv tool install rdstudio` (see Installing), and also through npm. |
 | Data shapes | **zod** schemas in the core, TypeScript types inferred from them | The pydantic role: validation and types from one definition. |
 | HTTP API | Hono with `@hono/zod-openapi` producing OpenAPI, from which **HeyAPI** generates the client (`npm run generate`) | The developer's usual workflow, for the parts that really are HTTP: the learner record and writes through `rdstudio serve`, and a hosted service later. Everything else imports the core directly. |
 | Python | Stays for papis and the classifier, called as a subprocess (as the classifier already is); the Python CLI and MCP server are retired once the Node ones pass the fixtures | No second implementation to keep in step. |
 | Rust | Only Tauri's thin shell, mostly configuration; a hot spot could later move to Rust compiled to WASM, checked by the fixtures | Not needed for speed at this scale. |
+
+**Installing stays one command.** `uv tool install rdstudio` keeps working
+when the command line moves to Node: the wheel stays pure Python
+(`py3-none-any`) and carries the Node program bundled into one JavaScript file
+(esbuild, at release time) beside the built dashboard; the `rdstudio` entry
+point is a few lines of Python that run it. Node itself comes as a dependency,
+`nodejs-wheel-binaries` (Node 24 for Linux, macOS and Windows on x86-64 and
+ARM), so nobody installs Node by hand and there is no per-platform build of our
+own. npm (`npx rdstudio`) is a second way in. Only developing rdstudio needs
+Node and npm installed (`mise run setup`).
 
 No interim FastAPI layer: an HTTP API in front of the Python code would be
 thrown away when the TypeScript core arrives.
