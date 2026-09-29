@@ -1,5 +1,7 @@
 // Loads the build's JSON and watches the version stamp for live updates.
 
+import { measure } from "./util.js";
+
 const FILES = ["site", "concepts", "tree", "changes", "reports", "skills"];
 const POLL_MS = 2500;
 
@@ -29,6 +31,7 @@ async function currentVersion() {
 }
 
 export async function load() {
+  const start = performance.now();
   const [version, ...parts] = await Promise.all([currentVersion(), ...FILES.map(getJSON)]);
   const [site, concepts, tree, changes, reports, skills] = parts;
   store.version = version;
@@ -39,6 +42,7 @@ export async function load() {
   store.reports = reports;
   store.skills = skills;
   store.bodies.clear();
+  measure("data", start);
 }
 
 export async function body(id) {

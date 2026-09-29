@@ -8,7 +8,7 @@
 
 import { store } from "./data.js";
 import { prerequisites } from "./learn.js";
-import { h, conceptHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
+import { h, conceptHref, trustState, TRUST_LABEL, titleCase, measure, timed } from "./util.js";
 
 /* global d3 */
 
@@ -647,8 +647,8 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const gSteps = world.append("g").attr("class", "m-steps");
   const gLabels = world.append("g").attr("class", "m-labels");
 
-  let model = buildModel();
-  let L = layout(model, o);
+  let model = timed("map-model", buildModel);
+  let L = timed("map-layout", () => layout(model, o));
   let cache = null; // routes for the current set of open folders
   let w = 800, hgt = 600;
   let focus = L.root;
@@ -657,7 +657,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function rebuild() {
-    L = layout(model, o);
+    L = timed("map-layout", () => layout(model, o));
     cache = null;
     focus = L.root;
     schedule();
@@ -682,7 +682,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   function schedule() {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; render(); });
+    requestAnimationFrame(() => { queued = false; timed("map-render", render); });
   }
 
   function fitTransform(n) {
@@ -709,6 +709,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
     const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
     const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "") + (trail ? "|" + path : "");
     if (cache?.signature === signature) return cache;
+    const start = performance.now();
     const shownRep = (leaf) => {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
       return leaf;
@@ -778,6 +779,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
     readout.textContent = `${routes.length} routes · ${hidden} implied links hidden · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
     Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length, hidden });
     cache = { signature, routes, shownRep };
+    measure("map-routes", start);
     return cache;
   }
 
@@ -1169,7 +1171,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
   wrap.leave = () => { window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = buildModel(); o = effective(); rebuild(); };
+  wrap.refresh = () => { model = timed("map-model", buildModel); o = effective(); rebuild(); };
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
   wrap.layout = () => L;

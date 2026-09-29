@@ -114,3 +114,33 @@ def test_server_compresses_text_and_caches_vendor_files(cfg, tmp_path):
         assert status == 200 and "Content-Encoding" not in headers
     finally:
         server.shutdown()
+
+
+def test_events_have_sortable_ids_and_merge_by_union(cfg):
+    a = learner.append(cfg, {"event": "seen", "concept": "a"})
+    b = learner.append(cfg, {"event": "seen", "concept": "b"})
+    assert learner.ID_RE.match(a["id"]) and a["id"] < b["id"]  # made in order, sorted in order
+    assert a["device"] == b["device"] == learner.device_id()
+    offline = learner.new_id()
+    c = learner.append(cfg, {"event": "seen", "id": offline, "device": "phone1"})
+    assert (c["id"], c["device"]) == (offline, "phone1")  # ids made offline are kept
+    learner.append(cfg, {"event": "seen", "id": offline, "device": "phone1"})  # a retried write
+    assert [e["id"] for e in learner.events(cfg)] == [a["id"], b["id"], offline]
+    for bad in ({"event": "x", "id": "nope"}, {"event": "x", "device": "Not Valid"}):
+        with pytest.raises(learner.LearnerError):
+            learner.append(cfg, bad)
+
+    laptop, phone = learner.events(cfg)[:2], learner.events(cfg)[1:]
+    merged = learner.merge(laptop, phone)
+    assert merged == learner.merge(phone, laptop) == learner.merge(merged, phone, laptop)
+    assert [e["id"] for e in merged] == sorted([a["id"], b["id"], offline])
+
+
+def test_events_written_before_ids_get_the_same_id_everywhere(cfg):
+    path = learner.record_dir(cfg) / "record.jsonl"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"at":"2026-09-28T01:00:00Z","event":"seen","concept":"a"}\n'
+                    '{"at":"2026-09-28T02:00:00Z","event":"seen","concept":"b"}\n')
+    first = learner.events(cfg)
+    assert [e["id"] for e in first] == [e["id"] for e in learner.events(cfg)]
+    assert first[0]["id"] < first[1]["id"] and all(learner.ID_RE.match(e["id"]) for e in first)

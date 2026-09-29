@@ -24,6 +24,9 @@ packages = ["src/rdstudio"]
 testpaths = ["tests"]
 
 [dependency-groups]
+bench = [
+    "playwright>=1.63.0",
+]
 dev = [
     "pytest>=9.1.1",
 ]

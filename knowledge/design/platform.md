@@ -43,6 +43,69 @@ One core, three bindings; one UI, three shells (browser, Tauri, static
 export). The OKF spec plus a shared set of test bundles is the contract that
 keeps implementations in step.
 
+# Scale
+
+A body of knowledge is a tree about four layers deep (fields, areas, subjects,
+notes) branching six to ten ways, so even a whole field such as mathematics is
+roughly 1,300 to 10,000 notes, and a single subject is 50 to 300. The
+differential geometry test bed, 63 notes, would be one bubble among many in a
+map of mathematics. Targets:
+
+| Size | Example | Target |
+|---|---|---|
+| Subject, 50 to 300 notes | differential geometry | smooth on a phone: 60 fps panning, first map under a second |
+| Field, about 1,300 | all of geometry and topology | usable on a phone; smooth on a desktop |
+| Ceiling, about 4,000 | past anything expected | works; may be slower |
+
+At field size the map must behave like nested bubbles: only the open bubble's
+contents are laid out in detail, routed and drawn (B7). The same idea may
+later join separate projects into one atlas (A7).
+
+The benchmark presets (`bench/synth.py`) follow these sizes: `subject` (2
+layers, branching 8), `area` (3, 6), `field` (4, 6) and `ceiling` (4, 8).
+
+# Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| UI | **Svelte 5 and TypeScript, in SvelteKit as a single-page app** (`adapter-static`, no server rendering) | Compiles to small, fast JavaScript with no virtual DOM; one build runs from `rdstudio serve`, a static export and inside Tauri (its documented setup). |
+| UI state | Svelte runes (`$state`, `$derived`) for local state; **TanStack Query** where data is genuinely remote (sync status, a hosted service, AI calls) | Most state here is on the device, which runes handle without a cache layer. |
+| Core | **Rust** | Compiles to WASM, links natively into Tauri, binds to Python (below). |
+| Types across the boundary | Written once in Rust; TypeScript generated from them by one `npm run generate`: `tsify` for WASM, `tauri-specta` for Tauri commands, and for HTTP, `axum` with `utoipa` producing OpenAPI, from which **HeyAPI** generates the client | The developer's usual workflow (typed models, a spec, a generated client), with Rust types in place of pydantic models. |
+| UI to core | One TypeScript interface with three implementations: WASM in the browser, Tauri commands on desktop and mobile, HTTP to `rdstudio serve` or a hosted service | Views never know where the core runs. |
+
+No interim FastAPI layer: an HTTP API in front of the Python code would be
+thrown away when the Rust core arrives.
+
+# Repository layout
+
+One repository, growing into these parts as the tasks land:
+
+```
+src/rdstudio/   Python package: CLI, MCP, papis (calls the core through PyO3 after D5)
+crates/         Rust: the core, its WASM and Python bindings, the HTTP server, the Tauri app
+app/            the SvelteKit UI, built into src/rdstudio/web/ for releases
+fixtures/       conformance bundles with expected output (D1)
+bench/          benchmarks and synthetic projects (B1)
+mise.toml       development tasks and, as they arrive, pinned toolchains
+```
+
+# Development utilities
+
+- **Tasks:** `mise run <task>` (`mise tasks` lists them): setup, test, check,
+  serve, bench, bench:compare, bench:synth; later generate, app:dev and core:test.
+  Each is a plain command, so nothing depends on mise.
+- **Performance contract:** with `?perf` in the address the dashboard records
+  its steps as `rd:<step>` performance measures (data, map-model, map-layout,
+  map-routes, map-render). The benchmarks read them, so any new implementation
+  keeps the names and stays comparable with the old one.
+- **Benchmarks:** `mise run bench` writes JSON to `.bench/results/`;
+  `mise run bench:compare before.json after.json` marks what got better or worse.
+  Every performance change is compared against the baseline.
+- **Synthetic projects:** `bench/synth.py` makes valid, repeatable bundles of
+  any size, for benchmarks, tests and demos.
+- **Conformance fixtures** (D1): the contract between the Python and Rust cores.
+
 # A. Local-first data
 
 The device holds the bundle and the learner record; the network is for sync,
@@ -105,9 +168,10 @@ implementation.) Learning both languages doubles as an
 Stays in Python: papis references, reports scanning, and anything tied to the
 Python ecosystem. Git history moves to Tauri's git library when needed.
 
-**The UI moves to TypeScript with a build step** (Vite). This ends
-"no build step" but not "no CDN": the build runs at release time and its
-output is shipped, vendored, inside the package.
+**The UI moves to Svelte and TypeScript with a build step** (SvelteKit on
+Vite; see Stack). This ends "no build step" but not "no CDN": the build runs at
+release time and its output is shipped, vendored, inside the package. The
+rewrite is where the renderer interface (B3) is introduced.
 
 # Order of work
 
@@ -121,12 +185,21 @@ flowchart LR
 ```
 
 Phase 0 improves today's app without a rewrite and gives the numbers that
-decide how far phase 2 must go. Phase 1 is the long one; the Python package
+decide how far phase 2 must go. The baseline ([T31](/tasks/T31-benchmarks-and-event-ids.md))
+found that layout, not drawing, is the cost: it is most of the time to first
+map and is repeated on every reload, while closed folders keep the SVG to a
+few hundred elements. So the worker and layout cache (B2) and laying out only
+the open bubble (B7) come before a GPU renderer (B4), which waits for
+measurements on a real phone. Phase 1 is the long one; the Python package
 keeps shipping throughout.
 
 # Decisions this makes
 
-- A build step for the UI (TypeScript), still with no CDN at runtime.
+- A build step for the UI (SvelteKit, Svelte 5, TypeScript), still with no CDN
+  at runtime.
+- Types are defined in Rust and TypeScript is generated from them; HeyAPI
+  wherever the boundary is HTTP.
 - Rust as the source of truth for OKF logic once D1 to D5 pass; the Python
   implementation is retired module by module behind the same API.
-- Learner events get unique ids now, before any sync exists.
+- Learner events get unique ids now, before any sync exists (done in T31:
+  ULIDs, a device id, and merging by union).

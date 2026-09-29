@@ -141,6 +141,26 @@ If rdstudio is a dev dependency of the project, use `uv run rdstudio export
 _site` instead of the `uvx` line. For other static hosts, run the same export
 and upload `_site/`.
 
+## Develop rdstudio
+
+Tasks live in `mise.toml`; run them with `mise run <task>` (`mise tasks` lists
+them), or run the command each one names.
+
+```sh
+mise run setup      # uv sync --all-groups, and Chromium for the benchmarks
+mise run test       # the Python tests
+mise run bench      # load and map benchmarks, written to .bench/results/
+mise run bench:compare .bench/results/a.json .bench/results/b.json
+mise run bench:synth field /tmp/field   # a synthetic project of about 1,300 notes
+```
+
+The benchmarks build and serve the differential geometry test bed (set
+`RDSTUDIO_BENCH_DG` to its folder) and synthetic projects from one subject up
+to a whole field, then time the first map and a fixed pan and zoom in headless
+Chromium, as a desktop and as a phone. Compare any change that could affect
+speed against a baseline. The platform plan is in
+`knowledge/design/platform.md`.
+
 ## Licence
 
 MIT. The bundled libraries and fonts keep their own licences, which are in

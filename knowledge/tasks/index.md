@@ -41,7 +41,7 @@
 * [T35 — Rust core: OKF parsing and lint](T35-rust-okf.md) - Frontmatter, links and ratings through a CommonMark parser, headings, trust and staleness, lint and index generation, matching the fixtures.
 * [T36 — Rust core: graph, search and learner record](T36-rust-graph-search-record.md) - Requires graph, reading order, implied links, PageRank, BM25 search and record merging in the Rust core.
 * [T37 — Core bindings: WASM and Python](T37-core-bindings.md) - Ship the core to the browser as WASM with TypeScript types and to the Python package through PyO3.
-* [T38 — TypeScript UI with a build step](T38-typescript-ui.md) - Move the dashboard to TypeScript built with Vite at release time, still vendored and offline.
+* [T38 — Svelte UI with a build step](T38-typescript-ui.md) - Rewrite the dashboard in Svelte 5 and TypeScript as a SvelteKit single-page app, built at release time, still vendored and offline.
 * [T39 — GPU map renderer](T39-gpu-map.md) - A renderer interface, then a Canvas 2D or WebGL renderer with theme parity, hit-testing, accessibility and level of detail.
 * [T40 — Tauri desktop app](T40-tauri-desktop.md) - A desktop app with the UI bundled and the core linked natively, released through CI with signed updates.
 * [T41 — Local-first sync](T41-local-first-sync.md) - Delta updates, derivation on the device, git and home-server sync, and learner record merging.
