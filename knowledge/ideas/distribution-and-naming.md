@@ -28,7 +28,7 @@ territory.
 | Route | Status | For | Notes |
 |---|---|---|---|
 | `uv tool install rdstudio` | current; kept after the move to Node (see [platform](/design/platform.md), Installing) | Python users, and anyone with uv | Node arrives as a dependency (`nodejs-wheel-binaries`); nothing else to install. |
-| `npx rdstudio` (npm) | potential | JavaScript developers, who already have Node | Publish `packages/cli` (with the core and the built dashboard) to npm; `npx rdstudio serve` runs without installing, `npm i -g rdstudio` keeps it. Only possible once the command line is in Node (T37). The name must be free on npm. |
+| `npx rdstudio` (npm) | prepared, not yet published ([procedure](/procedures/publish-npm.md)) | JavaScript developers, who already have Node | Publish `packages/cli` (with the core and the built dashboard) to npm; `npx rdstudio serve` runs without installing, `npm i -g rdstudio` keeps it. `mise run release:npm` stages and packs it; the name was free on 2026-09-29. |
 | Static export | current | reading without a server (GitHub Pages) | `rdstudio export`. |
 | Desktop and mobile apps | planned (T40, T42) | people who are not developers | Tauri; GitHub Releases, app stores. |
 | Hosted service | an option (see funding) | people who want nothing to install | |

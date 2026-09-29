@@ -2,6 +2,7 @@
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cmpTuple } from "@rdstudio/core";
 
 /** Every file under `root` (relative, "/"-separated), sorted part by part as
@@ -71,4 +72,14 @@ export function normpathPosix(p: string): string {
     else if (out.length) out.pop();
   }
   return "/".repeat(initial) + out.join("/") || ".";
+}
+
+/** A folder of rdstudio's own files (the dashboard, the init templates): named
+ *  by an environment variable, or beside the running program (a bundled
+ *  release, npm or Python), or in the repository (running from source). */
+export function assetDir(name: "web" | "templates", envVar: string, fromSource: string): string {
+  const env = process.env[envVar];
+  if (env) return env;
+  const beside = fileURLToPath(new URL(`./${name}/`, import.meta.url));
+  return existsSync(join(beside, name === "web" ? "index.html" : "agents_section.md")) ? beside : fromSource;
 }

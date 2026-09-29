@@ -1,6 +1,6 @@
 // rdstudio init: scaffold rdstudio into a repository, idempotently.
-// A port of src/rdstudio/scaffold.py; the templates are the Python package's
-// (src/rdstudio/templates) until the launcher ships them with the Node program.
+// A port of src/rdstudio/scaffold.py. The templates are src/rdstudio/templates,
+// copied beside the program in a release.
 
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -11,11 +11,10 @@ import { splitFrontmatter } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { stringify } from "yaml";
 import { PROJECT_FILE, loadConfig } from "./config.ts";
-import { walkFiles } from "./files.ts";
+import { assetDir, walkFiles } from "./files.ts";
 import { pyDumps } from "./pyjson.ts";
 
-export const TEMPLATES = process.env.RDSTUDIO_TEMPLATES_DIR
-  ?? fileURLToPath(new URL("../../../src/rdstudio/templates/", import.meta.url));
+export const TEMPLATES = assetDir("templates", "RDSTUDIO_TEMPLATES_DIR", fileURLToPath(new URL("../../../src/rdstudio/templates/", import.meta.url)));
 const SECTION_START = "<!-- rdstudio:start";
 const SECTION_END = "<!-- rdstudio:end -->";
 const HOOK_COMMAND = "rdstudio brief";

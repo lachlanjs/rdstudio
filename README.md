@@ -26,6 +26,10 @@ To upgrade later, run the same command with a newer tag, followed by
 `--force`. To work on rdstudio itself, clone the repository, run
 `mise run setup`, then `uv tool install --editable . --force` inside it.
 
+With Node 24 or later, `npx rdstudio` or `npm install -g rdstudio` will work
+once rdstudio is published to npm (prepared: `mise run release:npm` builds the
+package; see `knowledge/procedures/publish-npm.md`).
+
 rdstudio's command line is moving from Python to TypeScript (Node). Node comes
 with rdstudio as a Python dependency, so there is nothing else to install. A
 release wheel (built by `mise run release:build`) runs the Node command line;

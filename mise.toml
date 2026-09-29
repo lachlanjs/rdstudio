@@ -85,3 +85,7 @@ description = "Every comparison between the Python and Node implementations"
 run = ["uv run python fixtures/agree.py knowledge", "uv run python fixtures/agree_cli.py", "uv run python fixtures/agree_build.py",
        "uv run python fixtures/agree_writes.py", "uv run python fixtures/agree_scaffold.py",
        "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""]
+
+[tasks."release:npm"]
+description = "Stage and pack the npm package in .release/npm/ (publishing is manual: knowledge/procedures/publish-npm.md)"
+run = "node packages/cli/scripts/npm-package.ts"

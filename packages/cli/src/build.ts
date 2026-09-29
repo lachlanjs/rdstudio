@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 import { Bundle, cmp, contentHash, headings, iso, splitFrontmatter, text, type Concept } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { categoryGlobs, type Config } from "./config.ts";
-import { syncTree, walkFiles, writeIfChanged } from "./files.ts";
+import { assetDir, syncTree, walkFiles, writeIfChanged } from "./files.ts";
 import { history } from "./gitlog.ts";
 import { scan } from "./reports.ts";
 
-/** The dashboard's files: the Python package's web folder until the Svelte app replaces it (T38). */
-export const WEB_DIR = process.env.RDSTUDIO_WEB_DIR
-  ?? fileURLToPath(new URL("../../../src/rdstudio/web/", import.meta.url));
+/** The dashboard's files: beside a bundled release, or the Python package's web
+ *  folder when running from source (until the Svelte app replaces it, T38). */
+export const WEB_DIR = assetDir("web", "RDSTUDIO_WEB_DIR", fileURLToPath(new URL("../../../src/rdstudio/web/", import.meta.url)));
 
 /** JSON as the Python build writes it: compact, not ASCII-escaped. */
 export const dump = (value: unknown): string => JSON.stringify(value);
