@@ -53,5 +53,5 @@ domain, and trademarks in software.
 The developer's view: in the AI age, marketing decides which tool wins, and
 it is still very human. Assets this project has: the map is visual and demos
 well; the [autoethnography](/ideas/learning/autoethnography.md) is evidence and
-a story at once; learning in public (a devlog of learning Rust with the tool)
+a story at once; learning in public (a devlog of learning TypeScript with the tool)
 markets the tool while testing it.

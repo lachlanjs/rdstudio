@@ -27,7 +27,7 @@ Platform D1; also a test suite for OKF.
 # What the fixtures found
 
 Three places where today's core is arguably wrong, recorded as it behaves now
-and left for [T35](/tasks/T35-rust-okf.md) to decide:
+and left for [T35](/tasks/T35-core-okf.md) to decide:
 
 1. Links are found by pattern: escaped brackets, double-backtick code and
    indented code blocks produce links; nested brackets and parentheses in a
