@@ -23,7 +23,7 @@ compares their output on every ported command.
    Done.
 3. **Writes:** store and verify (with the significance rules), procedures
    (and their lint), the global bundle and promote, `init` and skills. Done.
-4. **The MCP server** on the official TypeScript SDK, the same tools.
+4. **The MCP server** on the official TypeScript SDK, the same tools. Done.
 5. **papis and the classifier** by subprocess, `brief`.
 6. **The launcher:** the wheel carries the bundled Node program and the
    dashboard, Node comes from `nodejs-wheel-binaries`, the `rdstudio` entry
@@ -90,3 +90,14 @@ compares their output on every ported command.
   promotion refused, kept and forced; skills moved both ways) and compares
   the output and all 121 files: the same. Found on the way: the default
   actor comes from `$LOGNAME`/`$USER` first, as Python's `getpass` does.
+- Slice 4: the MCP server (`rdstudio mcp`) on the official TypeScript SDK,
+  with the same twelve tools, argument names, descriptions and replies
+  (including Python's number and string printing), and `rdstudio brief`.
+  `packages/cli/scripts/mcp-agree.ts` (`mise run mcp:agree`) starts each
+  server in its own copy of a project with a global base and makes the same
+  47 calls through the SDK's client (search in every scope and filter,
+  outline, read, sections, listing, backlinks, study paths, the review queue,
+  procedures, proposals, records valid and refused, promotion): the same
+  tools and the same replies. By design, `read(frontmatter=true)` returns the
+  frontmatter as it is in the file (compared by content). The papis tools
+  (`ref_search`, `ref_text`) come with slice 5.

@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
+import { brief } from "./brief.ts";
+import { runServer } from "./mcp.ts";
 import { init } from "./scaffold.ts";
 import { ScopeError, globalConfig, initGlobal, moveSkill, promote, skillDirs } from "./scopes.ts";
 import { StoreError, verify } from "./store.ts";
@@ -34,7 +36,7 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["refs", "brief", "mcp"];
+const PENDING = ["refs"];
 
 const COMMANDS: Record<string, Command> = {
   init: {
@@ -98,6 +100,25 @@ const COMMANDS: Record<string, Command> = {
         console.log(`${h.score.toFixed(2).padStart(6)}  ${h.concept.id}  [${h.concept.type}]  ${h.concept.title}`);
         if (h.snippet) console.log(`        ${h.snippet}`);
       }
+      return 0;
+    },
+  },
+
+  brief: {
+    help: "print a short orientation for an agent session",
+    run(cfg) {
+      console.log(brief(cfg));
+      return 0;
+    },
+  },
+
+  mcp: {
+    help: "run the MCP server on stdio",
+    usage: "[--agent ACTOR]",
+    options: { agent: { type: "string" } },
+    run(cfg, v) {
+      if (v.agent) cfg.agent = v.agent as string;
+      runServer(cfg, VERSION).catch((err: unknown) => { console.error(err); process.exit(1); });
       return 0;
     },
   },
