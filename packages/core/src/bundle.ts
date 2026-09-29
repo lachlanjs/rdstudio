@@ -421,6 +421,13 @@ export class Bundle {
     return index.get(cid) ?? [];
   }
 
+  /** Accept an id, a bundle path, or a bundle-absolute link. */
+  resolveId(ref: string): string | null {
+    let id = strip(ref).replace(/^\/+/, "");
+    if (id.endsWith(".md")) id = id.slice(0, -3);
+    return this.concepts.has(id) ? id : null;
+  }
+
   /** Every issue (procedure checks are not ported yet: see T37). */
   lint(): Issue[] {
     return [...this.issues];

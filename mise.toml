@@ -51,3 +51,7 @@ run = "uv run python fixtures/expected.py --update"
 [tasks."core:agree"]
 description = "Compare the Python and TypeScript cores on real bundle folders"
 run = "uv run python fixtures/agree.py"
+
+[tasks."cli:agree"]
+description = "Compare the Python and Node command lines (fixture bundles and this repository, or the given projects)"
+run = "uv run python fixtures/agree_cli.py"

@@ -1,0 +1,21 @@
+{
+  "name": "rdstudio",
+  "version": "0.1.0",
+  "description": "Agentic research and development studio: OKF knowledge bundles, a dashboard, an MCP server and skills.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "rdstudio": "./src/main.ts" },
+  "scripts": {
+    "test": "vitest run",
+    "check": "tsc -p ."
+  },
+  "dependencies": {
+    "@rdstudio/core": "*",
+    "smol-toml": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}
