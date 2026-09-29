@@ -84,6 +84,48 @@ def learner_snapshot() -> dict[str, Any]:
     return {"format": FORMAT, "read": records, "merged": learner.merge(*records.values())}
 
 
+def classify_snapshot() -> dict[str, Any]:
+    """The classifier's rules: difflib opcodes on random token lists (a seeded
+    generator, so the cases never change), edit significance and step matching."""
+    import difflib
+    import random
+
+    from rdstudio.classify import edit_significance, match_step
+
+    rng = random.Random(4)
+    words = list("abcdefgh")
+    diffs = []
+    for _ in range(400):
+        a = [rng.choice(words) for _ in range(rng.randint(0, 14))]
+        b = list(a)
+        for _ in range(rng.randint(0, 5)):
+            op = rng.random()
+            if op < 0.3 and b:
+                b.pop(rng.randrange(len(b)))
+            elif op < 0.6:
+                b.insert(rng.randint(0, len(b)), rng.choice(words))
+            elif b:
+                b[rng.randrange(len(b))] = rng.choice(words)
+        ops = difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_opcodes()
+        diffs.append({"a": a, "b": b, "opcodes": [list(o) for o in ops]})
+    edits = [("The metric is smooth.", "The metric is smooth!"), ("A connection on a bundle.", "A Connection on a bundle"),
+             ("Geodesics minimise length locally.", "Geodesics minimize length locally."),
+             ("One two three four five six seven eight nine ten eleven twelve.",
+              "Completely different text about curvature and torsion now."),
+             ("", "New"),
+             ("Tangent vectors are derivations at a point of the manifold, acting on germs.",
+              "Tangent vectors are derivations at a point, acting on germs of smooth functions.")]
+    steps = {"find-source": "Find the source", "add-reference": "Add the reference to papis", "renamed-file": "Rename the file"}
+    queries = ["adding a reference", "renaming files", "find it", "unrelated words entirely", "source"]
+    return {
+        "format": FORMAT,
+        "difflib": diffs,
+        "significance": [{"before": x, "after": y, **vars(edit_significance(x, y))} for x, y in edits],
+        "steps": steps,
+        "match": [{"description": q, **vars(match_step(q, steps))} for q in queries],
+    }
+
+
 def dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
 
@@ -100,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = []
     outputs = {f"{name}.json": lambda name=name: snapshot(BUNDLES / name, QUERIES.get(name, [])) for name in names()}
     outputs["learner.json"] = learner_snapshot
+    outputs["classify.json"] = classify_snapshot
     for file, make in outputs.items():
         name = file[:-5]
         got = dump(make())

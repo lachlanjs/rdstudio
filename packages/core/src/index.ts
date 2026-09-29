@@ -3,7 +3,7 @@
 
 export { Bundle, Concept, Directory, OKF_VERSION } from "./bundle.ts";
 export type { FileEntry, Issue, IssueCode, Link, Trust } from "./bundle.ts";
-export { FrontmatterError, dumpFrontmatter, splitFrontmatter } from "./frontmatter.ts";
+export { FrontmatterError, dumpFrontmatter, frontmatterText, parseYaml, splitFrontmatter } from "./frontmatter.ts";
 export type { Meta } from "./frontmatter.ts";
 export { RATINGS, headings, linkRefs, rating, section, slugify } from "./markdown.ts";
 export type { Heading, Rating } from "./markdown.ts";
@@ -14,3 +14,5 @@ export { DEVICE_RE, ID_RE, KINDS, LearnerError, MAX_EVENT_BYTES, cleanEvent, leg
 export type { LearnerEvent } from "./record.ts";
 export { STRENGTH, impliedLinks, noteIds, pagerank, strengthEdges, stronglyConnected } from "./graph.ts";
 export type { Edge } from "./graph.ts";
+export { RulesClassifier, editSignificance, matchStep, opcodes } from "./classify.ts";
+export type { Classifier, Decision } from "./classify.ts";

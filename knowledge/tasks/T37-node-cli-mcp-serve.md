@@ -63,3 +63,13 @@ compares their output on every ported command.
   where Python lists it. Both servers rebuild twice after a change, because
   `git status` during the build refreshes git's index, which the watcher
   counts as a change (to fix later, in the Node server only).
+- Slice 3a: the classifier's rules in the core, with a port of difflib's
+  matching (400 random cases, edit significance and step matching recorded
+  from Python as `fixtures/expected/classify.json`); the command backend; the
+  store (`record`, `verify`, `replaceSection`, id checks) and `rdstudio
+  verify`. The Node store edits frontmatter in place, so untouched keys keep
+  their formatting and comments survive; new values are written as the
+  Python store writes them (`[a, b]`, unindented list items, `|` for text
+  with line breaks). `fixtures/agree_writes.py` (`mise run writes:agree`)
+  runs 14 writes through both stores and reads the results with the Python
+  core: they read the same.

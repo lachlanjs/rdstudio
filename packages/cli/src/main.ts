@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
+import { StoreError, verify } from "./store.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
 import * as learner from "./learner.ts";
 import { PyFloat, pyDumps } from "./pyjson.ts";
@@ -30,7 +31,7 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["init", "verify", "procedure", "refs", "global", "promote", "skills", "brief", "mcp"];
+const PENDING = ["init", "procedure", "refs", "global", "promote", "skills", "brief", "mcp"];
 
 const COMMANDS: Record<string, Command> = {
   check: {
@@ -106,6 +107,30 @@ const COMMANDS: Record<string, Command> = {
       for (const e of limit > 0 ? all.slice(-limit) : all) {
         const { at = "", event = "", concept, ...rest } = e as Record<string, unknown>;
         console.log(`${at}  ${String(event).padEnd(10)} ${concept || ""}  ${Object.keys(rest).length ? pyDumps(rest) : ""}`);
+      }
+      return 0;
+    },
+  },
+
+  verify: {
+    help: "record a human verification of concepts",
+    usage: "concept... [--by human:<id>]",
+    options: { by: { type: "string" } },
+    run(cfg, v, concepts) {
+      if (!concepts.length) return usageError("verify", "the following arguments are required: concepts");
+      const actor = (v.by as string | undefined) || cfg.human;
+      if (!actor.startsWith("human:")) {
+        console.error('set [actors] human = "human:<id>" in rdstudio.toml or ~/.config/rdstudio/config.toml, or pass --by human:<id>');
+        return 2;
+      }
+      for (const ref of concepts) {
+        try {
+          console.log(`verified ${verify(cfg.knowledgeDir, ref, actor).path} by ${actor}`);
+        } catch (err) {
+          if (!(err instanceof StoreError)) throw err;
+          console.error(err.message);
+          return 1;
+        }
       }
       return 0;
     },

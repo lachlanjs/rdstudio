@@ -59,3 +59,7 @@ run = "uv run python fixtures/agree_cli.py"
 [tasks."build:agree"]
 description = "Compare what the Python and Node builds and exports write, file by file"
 run = "uv run python fixtures/agree_build.py"
+
+[tasks."writes:agree"]
+description = "Check the Python and Node stores leave notes that read the same"
+run = "uv run python fixtures/agree_writes.py"

@@ -21,3 +21,8 @@ def test_python_core_matches_the_fixtures(name):
 def test_learner_records_match_the_fixtures():
     got = json.loads(expected.dump(expected.learner_snapshot()))
     assert got == json.loads((expected.EXPECTED / "learner.json").read_text(encoding="utf-8"))
+
+
+def test_classifier_matches_the_fixtures():
+    got = json.loads(expected.dump(expected.classify_snapshot()))
+    assert got == json.loads((expected.EXPECTED / "classify.json").read_text(encoding="utf-8"))
