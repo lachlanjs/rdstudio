@@ -17,7 +17,7 @@ export function splitFrontmatter(source: string): [Meta | null, string] {
   if (strip(lines[0]!) !== "---") return [null, text];
   for (let i = 1; i < lines.length; i++) {
     if (rstrip(lines[i]!) !== "---") continue;
-    const raw = lines.slice(1, i).join("\n");
+    const raw = lines.slice(1, i).join("\n") + "\n"; // with its last line break, as in the file
     const body = lines.slice(i + 1).join("\n");
     let meta: unknown = {};
     if (strip(raw)) {

@@ -56,6 +56,33 @@
    "type": "",
    "verification_stale": false
   },
+  "block-scalar": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "A folded description, the last key, so its final line break is kept (YAML clip chomping).\n",
+   "directory": "",
+   "generated_at": null,
+   "hash": "521b25cc4586",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "A folded description, the last key, so its final line break is kept (YAML clip chomping).\n",
+    "title": "Block scalars",
+    "type": "Concept"
+   },
+   "order": 3,
+   "path": "block-scalar.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Block scalars",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
   "bom": {
    "backlinks": [],
    "content_stale": false,
@@ -78,7 +105,7 @@
     "title": "Starts with a byte order mark",
     "type": "Concept"
    },
-   "order": 8,
+   "order": 9,
    "path": "bom.md",
    "prerequisites": [],
    "requires": [],
@@ -124,7 +151,7 @@
     "title": "Windows line endings",
     "type": "Concept"
    },
-   "order": 12,
+   "order": 13,
    "path": "crlf.md",
    "prerequisites": [
     "sub/child"
@@ -151,7 +178,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 3,
+   "order": 4,
    "path": "empty-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -193,7 +220,7 @@
     "title": "Géométrie différentielle",
     "type": "Concept"
    },
-   "order": 4,
+   "order": 5,
    "path": "géométrie.md",
    "prerequisites": [],
    "requires": [],
@@ -216,7 +243,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 5,
+   "order": 6,
    "path": "list-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -250,7 +277,7 @@
      "not a mapping"
     ]
    },
-   "order": 6,
+   "order": 7,
    "path": "no-by.md",
    "prerequisites": [],
    "requires": [],
@@ -280,7 +307,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 7,
+   "order": 8,
    "path": "no-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -349,7 +376,7 @@
     "title": "Child",
     "type": "Concept"
    },
-   "order": 11,
+   "order": 12,
    "path": "sub/child.md",
    "prerequisites": [],
    "requires": [],
@@ -372,7 +399,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 9,
+   "order": 10,
    "path": "unclosed.md",
    "prerequisites": [],
    "requires": [],
@@ -412,7 +439,7 @@
     "version": 0.1,
     "when": "2026-09-01"
    },
-   "order": 10,
+   "order": 11,
    "path": "yaml-quirks.md",
    "prerequisites": [],
    "requires": [],
@@ -436,6 +463,7 @@
    "concepts": [
     "bad-yaml",
     "blank-type",
+    "block-scalar",
     "bom",
     "crlf",
     "empty-frontmatter",
@@ -461,7 +489,7 @@
  },
  "format": 1,
  "indexes": {
-  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [2026](numeric-title.md) - 42\n* [Bad yaml](bad-yaml.md)\n* [Blank type](blank-type.md)\n* [Empty frontmatter](empty-frontmatter.md)\n* [Géométrie différentielle](géométrie.md) - Unicode in the file name, title and headings.\n* [List frontmatter](list-frontmatter.md)\n* [No by](no-by.md)\n* [No frontmatter](no-frontmatter.md)\n* [Starts with a byte order mark](bom.md)\n* [Unclosed](unclosed.md)\n* [Windows line endings](crlf.md)\n* [YAML 1.1 quirks](yaml-quirks.md) - What PyYAML makes of values YAML 1.2 reads differently.\n\n# Directories\n\n* [sub](sub/)\n",
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [2026](numeric-title.md) - 42\n* [Bad yaml](bad-yaml.md)\n* [Blank type](blank-type.md)\n* [Block scalars](block-scalar.md) - A folded description, the last key, so its final line break is kept (YAML clip chomping).\n* [Empty frontmatter](empty-frontmatter.md)\n* [Géométrie différentielle](géométrie.md) - Unicode in the file name, title and headings.\n* [List frontmatter](list-frontmatter.md)\n* [No by](no-by.md)\n* [No frontmatter](no-frontmatter.md)\n* [Starts with a byte order mark](bom.md)\n* [Unclosed](unclosed.md)\n* [Windows line endings](crlf.md)\n* [YAML 1.1 quirks](yaml-quirks.md) - What PyYAML makes of values YAML 1.2 reads differently.\n\n# Directories\n\n* [sub](sub/)\n",
   "sub": "# Concept\n\n* [Child](child.md)\n"
  },
  "issues": [
@@ -537,39 +565,44 @@
   "gauss bonnet": [
    [
     "géométrie",
-    5.3,
+    5.581,
     "# Théorème de Gauss–Bonnet"
    ]
   ],
   "unicode": [
    [
     "sub/child",
-    2.051,
+    2.167,
     "Back to the [unicode note](/géométrie.md)."
    ],
    [
     "géométrie",
-    1.631,
+    1.741,
     "Unicode in the file name, title and headings."
    ]
   ],
   "windows": [
    [
     "crlf",
-    3.737,
+    3.897,
     ""
    ]
   ],
   "yaml": [
    [
     "bad-yaml",
-    2.999,
+    2.559,
     ""
    ],
    [
     "yaml-quirks",
-    2.876,
+    2.46,
     "What PyYAML makes of values YAML 1.2 reads differently."
+   ],
+   [
+    "block-scalar",
+    1.728,
+    "A folded description, the last key, so its final line break is kept (YAML clip chomping).\n"
    ]
   ]
  }

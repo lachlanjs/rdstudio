@@ -55,3 +55,7 @@ run = "uv run python fixtures/agree.py"
 [tasks."cli:agree"]
 description = "Compare the Python and Node command lines (fixture bundles and this repository, or the given projects)"
 run = "uv run python fixtures/agree_cli.py"
+
+[tasks."build:agree"]
+description = "Compare what the Python and Node builds and exports write, file by file"
+run = "uv run python fixtures/agree_build.py"

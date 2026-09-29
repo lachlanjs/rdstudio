@@ -20,6 +20,7 @@ compares their output on every ported command.
 2. **`build` and `serve`:** the dashboard data, byte for byte against the
    Python build; `rdstudio serve` on Hono (compression, caching, the learner
    API with its checks, rebuilding on change); OpenAPI for the learner API.
+   Done.
 3. **Writes:** store and verify (with the significance rules), procedures
    (and their lint), the global bundle and promote, `init` and skills.
 4. **The MCP server** on the official TypeScript SDK, the same tools.
@@ -40,3 +41,25 @@ compares their output on every ported command.
   bundle, with both command lines: identical output and exit codes, and
   identical index files (YAML error wording, which comes from each parser,
   excepted).
+- Slice 2: `build` and `export` (the dashboard's data, git history, reports,
+  skills, assets, the service worker's fingerprint, the manifest and the data
+  version) and `serve` on Hono: compression with a cache, 304s, cache
+  headers, the learner API with the same checks in the same order, keep-alive
+  with POSTs closing, rebuilding on change. The learner API is described with
+  zod and served as OpenAPI at `/api/openapi.json`, for the Svelte
+  dashboard's generated client (T38). `fixtures/agree_build.py`
+  (`mise run build:agree`) builds and exports each project with both command
+  lines and compares every file written: identical, byte for byte, for the
+  five fixture projects (made into git projects with a report and an
+  uncommitted note), this repository and the differential geometry bundle.
+  The Python server's tests are ported and pass.
+- Found on the way: both cores read frontmatter without its last line break,
+  so a folded block (`description: >`) as the last key lost its final newline
+  in Python but not in JavaScript. Both now parse the block as written, with
+  a fixture (`edge/block-scalar.md`). File walks follow symlinks, as Python's
+  do (a symlinked skill folder was missing).
+- Known and accepted: YAML error messages are worded by each language's
+  parser; the Node server returns 404 for a folder without an `index.html`
+  where Python lists it. Both servers rebuild twice after a change, because
+  `git status` during the build refreshes git's index, which the watcher
+  counts as a change (to fix later, in the Node server only).

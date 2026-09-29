@@ -7,7 +7,7 @@ export { FrontmatterError, dumpFrontmatter, splitFrontmatter } from "./frontmatt
 export type { Meta } from "./frontmatter.ts";
 export { RATINGS, headings, linkRefs, rating, section, slugify } from "./markdown.ts";
 export type { Heading, Rating } from "./markdown.ts";
-export { cmp, contentHash, iso, sha256, text, toTime } from "./text.ts";
+export { cmp, cmpTuple, contentHash, iso, sha256, strip, text, toTime } from "./text.ts";
 export { SearchIndex, round3, snippet, tokenize } from "./search.ts";
 export type { Hit, SearchOptions } from "./search.ts";
 export { DEVICE_RE, ID_RE, KINDS, LearnerError, MAX_EVENT_BYTES, cleanEvent, legacyId, mergeRecords, newId, readRecord } from "./record.ts";

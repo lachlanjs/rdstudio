@@ -6,6 +6,11 @@
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { Bundle, SearchIndex, round3 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { build } from "./build.ts";
+import { serve } from "./serve.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
 import * as learner from "./learner.ts";
 import { PyFloat, pyDumps } from "./pyjson.ts";
@@ -25,7 +30,7 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["init", "verify", "build", "export", "serve", "procedure", "refs", "global", "promote", "skills", "brief", "mcp"];
+const PENDING = ["init", "verify", "procedure", "refs", "global", "promote", "skills", "brief", "mcp"];
 
 const COMMANDS: Record<string, Command> = {
   check: {
@@ -106,6 +111,54 @@ const COMMANDS: Record<string, Command> = {
     },
   },
 
+  build: {
+    help: "build the dashboard site",
+    run(cfg) {
+      console.log(`built ${build(cfg)}`);
+      return 0;
+    },
+  },
+
+  export: {
+    help: "write a static snapshot of the dashboard (e.g. for GitHub Pages)",
+    usage: "target [--force]",
+    options: { force: { type: "boolean" } },
+    run(cfg, v, [target]) {
+      if (!target) return usageError("export", "the following arguments are required: target");
+      const dest = resolve(target);
+      if (existsSync(dest) && readdirSync(dest).length && !v.force) {
+        console.error(`${dest} is not empty; pass --force to replace it`);
+        return 1;
+      }
+      const tmp = mkdtempSync(join(tmpdir(), "rdstudio-export-"));
+      try {
+        const site = build(cfg, { writeIndexes: false, export: true, site: join(tmp, "site") });
+        writeFileSync(join(site, ".nojekyll"), "");
+        rmSync(dest, { recursive: true, force: true });
+        cpSync(site, dest, { recursive: true, preserveTimestamps: true });
+      } finally {
+        rmSync(tmp, { recursive: true, force: true });
+      }
+      console.log(`exported a static snapshot to ${dest} (project knowledge only)`);
+      return 0;
+    },
+  },
+
+  serve: {
+    help: "serve the dashboard, rebuilding on change",
+    usage: "[--host HOST] [--port PORT] [--no-watch] [--allow-host NAME]",
+    options: {
+      host: { type: "string", default: "127.0.0.1" },
+      port: { type: "string", default: "8000" },
+      "no-watch": { type: "boolean" },
+      "allow-host": { type: "string", multiple: true, default: [] },
+    },
+    run(cfg, v) {
+      serve(cfg, { host: v.host as string, port: Number(v.port), watch: !v["no-watch"], allowHosts: v["allow-host"] as string[] });
+      return 0;
+    },
+  },
+
   path: {
     help: "a concept's prerequisites in reading order, or the whole bundle's reading order",
     usage: "[concept]",
@@ -177,4 +230,7 @@ export function main(argv: string[]): number {
   return command.run(loadConfig(directory), parsed.values as Values, parsed.positionals);
 }
 
-if (import.meta.main) process.exitCode = main(process.argv.slice(2));
+if (import.meta.main) {
+  const code = main(process.argv.slice(2));
+  if (code) process.exitCode = code; // serve keeps running after main returns
+}

@@ -79,7 +79,7 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
         return None, text
     for i in range(1, len(lines)):
         if lines[i].rstrip() == "---":
-            raw = "\n".join(lines[1:i])
+            raw = "\n".join(lines[1:i]) + "\n"  # with its last line break, as in the file
             body = "\n".join(lines[i + 1 :])
             try:
                 meta = yaml.load(raw, Loader=_Loader) if raw.strip() else {}
