@@ -1,13 +1,13 @@
 // The conformance snapshot (the shape of fixtures/expected/*.json, built by
 // snapshot() in fixtures/expected.py), from the TypeScript core.
 
-import { contentHash, headings, iso, type Bundle } from "../src/index.ts";
+import { SearchIndex, contentHash, headings, iso, round3, type Bundle } from "../src/index.ts";
 import { cmpTuple } from "../src/text.ts";
 
 // Like jsonable() in the Python core: frontmatter values as JSON.
 const json = (v: unknown): unknown => JSON.parse(JSON.stringify(v));
 
-export function snapshot(b: Bundle): Record<string, unknown> {
+export function snapshot(b: Bundle, queries: string[] = []): Record<string, unknown> {
   const order = b.prerequisiteOrder();
   const concepts: Record<string, unknown> = {};
   for (const [cid, c] of b.concepts) {
@@ -48,6 +48,10 @@ export function snapshot(b: Bundle): Record<string, unknown> {
     issues: b.lint().map((i) => [i.path, i.level, i.code]).sort(cmpTuple),
     requires_cycles: b.requiresCycles(),
     indexes: Object.fromEntries([...b.directories.keys()].map((d) => [d, b.renderIndex(d)])),
+    search: (() => {
+      const index = new SearchIndex(b);
+      return Object.fromEntries(queries.map((q) => [q, index.search(q, { limit: 10 }).map((h) => [h.concept.id, round3(h.score), h.snippet])]));
+    })(),
   };
 }
 

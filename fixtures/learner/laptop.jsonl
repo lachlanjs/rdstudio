@@ -1,0 +1,9 @@
+{"at":"2026-09-28T01:00:00Z","event":"seen","concept":"a","hash":"abc"}
+{"at":"2026-09-28T01:00:00Z","event":"seen","concept":"a","hash":"abc"}
+{"at":"2026-09-28T02:30:00.250+10:00","event":"attempt","concept":"b","kind":"interactive","grade":2}
+{"id":"01K6A2B3C4D5E6F7G8H9J0KMNP","at":"2026-09-28T03:00:00Z","device":"laptop1","event":"seen","concept":"c"}
+{"id":"01K6A2B3C4D5E6F7G8H9J0KMNP","at":"2026-09-28T03:00:00Z","device":"laptop1","event":"seen","concept":"c"}
+not json at all
+[1, 2, 3]
+{"event":"no time","concept":"d"}
+{"at":"2026-09-28T04:00:00Z","event":"unicode","note":"géométrie ℝⁿ"}

@@ -21,12 +21,11 @@ import secrets
 import subprocess
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .config import Config, _read_toml, user_config_path
-from .okf import iso, now
+from .okf import iso, now, to_datetime
 
 KINDS = ("autodidactic", "interactive", "ai")
 MAX_EVENT_BYTES = 64 * 1024
@@ -109,10 +108,8 @@ def new_id(ms: int | None = None) -> str:
 def legacy_id(line: str, at: object) -> str:
     """A fixed id for an event written before events had ids: its time, and a
     hash of the line in place of randomness, so every device derives the same one."""
-    try:
-        ms = int(datetime.fromisoformat(str(at).replace("Z", "+00:00")).timestamp() * 1000)
-    except ValueError:
-        ms = 0
+    when = to_datetime(at)
+    ms = int(when.timestamp() * 1000) if when else 0
     return _encode(ms, 10) + _encode(int(hashlib.sha256(line.encode()).hexdigest()[:20], 16), 16)
 
 
@@ -138,7 +135,7 @@ def _clean(event: dict[str, Any]) -> dict[str, Any]:
         raise LearnerError("'device' is 4 to 16 lowercase letters and digits")
     rest = {k: v for k, v in event.items() if k not in ("at", "id", "device")}
     out = {"id": eid or new_id(), "at": iso(now()), "device": dev or device_id(), **rest}
-    if len(json.dumps(out, ensure_ascii=False)) > MAX_EVENT_BYTES:
+    if len(json.dumps(out, ensure_ascii=False, separators=(",", ":")).encode()) > MAX_EVENT_BYTES:
         raise LearnerError("event too large")
     return out
 

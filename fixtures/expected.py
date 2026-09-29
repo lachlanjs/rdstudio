@@ -4,7 +4,7 @@ in fixtures/bundles/, recorded from the Python core in fixtures/expected/.
     python fixtures/expected.py            # check the Python core against them
     python fixtures/expected.py --update   # record them again (review the diff)
 
-Any other implementation (the Rust core) produces the same JSON and compares.
+Any other implementation (the TypeScript core) produces the same JSON and compares.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 BUNDLES = HERE / "bundles"
 EXPECTED = HERE / "expected"
 QUERIES = json.loads((HERE / "queries.json").read_text(encoding="utf-8"))
+RECORDS = HERE / "learner"
 FORMAT = 1  # bump when the snapshot's shape changes
 
 
@@ -76,6 +77,13 @@ def snapshot(root: Path, queries: list[str]) -> dict[str, Any]:
     }
 
 
+def learner_snapshot() -> dict[str, Any]:
+    """Learner records: each file as read (ids given to events written before
+    ids, repeats dropped, unreadable lines skipped), and all merged."""
+    records = {p.name: learner.read(p) for p in sorted(RECORDS.glob("*.jsonl"))}
+    return {"format": FORMAT, "read": records, "merged": learner.merge(*records.values())}
+
+
 def dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
 
@@ -90,15 +98,18 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     EXPECTED.mkdir(exist_ok=True)
     failed = []
-    for name in names():
-        got = dump(snapshot(BUNDLES / name, QUERIES.get(name, [])))
-        path = EXPECTED / f"{name}.json"
+    outputs = {f"{name}.json": lambda name=name: snapshot(BUNDLES / name, QUERIES.get(name, [])) for name in names()}
+    outputs["learner.json"] = learner_snapshot
+    for file, make in outputs.items():
+        name = file[:-5]
+        got = dump(make())
+        path = EXPECTED / file
         if args.update:
             path.write_text(got, encoding="utf-8")
         elif not path.exists() or path.read_text(encoding="utf-8") != got:
             failed.append(name)
     if args.update:
-        print(f"recorded {len(names())} bundles in {EXPECTED}")
+        print(f"recorded {len(outputs)} files in {EXPECTED}")
         return 0
     for name in failed:
         print(f"{name}: differs from fixtures/expected/{name}.json", file=sys.stderr)

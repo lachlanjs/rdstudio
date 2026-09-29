@@ -16,6 +16,8 @@ bundles that wants to agree with them.
   - `synthetic`: 63 generated notes (`bench/synth.py subject`), shaped like a
     real subject.
 - `queries.json`: search queries run against each bundle.
+- `learner/`: two devices' learner records, with repeats, unreadable lines and
+  events from before ids; `expected/learner.json` is each as read, and merged.
 - `expected/<bundle>.json`: what the core computes, from `expected.py`.
 
 ## Use
@@ -25,9 +27,10 @@ uv run python fixtures/expected.py            # does the Python core still agree
 uv run python fixtures/expected.py --update   # record again, then review the diff
 ```
 
-`tests/test_conformance.py` runs the check with the other tests. Another
-implementation builds the same JSON (the shape is `snapshot()` in
-`expected.py`) and compares it field by field.
+`tests/test_conformance.py` runs the check with the other tests;
+`packages/core/test/conformance.test.ts` checks the TypeScript core against the
+same files. `fixtures/agree.py` (`mise run core:agree <folders>`) compares the
+two cores on any real bundle.
 
 ## What is compared
 

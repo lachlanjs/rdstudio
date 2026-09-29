@@ -16,3 +16,8 @@ def test_python_core_matches_the_fixtures(name):
     for key in want:  # one assertion per part, so a failure says which
         assert got[key] == want[key], f"{name}: {key} differs (python fixtures/expected.py --update, then review)"
     assert got.keys() == want.keys()
+
+
+def test_learner_records_match_the_fixtures():
+    got = json.loads(expected.dump(expected.learner_snapshot()))
+    assert got == json.loads((expected.EXPECTED / "learner.json").read_text(encoding="utf-8"))

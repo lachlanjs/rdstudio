@@ -1,5 +1,5 @@
 // Print the TypeScript core's conformance snapshot of a bundle folder as JSON:
-//   node packages/core/scripts/snapshot.ts path/to/knowledge
+//   node packages/core/scripts/snapshot.ts path/to/knowledge [search queries...]
 // fixtures/agree.py compares it with the Python core's.
 
 import { loadBundle } from "../src/node.ts";
@@ -10,4 +10,4 @@ if (!dir) {
   console.error("usage: snapshot.ts <bundle folder>");
   process.exit(2);
 }
-process.stdout.write(JSON.stringify(snapshot(loadBundle(dir))));
+process.stdout.write(JSON.stringify(snapshot(loadBundle(dir), process.argv.slice(3))));
