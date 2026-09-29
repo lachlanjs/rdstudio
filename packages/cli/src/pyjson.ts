@@ -3,19 +3,13 @@
 // the same bytes while both exist.
 
 /** A number Python holds as a float, so it prints as one (2.0, 1e-05). */
+import { floatRepr, pyRepr as coreRepr } from "@rdstudio/core";
+
+export { floatRepr };
+
 export class PyFloat {
   readonly value: number;
   constructor(value: number) { this.value = value; }
-}
-
-/** Python's repr() of a float. */
-export function floatRepr(x: number): string {
-  if (!Number.isFinite(x)) return Number.isNaN(x) ? "NaN" : x > 0 ? "Infinity" : "-Infinity";
-  const a = Math.abs(x);
-  if (x !== 0 && (a >= 1e16 || a < 1e-4)) {
-    return x.toExponential().replace(/e([+-])(\d)$/, "e$10$2");
-  }
-  return Number.isInteger(x) ? `${x.toFixed(0)}.0` : String(x);
 }
 
 export function pyDumps(value: unknown, { indent, ensureAscii = true }: { indent?: number; ensureAscii?: boolean } = {}): string {
@@ -43,3 +37,9 @@ export function pyDumps(value: unknown, { indent, ensureAscii = true }: { indent
   };
   return walk(value, 0);
 }
+
+/** Python's repr(), for values that may be marked as floats. */
+export const pyRepr = (v: unknown): string => (v instanceof PyFloat ? floatRepr(v.value) : coreRepr(v));
+
+/** Python's str(): text as is, anything else as repr() shows it. */
+export const pyStr = (v: unknown): string => (typeof v === "string" ? v : pyRepr(v));

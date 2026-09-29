@@ -41,7 +41,8 @@ def commands(project: Path) -> list[list[str]]:
     ids = sorted(b.concepts)
     words = [w for c in ids[:: max(1, len(ids) // 5)] for w in b.concepts[c].title.split()[:2]]
     out = [["check"], ["check", "-w"], ["path"], ["path", "no/such/note"], ["learner", "where"],
-           ["learner", "log", "-n", "3"], ["--version"]]
+           ["learner", "log", "-n", "3"], ["--version"], ["procedure", "list"], ["procedure", "show", "add-reference"],
+           ["procedure", "show", "nothing"]]
     out += [["path", c] for c in ids[:: max(1, len(ids) // 4)]]
     for w in words[:6]:
         out += [["search", w], ["search", w, "--json", "-n", "3"]]

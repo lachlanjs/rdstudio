@@ -1,5 +1,51 @@
 {
  "concepts": {
+  "bad-procedure": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "edges": [
+     {
+      "from": "a",
+      "to": "z"
+     },
+     {
+      "from": "a",
+      "relation": "SOMETIMES",
+      "to": "a"
+     },
+     "not a mapping"
+    ],
+    "nodes": [
+     "a",
+     {
+      "label": "no id"
+     },
+     "a"
+    ],
+    "start": "nowhere",
+    "title": "A broken procedure",
+    "type": "Procedure"
+   },
+   "order": 1,
+   "path": "bad-procedure.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "A broken procedure",
+   "trust": "unverified",
+   "type": "Procedure",
+   "verification_stale": false
+  },
   "bad-yaml": {
    "backlinks": [],
    "content_stale": false,
@@ -19,7 +65,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 1,
+   "order": 2,
    "path": "bad-yaml.md",
    "prerequisites": [],
    "requires": [],
@@ -45,7 +91,7 @@
     "title": "Blank type",
     "type": ""
    },
-   "order": 2,
+   "order": 3,
    "path": "blank-type.md",
    "prerequisites": [],
    "requires": [],
@@ -72,7 +118,7 @@
     "title": "Block scalars",
     "type": "Concept"
    },
-   "order": 3,
+   "order": 4,
    "path": "block-scalar.md",
    "prerequisites": [],
    "requires": [],
@@ -105,7 +151,7 @@
     "title": "Starts with a byte order mark",
     "type": "Concept"
    },
-   "order": 9,
+   "order": 10,
    "path": "bom.md",
    "prerequisites": [],
    "requires": [],
@@ -151,7 +197,7 @@
     "title": "Windows line endings",
     "type": "Concept"
    },
-   "order": 13,
+   "order": 14,
    "path": "crlf.md",
    "prerequisites": [
     "sub/child"
@@ -178,7 +224,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 4,
+   "order": 5,
    "path": "empty-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -220,7 +266,7 @@
     "title": "Géométrie différentielle",
     "type": "Concept"
    },
-   "order": 5,
+   "order": 6,
    "path": "géométrie.md",
    "prerequisites": [],
    "requires": [],
@@ -243,7 +289,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 6,
+   "order": 7,
    "path": "list-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -277,7 +323,7 @@
      "not a mapping"
     ]
    },
-   "order": 7,
+   "order": 8,
    "path": "no-by.md",
    "prerequisites": [],
    "requires": [],
@@ -307,7 +353,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 8,
+   "order": 9,
    "path": "no-frontmatter.md",
    "prerequisites": [],
    "requires": [],
@@ -376,7 +422,7 @@
     "title": "Child",
     "type": "Concept"
    },
-   "order": 12,
+   "order": 13,
    "path": "sub/child.md",
    "prerequisites": [],
    "requires": [],
@@ -399,7 +445,7 @@
    "last_human_verification": null,
    "links": [],
    "meta": {},
-   "order": 10,
+   "order": 11,
    "path": "unclosed.md",
    "prerequisites": [],
    "requires": [],
@@ -439,7 +485,7 @@
     "version": 0.1,
     "when": "2026-09-01"
    },
-   "order": 11,
+   "order": 12,
    "path": "yaml-quirks.md",
    "prerequisites": [],
    "requires": [],
@@ -461,6 +507,7 @@
     "sub"
    ],
    "concepts": [
+    "bad-procedure",
     "bad-yaml",
     "blank-type",
     "block-scalar",
@@ -489,10 +536,40 @@
  },
  "format": 1,
  "indexes": {
-  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [2026](numeric-title.md) - 42\n* [Bad yaml](bad-yaml.md)\n* [Blank type](blank-type.md)\n* [Block scalars](block-scalar.md) - A folded description, the last key, so its final line break is kept (YAML clip chomping).\n* [Empty frontmatter](empty-frontmatter.md)\n* [Géométrie différentielle](géométrie.md) - Unicode in the file name, title and headings.\n* [List frontmatter](list-frontmatter.md)\n* [No by](no-by.md)\n* [No frontmatter](no-frontmatter.md)\n* [Starts with a byte order mark](bom.md)\n* [Unclosed](unclosed.md)\n* [Windows line endings](crlf.md)\n* [YAML 1.1 quirks](yaml-quirks.md) - What PyYAML makes of values YAML 1.2 reads differently.\n\n# Directories\n\n* [sub](sub/)\n",
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [2026](numeric-title.md) - 42\n* [Bad yaml](bad-yaml.md)\n* [Blank type](blank-type.md)\n* [Block scalars](block-scalar.md) - A folded description, the last key, so its final line break is kept (YAML clip chomping).\n* [Empty frontmatter](empty-frontmatter.md)\n* [Géométrie différentielle](géométrie.md) - Unicode in the file name, title and headings.\n* [List frontmatter](list-frontmatter.md)\n* [No by](no-by.md)\n* [No frontmatter](no-frontmatter.md)\n* [Starts with a byte order mark](bom.md)\n* [Unclosed](unclosed.md)\n* [Windows line endings](crlf.md)\n* [YAML 1.1 quirks](yaml-quirks.md) - What PyYAML makes of values YAML 1.2 reads differently.\n\n# Procedure\n\n* [A broken procedure](bad-procedure.md)\n\n# Directories\n\n* [sub](sub/)\n",
   "sub": "# Concept\n\n* [Child](child.md)\n"
  },
  "issues": [
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
+  [
+   "bad-procedure.md",
+   "error",
+   "procedure"
+  ],
   [
    "bad-yaml.md",
    "error",
@@ -565,43 +642,43 @@
   "gauss bonnet": [
    [
     "géométrie",
-    5.581,
+    5.644,
     "# Théorème de Gauss–Bonnet"
    ]
   ],
   "unicode": [
    [
     "sub/child",
-    2.167,
+    2.218,
     "Back to the [unicode note](/géométrie.md)."
    ],
    [
     "géométrie",
-    1.741,
+    1.768,
     "Unicode in the file name, title and headings."
    ]
   ],
   "windows": [
    [
     "crlf",
-    3.897,
+    3.971,
     ""
    ]
   ],
   "yaml": [
    [
     "bad-yaml",
-    2.559,
+    2.652,
     ""
    ],
    [
     "yaml-quirks",
-    2.46,
+    2.545,
     "What PyYAML makes of values YAML 1.2 reads differently."
    ],
    [
     "block-scalar",
-    1.728,
+    1.777,
     "A folded description, the last key, so its final line break is kept (YAML clip chomping).\n"
    ]
   ]

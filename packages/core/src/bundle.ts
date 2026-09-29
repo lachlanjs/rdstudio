@@ -7,6 +7,7 @@
 
 import { FrontmatterError, splitFrontmatter, type Meta } from "./frontmatter.ts";
 import { headings, linkRefs, type Rating } from "./markdown.ts";
+import { lintProcedures } from "./procedures.ts";
 import { basename, cmp, cmpTuple, dirname, join, normpath, strip, text, toTime, unquote } from "./text.ts";
 
 export const OKF_VERSION = "0.2";
@@ -428,9 +429,11 @@ export class Bundle {
     return this.concepts.has(id) ? id : null;
   }
 
-  /** Every issue (procedure checks are not ported yet: see T37). */
+  /** Every issue, procedures' structure included. */
   lint(): Issue[] {
-    return [...this.issues];
+    const procedures = lintProcedures(this.concepts.values())
+      .map(([path, message]): Issue => ({ path, level: "error", code: "procedure", message }));
+    return [...this.issues, ...procedures];
   }
 
   // ------------------------------------------------------------ indexes

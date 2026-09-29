@@ -56,7 +56,7 @@ export function replaceSection(body: string, heading: string, content: string): 
 
 /** A value as a node written the way the Python store writes it: flat lists
  *  inline ([a, b]), text with line breaks as a literal block. */
-function node(doc: Document, value: unknown): Node {
+export function node(doc: Document, value: unknown): Node {
   const n = doc.createNode(value) as Node;
   const style = (x: unknown): void => {
     if (isSeq(x)) {
@@ -72,12 +72,12 @@ function node(doc: Document, value: unknown): Node {
   return n;
 }
 
-interface Note {
+export interface Note {
   doc: Document;
   body: string;
 }
 
-function readNote(path: string): Note {
+export function readNote(path: string): Note {
   const [raw, rest] = frontmatterText(readFileSync(path, "utf8").replace(/\r\n?/g, "\n"));
   const body = rest.replace(/^\n+/, "");
   if (raw === null || !strip(raw)) return { doc: new Document({}, { version: "1.2" }), body };
@@ -88,7 +88,7 @@ function readNote(path: string): Note {
   return { doc, body };
 }
 
-function writeNote(path: string, { doc, body }: Note): void {
+export function writeNote(path: string, { doc, body }: Note): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `---\n${doc.toString(YAML_STYLE)}---\n\n${strip(body)}\n`, "utf8");
 }
@@ -97,7 +97,7 @@ function writeNote(path: string, { doc, body }: Note): void {
 const YAML_STYLE = { lineWidth: 100, flowCollectionPadding: false, indentSeq: false } as const;
 
 const meta = (doc: Document): Record<string, unknown> => (doc.toJS() ?? {}) as Record<string, unknown>;
-const now = (): string => iso(Date.now());
+export const now = (): string => iso(Date.now());
 
 export interface RecordOptions {
   actor: string;

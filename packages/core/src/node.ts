@@ -9,6 +9,7 @@ import { cmp } from "./text.ts";
 /** Every file and folder under `root`, Markdown with its text. */
 export function readFolder(root: string): FileEntry[] {
   const out: FileEntry[] = [];
+  if (!existsSync(root) || !statSync(root).isDirectory()) return out; // no bundle yet: empty, as in Python
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);

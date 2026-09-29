@@ -214,6 +214,96 @@
    "type": "Overview",
    "verification_stale": false
   },
+  "procedures/add-reference": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "How a new paper gets into the knowledge base.",
+   "directory": "procedures",
+   "generated_at": null,
+   "hash": "54e15541b532",
+   "headings": [
+    [
+     1,
+     "Notes",
+     "notes",
+     0
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "description": "How a new paper gets into the knowledge base.",
+    "edges": [
+     {
+      "from": "find",
+      "relation": "LEADS_TO",
+      "to": "add"
+     },
+     {
+      "from": "add",
+      "guidance": "Run rdstudio refs sync.",
+      "relation": "LEADS_TO",
+      "to": "stub"
+     },
+     {
+      "from": "stub",
+      "relation": "CONVERGES_TO",
+      "to": "done"
+     }
+    ],
+    "nodes": [
+     {
+      "id": "find",
+      "label": "Find the source"
+     },
+     {
+      "description": "With the DOI when there is one.",
+      "id": "add",
+      "label": "Add it to papis"
+     },
+     {
+      "id": "stub",
+      "label": "Write the reference stub"
+     },
+     "done"
+    ],
+    "proposals": [
+     {
+      "at": "2026-01-01T00:00:00Z",
+      "by": "agent/x",
+      "edits": [
+       {
+        "id": "dedupe",
+        "label": "Check for duplicates",
+        "op": "add_node"
+       },
+       {
+        "from": "find",
+        "op": "add_edge",
+        "to": "dedupe"
+       }
+      ],
+      "id": 1,
+      "rationale": "Check for duplicates first.",
+      "state": "pending"
+     }
+    ],
+    "start": "find",
+    "title": "Add a reference",
+    "type": "Procedure"
+   },
+   "order": 2,
+   "path": "procedures/add-reference.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Add a reference",
+   "trust": "unverified",
+   "type": "Procedure",
+   "verification_stale": false
+  },
   "research/fresh": {
    "backlinks": [
     "design/overview"
@@ -241,7 +331,7 @@
      "by": "human:bob"
     }
    },
-   "order": 2,
+   "order": 3,
    "path": "research/fresh.md",
    "prerequisites": [],
    "requires": [],
@@ -266,7 +356,7 @@
    "meta": {
     "type": "Concept"
    },
-   "order": 3,
+   "order": 4,
    "path": "research/snake_and-kebab.md",
    "prerequisites": [],
    "requires": [],
@@ -309,7 +399,7 @@
      }
     ]
    },
-   "order": 4,
+   "order": 5,
    "path": "research/spectrum.md",
    "prerequisites": [],
    "requires": [],
@@ -349,7 +439,7 @@
      "by": "human:bob"
     }
    },
-   "order": 5,
+   "order": 6,
    "path": "research/stale.md",
    "prerequisites": [],
    "requires": [],
@@ -377,7 +467,7 @@
     "description": "A file name with a space in it.",
     "type": "Concept"
    },
-   "order": 6,
+   "order": 7,
    "path": "research/two words.md",
    "prerequisites": [],
    "requires": [],
@@ -394,6 +484,7 @@
    "children": [
     "design",
     "media",
+    "procedures",
     "research"
    ],
    "concepts": [],
@@ -415,6 +506,14 @@
    "has_index": false,
    "has_log": false
   },
+  "procedures": {
+   "children": [],
+   "concepts": [
+    "procedures/add-reference"
+   ],
+   "has_index": false,
+   "has_log": false
+  },
   "research": {
    "children": [],
    "concepts": [
@@ -430,9 +529,10 @@
  },
  "format": 1,
  "indexes": {
-  "": "---\nokf_version: \"0.2\"\n---\n\n# Directories\n\n* [design](design/) - How the system is designed, across two lines.\n* [media](media/)\n* [research](research/)\n",
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Directories\n\n* [design](design/) - How the system is designed, across two lines.\n* [media](media/)\n* [procedures](procedures/)\n* [research](research/)\n",
   "design": "# Overview\n\n* [Design overview](overview.md) - How the system is designed, across two lines.\n\n# Design\n\n* [Model](model.md) - The recurrent network model with random matrices.\n",
   "media": "# Contents\n",
+  "procedures": "# Procedure\n\n* [Add a reference](add-reference.md) - How a new paper gets into the knowledge base.\n",
   "research": "# Concept\n\n* [Snake and kebab](snake_and-kebab.md)\n* [Two words](two words.md) - A file name with a space in it.\n\n# Research\n\n* [Fresh](fresh.md) - Checked by a person after it last changed; stale only in the far future.\n* [Spectrum](spectrum.md) - Eigenvalue spectra of random matrices.\n* [Stale](stale.md) - Changed after its last human check, and past its stale_after date.\n"
  },
  "issues": [
@@ -455,24 +555,24 @@
   "circular law disc": [
    [
     "research/spectrum",
-    6.28,
+    6.791,
     "# Circular law"
    ],
    [
     "design/overview",
-    1.29,
+    1.377,
     "…a [section](/research/spectrum.md#circular-law), a"
    ]
   ],
   "design": [
    [
     "design/overview",
-    1.892,
+    2.056,
     "How the system is designed, across two lines."
    ],
    [
     "design/model",
-    0.935,
+    1.004,
     "The recurrent network model with random matrices."
    ]
   ],
@@ -480,46 +580,46 @@
   "random matrices": [
    [
     "research/spectrum",
-    4.078,
+    4.454,
     "The circular law describes the spectrum of random matrices. Eigenvalues fill a disc."
    ],
    [
     "design/model",
-    3.08,
+    3.337,
     "Genetic programming over block matrices. See [the spectrum](../research/spectrum.md)."
    ]
   ],
   "spectrum eigenvalues": [
    [
     "research/spectrum",
-    4.559,
+    4.96,
     "The circular law describes the spectrum of random matrices. Eigenvalues fill a disc."
    ],
    [
     "design/model",
-    0.995,
+    1.116,
     "Genetic programming over block matrices. See [the spectrum](../research/spectrum.md)."
    ],
    [
     "design/overview",
-    0.94,
+    1.052,
     "Absolute [spectrum](/research/spectrum.md), relative [model](./model.md) and"
    ]
   ],
   "stale": [
    [
     "research/stale",
-    1.71,
+    1.946,
     "Changed after its last human check, and past its stale_after date."
    ],
    [
     "research/fresh",
-    1.34,
+    1.517,
     "Checked by a person after it last changed; stale only in the far future."
    ],
    [
     "design/overview",
-    0.458,
+    0.508,
     "[parent](../research/stale.md), a [folder](/research/), a [folder index](/research/index.md),"
    ]
   ]

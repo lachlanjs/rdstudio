@@ -73,3 +73,12 @@ compares their output on every ported command.
   with line breaks). `fixtures/agree_writes.py` (`mise run writes:agree`)
   runs 14 writes through both stores and reads the results with the Python
   core: they read the same.
+- Slice 3b: procedures. The graph (reading, localising a step, the
+  neighbourhood, applying edits, the agent-facing description) and its lint
+  are in the core, so `Bundle.lint()` now includes procedures, with messages
+  worded as Python words them. Proposing and resolving edits write through
+  the in-place store; `rdstudio procedure list|show|apply|reject` in Node.
+  New fixtures: a valid procedure with a pending proposal (`basics`) and a
+  broken one (`edge`). `agree_writes` now also proposes (valid, invalid, bad
+  op, not a procedure) and applies and rejects: the notes read the same.
+  A missing knowledge folder is an empty bundle, as in Python.

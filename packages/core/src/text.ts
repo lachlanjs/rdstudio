@@ -176,3 +176,38 @@ export function sha256(message: string): string {
 export function contentHash(body: string): string {
   return sha256(strip(body)).slice(0, 12);
 }
+
+// ------------------------------------------------------------ Python's printing
+
+/** Python's repr() of a float. */
+export function floatRepr(x: number): string {
+  if (!Number.isFinite(x)) return Number.isNaN(x) ? "NaN" : x > 0 ? "Infinity" : "-Infinity";
+  const a = Math.abs(x);
+  if (x !== 0 && (a >= 1e16 || a < 1e-4)) {
+    return x.toExponential().replace(/e([+-])(\d)$/, "e$10$2");
+  }
+  return Number.isInteger(x) ? `${x.toFixed(0)}.0` : String(x);
+}
+
+/** Python's repr(): what Python prints for a value inside a list or dict. */
+export function pyRepr(v: unknown): string {
+  if (v === null || v === undefined) return "None";
+  if (typeof v === "boolean") return v ? "True" : "False";
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : floatRepr(v);
+  if (typeof v === "string") {
+    const quote = v.includes("'") && !v.includes('"') ? '"' : "'";
+    const body = [...v].map((c) => {
+      if (c === "\\" || c === quote) return "\\" + c;
+      if (c === "\n") return "\\n";
+      if (c === "\r") return "\\r";
+      if (c === "\t") return "\\t";
+      const cp = c.codePointAt(0)!;
+      return cp < 0x20 || cp === 0x7f ? "\\x" + cp.toString(16).padStart(2, "0") : c;
+    }).join("");
+    return quote + body + quote;
+  }
+  if (Array.isArray(v)) return "[" + v.map(pyRepr).join(", ") + "]";
+  if (typeof v === "object") return "{" + Object.entries(v).map(([k, x]) => `${pyRepr(k)}: ${pyRepr(x)}`).join(", ") + "}";
+  return String(v);
+}
+

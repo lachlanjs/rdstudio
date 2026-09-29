@@ -4,7 +4,7 @@
 // Python command line's, so either can be used while both exist.
 
 import { parseArgs, type ParseArgsConfig } from "node:util";
-import { Bundle, SearchIndex, round3 } from "@rdstudio/core";
+import { Bundle, ProcedureError, SearchIndex, graphOf, isProcedure, round3 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,7 +14,8 @@ import { serve } from "./serve.ts";
 import { StoreError, verify } from "./store.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
 import * as learner from "./learner.ts";
-import { PyFloat, pyDumps } from "./pyjson.ts";
+import { resolve as resolveProposal } from "./procedures.ts";
+import { PyFloat, pyDumps, pyRepr, pyStr } from "./pyjson.ts";
 
 export const VERSION = "0.1.0";
 
@@ -31,7 +32,7 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["init", "procedure", "refs", "global", "promote", "skills", "brief", "mcp"];
+const PENDING = ["init", "refs", "global", "promote", "skills", "brief", "mcp"];
 
 const COMMANDS: Record<string, Command> = {
   check: {
@@ -131,6 +132,48 @@ const COMMANDS: Record<string, Command> = {
           console.error(err.message);
           return 1;
         }
+      }
+      return 0;
+    },
+  },
+
+  procedure: {
+    help: "list procedures; show, apply or reject proposed edits",
+    usage: "{list,show,apply,reject} [procedure] [proposal]",
+    run(cfg, _v, [action, name, proposal]) {
+      if (!action || !["list", "show", "apply", "reject"].includes(action)) {
+        return usageError("procedure", `argument action: invalid choice: ${pyRepr(action ?? "")} (choose from 'list', 'show', 'apply', 'reject')`);
+      }
+      const b = bundle(cfg);
+      if (action === "list") {
+        for (const c of b.concepts.values()) {
+          if (!isProcedure(c)) continue;
+          const pending = (Array.isArray(c.meta.proposals) ? c.meta.proposals : []).filter((p) => (p as { state?: unknown })?.state === "pending").length;
+          const g = graphOf(c);
+          console.log(`${c.id}  ${g.nodes.size} steps, ${g.edges.length} transitions` + (pending ? `, ${pending} pending proposal(s)` : ""));
+        }
+        return 0;
+      }
+      const cid = b.resolveId(name ?? "") ?? b.resolveId("procedures/" + (name ?? ""));
+      if (cid === null) { console.error(`no procedure ${name === undefined ? "None" : pyRepr(name)}`); return 2; }
+      if (action === "show") {
+        for (const p of (Array.isArray(b.concepts.get(cid)!.meta.proposals) ? b.concepts.get(cid)!.meta.proposals as Record<string, unknown>[] : [])) {
+          console.log(`#${pyStr(p.id)} [${pyStr(p.state)}] by ${pyStr(p.by)}: ${pyStr(p.rationale)}`);
+          for (const e of (Array.isArray(p.edits) ? p.edits : []) as Record<string, unknown>[]) {
+            console.log("    " + Object.entries(e).map(([k, x]) => `${k}=${pyStr(x)}`).join(", "));
+          }
+        }
+        return 0;
+      }
+      const pid = Number(proposal);
+      if (proposal === undefined || !Number.isInteger(pid)) return usageError("procedure", `argument proposal: invalid int value: ${pyRepr(proposal ?? "")}`);
+      try {
+        const result = resolveProposal(cfg.knowledgeDir, cid, pid, { accept: action === "apply", actor: cfg.human || "human:unknown" });
+        console.log(`proposal ${result.proposal} on ${cid}: ${result.state}`);
+      } catch (err) {
+        if (!(err instanceof ProcedureError)) throw err;
+        console.error(err.message);
+        return 1;
       }
       return 0;
     },

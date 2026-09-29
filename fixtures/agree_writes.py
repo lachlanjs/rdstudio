@@ -21,7 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src"))
-from rdstudio import store  # noqa: E402
+from rdstudio import procedures, store  # noqa: E402
 from rdstudio.okf import Bundle, jsonable  # noqa: E402
 
 SCRIPT = HERE.parent / "packages" / "cli" / "scripts" / "writes.ts"
@@ -45,6 +45,17 @@ OPS = [
     {"op": "verify", "id": "design/model", "actor": HUMAN},
     {"op": "verify", "id": "new/idea", "actor": HUMAN},
     {"op": "verify", "id": "no/such", "actor": HUMAN},
+    {"op": "propose", "id": "procedures/add-reference", "actor": ACTOR, "rationale": "Say where stubs go.",
+     "edits": [{"op": "update_edge", "from": "add", "to": "stub", "guidance": "Stubs go in references/."},
+               {"op": "add_node", "id": "check", "label": "Check the stub"}, {"op": "add_edge", "from": "stub", "to": "check"}]},
+    {"op": "propose", "id": "procedures/add-reference", "actor": ACTOR, "rationale": "Broken.",
+     "edits": [{"op": "add_edge", "from": "find", "to": "nowhere"}]},
+    {"op": "propose", "id": "procedures/add-reference", "actor": ACTOR, "rationale": "Bad op.", "edits": [{"op": "explode"}]},
+    {"op": "propose", "id": "design/model", "actor": ACTOR, "rationale": "Not a procedure.", "edits": [{"op": "delete_node", "id": "x"}]},
+    {"op": "resolve", "id": "procedures/add-reference", "proposal": 1, "accept": True, "actor": HUMAN},
+    {"op": "resolve", "id": "procedures/add-reference", "proposal": 2, "accept": False, "actor": HUMAN},
+    {"op": "resolve", "id": "procedures/add-reference", "proposal": 2, "accept": True, "actor": HUMAN},
+    {"op": "resolve", "id": "procedures/add-reference", "proposal": 9, "accept": True, "actor": HUMAN},
 ]
 
 
@@ -53,9 +64,15 @@ def run_python(root: Path) -> list:
     for op in OPS:
         args = {k: v for k, v in op.items() if k not in ("op", "id")}
         try:
-            r = store.verify(root, op["id"], actor=args["actor"]) if op["op"] == "verify" else store.record(root, op["id"], **args)
-            out.append(r.as_dict())
-        except store.StoreError as exc:
+            if op["op"] == "verify":
+                out.append(store.verify(root, op["id"], actor=args["actor"]).as_dict())
+            elif op["op"] == "propose":
+                out.append(procedures.propose(root, op["id"], edits=args["edits"], rationale=args["rationale"], actor=args["actor"]))
+            elif op["op"] == "resolve":
+                out.append(procedures.resolve(root, op["id"], args["proposal"], accept=args["accept"], actor=args["actor"]))
+            else:
+                out.append(store.record(root, op["id"], **args).as_dict())
+        except (store.StoreError, procedures.ProcedureError) as exc:
             out.append({"error": str(exc)})
     return out
 
