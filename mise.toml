@@ -1,15 +1,24 @@
 # Development tasks: `mise run <task>` (or `mise tasks` to list them). Each is a
 # plain command, so running it by hand works just as well without mise.
-# Toolchains are added here as they arrive: node with the SvelteKit app (T38),
-# rust with the core (T35).
+
+[tools]
+node = "24"  # LTS; the TypeScript packages (npm workspaces)
 
 [tasks.setup]
 description = "Install every dependency group and the benchmark browser"
-run = ["uv sync --all-groups", "uv run --group bench playwright install chromium"]
+run = ["mise install", "uv sync --all-groups", "npm install", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
-description = "Run the Python tests"
-run = "uv run pytest -q"
+description = "Run every test: Python, then the TypeScript packages"
+run = ["uv run pytest -q", "npm test"]
+
+[tasks."core:test"]
+description = "Test the TypeScript core (vitest), including the conformance fixtures"
+run = "npm test --workspace @rdstudio/core"
+
+[tasks."core:check"]
+description = "Type-check the TypeScript packages"
+run = "npm run check"
 
 [tasks.check]
 description = "Lint this repository's own knowledge bundle"
@@ -38,3 +47,7 @@ run = "uv run python fixtures/expected.py"
 [tasks."fixtures:update"]
 description = "Record the conformance fixtures again (review the diff before committing)"
 run = "uv run python fixtures/expected.py --update"
+
+[tasks."core:agree"]
+description = "Compare the Python and TypeScript cores on real bundle folders"
+run = "uv run python fixtures/agree.py"

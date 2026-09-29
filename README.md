@@ -152,8 +152,10 @@ Tasks live in `mise.toml`; run them with `mise run <task>` (`mise tasks` lists
 them), or run the command each one names.
 
 ```sh
-mise run setup      # uv sync --all-groups, and Chromium for the benchmarks
-mise run test       # the Python tests
+mise run setup      # Node 24 (mise), Python and npm dependencies, Chromium for the benchmarks
+mise run test       # the Python tests, then the TypeScript packages
+mise run core:test  # the TypeScript core against the conformance fixtures
+mise run core:agree ~/notes/knowledge   # do the Python and TypeScript cores agree on a bundle?
 mise run bench      # load and map benchmarks, written to .bench/results/
 mise run bench:compare .bench/results/a.json .bench/results/b.json
 mise run bench:synth field /tmp/field   # a synthetic project of about 1,300 notes
@@ -165,6 +167,9 @@ to a whole field, then time the first map and a fixed pan and zoom in headless
 Chromium, as a desktop and as a phone. Compare any change that could affect
 speed against a baseline. The platform plan is in
 `knowledge/design/platform.md`.
+
+The TypeScript core (`packages/core`) is replacing the Python one part by part;
+`fixtures/` holds the contract both keep (see `fixtures/README.md`).
 
 ## Licence
 

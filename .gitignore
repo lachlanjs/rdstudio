@@ -18,3 +18,6 @@ reference/papers/
 
 # Benchmark bundles and results (bench/run.py)
 .bench/
+
+# TypeScript packages
+node_modules/
