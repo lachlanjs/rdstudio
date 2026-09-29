@@ -24,7 +24,9 @@ compares their output on every ported command.
 3. **Writes:** store and verify (with the significance rules), procedures
    (and their lint), the global bundle and promote, `init` and skills. Done.
 4. **The MCP server** on the official TypeScript SDK, the same tools. Done.
-5. **papis and the classifier** by subprocess, `brief`.
+5. **papis and the classifier** by subprocess, `brief`. Done: papis needed
+   no subprocess after all, since its library is folders of YAML files; PDF
+   text comes from `pdftotext`, as before.
 6. **The launcher:** the wheel carries the bundled Node program and the
    dashboard, Node comes from `nodejs-wheel-binaries`, the `rdstudio` entry
    point runs it; then the Python modules are retired.
@@ -101,3 +103,10 @@ compares their output on every ported command.
   tools and the same replies. By design, `read(frontmatter=true)` returns the
   frontmatter as it is in the file (compared by content). The papis tools
   (`ref_search`, `ref_text`) come with slice 5.
+- Slice 5: papis references in Node (`rdstudio refs sync|search|text`,
+  and the MCP tools `ref_search` and `ref_text` when `[references]` is set),
+  reading the library's `info.yaml` files (as YAML 1.2 now, in both) and the
+  papis configuration file. `mcp-agree` now builds a papis library with a
+  real two-page PDF and adds 11 reference calls and 6 commands, and compares
+  the stubs `refs sync` writes: 14 tools, 58 calls, the commands and the
+  stubs, the same. Every command is now in the Node command line.

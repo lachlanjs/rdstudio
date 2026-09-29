@@ -69,5 +69,5 @@ description = "Compare init, global, promote and skills between the Python and N
 run = "uv run python fixtures/agree_scaffold.py"
 
 [tasks."mcp:agree"]
-description = "Compare the Python and Node MCP servers: tool lists and 47 calls"
+description = "Compare the Python and Node MCP servers (tools and 58 calls, papis included) and the refs command"
 run = "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""

@@ -6,7 +6,8 @@
 // aside. read(frontmatter=true) differs by design (Node returns the file's
 // frontmatter as written) and is compared by what it says.
 
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -65,14 +66,56 @@ const CALLS: [string, Record<string, unknown>][] = [
   ["promote", { id: "research/fresh", keep: true }],
   ["promote", { id: "research/fresh", as_id: "shared/fresh" }],
   ["promote", { id: "no/such" }],
+  ["ref_search", { query: "chaos random networks" }],
+  ["ref_search", { query: "clark2024coupled synaptic", limit: 1 }],
+  ["ref_search", { query: "nothing matches this" }],
+  ["ref_text", { ref: "clark2024coupled" }],
+  ["ref_text", { ref: "clark2024coupled", pages: "2" }],
+  ["ref_text", { ref: "clark2024coupled", pages: "1-2,5" }],
+  ["ref_text", { ref: "clark2024coupled", query: "synaptic" }],
+  ["ref_text", { ref: "clark2024coupled", query: "unmentioned" }],
+  ["ref_text", { ref: "clark2024coupled", pages: "x" }],
+  ["ref_text", { ref: "sompolinsky1988chaos" }],
+  ["ref_text", { ref: "nobody" }],
 ];
 
+// Command-line calls made after the MCP session, in the same project.
+const COMMANDS = [["refs", "search", "chaos"], ["refs", "text", "clark2024coupled", "--pages", "2"], ["refs", "sync"], ["refs", "sync"],
+  ["refs", "text", "sompolinsky1988chaos"], ["brief"]];
+
+/** A two-page PDF built by hand (page 2 mentions "synaptic"), as in tests/test_references.py. */
+function pdf(): Buffer {
+  const objs = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Contents 4 0 R /Resources << /Font << /F1 7 0 R >> >> >>",
+    null, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Contents 6 0 R /Resources << /Font << /F1 7 0 R >> >> >>",
+    null, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
+  const streams: Record<number, string> = { 4: "BT /F1 12 Tf 20 200 Td (Introduction to chaos) Tj ET", 6: "BT /F1 12 Tf 20 200 Td (synaptic dynamics result) Tj ET" };
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((body, k) => {
+    const i = k + 1;
+    offsets.push(out.length);
+    out += body === null ? `${i} 0 obj << /Length ${streams[i]!.length} >> stream\n${streams[i]}\nendstream endobj\n` : `${i} 0 obj ${body} endobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("");
+  out += `trailer << /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
 function setup(base: string) {
+  mkdirSync(base, { recursive: true });
   const home = join(base, "home"), project = join(base, "project"), gk = join(base, "gk");
   mkdirSync(join(home, ".config", "rdstudio"), { recursive: true });
   writeFileSync(join(home, ".config", "rdstudio", "config.toml"), `[global]\npath = "${gk}"\n`);
   cpSync(join(REPO, "fixtures", "bundles", "basics"), join(project, "knowledge"), { recursive: true });
-  writeFileSync(join(project, "rdstudio.toml"), '[project]\ntitle = "Basics"\n\n[actors]\nagent = "agent/test"\n');
+  const lib = join(base, "papis");
+  mkdirSync(join(lib, "a1"), { recursive: true });
+  mkdirSync(join(lib, "b2"), { recursive: true });
+  writeFileSync(join(lib, "a1", "info.yaml"), "ref: clark2024coupled\ntitle: Theory of Coupled Neuronal-Synaptic Dynamics\nauthor_list: [{family: Clark, given: David G.}, {family: Abbott, given: L. F.}]\nyear: 2024\njournal: Physical Review X\ndoi: 10.1103/physrevx.14.021001\ntags: [dmft, plasticity]\nfiles: [paper.pdf]\n");
+  writeFileSync(join(lib, "a1", "paper.pdf"), pdf());
+  writeFileSync(join(lib, "b2", "info.yaml"), "ref: sompolinsky1988chaos\ntitle: Chaos in Random Neural Networks\nauthor: Sompolinsky, H. and Crisanti, A. and Sommers, H. J.\nyear: 1988\n");
+  writeFileSync(join(project, "rdstudio.toml"), `[project]\ntitle = "Basics"\n\n[actors]\nagent = "agent/test"\n\n[references]\nbackend = "papis"\npath = "${lib}"\n`);
   mkdirSync(join(gk, "knowledge", "shared"), { recursive: true });
   writeFileSync(join(gk, "rdstudio.toml"), '[project]\ntitle = "Global"\n');
   writeFileSync(join(gk, "knowledge", "shared", "fact.md"), "---\ntype: Fact\ntitle: A shared fact\ndescription: Knowledge shared across projects.\n---\n\n# Fact\n\nShared knowledge.\n");
@@ -96,6 +139,15 @@ async function session(command: string, args: string[], base: string) {
     replies.push((r.isError ? "ERROR " : "") + text);
   }
   await client.close();
+  for (const cmd of COMMANDS) {
+    const r = spawnSync(command, [...args.slice(0, -1), ...cmd], { cwd: project, env, encoding: "utf8" });
+    replies.push(`$ ${cmd.join(" ")} [exit ${r.status}]\n${r.stdout}${r.stderr}`.replaceAll(base, "<base>").replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/g, "<time>"));
+  }
+  const stubs = join(project, "knowledge", "references");
+  for (const f of readdirSync(stubs).sort()) {
+    const [meta, body] = splitFrontmatter(readFileSync(join(stubs, f), "utf8"));
+    replies.push(`stub ${f}: ${JSON.stringify([{ ...meta, generated: "<generated>" }, body])}`);
+  }
   return { tools, replies };
 }
 
@@ -117,12 +169,13 @@ const meaning = (reply: string) => {
   const m = /^---\n([\s\S]*?)---\n\n([\s\S]*)$/.exec(reply);
   return m ? JSON.stringify([splitFrontmatter(`---\n${m[1]}---\n`)[0], m[2]]) : reply;
 };
-CALLS.forEach(([name, args], i) => {
-  let [a, b] = [py.replies[i]!, nd.replies[i]!];
+py.replies.forEach((_, i) => {
+  const [name, args] = CALLS[i] ?? ["after the session", {}];
+  let [a, b] = [py.replies[i]!, nd.replies[i] ?? "(missing)"];
   if (name === "read" && args.frontmatter) [a, b] = [meaning(a), meaning(b)];
   if (a !== b) diffs.push(`${name} ${JSON.stringify(args)}:\n  python ${JSON.stringify(a).slice(0, 700)}\n  node   ${JSON.stringify(b).slice(0, 700)}`);
 });
 if (process.env.SHOW) for (const i of process.env.SHOW.split(",").map(Number)) console.log(`--- ${CALLS[i]![0]} ${JSON.stringify(CALLS[i]![1])}\n${nd.replies[i]}`);
-console.log(`${py.tools.length} tools, ${CALLS.length} calls: ${diffs.length ? `${diffs.length} differences` : "the same"}`);
+console.log(`${py.tools.length} tools, ${CALLS.length} calls, ${COMMANDS.length} commands and the stubs they write: ${diffs.length ? `${diffs.length} differences` : "the same"}`);
 if (diffs.length) console.log(diffs.join("\n"));
 process.exitCode = diffs.length ? 1 : 0;

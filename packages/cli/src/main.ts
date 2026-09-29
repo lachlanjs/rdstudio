@@ -12,6 +12,7 @@ import { join, resolve } from "node:path";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
 import { brief } from "./brief.ts";
+import * as refs from "./references.ts";
 import { runServer } from "./mcp.ts";
 import { init } from "./scaffold.ts";
 import { ScopeError, globalConfig, initGlobal, moveSkill, promote, skillDirs } from "./scopes.ts";
@@ -36,7 +37,7 @@ interface Command {
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
-const PENDING = ["refs"];
+const PENDING: string[] = [];
 
 const COMMANDS: Record<string, Command> = {
   init: {
@@ -205,6 +206,37 @@ const COMMANDS: Record<string, Command> = {
         console.log(`proposal ${result.proposal} on ${cid}: ${result.state}`);
       } catch (err) {
         if (!(err instanceof ProcedureError)) throw err;
+        console.error(err.message);
+        return 1;
+      }
+      return 0;
+    },
+  },
+
+  refs: {
+    help: "papis references: sync stubs, search, read PDF text",
+    usage: "{sync,search,text} [terms...] [--pages PAGES]",
+    options: { pages: { type: "string" } },
+    run(cfg, v, [action, ...terms]) {
+      if (!action || !["sync", "search", "text"].includes(action)) {
+        return usageError("refs", `argument action: invalid choice: ${pyRepr(action ?? "")} (choose from 'sync', 'search', 'text')`);
+      }
+      if (!refs.enabled(cfg)) {
+        console.error('references are off: add [references] backend = "papis" to rdstudio.toml');
+        return 2;
+      }
+      try {
+        if (action === "sync") {
+          const created = refs.syncStubs(cfg);
+          for (const cid of created) console.log(`created ${cid}`);
+          console.log(`${created.length} new reference stubs`);
+        } else if (action === "search") {
+          for (const hit of refs.search(cfg, terms.join(" "))) console.log(`${String(hit.ref).padEnd(32)} ${String(hit.year).padEnd(5)} ${hit.title}`);
+        } else {
+          console.log(refs.text(cfg, terms[0] ?? "", { pages: v.pages as string | undefined }));
+        }
+      } catch (err) {
+        if (!(err instanceof refs.ReferenceError)) throw err;
         console.error(err.message);
         return 1;
       }

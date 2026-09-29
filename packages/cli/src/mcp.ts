@@ -17,6 +17,7 @@ import { brief } from "./brief.ts";
 import { fromConfig } from "./classifier.ts";
 import type { Config } from "./config.ts";
 import { propose } from "./procedures.ts";
+import * as refs from "./references.ts";
 import { PyFloat, pyDumps } from "./pyjson.ts";
 import { ScopeError, globalConfig, promote, scoped } from "./scopes.ts";
 import { StoreError, conceptPath, record } from "./store.ts";
@@ -266,6 +267,31 @@ project concepts link to unless keep=true.`, { id: z.string(), as_id: opt(z.stri
       throw err;
     }
   });
+
+  if (refs.enabled(cfg)) {
+    tool("ref_search", `Search the bibliography (papis library) by title, authors, tags and
+abstract. Returns citekeys (\`ref\`), metadata, whether a PDF is attached, and
+the id of the Reference concept for notes.`, { query: z.string(), limit: z.number().int().default(8) }, ({ query, limit }) => {
+      try {
+        const hits = refs.search(cfg, query, Math.max(1, Math.min(limit, 25)));
+        return hits.length ? fmt(hits) : "No matching references.";
+      } catch (err) {
+        if (err instanceof refs.ReferenceError) return err.message;
+        throw err;
+      }
+    });
+
+    tool("ref_text", `Read part of a reference's PDF as plain text: \`pages\` like "1" or "3-4,7",
+or \`query\` to get the two pages that best match. Read the pages you need
+rather than the whole paper.`, { ref: z.string(), pages: opt(z.string()), query: opt(z.string()) }, ({ ref, pages, query }) => {
+      try {
+        return refs.text(cfg, ref, { pages, query });
+      } catch (err) {
+        if (err instanceof refs.ReferenceError) return err.message;
+        throw err;
+      }
+    });
+  }
 
   return server;
 }
