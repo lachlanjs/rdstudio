@@ -64,9 +64,27 @@ See the [understanding layer design](/design/understanding-layer.md).
 - [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
 - [ ] [T30 Editing from the dashboard](/tasks/T30-dashboard-editing.md)
 
+# M9 — Performance and platform (current priority)
+
+See [platform, performance and deployment](/design/platform.md). M8 resumes after phase 0 or 1.
+
+- [ ] [T31 Benchmarks and learner event ids](/tasks/T31-benchmarks-and-event-ids.md)
+- [ ] [T32 Offline app shell](/tasks/T32-offline-shell.md)
+- [ ] [T33 Map layout and routing in a Web Worker](/tasks/T33-map-worker.md)
+- [ ] [T34 Conformance fixtures](/tasks/T34-conformance-fixtures.md)
+- [ ] [T35 Rust core: OKF parsing and lint](/tasks/T35-rust-okf.md)
+- [ ] [T36 Rust core: graph, search and learner record](/tasks/T36-rust-graph-search-record.md)
+- [ ] [T37 Core bindings: WASM and Python](/tasks/T37-core-bindings.md)
+- [ ] [T38 TypeScript UI with a build step](/tasks/T38-typescript-ui.md)
+- [ ] [T39 GPU map renderer](/tasks/T39-gpu-map.md)
+- [ ] [T40 Tauri desktop app](/tasks/T40-tauri-desktop.md)
+- [ ] [T41 Local-first sync](/tasks/T41-local-first-sync.md)
+- [ ] [T42 Mobile apps](/tasks/T42-mobile-apps.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
+- [Distribution, funding and naming](/ideas/distribution-and-naming.md)
 - Understanding layer (proposed; see the [manifesto](/ideas/manifesto/motivation.md)):
   [where it lives](/ideas/learning/tool-boundary.md),
   [PID feature map](/ideas/learning/pid-feature-map.md),
@@ -75,4 +93,5 @@ See the [understanding layer design](/design/understanding-layer.md).
   [learner record](/ideas/learning/learner-record.md),
   [tours and exercises](/ideas/learning/tours-and-exercises.md),
   [dashboard editing](/ideas/learning/dashboard-editing.md),
-  [alpha trials](/ideas/learning/alpha-trials.md)
+  [alpha trials](/ideas/learning/alpha-trials.md),
+  [autoethnography](/ideas/learning/autoethnography.md)

@@ -15,8 +15,7 @@
   --map-size: auto;
   --region-open-alpha: 0;
   --region-closed-alpha: .07;
-  --region-filter: url(#m-sketch);
-  --route-filter: url(#m-sketch);
+  --region-dash: 22 2.5 9 1.5 14 2;
   --territory-font: "Caveat", cursive;
   --territory-size: 22px;
   --territory-weight: 700;

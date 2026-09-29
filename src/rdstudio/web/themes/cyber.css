@@ -72,11 +72,9 @@
   --map-size: auto, 32px 32px, 32px 32px;
   --region-open-alpha: .03;
   --region-closed-alpha: .10;
-  --place-filter: drop-shadow(0 0 3px var(--c));
   --route-from: #19e6ff;
   --route-to: #ff2bd6;
   --route-both: #5f7f88;
-  --route-filter: drop-shadow(0 0 3px rgb(25 230 255 / .6));
   --territory-ink: #19e6ff;
   color-scheme: dark;
   --reviewed: #5fbf8f;
@@ -115,11 +113,9 @@
     --map-size: auto, 32px 32px, 32px 32px;
     --region-open-alpha: .03;
     --region-closed-alpha: .10;
-    --place-filter: drop-shadow(0 0 3px var(--c));
     --route-from: #19e6ff;
     --route-to: #ff2bd6;
     --route-both: #5f7f88;
-    --route-filter: drop-shadow(0 0 3px rgb(25 230 255 / .6));
     --territory-ink: #19e6ff;
     color-scheme: dark;
     --reviewed: #5fbf8f;

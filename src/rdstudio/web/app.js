@@ -129,3 +129,12 @@ try {
     h("p", { class: "lede" }, "Run rdstudio build (or rdstudio serve) in the project, then reload this page."),
     h("pre", {}, String(err))));
 }
+
+// The service worker is registered in index.html. The first time, hand it the
+// files this page loaded before it was in control, so the next visit is served
+// from the cache.
+if ("serviceWorker" in navigator && !navigator.serviceWorker.controller) {
+  navigator.serviceWorker.ready.then((reg) => reg.active?.postMessage({
+    warm: [location.href.split("#")[0], ...performance.getEntriesByType("resource").map((e) => e.name)],
+  }));
+}

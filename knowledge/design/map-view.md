@@ -87,6 +87,13 @@ Each is checkable by looking at a screenshot or reading the code.
   clear and drawn as B-splines. Corridors already used get cheaper, so links
   heading the same way share gates and form trunks. Routes are computed in
   layout units and cached until the set of open folders or a setting changes.
+- **Placing without waiting:** the layout (`js/layout.js`) runs in a Web
+  Worker. The map appears at once in the starting circle packing and settles
+  when the worker is done, keeping the reader's view if they have moved it.
+  Finished layouts are cached in the browser, keyed by a hash of the
+  contents and the five layout settings, so a reload is already settled.
+  Each folder considers only the links with an end inside it, which gives the
+  same positions as considering them all.
 - **Focus:** when zoomed into a folder, routes are drawn at full strength
   inside it and faded outside it, so the detail in view is clear while routes
   still show where they lead.

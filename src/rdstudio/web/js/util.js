@@ -1,5 +1,18 @@
 // Small DOM and formatting helpers.
 
+// Timings for benchmarks. With ?perf in the address, named steps are recorded as
+// performance measures called "rd:<name>", which bench/run.py reads; otherwise
+// nothing is recorded. Any new implementation of the UI keeps these names.
+const PERF = new URLSearchParams(location.search).has("perf");
+export function measure(name, start) {
+  if (PERF) performance.measure("rd:" + name, { start, end: performance.now() });
+}
+export function timed(name, fn) {
+  if (!PERF) return fn();
+  const start = performance.now();
+  try { return fn(); } finally { measure(name, start); }
+}
+
 export function h(tag, attrs = {}, ...children) {
   const node = tag.includes(":")
     ? document.createElementNS("http://www.w3.org/2000/svg", tag.split(":")[1])

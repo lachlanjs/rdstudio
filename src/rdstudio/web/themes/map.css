@@ -33,7 +33,6 @@
   --route-from: #1d4e89;
   --route-to: #b8321f;
   --route-both: #6c7466;
-  --route-filter: drop-shadow(0 0 1.2px #ffffff) drop-shadow(0 0 .6px #ffffff);
   --territory-ink: #3d4a39;
   color-scheme: light;
   --reviewed: #2e7a58;
@@ -72,7 +71,6 @@
   --route-from: #5fb3f0;
   --route-to: #f07a5f;
   --route-both: #7f93a3;
-  --route-filter: drop-shadow(0 0 1.2px #0a1520);
   --territory-ink: #c9d6df;
   color-scheme: dark;
   --reviewed: #5fbf8f;
@@ -112,7 +110,6 @@
     --route-from: #5fb3f0;
     --route-to: #f07a5f;
     --route-both: #7f93a3;
-    --route-filter: drop-shadow(0 0 1.2px #0a1520);
     --territory-ink: #c9d6df;
     color-scheme: dark;
     --reviewed: #5fbf8f;

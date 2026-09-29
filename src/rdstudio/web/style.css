@@ -305,17 +305,19 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 
 /* Themes restyle the map through these tokens (all optional): --map-canvas,
    --map-image, --map-size, --region-open-alpha, --region-closed-alpha,
-   --region-dash, --region-filter, --place-fill, --place-filter, --route-from,
-   --route-to, --route-both, --route-filter, --territory-font and friends. */
+   --region-dash, --place-fill, --route-from, --route-to, --route-both,
+   --territory-font and friends. No filters (glows, blurs, wobble): the map is
+   repainted on every zoom step, and filters made that 25 to 80 times slower
+   (bench/, T31). Effects are fills, strokes, dashes and opacity. */
 .map-wrap { background-color: var(--map-canvas, var(--paper)); background-image: var(--map-image, none); background-size: var(--map-size, auto); }
 .map-wrap .m-back { fill: transparent; }
 .m-dir { fill: var(--c); stroke: var(--c); cursor: zoom-in; transition: fill-opacity .2s, opacity .2s;
-  stroke-dasharray: var(--region-dash, none); filter: var(--region-filter, none); }
+  stroke-dasharray: var(--region-dash, none); }
 .m-dir.open { fill-opacity: var(--region-open-alpha, .035); stroke-opacity: .5; stroke-width: .8; }
 .m-dir.open.depth-1 { stroke-width: 1.5; stroke-opacity: .6; }
 .m-dir.closed { fill-opacity: var(--region-closed-alpha, .11); stroke-opacity: .55; stroke-width: 1; }
 .m-dir.closed:hover { fill-opacity: calc(var(--region-closed-alpha, .11) + .09); }
-.m-place { cursor: pointer; transition: opacity .2s; filter: var(--place-filter, none); }
+.m-place { cursor: pointer; transition: opacity .2s; }
 .m-place .mark { fill: var(--place-fill, var(--c)); stroke: var(--paper); stroke-width: 1.5; }
 .m-place.ring .mark { fill: var(--paper); stroke: var(--place-fill, var(--c)); stroke-width: 2; }
 .m-place .ring { fill: none; stroke: var(--ink); stroke-width: 1.4; }
@@ -324,7 +326,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .m-place:focus-visible .mark { stroke: var(--accent); stroke-width: 3; }
 /* Route colour means direction only (set per route: a gradient from a note to
    what it links to, or --route-both for links both ways). */
-.m-link { fill: none; stroke-opacity: var(--route-opacity, .55); stroke-linecap: round; transition: opacity .2s; filter: var(--route-filter, none); }
+.m-link { fill: none; stroke-opacity: var(--route-opacity, .55); stroke-linecap: round; transition: opacity .2s; }
 .m-link.s1 { stroke-opacity: .35; stroke-dasharray: 2 4; }
 .m-link.s3 { stroke-opacity: .75; }
 svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
@@ -378,6 +380,10 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .route-key .key-dir { background: linear-gradient(90deg, var(--route-from, var(--accent)), var(--route-to, var(--stale))); }
 .route-key .key-both { background: var(--route-both, var(--ink-faint)); }
 .route-key .key-dotted { background: repeating-linear-gradient(90deg, var(--ink-faint) 0 2px, transparent 2px 6px); }
+.map-status { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); margin: 0;
+  padding: 4px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--paper-raised);
+  color: var(--ink-soft); font-size: 13px; pointer-events: none; }
+.map-status[hidden] { display: none; }
 .map-readout { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .map-snippet { margin: 0; font-size: 12px; padding: 8px; background: var(--paper-sunk); border-radius: 4px; user-select: all; white-space: pre; overflow: auto; }
 .legend .key-across { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--accent); }
@@ -502,9 +508,8 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   body { background-attachment: fixed; }
 }
 
-/* While the map is being panned or zoomed, drop the costly effects (glows,
-   blurs, pencil wobble) and restore them when it comes to rest. */
-.map-wrap svg.moving .m-link, .map-wrap svg.moving .m-dir, .map-wrap svg.moving .m-place { filter: none; transition: none; }
+/* No fades while the map is being panned or zoomed. */
+.map-wrap svg.moving .m-link, .map-wrap svg.moving .m-dir, .map-wrap svg.moving .m-place { transition: none; }
 
 /* Short screens (a phone on its side) get the compact map and graph controls too. */
 @media (max-height: 560px) {

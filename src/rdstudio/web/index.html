@@ -4,13 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>rdstudio</title>
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
 <meta name="theme-color" content="#141a20">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235646c0'/%3E%3Ccircle cx='11' cy='12' r='3.2' fill='%23f4f6f2'/%3E%3Ccircle cx='22' cy='10' r='2.4' fill='%23f4f6f2'/%3E%3Ccircle cx='19' cy='22' r='3.6' fill='%23f4f6f2'/%3E%3Cpath d='M11 12 22 10M11 12l8 10M22 10l-3 12' stroke='%23f4f6f2' stroke-width='1.4'/%3E%3C/svg%3E">
+<script>
+  // Instant reopening and offline reading (sw.js), registered before anything
+  // else loads so it installs even when a file fails. Browsers allow it only
+  // on https or localhost; everything works without it. ?nosw skips it.
+  (function () {
+    if (!("serviceWorker" in navigator) || new URLSearchParams(location.search).has("nosw")) return;
+    var had = Boolean(navigator.serviceWorker.controller);
+    (function register(tries) {
+      navigator.serviceWorker.register("sw.js").catch(function () {
+        if (tries < 3) setTimeout(function () { register(tries + 1); }, 800);
+      });
+    })(0);
+    // A new rdstudio took over just as this page opened: show the new version.
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (had && performance.now() < 10000) location.reload();
+    });
+    // Tunnels sometimes drop a request (a 504). If a script or style fails,
+    // reload once, when the service worker (which retries) is ready or after
+    // a few seconds without it.
+    var failed = false;
+    addEventListener("error", function (e) {
+      var t = e.target;
+      if (failed || !t || !/^(SCRIPT|LINK)$/.test(t.tagName)) return;
+      var last = Number(sessionStorage.getItem("rdstudio.retry") || 0);
+      if (Date.now() - last < 30000) return; // tried already: show the error instead
+      failed = true;
+      sessionStorage.setItem("rdstudio.retry", String(Date.now()));
+      var wait = new Promise(function (r) { setTimeout(r, 4000); });
+      Promise.race([navigator.serviceWorker.ready, wait]).then(function () { location.reload(); });
+    }, true);
+  })();
+</script>
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <link id="code-light" rel="stylesheet" href="vendor/hljs/github.min.css" media="(prefers-color-scheme: light)">
 <link id="code-dark" rel="stylesheet" href="vendor/hljs/github-dark.min.css" media="(prefers-color-scheme: dark)">

@@ -27,20 +27,24 @@ active theme uses.
 Themes also restyle the page and the map through optional tokens, each with a
 default in `style.css`: page texture (`--page-image`), heading sizes, the map
 canvas (`--map-canvas`, `--map-image`, `--map-size`), folder regions
-(`--region-open-alpha`, `--region-closed-alpha`, `--region-dash`,
-`--region-filter`), places (`--place-fill`, `--place-filter`, `--place-font`),
-routes (`--route-from`, `--route-to`, `--route-both`, `--route-opacity`,
-`--route-filter`) and territory names (`--territory-font`, `-style`, `-size`,
-`-weight`, `-spacing`, `-ink`). The map defines SVG filters themes can use:
-`url(#m-sketch)` (pencil wobble) and `url(#m-soft)` (soft edges).
+(`--region-open-alpha`, `--region-closed-alpha`, `--region-dash`), places
+(`--place-fill`, `--place-font`), routes (`--route-from`, `--route-to`,
+`--route-both`, `--route-opacity`) and territory names (`--territory-font`,
+`-style`, `-size`, `-weight`, `-spacing`, `-ink`).
+
+**No filters on the map.** Glows, blurs and the pencil wobble were SVG and CSS
+filters, repainted on every zoom step; on a 1,186-note bundle they turned
+0.2 s of pauses during a pan and zoom into 6 to 19 s
+([T31](/tasks/T31-benchmarks-and-event-ids.md)). Themes use fills, strokes,
+dashes and opacity only.
 
 | Theme | Reading / interface | Light | Dark |
 |---|---|---|---|
 | Studio (default) | Literata / Atkinson Hyperlegible Next | engineering paper, violet | slate, lavender |
-| Notebook | Literata / Atkinson, Caveat headings and map labels | ruled exercise book, blue-black ink, pencil lines | chalkboard |
+| Notebook | Literata / Atkinson, Caveat headings and map labels | ruled exercise book, blue-black ink, broken pencil outlines | chalkboard |
 | Map | Source Serif 4 / Source Sans 3 | topographic chart: land tints, dash-dot borders, contour sea, cased roads | night navigation chart |
-| Space | IBM Plex Sans, Plex Mono labels | celestial atlas | star field, nebulae, glowing stars |
-| Cyber | IBM Plex Sans / JetBrains Mono | hard-edged daylight grid | neon on black, grid and scanlines, glow |
+| Space | IBM Plex Sans, Plex Mono labels | celestial atlas | star field, nebulae, bright stars |
+| Cyber | IBM Plex Sans / JetBrains Mono | hard-edged daylight grid | neon on black, grid and scanlines |
 
 The choice is stored as `rdstudio.look`; choices from before this set
 (`rdstudio.theme`) map to Studio, Map or Cyber.

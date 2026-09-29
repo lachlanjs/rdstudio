@@ -15,3 +15,6 @@ reference/papers/
 
 # rdstudio build output
 .rdstudio/
+
+# Benchmark bundles and results (bench/run.py)
+.bench/

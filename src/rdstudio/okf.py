@@ -38,6 +38,11 @@ class FrontmatterError(ValueError):
     pass
 
 
+# LibYAML's parser when PyYAML has it (it usually does): the same results, and
+# about ten times faster than the pure-Python one on a large bundle.
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
     """Return ``(frontmatter, body)``; frontmatter is None when absent."""
     if text.startswith("﻿"):
@@ -52,7 +57,7 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
             raw = "\n".join(lines[1:i])
             body = "\n".join(lines[i + 1 :])
             try:
-                meta = yaml.safe_load(raw) if raw.strip() else {}
+                meta = yaml.load(raw, Loader=_YAML_LOADER) if raw.strip() else {}
             except yaml.YAMLError as exc:
                 raise FrontmatterError(f"unparseable YAML frontmatter: {exc}") from exc
             if meta is None:
@@ -372,7 +377,10 @@ class Bundle:
         self.directories: dict[str, Directory] = {}
         self.issues: list[Issue] = []
         self.root_meta: dict[str, Any] = {}
+        # Derived views, computed on first use: a bundle does not change once loaded.
         self._prereq: dict[str, dict[str, int]] | None = None
+        self._requires: dict[str, list[str]] | None = None
+        self._backlinks: dict[str, list[str]] | None = None
 
     # ----------------------------------------------------------------- load
 
@@ -500,6 +508,11 @@ class Bundle:
 
     def requires_graph(self) -> dict[str, list[str]]:
         """Each concept's direct prerequisites: the concepts it links to as ``requires``."""
+        if self._requires is None:
+            self._requires = self._requires_graph()
+        return self._requires
+
+    def _requires_graph(self) -> dict[str, list[str]]:
         return {cid: sorted({l.target for l in c.links if l.rel == "requires" and l.kind == "concept"
                              and not l.broken and l.target != cid and l.target in self.concepts})
                 for cid, c in self.concepts.items()}
@@ -572,18 +585,21 @@ class Bundle:
         title = {i: min(self.concepts[c].title.lower() for c in g) for i, g in enumerate(comps)}
         folder = {i: self.concepts[comps[i][0]].directory for i in range(len(comps))}
 
-        def shared(a: str, b: str) -> int:
-            pa, pb = a.split("/") if a else [], b.split("/") if b else []
+        parts = {i: tuple(f.split("/")) if f else () for i, f in folder.items()}
+
+        def shared(a: tuple[str, ...], b: tuple[str, ...]) -> int:
             n = 0
-            while n < min(len(pa), len(pb)) and pa[n] == pb[n]:
+            for x, y in zip(a, b):
+                if x != y:
+                    break
                 n += 1
             return n
 
         out: dict[str, dict[str, int]] = {}
         last = None
         while ready:
-            i = min(ready, key=lambda k: (-(shared(folder[k], folder[last]) if last is not None else 0),
-                                          depth[k], folder[k], title[k]))
+            near = parts[last] if last is not None else ()
+            i = min(ready, key=lambda k: (-shared(parts[k], near), depth[k], folder[k], title[k]))
             ready.discard(i)
             for cid in sorted(comps[i], key=lambda c: self.concepts[c].title.lower()):
                 out[cid] = {"order": len(out), "depth": depth[i]}
@@ -611,7 +627,14 @@ class Bundle:
         return sorted(seen, key=lambda c: order[c]["order"])
 
     def backlinks(self, cid: str) -> list[str]:
-        return sorted(c.id for c in self.concepts.values() if any(l.target == cid for l in c.links))
+        """The concepts that link to ``cid``."""
+        if self._backlinks is None:
+            index: dict[str, set[str]] = {}
+            for c in self.concepts.values():
+                for l in c.links:
+                    index.setdefault(l.target, set()).add(c.id)
+            self._backlinks = {target: sorted(ids) for target, ids in index.items()}
+        return self._backlinks.get(cid, [])
 
     def lint(self) -> list[Issue]:
         from .procedures import lint as lint_procedures  # procedures builds on this module

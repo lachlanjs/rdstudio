@@ -80,3 +80,17 @@ def test_export(tmp_path, bundle_dir, monkeypatch):
     assert site["static"] is True and skills["skills"] == []
     assert (out / ".nojekyll").exists() and (out / "index.html").exists()
     assert main(["-C", str(root), "export", str(out)]) == 1  # refuses to overwrite
+
+
+def test_service_worker_is_stamped_with_the_app_files(tmp_path, monkeypatch):
+    from rdstudio import build as build_mod
+
+    web = tmp_path / "web"
+    web.mkdir()
+    (web / "sw.js").write_text('const SHELL = "__SHELL__";\n')
+    (web / "app.js").write_text("one")
+    monkeypatch.setattr(build_mod, "WEB_DIR", web)
+    first = build_mod.service_worker()
+    assert "__SHELL__" not in first and first == build_mod.service_worker()
+    (web / "app.js").write_text("two!")
+    assert build_mod.service_worker() != first  # an edited app file makes a new cache

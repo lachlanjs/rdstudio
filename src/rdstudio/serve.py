@@ -39,6 +39,10 @@ class _Handler(SimpleHTTPRequestHandler):
     ``tailscale serve`` passes them through) and ``--allow-host`` names, against
     DNS rebinding."""
 
+    # Keep connections open between requests: through a tunnel, each new
+    # connection is slow to set up and more likely to be dropped.
+    protocol_version = "HTTP/1.1"
+
     cfg: Config
     token: str
     loopback: bool
@@ -54,6 +58,8 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        if self.close_connection:
+            self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -71,6 +77,7 @@ class _Handler(SimpleHTTPRequestHandler):
         })
 
     def do_POST(self) -> None:
+        self.close_connection = True  # a refused body is never read; do not reuse the connection
         if urlsplit(self.path).path != "/api/learner":
             return self._json(404, {"error": "not found"})
         origin = urlsplit(self.headers.get("Origin") or "").netloc

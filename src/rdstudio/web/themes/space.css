@@ -68,12 +68,9 @@
   --page-stars: radial-gradient(1px 1px at 12% 18%, #ffffffcc 50%, transparent 51%), radial-gradient(1px 1px at 72% 34%, #ffffffaa 50%, transparent 51%), radial-gradient(1.5px 1.5px at 38% 76%, #cfe0ff 50%, transparent 51%), radial-gradient(1px 1px at 88% 82%, #ffffff99 50%, transparent 51%), radial-gradient(1px 1px at 55% 8%, #ffe9c7aa 50%, transparent 51%), radial-gradient(1px 1px at 24% 52%, #ffffff77 50%, transparent 51%);
   --region-open-alpha: .10;
   --region-closed-alpha: .22;
-  --region-filter: url(#m-soft);
-  --place-filter: drop-shadow(0 0 4px var(--c));
   --route-from: #8ab4ff;
   --route-to: #ffcf6b;
   --route-both: #7a86a8;
-  --route-filter: drop-shadow(0 0 2.5px rgb(138 180 255 / .55));
   --territory-ink: #c6cdea;
   color-scheme: dark;
   --reviewed: #5fbf8f;
@@ -112,12 +109,9 @@
     --page-stars: radial-gradient(1px 1px at 12% 18%, #ffffffcc 50%, transparent 51%), radial-gradient(1px 1px at 72% 34%, #ffffffaa 50%, transparent 51%), radial-gradient(1.5px 1.5px at 38% 76%, #cfe0ff 50%, transparent 51%), radial-gradient(1px 1px at 88% 82%, #ffffff99 50%, transparent 51%), radial-gradient(1px 1px at 55% 8%, #ffe9c7aa 50%, transparent 51%), radial-gradient(1px 1px at 24% 52%, #ffffff77 50%, transparent 51%);
     --region-open-alpha: .10;
     --region-closed-alpha: .22;
-    --region-filter: url(#m-soft);
-    --place-filter: drop-shadow(0 0 4px var(--c));
     --route-from: #8ab4ff;
     --route-to: #ffcf6b;
     --route-both: #7a86a8;
-    --route-filter: drop-shadow(0 0 2.5px rgb(138 180 255 / .55));
     --territory-ink: #c6cdea;
     color-scheme: dark;
     --reviewed: #5fbf8f;

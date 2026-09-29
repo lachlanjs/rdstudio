@@ -8,12 +8,12 @@
 
 import { store } from "./data.js";
 import { prerequisites } from "./learn.js";
-import { h, conceptHref, trustState, TRUST_LABEL, titleCase } from "./util.js";
+import { h, conceptHref, trustState, TRUST_LABEL, titleCase, measure, timed } from "./util.js";
+import { start, plainModel, layoutKey, cached, remember, applyPositions, computeLayout } from "./layout.js";
 
 /* global d3 */
 
 const KEY = "rdstudio.map";
-const SIZE = 1000; // layout units
 
 // View settings, shown in the Options panel.
 export const VIEW_DEFAULTS = {
@@ -225,100 +225,6 @@ function stronglyConnected(ids, next) {
   };
   for (const v of ids) if (!index.has(v)) visit(v);
   return component;
-}
-
-function layout(model, o) {
-  const root = d3.hierarchy(model.root, (d) => (d.kind === "dir" ? d.children : null))
-    .sum((d) => (d.kind === "concept" ? d.weight : d.children.length ? 0 : 1));
-  d3.pack().size([SIZE, SIZE]).padding((d) => (d.depth === 0 ? 10 : 6))(root); // a starting arrangement
-  const byId = new Map();
-  root.each((n) => byId.set(n.data.id, n));
-  const leafEdges = model.edges.map(([a, b]) => [byId.get("c:" + a), byId.get("c:" + b)]).filter(([a, b]) => a && b);
-
-  const moveTree = (n, dx, dy) => n.each((d) => { d.x += dx; d.y += dy; });
-  const scaleTree = (n, k) => n.each((d) => { d.x = n.x + (d.x - n.x) * k; d.y = n.y + (d.y - n.y) * k; d.r *= k; });
-  const childOf = (folder, n) => n.ancestors().find((a) => a.parent === folder);
-
-  // Top down: give each folder's contents room, then spread them out evenly
-  // inside its wall, keeping linked items near each other and drawing items
-  // towards the side where their links leave the folder.
-  function arrange(folder) {
-    const kids = folder.children;
-    if (!kids) return;
-    const unit = folder.r / (SIZE / 2); // settings are given for the whole map; scale them to this folder
-    const inner = folder.depth ? folder.r - Math.min(o.margin * unit, folder.r * 0.25) : folder.r;
-    const gap = o.spacing * unit;
-    const area = kids.reduce((s, c) => s + c.r * c.r, 0) || 1;
-    const k = Math.min(1, Math.sqrt((o.room * inner * inner) / area));
-    for (const c of kids) {
-      scaleTree(c, k);
-      moveTree(c, folder.x + (c.x - folder.x) * (inner / folder.r) - c.x, folder.y + (c.y - folder.y) * (inner / folder.r) - c.y);
-    }
-    if (kids.length > 1) {
-      const nodes = kids.map((c) => ({ c, x: c.x - folder.x, y: c.y - folder.y, r: c.r, pull: [0, 0, 0] }));
-      const index = new Map(kids.map((c, i) => [c, i]));
-      const links = [];
-      for (const [u, v] of leafEdges) {
-        const cu = childOf(folder, u), cv = childOf(folder, v);
-        if (cu && cv && cu !== cv) links.push({ source: index.get(cu), target: index.get(cv) });
-        // A link leaving the folder pulls its end towards that side.
-        for (const [inside, outside, other] of [[cu, cv, v], [cv, cu, u]]) {
-          if (!inside || outside) continue;
-          const dx = other.x - folder.x, dy = other.y - folder.y, d = Math.hypot(dx, dy) || 1;
-          const pull = nodes[index.get(inside)].pull;
-          pull[0] += dx / d; pull[1] += dy / d; pull[2] += 1;
-        }
-      }
-      for (const nd of nodes) {
-        if (nd.pull[2]) {
-          const d = Math.hypot(nd.pull[0], nd.pull[1]) || 1;
-          nd.tx = (nd.pull[0] / d) * inner * 0.7;
-          nd.ty = (nd.pull[1] / d) * inner * 0.7;
-        }
-      }
-      const sim = d3.forceSimulation(nodes).stop()
-        .force("collide", d3.forceCollide((d) => d.r + gap / 2).strength(1).iterations(2))
-        .force("charge", d3.forceManyBody().strength(-o.spread * inner * 0.15))
-        .force("link", d3.forceLink(links).distance((l) => l.source.r + l.target.r + gap * 1.5).strength(0.04))
-        .force("x", d3.forceX((d) => d.tx ?? 0).strength((d) => (d.tx !== undefined ? 0.04 * o.outward : 0.03)))
-        .force("y", d3.forceY((d) => d.ty ?? 0).strength((d) => (d.ty !== undefined ? 0.04 * o.outward : 0.03)));
-      const contain = () => {
-        for (const nd of nodes) { // stay inside the wall
-          const d = Math.hypot(nd.x, nd.y), max = Math.max(0, inner - nd.r - gap / 4);
-          if (d > max) { nd.x *= max / d; nd.y *= max / d; }
-        }
-      };
-      for (let i = 0; i < 240; i++) { sim.tick(); contain(); }
-      // Finish by separating anything still overlapping, without other forces.
-      for (let round = 0; round < 80; round++) {
-        let moved = false;
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i], b = nodes[j];
-            const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-6, want = a.r + b.r + gap;
-            if (d < want) {
-              const push = (want - d) / 2;
-              a.x -= (dx / d) * push; a.y -= (dy / d) * push;
-              b.x += (dx / d) * push; b.y += (dy / d) * push;
-              moved = true;
-            }
-          }
-        }
-        contain();
-        if (!moved) break;
-      }
-      for (const nd of nodes) moveTree(nd.c, folder.x + nd.x - nd.c.x, folder.y + nd.y - nd.c.y);
-    }
-    kids.forEach(arrange);
-  }
-  arrange(root);
-
-  const groups = [...new Set((root.children || []).map((c) => c.data.ref))].sort();
-  root.each((n) => {
-    const top = n.ancestors().reverse()[1];
-    n.group = top ? (top.data.kind === "dir" ? groups.indexOf(top.data.ref) : -1) : -1;
-  });
-  return { root, byId };
 }
 
 function wrapWords(text, width, charW) {
@@ -613,10 +519,11 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const readout = h("p", { class: "map-readout" });
   const panel = controls({
     view: () => { o = effective(); cache = null; schedule(); },
-    tune: () => { o = effective(); rebuild(); },
+    tune: () => { o = effective(); cache = null; arrange(); schedule(); },
     readout,
   });
-  wrap.append(panel, crumbs, tip, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
+  const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
+  wrap.append(panel, crumbs, tip, status, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
   if (trail) wrap.append(trailCard());
 
   const defs = svg.append("defs");
@@ -630,15 +537,6 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   // full strength clipped to the focused folder, so the detail you are looking
   // at is clear while routes still show where they lead.
   const clip = defs.append("clipPath").attr("id", "m-focus-clip").append("circle");
-  // Filters themes can use through --route-filter, --region-filter and
-  // --place-filter. User-space regions so thin, straight paths are not clipped.
-  const filter = (id) => defs.append("filter").attr("id", id).attr("filterUnits", "userSpaceOnUse")
-    .attr("x", -5000).attr("y", -5000).attr("width", 20000).attr("height", 20000);
-  const sketch = filter("m-sketch"); // pencil: a slightly wobbly line
-  sketch.append("feTurbulence").attr("type", "fractalNoise").attr("baseFrequency", 0.035).attr("numOctaves", 2).attr("seed", 7).attr("result", "noise");
-  sketch.append("feDisplacementMap").attr("in", "SourceGraphic").attr("in2", "noise").attr("scale", 3.2)
-    .attr("xChannelSelector", "R").attr("yChannelSelector", "G");
-  filter("m-soft").append("feGaussianBlur").attr("stdDeviation", 3); // nebula: soft edges
   const gradients = defs.append("g"); // one per one-way route: direction as colour
   const gLinks = world.append("g").attr("class", "m-routes");
   const gFocus = world.append("g").attr("class", "m-routes m-focus").attr("clip-path", "url(#m-focus-clip)");
@@ -647,8 +545,15 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const gSteps = world.append("g").attr("class", "m-steps");
   const gLabels = world.append("g").attr("class", "m-labels");
 
-  let model = buildModel();
-  let L = layout(model, o);
+  let model = timed("map-model", buildModel);
+  // The map is placed at once: from this browser's cache when it has laid out
+  // the same contents with the same settings before, otherwise in the quick
+  // starting arrangement while the full layout is worked out in a worker
+  // (layout.js); then it settles. Positions are updated in place, so the
+  // hierarchy (L) changes only when the contents do.
+  let L = timed("map-place", () => start(model.root));
+  let placedKey = null, wantedKey = null; // the layout L shows, and the one asked for
+  let settled = false, viewed = false, userMoved = false, left = false, markSettled = false;
   let cache = null; // routes for the current set of open folders
   let w = 800, hgt = 600;
   let focus = L.root;
@@ -656,17 +561,52 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   let current = null; // screen helpers from the last render, for hover
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  function arrange() {
+    const plain = plainModel(model);
+    const key = layoutKey(plain, o);
+    if (key === wantedKey) return;
+    wantedKey = key;
+    if (key === placedKey) { status.hidden = true; return; } // back to what is shown
+    const hit = cached(key, L.root.descendants().length);
+    if (hit) return settle(key, hit);
+    status.hidden = false;
+    const t0 = performance.now();
+    computeLayout(plain, o).then((xyr) => {
+      if (left || key !== wantedKey) return; // left the map, or the settings moved on
+      measure("map-layout", t0);
+      remember(key, xyr);
+      settle(key, xyr);
+    });
+  }
+
+  function settle(key, xyr) {
+    applyPositions(L.root, xyr);
+    placedKey = key;
+    status.hidden = true;
+    cache = null;
+    markSettled = true;
+    if (!settled) {
+      settled = true;
+      if (viewed && !userMoved) initialView(); // fit the settled map, unless the reader has moved it
+    }
+    schedule();
+  }
+
+  // After a change of contents: a new hierarchy, then a layout for it.
   function rebuild() {
-    L = layout(model, o);
+    L = timed("map-place", () => start(model.root));
+    placedKey = wantedKey = null;
+    settled = false;
     cache = null;
     focus = L.root;
+    arrange();
     schedule();
   }
 
   let drawnAt = null, drawnWhen = 0; // the transform and time of the last full redraw
   let moving = false;
   const zoom = d3.zoom().scaleExtent([0.2, 80])
-    .on("start", () => { moving = true; svg.classed("moving", true); })
+    .on("start", (event) => { if (event.sourceEvent) userMoved = true; moving = true; svg.classed("moving", true); })
     .on("zoom", (event) => {
       const t = event.transform;
       M.transform = t;
@@ -682,7 +622,11 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   function schedule() {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; render(); });
+    requestAnimationFrame(() => {
+      queued = false;
+      timed("map-render", render);
+      if (markSettled) { markSettled = false; measure("map-settled", 0); } // since the page opened
+    });
   }
 
   function fitTransform(n) {
@@ -709,6 +653,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
     const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
     const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "") + (trail ? "|" + path : "");
     if (cache?.signature === signature) return cache;
+    const start = performance.now();
     const shownRep = (leaf) => {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
       return leaf;
@@ -778,6 +723,7 @@ export function mapView(focusRef = "", { path = "" } = {}) {
     readout.textContent = `${routes.length} routes · ${hidden} implied links hidden · ${count.bubbles} through bubbles · ${count.lines} route crossings · ${stretch.toFixed(2)}× stretch`;
     Object.assign(readout.dataset, { bubbles: count.bubbles, lines: count.lines, stretch: stretch.toFixed(3), routes: routes.length, hidden });
     cache = { signature, routes, shownRep };
+    measure("map-routes", start);
     return cache;
   }
 
@@ -1158,21 +1104,27 @@ export function mapView(focusRef = "", { path = "" } = {}) {
     back.attr("width", w).attr("height", hgt);
   }
 
-  requestAnimationFrame(() => {
-    size();
+  function initialView() {
     const target = focusRef ? L.byId.get("d:" + focusRef) : null;
     const onTrail = trail && trailTransform();
     if (onTrail) svg.call(zoom.transform, onTrail);
     else if (target) svg.call(zoom.transform, fitTransform(target));
     else svg.call(zoom.transform, M.transform || fitTransform(L.root));
+  }
+  arrange();
+  requestAnimationFrame(() => {
+    size();
+    viewed = true;
+    initialView();
   });
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
-  wrap.leave = () => { window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = buildModel(); o = effective(); rebuild(); };
+  wrap.leave = () => { left = true; window.removeEventListener("resize", onResize); persist(); };
+  wrap.refresh = () => { model = timed("map-model", buildModel); o = effective(); rebuild(); };
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
   wrap.layout = () => L;
+  wrap.model = () => model;
   return wrap;
 }
 

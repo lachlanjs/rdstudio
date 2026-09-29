@@ -1,0 +1,32 @@
+# Development tasks: `mise run <task>` (or `mise tasks` to list them). Each is a
+# plain command, so running it by hand works just as well without mise.
+# Toolchains are added here as they arrive: node with the SvelteKit app (T38),
+# rust with the core (T35).
+
+[tasks.setup]
+description = "Install every dependency group and the benchmark browser"
+run = ["uv sync --all-groups", "uv run --group bench playwright install chromium"]
+
+[tasks.test]
+description = "Run the Python tests"
+run = "uv run pytest -q"
+
+[tasks.check]
+description = "Lint this repository's own knowledge bundle"
+run = "uv run rdstudio check"
+
+[tasks.serve]
+description = "Serve this repository's dashboard, rebuilding on change"
+run = "uv run rdstudio serve"
+
+[tasks.bench]
+description = "Benchmark load and map performance (bench/run.py; pass --help for options)"
+run = "uv run --group bench python bench/run.py"
+
+[tasks."bench:compare"]
+description = "Compare two benchmark results"
+run = "uv run python bench/compare.py"
+
+[tasks."bench:synth"]
+description = "Generate a synthetic project: a preset (subject, area, field, ceiling) and a folder"
+run = "uv run python bench/synth.py"
