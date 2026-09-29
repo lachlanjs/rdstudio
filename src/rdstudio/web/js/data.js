@@ -74,9 +74,21 @@ export function watch(onChange, onStatus) {
         }
       }
     }
-    setTimeout(tick, document.hidden ? POLL_MS * 4 : POLL_MS);
+    schedule();
   }
-  setTimeout(tick, POLL_MS);
+  // A hidden tab stops asking (several open dashboards would otherwise share
+  // a slow link with the one in use) and asks at once when shown again.
+  let timer = null;
+  function schedule() {
+    timer = document.hidden ? null : setTimeout(tick, POLL_MS);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && timer === null) {
+      timer = -1; // a check is under way
+      tick();
+    }
+  });
+  schedule();
 }
 
 // ------------------------------------------------------- learner record
