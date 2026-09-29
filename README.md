@@ -23,8 +23,14 @@ uv tool install git+https://github.com/lachlanjs/rdstudio@v0.1.0
 ```
 
 To upgrade later, run the same command with a newer tag, followed by
-`--force`. To work on rdstudio itself, clone the repository and run
-`uv tool install --editable .` inside it.
+`--force`. To work on rdstudio itself, clone the repository, run
+`mise run setup`, then `uv tool install --editable . --force` inside it.
+
+rdstudio's command line is moving from Python to TypeScript (Node). Node comes
+with rdstudio as a Python dependency, so there is nothing else to install. A
+release wheel (built by `mise run release:build`) runs the Node command line;
+installing from a git tag builds without it and runs the Python one, which
+does the same things. `rdstudio-py` always runs the Python one.
 
 ## Use it in a project
 
@@ -168,8 +174,13 @@ Chromium, as a desktop and as a phone. Compare any change that could affect
 speed against a baseline. The platform plan is in
 `knowledge/design/platform.md`.
 
-The TypeScript core (`packages/core`) is replacing the Python one part by part;
-`fixtures/` holds the contract both keep (see `fixtures/README.md`).
+The TypeScript core (`packages/core`) and command line (`packages/cli`) are
+replacing the Python ones; `fixtures/` holds the contract both keep (see
+`fixtures/README.md`), and `mise run agree` runs every comparison between the
+two: the core on real bundles, every command's output, every file `build`,
+`export` and `init` write, the notes after the same writes, and the MCP
+server's tools and replies. In a checkout, `rdstudio` runs the TypeScript
+sources directly; `mise run bundle` builds the single file a release ships.
 
 ## Licence
 

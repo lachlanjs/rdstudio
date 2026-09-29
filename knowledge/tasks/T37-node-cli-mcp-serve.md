@@ -2,7 +2,7 @@
 type: Task
 title: "T37 — Node command line, MCP server and rdstudio serve"
 description: "The rdstudio command, MCP server and server rebuilt in Node on the TypeScript core, with OpenAPI and a HeyAPI client for the HTTP parts; the Python package retired part by part."
-tags: [task, m9, todo]
+tags: [task, m9, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-09-29T01:14:28Z }
 ---
 
@@ -29,7 +29,9 @@ compares their output on every ported command.
    text comes from `pdftotext`, as before.
 6. **The launcher:** the wheel carries the bundled Node program and the
    dashboard, Node comes from `nodejs-wheel-binaries`, the `rdstudio` entry
-   point runs it; then the Python modules are retired.
+   point runs it. Done. Retiring the Python modules is a follow-up: they stay
+   as the reference the fixtures are recorded from, and as `rdstudio-py`,
+   until the Node command line has been in daily use for a while.
 
 # Progress
 
@@ -110,3 +112,16 @@ compares their output on every ported command.
   real two-page PDF and adds 11 reference calls and 6 commands, and compares
   the stubs `refs sync` writes: 14 tools, 58 calls, the commands and the
   stubs, the same. Every command is now in the Node command line.
+- Slice 6: `rdstudio.launcher` is the `rdstudio` entry point. It runs the
+  Node command line with Node from `nodejs-wheel-binaries` (24.19; about
+  200 MB installed, npm included): in a checkout the TypeScript sources, in a
+  release wheel a single bundled file (`mise run bundle`, esbuild, 2.2 MB,
+  `src/rdstudio/_node/`, not committed; `mise run release:build` bundles and
+  builds the wheel). `RDSTUDIO_PYTHON=1` or `rdstudio-py` runs the Python
+  command line, as does a missing bundle (so an install from a git tag keeps
+  working). Checked: the wheel installed with `uvx --isolated` runs the Node
+  program (`--version`, `search`, a full `build`). `mise run agree` runs all
+  six comparisons.
+- To decide: how releases are published. A git-tag install builds without the
+  bundle; the Node command line needs the release wheel, attached to a GitHub
+  Release by CI, or published to PyPI.

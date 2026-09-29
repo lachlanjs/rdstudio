@@ -21,3 +21,6 @@ reference/papers/
 
 # TypeScript packages
 node_modules/
+
+# The bundled Node command line, built at release (npm run bundle --workspace rdstudio)
+src/rdstudio/_node/

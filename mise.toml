@@ -71,3 +71,17 @@ run = "uv run python fixtures/agree_scaffold.py"
 [tasks."mcp:agree"]
 description = "Compare the Python and Node MCP servers (tools and 58 calls, papis included) and the refs command"
 run = "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""
+
+[tasks.bundle]
+description = "Bundle the Node command line into the Python package (src/rdstudio/_node/)"
+run = "npm run bundle --workspace rdstudio"
+
+[tasks."release:build"]
+description = "Build the wheel for release: bundle the Node command line, then uv build"
+run = ["npm run bundle --workspace rdstudio", "uv build"]
+
+[tasks.agree]
+description = "Every comparison between the Python and Node implementations"
+run = ["uv run python fixtures/agree.py knowledge", "uv run python fixtures/agree_cli.py", "uv run python fixtures/agree_build.py",
+       "uv run python fixtures/agree_writes.py", "uv run python fixtures/agree_scaffold.py",
+       "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""]
