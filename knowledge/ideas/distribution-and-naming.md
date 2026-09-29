@@ -23,6 +23,16 @@ territory.
 - **Bring your own AI, always:** any harness or model the user pays for or
   hosts themselves.
 
+# Ways to deliver it
+
+| Route | Status | For | Notes |
+|---|---|---|---|
+| `uv tool install rdstudio` | current; kept after the move to Node (see [platform](/design/platform.md), Installing) | Python users, and anyone with uv | Node arrives as a dependency (`nodejs-wheel-binaries`); nothing else to install. |
+| `npx rdstudio` (npm) | potential | JavaScript developers, who already have Node | Publish `packages/cli` (with the core and the built dashboard) to npm; `npx rdstudio serve` runs without installing, `npm i -g rdstudio` keeps it. Only possible once the command line is in Node (T37). The name must be free on npm. |
+| Static export | current | reading without a server (GitHub Pages) | `rdstudio export`. |
+| Desktop and mobile apps | planned (T40, T42) | people who are not developers | Tauri; GitHub Releases, app stores. |
+| Hosted service | an option (see funding) | people who want nothing to install | |
+
 # Options for funding (not yet decided)
 
 | Option | For | Against |
