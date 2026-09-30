@@ -69,8 +69,9 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: release
-      # "./" so npm reads a file path, not "owner/repo" GitHub shorthand
-      - run: npm publish ./npm-dist/rdstudio-*.tgz --access public
+      # Staged: the version goes live only when approved on npmjs.com with 2FA.
+      # "./" so npm reads a file path, not "owner/repo" GitHub shorthand.
+      - run: npm stage publish ./npm-dist/rdstudio-*.tgz --access public
 
   pypi:
     needs: build
