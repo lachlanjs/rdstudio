@@ -6,7 +6,10 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, unlinkSync
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Bundle, cmp, contentHash, headings, iso, splitFrontmatter, text, type Concept } from "@rdstudio/core";
+import {
+  Bundle, cmp, contentHash, headings, iso, splitFrontmatter, text,
+  type Changes, type Concept, type ConceptRecord, type FolderRecord, type ReportRecord, type SiteInfo, type Skills,
+} from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { categoryGlobs, type Config } from "./config.ts";
 import { assetDir, syncTree, walkFiles, writeIfChanged } from "./files.ts";
@@ -39,7 +42,7 @@ function summary(c: Concept) {
   };
 }
 
-export function conceptRecord(b: Bundle, cid: string): Record<string, unknown> {
+export function conceptRecord(b: Bundle, cid: string): ConceptRecord {
   const c = b.concepts.get(cid)!;
   const place = b.prerequisiteOrder().get(cid)!;
   const generated = c.generatedAt;
@@ -48,8 +51,8 @@ export function conceptRecord(b: Bundle, cid: string): Record<string, unknown> {
     hash: contentHash(c.body),
     order: place.order,
     depth: place.depth,
-    requires: b.requiresGraph().get(cid),
-    meta: json(c.meta),
+    requires: b.requiresGraph().get(cid) ?? [],
+    meta: json(c.meta) as Record<string, unknown>,
     directory: c.directory,
     links: c.links.map((l) => ({ target: l.target, kind: l.kind, broken: l.broken, rel: l.rel })),
     backlinks: b.backlinks(cid),
@@ -59,8 +62,8 @@ export function conceptRecord(b: Bundle, cid: string): Record<string, unknown> {
   };
 }
 
-export function treeRecord(b: Bundle): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+export function treeRecord(b: Bundle): Record<string, FolderRecord> {
+  const out: Record<string, FolderRecord> = {};
   for (const [did, d] of b.directories) {
     const title = (id: string) => b.concepts.get(id)!.title.toLowerCase();
     out[did] = {
@@ -77,8 +80,8 @@ export function treeRecord(b: Bundle): Record<string, unknown> {
 
 /** Skills (.claude/skills/<name>/SKILL.md) and agents (.claude/agents/*.md),
  *  from the project and, unless `user` is false, from ~/.claude. */
-export function skillFiles(root: string, user = true): { skills: Record<string, unknown>[]; agents: Record<string, unknown>[] } {
-  const out = { skills: [] as Record<string, unknown>[], agents: [] as Record<string, unknown>[] };
+export function skillFiles(root: string, user = true): Skills {
+  const out: Skills = { skills: [], agents: [] };
   const find = (base: string, kind: "skills" | "agents") => walkFiles(join(base, ".claude", kind))
     // As Python's glob("*/SKILL.md") and glob("*.md"): names starting with "." do not match.
     .filter((p) => (kind === "skills" ? /^[^/.][^/]*\/SKILL\.md$/.test(p) : /^[^/.][^/]*\.md$/.test(p)));
@@ -96,7 +99,7 @@ export function skillFiles(root: string, user = true): { skills: Record<string, 
         description: text(meta.description || ""),
         path: (scope === "user" ? "~/" : "") + `.claude/${kind}/${rel}`,
         scope,
-        meta: json(meta),
+        meta: json(meta) as Record<string, unknown>,
         body,
       });
     }
@@ -126,9 +129,9 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
   if (autoIndex && existsSync(cfg.knowledgeDir) && writeIndexes(b, cfg.knowledgeDir).length) b = loadBundle(cfg.knowledgeDir);
 
   const concepts = [...b.concepts.keys()].sort(cmp).map((cid) => conceptRecord(b, cid));
-  const changes = history(cfg.root, categoryGlobs(cfg), 200, [cfg.output.replace(/^\/+|\/+$/g, "") + "/"]) as { commits: { pending?: boolean }[] };
+  const changes = history(cfg.root, categoryGlobs(cfg), 200, [cfg.output.replace(/^\/+|\/+$/g, "") + "/"]) as unknown as Changes;
   if (opts.export) changes.commits = changes.commits.filter((c) => !c.pending);
-  const reports = scan(cfg.reportsDir, cfg.knowledge, cfg.reports);
+  const reports = scan(cfg.reportsDir, cfg.knowledge, cfg.reports) as unknown as ReportRecord[];
   const skills = skillFiles(cfg.root, !opts.export);
   const issues = b.lint().map((i) => ({ path: i.path, level: i.level, code: i.code, message: i.message }));
 
@@ -139,17 +142,18 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     "reports.json": dump(reports),
     "skills.json": dump(skills),
   };
-  payload["site.json"] = dump({
+  const info: SiteInfo = {
     title: cfg.title,
     knowledge: cfg.knowledge,
     reports: cfg.reports,
     human: cfg.human,
-    okf_version: b.rootMeta.okf_version ?? null,
+    okf_version: (b.rootMeta.okf_version as string | undefined) ?? null,
     static: Boolean(opts.export),
-    map: cfg.raw.map ?? {}, // project defaults for the Map tab ([map] in rdstudio.toml)
+    map: (cfg.raw.map as Record<string, unknown> | undefined) ?? {}, // project defaults for the Map tab ([map] in rdstudio.toml)
     issues,
     counts: { concepts: concepts.length, reports: reports.length, skills: skills.skills.length, agents: skills.agents.length },
-  });
+  };
+  payload["site.json"] = dump(info);
 
   const bodies = new Map([...b.concepts].map(([cid, c]) => [`k/${cid}.md`, c.body]));
   const digest = createHash("sha256");

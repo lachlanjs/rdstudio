@@ -3,10 +3,21 @@
   "private": true,
   "type": "module",
   "description": "rdstudio's TypeScript packages (npm workspaces); the Python package is in src/rdstudio.",
-  "workspaces": ["packages/*"],
-  "engines": { "node": ">=24" },
+  "workspaces": [
+    "packages/*",
+    "app"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "check": "npm run check --workspaces --if-present"
+  },
+  "overrides": {
+    "typescript": "$typescript"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

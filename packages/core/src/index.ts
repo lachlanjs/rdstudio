@@ -18,3 +18,4 @@ export { RulesClassifier, editSignificance, matchStep, opcodes } from "./classif
 export type { Classifier, Decision } from "./classify.ts";
 export { ATTRIBUTES, EDIT_OPS, Graph, ProcedureError, RELATIONS, applyEdits, describe, graphOf, isProcedure, lintProcedures, validateEdits } from "./procedures.ts";
 export type { Edge as ProcedureEdge } from "./procedures.ts";
+export type { ChangedFile, Changes, Commit, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, SkillRecord, Skills, Version } from "./site.ts";

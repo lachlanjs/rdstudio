@@ -93,3 +93,19 @@ run = "node packages/cli/scripts/npm-package.ts"
 [tasks.version]
 description = "Print rdstudio's version, or set it everywhere: mise run version 0.2.0"
 run = "node packages/cli/scripts/version.ts"
+
+[tasks."app:dev"]
+description = "The Svelte dashboard with hot reloading; start rdstudio serve in a project first (RDSTUDIO_SERVE, default http://127.0.0.1:8000)"
+run = "npm run dev --workspace @rdstudio/app"
+
+[tasks."app:build"]
+description = "Build the Svelte dashboard into app/build/ (try it: RDSTUDIO_WEB_DIR=app/build rdstudio serve)"
+run = "npm run build --workspace @rdstudio/app"
+
+[tasks."app:check"]
+description = "Type-check the Svelte dashboard (svelte-check)"
+run = "npm run check --workspace @rdstudio/app"
+
+[tasks.generate]
+description = "Regenerate the dashboard's typed API client from rdstudio serve's schemas (OpenAPI, HeyAPI)"
+run = "npm run generate --workspace @rdstudio/app"

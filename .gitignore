@@ -28,3 +28,8 @@ src/rdstudio/_node/
 # Release staging (mise run release:npm, and the release workflow)
 .release/
 npm-dist/
+# The SvelteKit app
+app/.svelte-kit/
+app/build/
+app/static/
+# openapi.json and src/lib/api/ are generated (npm run generate) but committed, so builds need no server.
