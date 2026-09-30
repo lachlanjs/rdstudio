@@ -1,15 +1,24 @@
 # Development tasks: `mise run <task>` (or `mise tasks` to list them). Each is a
 # plain command, so running it by hand works just as well without mise.
-# Toolchains are added here as they arrive: node with the SvelteKit app (T38),
-# rust with the core (T35).
+
+[tools]
+node = "24"  # LTS; the TypeScript packages (npm workspaces)
 
 [tasks.setup]
 description = "Install every dependency group and the benchmark browser"
-run = ["uv sync --all-groups", "uv run --group bench playwright install chromium"]
+run = ["mise install", "uv sync --all-groups", "npm install", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
-description = "Run the Python tests"
-run = "uv run pytest -q"
+description = "Run every test: Python, then the TypeScript packages"
+run = ["uv run pytest -q", "npm test"]
+
+[tasks."core:test"]
+description = "Test the TypeScript core (vitest), including the conformance fixtures"
+run = "npm test --workspace @rdstudio/core"
+
+[tasks."core:check"]
+description = "Type-check the TypeScript packages"
+run = "npm run check"
 
 [tasks.check]
 description = "Lint this repository's own knowledge bundle"
@@ -30,3 +39,73 @@ run = "uv run python bench/compare.py"
 [tasks."bench:synth"]
 description = "Generate a synthetic project: a preset (subject, area, field, ceiling) and a folder"
 run = "uv run python bench/synth.py"
+
+[tasks.fixtures]
+description = "Check the Python core against the conformance fixtures"
+run = "uv run python fixtures/expected.py"
+
+[tasks."fixtures:update"]
+description = "Record the conformance fixtures again (review the diff before committing)"
+run = "uv run python fixtures/expected.py --update"
+
+[tasks."core:agree"]
+description = "Compare the Python and TypeScript cores on real bundle folders"
+run = "uv run python fixtures/agree.py"
+
+[tasks."cli:agree"]
+description = "Compare the Python and Node command lines (fixture bundles and this repository, or the given projects)"
+run = "uv run python fixtures/agree_cli.py"
+
+[tasks."build:agree"]
+description = "Compare what the Python and Node builds and exports write, file by file"
+run = "uv run python fixtures/agree_build.py"
+
+[tasks."writes:agree"]
+description = "Check the Python and Node stores leave notes that read the same"
+run = "uv run python fixtures/agree_writes.py"
+
+[tasks."scaffold:agree"]
+description = "Compare init, global, promote and skills between the Python and Node command lines (in a temporary home)"
+run = "uv run python fixtures/agree_scaffold.py"
+
+[tasks."mcp:agree"]
+description = "Compare the Python and Node MCP servers (tools and 58 calls, papis included) and the refs command"
+run = "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""
+
+[tasks.bundle]
+description = "Bundle the Node command line into the Python package (src/rdstudio/_node/)"
+run = "npm run bundle --workspace rdstudio"
+
+[tasks."release:build"]
+description = "Build the wheel for release: bundle the Node command line, then uv build"
+run = ["node packages/cli/scripts/version.ts", "npm run bundle --workspace rdstudio", "uv build"]
+
+[tasks.agree]
+description = "Every comparison between the Python and Node implementations"
+run = ["uv run python fixtures/agree.py knowledge", "uv run python fixtures/agree_cli.py", "uv run python fixtures/agree_build.py",
+       "uv run python fixtures/agree_writes.py", "uv run python fixtures/agree_scaffold.py",
+       "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""]
+
+[tasks."release:npm"]
+description = "Stage and pack the npm package in .release/npm/ (publishing is manual: knowledge/procedures/publish-npm.md)"
+run = "node packages/cli/scripts/npm-package.ts"
+
+[tasks.version]
+description = "Print rdstudio's version, or set it everywhere: mise run version 0.2.0"
+run = "node packages/cli/scripts/version.ts"
+
+[tasks."app:dev"]
+description = "The Svelte dashboard with hot reloading; start rdstudio serve in a project first (RDSTUDIO_SERVE, default http://127.0.0.1:8000)"
+run = "npm run dev --workspace @rdstudio/app"
+
+[tasks."app:build"]
+description = "Build the Svelte dashboard into app/build/ (try it: RDSTUDIO_WEB_DIR=app/build rdstudio serve)"
+run = "npm run build --workspace @rdstudio/app"
+
+[tasks."app:check"]
+description = "Type-check the Svelte dashboard (svelte-check)"
+run = "npm run check --workspace @rdstudio/app"
+
+[tasks.generate]
+description = "Regenerate the dashboard's typed API client from rdstudio serve's schemas (OpenAPI, HeyAPI)"
+run = "npm run generate --workspace @rdstudio/app"

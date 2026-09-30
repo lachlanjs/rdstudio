@@ -7,24 +7,21 @@ The spec in ``reference/OKF_SPEC.md`` is the ground truth for everything here.
 
 from __future__ import annotations
 
+import functools
 import posixpath
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
 import yaml
+from markdown_it import MarkdownIt
 
 OKF_VERSION = "0.2"
 RESERVED = {"index.md", "log.md"}
 
-_FENCE = re.compile(r"^\s*(```|~~~)")
-_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
-_INLINE_CODE = re.compile(r"`[^`\n]*`")
-_LINK = re.compile(r"(?<!!)\[(?P<text>[^\]]*)\]\((?P<target><[^>]+>|[^)\s]+)(?:\s+(?:\"(?P<title>[^\"]*)\"|'(?P<title2>[^']*)'))?\)")
-_REF_DEF = re.compile(r"^\s{0,3}\[(?!\^)[^\]]+\]:\s*(?P<target>\S+)", re.M)
 _SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 _LOG_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -38,9 +35,37 @@ class FrontmatterError(ValueError):
     pass
 
 
-# LibYAML's parser when PyYAML has it (it usually does): the same results, and
-# about ten times faster than the pure-Python one on a large bundle.
-_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+# Frontmatter is YAML 1.2 (core schema), as in the TypeScript core: `yes`, `on`
+# and `NO` are text, `010` is ten, and dates stay the text they were written as
+# (to_datetime reads them). PyYAML implements YAML 1.1, so its implicit types
+# are replaced; LibYAML's parser is used when available (about ten times faster).
+_YAML12 = {
+    "tag:yaml.org,2002:bool": (r"^(?:true|True|TRUE|false|False|FALSE)$", "tTfF"),
+    "tag:yaml.org,2002:int": (r"^(?:[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+)$", "-+0123456789"),
+    "tag:yaml.org,2002:float": (r"^(?:[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][-+]?[0-9]+)?"
+                                r"|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))$", "-+0123456789."),
+    "tag:yaml.org,2002:null": (r"^(?:~|null|Null|NULL|)$", ["~", "n", "N", ""]),
+}
+_RESOLVERS: dict[Any, list] = {}
+for _tag, (_pattern, _first) in _YAML12.items():
+    for _ch in _first:
+        _RESOLVERS.setdefault(_ch or None, []).append((_tag, re.compile(_pattern)))
+
+
+class _Loader(getattr(yaml, "CSafeLoader", yaml.SafeLoader)):  # type: ignore[misc]
+    yaml_implicit_resolvers = _RESOLVERS
+
+
+def _construct_int(loader: yaml.SafeLoader, node: yaml.ScalarNode) -> int:
+    text = str(loader.construct_scalar(node))
+    if text.startswith("0o"):
+        return int(text[2:], 8)
+    if text.startswith("0x"):
+        return int(text[2:], 16)
+    return int(text, 10)
+
+
+_Loader.add_constructor("tag:yaml.org,2002:int", _construct_int)
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
@@ -54,10 +79,10 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
         return None, text
     for i in range(1, len(lines)):
         if lines[i].rstrip() == "---":
-            raw = "\n".join(lines[1:i])
+            raw = "\n".join(lines[1:i]) + "\n"  # with its last line break, as in the file
             body = "\n".join(lines[i + 1 :])
             try:
-                meta = yaml.load(raw, Loader=_YAML_LOADER) if raw.strip() else {}
+                meta = yaml.load(raw, Loader=_Loader) if raw.strip() else {}
             except yaml.YAMLError as exc:
                 raise FrontmatterError(f"unparseable YAML frontmatter: {exc}") from exc
             if meta is None:
@@ -69,11 +94,13 @@ def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
 
 
 class _Dumper(yaml.SafeDumper):
-    pass
+    # The same YAML 1.2 types as the loader, so text such as `yes` or a date is
+    # written plain, not quoted, and reads back unchanged.
+    yaml_implicit_resolvers = _RESOLVERS
 
 
 def _repr_datetime(dumper: yaml.SafeDumper, value: datetime) -> yaml.Node:
-    return dumper.represent_scalar("tag:yaml.org,2002:timestamp", iso(value))
+    return dumper.represent_scalar("tag:yaml.org,2002:str", iso(value))
 
 
 def _repr_str(dumper: yaml.SafeDumper, value: str) -> yaml.Node:
@@ -115,19 +142,48 @@ def iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# The date and time forms frontmatter may use (the TypeScript core accepts the
+# same): a date, or a date and time with optional seconds, fraction and offset;
+# no offset means UTC.
+_DATETIME = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})"
+    r"(?:[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(?:([Zz])|([+-])(\d{2}):?(\d{2}))?)?$")
+
+
 def to_datetime(value: Any) -> datetime | None:
-    """Coerce a YAML timestamp (datetime, date or string) to an aware datetime."""
+    """Read a frontmatter time (text in the forms above, or a datetime or date)
+    as an aware datetime; None when it is not one."""
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
     if isinstance(value, date):
         return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
-    if isinstance(value, str):
-        try:
-            parsed = datetime.fromisoformat(value.strip())
-        except ValueError:
-            return None
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-    return None
+    if not isinstance(value, str):
+        return None
+    m = _DATETIME.match(value.strip())
+    if not m:
+        return None
+    y, mo, d, hh, mm, ss, frac, _z, sign, oh, om = m.groups()
+    try:
+        tz = timezone.utc
+        if sign:
+            offset = timedelta(hours=int(oh), minutes=int(om))
+            tz = timezone(offset if sign == "+" else -offset)
+        micro = int((frac or "0")[:6].ljust(6, "0"))
+        return datetime(int(y), int(mo), int(d), int(hh or 0), int(mm or 0), int(ss or 0), micro, tzinfo=tz)
+    except ValueError:  # such as month 13
+        return None
+
+
+def text(value: Any) -> str:
+    """A frontmatter value as text, the same in every implementation: booleans
+    as true/false, whole-number floats without ".0", nothing for null."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
 def jsonable(value: Any) -> Any:
@@ -137,7 +193,7 @@ def jsonable(value: Any) -> Any:
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, dict):
-        return {str(k): jsonable(v) for k, v in value.items()}
+        return {text(k): jsonable(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [jsonable(v) for v in value]
     return value
@@ -148,17 +204,19 @@ def jsonable(value: Any) -> Any:
 # --------------------------------------------------------------------------- #
 
 
-def _strip_code(body: str) -> list[str]:
-    """Body lines with fenced blocks blanked and inline code removed."""
-    out: list[str] = []
-    in_fence = False
-    for line in body.split("\n"):
-        if _FENCE.match(line):
-            in_fence = not in_fence
-            out.append("")
-            continue
-        out.append("" if in_fence else _INLINE_CODE.sub("", line))
-    return out
+# Links and headings are read with markdown-it (CommonMark), the parser the
+# dashboard renders with and the TypeScript core uses, so all three agree on
+# what is a link: never one in code, escaped, or in an image.
+_MD = MarkdownIt("commonmark")
+
+
+@functools.lru_cache(maxsize=8192)
+def _parse(body: str) -> tuple[tuple[Any, ...], tuple[tuple[str, str | None], ...]]:
+    """markdown-it's tokens for a body, and its link reference definitions."""
+    env: dict[str, Any] = {}
+    tokens = _MD.parse(body, env)
+    defs = tuple((d.get("href", ""), d.get("title")) for d in env.get("references", {}).values())
+    return tuple(tokens), defs
 
 
 def slugify(text: str) -> str:
@@ -175,12 +233,12 @@ class Heading:
 
 
 def headings(body: str) -> list[Heading]:
+    tokens, _ = _parse(body)
     out: list[Heading] = []
-    for i, line in enumerate(_strip_code(body)):
-        m = _HEADING.match(line)
-        if m:
-            text = m.group(2).strip()
-            out.append(Heading(len(m.group(1)), text, slugify(text), i))
+    for i, t in enumerate(tokens):
+        if t.type == "heading_open":
+            label = tokens[i + 1].content.strip()
+            out.append(Heading(int(t.tag[1]), label, slugify(label), t.map[0]))
     return out
 
 
@@ -219,10 +277,14 @@ def rating(title: str | None) -> str | None:
 
 
 def link_refs(body: str) -> list[tuple[str, str | None]]:
-    """Link targets with their ratings, in order of appearance."""
-    text = "\n".join(_strip_code(body))
-    refs = [(m.group("target").strip("<>"), rating(m.group("title") or m.group("title2"))) for m in _LINK.finditer(text)]
-    refs += [(m.group("target").strip("<>"), None) for m in _REF_DEF.finditer(text)]
+    """Link targets with their ratings: every link in order of appearance, then
+    each reference definition no link used."""
+    tokens, defs = _parse(body)
+    refs = [(c.attrGet("href") or "", rating(c.attrGet("title")))
+            for t in tokens if t.type == "inline" and t.children
+            for c in t.children if c.type == "link_open"]
+    used = {href for href, _ in refs}
+    refs += [(href, rating(title)) for href, title in defs if href not in used]
     return refs
 
 
@@ -256,30 +318,30 @@ class Concept:
     @property
     def type(self) -> str:
         t = self.meta.get("type")
-        return str(t) if t not in (None, "") else ""
+        return text(t) if t not in (None, "") else ""
 
     @property
     def title(self) -> str:
         t = self.meta.get("title")
         if t:
-            return str(t)
+            return text(t)
         stem = posixpath.basename(self.id)
         return stem.replace("-", " ").replace("_", " ").strip().capitalize() or stem
 
     @property
     def description(self) -> str:
-        return str(self.meta.get("description") or "")
+        return text(self.meta.get("description") or "")
 
     @property
     def tags(self) -> list[str]:
         tags = self.meta.get("tags") or []
         if isinstance(tags, str):
             tags = [tags]
-        return [str(t) for t in tags]
+        return [text(t) for t in tags if t is not None]
 
     @property
     def status(self) -> str:
-        return str(self.meta.get("status") or "stable")
+        return text(self.meta.get("status") or "stable")
 
     @property
     def generated(self) -> dict[str, Any]:
@@ -305,7 +367,7 @@ class Concept:
         events = self.verified
         if not events:
             return "unverified"
-        if any(str(e.get("by", "")).startswith("human:") for e in events):
+        if any(text(e.get("by")).startswith("human:") for e in events):
             return "human-reviewed"
         return "machine-confirmed"
 
@@ -314,7 +376,7 @@ class Concept:
         times = [
             to_datetime(e.get("at"))
             for e in self.verified
-            if str(e.get("by", "")).startswith("human:")
+            if text(e.get("by")).startswith("human:")
         ]
         times = [t for t in times if t is not None]
         return max(times) if times else None
@@ -365,6 +427,9 @@ class Issue:
     path: str
     level: str  # "error" | "warning"
     message: str
+    # A stable name for the kind of issue, which other implementations match
+    # (fixtures/); the message is for people and may differ.
+    code: str = ""
 
 
 class Bundle:
@@ -424,10 +489,10 @@ class Bundle:
             concept.links = links
             for link in concept.links:
                 if link.broken:
-                    self.issues.append(Issue(concept.path, "warning", f"broken link to {link.target}"))
+                    self.issues.append(Issue(concept.path, "warning", f"broken link to {link.target}", "broken-link"))
         for group in self.requires_cycles():
             first = self.concepts[group[0]]
-            self.issues.append(Issue(first.path, "warning", "requires cycle: " + ", ".join(group) + " require each other"))
+            self.issues.append(Issue(first.path, "warning", "requires cycle: " + ", ".join(group) + " require each other", "requires-cycle"))
 
     def _ensure_dir(self, directory: str) -> None:
         if directory in self.directories:
@@ -443,19 +508,19 @@ class Bundle:
         try:
             meta, body = split_frontmatter(text)
         except FrontmatterError as exc:
-            self.issues.append(Issue(rel, "error", str(exc)))
+            self.issues.append(Issue(rel, "error", str(exc), "frontmatter-invalid"))
             meta, body = {}, text
         concept = Concept(cid, rel, meta or {}, body, path.stat().st_mtime)
         if meta is None:
-            self.issues.append(Issue(rel, "error", "missing YAML frontmatter"))
+            self.issues.append(Issue(rel, "error", "missing YAML frontmatter", "frontmatter-missing"))
         elif not concept.type:
-            self.issues.append(Issue(rel, "error", "frontmatter has no non-empty 'type'"))
+            self.issues.append(Issue(rel, "error", "frontmatter has no non-empty 'type'", "type-missing"))
         for key in ("generated",):
             if key in concept.meta and "by" not in concept.generated:
-                self.issues.append(Issue(rel, "warning", "'generated' should record 'by'"))
+                self.issues.append(Issue(rel, "warning", "'generated' should record 'by'", "generated-without-by"))
         for event in concept.verified:
             if "by" not in event:
-                self.issues.append(Issue(rel, "warning", "'verified' entry without 'by'"))
+                self.issues.append(Issue(rel, "warning", "'verified' entry without 'by'", "verified-without-by"))
         self.concepts[cid] = concept
         self.directories[posixpath.dirname(rel)].concepts.append(cid)
 
@@ -463,21 +528,21 @@ class Bundle:
         try:
             meta, _ = split_frontmatter(path.read_text(encoding="utf-8"))
         except FrontmatterError as exc:
-            self.issues.append(Issue(rel, "error", str(exc)))
+            self.issues.append(Issue(rel, "error", str(exc), "frontmatter-invalid"))
             return
         if meta is None:
             return
         if directory != "":
-            self.issues.append(Issue(rel, "error", "index.md below the root must not have frontmatter"))
+            self.issues.append(Issue(rel, "error", "index.md below the root must not have frontmatter", "index-frontmatter"))
         elif set(meta) - {"okf_version"}:
-            self.issues.append(Issue(rel, "error", "root index.md frontmatter may only carry okf_version"))
+            self.issues.append(Issue(rel, "error", "root index.md frontmatter may only carry okf_version", "root-index-frontmatter"))
         else:
             self.root_meta = meta
 
     def _check_log(self, path: Path, rel: str) -> None:
         for line in path.read_text(encoding="utf-8").split("\n"):
             if line.startswith("## ") and not _LOG_DATE.match(line[3:].strip()):
-                self.issues.append(Issue(rel, "warning", f"log heading is not YYYY-MM-DD: {line.strip()}"))
+                self.issues.append(Issue(rel, "warning", f"log heading is not YYYY-MM-DD: {line.strip()}", "log-heading-date"))
 
     def _resolve(self, concept: Concept, target: str) -> Link | None:
         if not target or target.startswith("#") or _SCHEME.match(target):
@@ -639,7 +704,7 @@ class Bundle:
     def lint(self) -> list[Issue]:
         from .procedures import lint as lint_procedures  # procedures builds on this module
 
-        return list(self.issues) + [Issue(path, "error", msg) for path, msg in lint_procedures(self)]
+        return list(self.issues) + [Issue(path, "error", msg, "procedure") for path, msg in lint_procedures(self)]
 
     def resolve_id(self, ref: str) -> str | None:
         """Accept an id, a bundle path, or a bundle-absolute link."""

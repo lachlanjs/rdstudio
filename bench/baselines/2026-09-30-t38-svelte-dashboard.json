@@ -1,0 +1,312 @@
+{
+ "meta": {
+  "at": "2026-09-30T05:22:32+00:00",
+  "label": "Svelte dashboard",
+  "commit": "190c314",
+  "dirty": false,
+  "machine": {
+   "cpu": "Intel(R) Core(TM) Ultra 7 265K",
+   "cores": 20,
+   "os": "Linux-7.1.4-arch1-1-x86_64-with-glibc2.43"
+  },
+  "chromium": "153.0.8010.12",
+  "service_worker": true,
+  "dashboard": "app/build"
+ },
+ "runs": [
+  {
+   "bundle": "dg",
+   "theme": "studio",
+   "profile": "desktop",
+   "build": {
+    "notes": 63,
+    "links": 279,
+    "load_ms": 24.7,
+    "build_ms": 33.3
+   },
+   "load": {
+    "first_map_ms": 131.9,
+    "settled_ms": 181.4,
+    "data_ms": 11.7,
+    "model_ms": 8.2,
+    "place_ms": 1.4,
+    "layout_ms": 105.2,
+    "routes_ms": 7.1,
+    "render_ms": 11.6,
+    "dom_ready": 20.7,
+    "requests": 40,
+    "transfer_kb": 115.1,
+    "svg_nodes": 93,
+    "heap_mb": 9.5
+   },
+   "interact": {
+    "fps": 58.8,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 16.7,
+    "frame_max_ms": 33.4,
+    "janky_pct": 0.0,
+    "renders": 34,
+    "render_p50_ms": 1.5,
+    "render_p95_ms": 6.3,
+    "reroutes": 5,
+    "routes_total_ms": 21.1,
+    "long_tasks": 0,
+    "long_task_ms": 0
+   },
+   "reload": {
+    "first_map_ms": 56.9,
+    "settled_ms": 56.9,
+    "data_ms": 10,
+    "layout_ms": null,
+    "routes_ms": 3.5,
+    "render_ms": 5.5,
+    "transfer_kb": 5.4
+   }
+  },
+  {
+   "bundle": "dg",
+   "theme": "studio",
+   "profile": "phone",
+   "build": {
+    "notes": 63,
+    "links": 279,
+    "load_ms": 24.7,
+    "build_ms": 33.3
+   },
+   "load": {
+    "first_map_ms": 253.5,
+    "settled_ms": 302.4,
+    "data_ms": 15.9,
+    "model_ms": 16.5,
+    "place_ms": 4.3,
+    "layout_ms": 121.1,
+    "routes_ms": 6.8,
+    "render_ms": 17,
+    "dom_ready": 37.3,
+    "requests": 40,
+    "transfer_kb": 64.2,
+    "svg_nodes": 90,
+    "heap_mb": 9.5
+   },
+   "interact": {
+    "fps": 59.5,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 16.8,
+    "frame_max_ms": 50.1,
+    "janky_pct": 0.4,
+    "renders": 7,
+    "render_p50_ms": 3.8,
+    "render_p95_ms": 18.5,
+    "reroutes": 2,
+    "routes_total_ms": 22.7,
+    "long_tasks": 1,
+    "long_task_ms": 71
+   },
+   "reload": {
+    "first_map_ms": 132.3,
+    "settled_ms": 132.3,
+    "data_ms": 16.5,
+    "layout_ms": null,
+    "routes_ms": 12.4,
+    "render_ms": 19,
+    "transfer_kb": 5.4
+   }
+  },
+  {
+   "bundle": "dg",
+   "theme": "studio",
+   "profile": "tunnel",
+   "build": {
+    "notes": 63,
+    "links": 279,
+    "load_ms": 24.7,
+    "build_ms": 33.3
+   },
+   "load": {
+    "first_map_ms": 1066.0,
+    "settled_ms": 1113.8,
+    "data_ms": 189.5,
+    "model_ms": 7.2,
+    "place_ms": 1,
+    "layout_ms": 83,
+    "routes_ms": 5.4,
+    "render_ms": 8.9,
+    "dom_ready": 513.4,
+    "requests": 40,
+    "transfer_kb": 115.1,
+    "svg_nodes": 93,
+    "heap_mb": 9.5
+   },
+   "interact": {
+    "fps": 58.8,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 16.8,
+    "frame_max_ms": 33.4,
+    "janky_pct": 0.0,
+    "renders": 34,
+    "render_p50_ms": 1.2,
+    "render_p95_ms": 4.8,
+    "reroutes": 5,
+    "routes_total_ms": 16.9,
+    "long_tasks": 0,
+    "long_task_ms": 0
+   },
+   "reload": {
+    "first_map_ms": 209.2,
+    "settled_ms": 209.2,
+    "data_ms": 9.9,
+    "layout_ms": null,
+    "routes_ms": 3.7,
+    "render_ms": 6.1,
+    "transfer_kb": 5.4
+   }
+  },
+  {
+   "bundle": "field",
+   "theme": "studio",
+   "profile": "desktop",
+   "build": {
+    "notes": 1186,
+    "links": 3870,
+    "load_ms": 290.4,
+    "build_ms": 199.3
+   },
+   "load": {
+    "first_map_ms": 176.5,
+    "settled_ms": 469,
+    "data_ms": 38.4,
+    "model_ms": 26.3,
+    "place_ms": 6,
+    "layout_ms": 338.5,
+    "routes_ms": 4.4,
+    "render_ms": 7.7,
+    "dom_ready": 16.1,
+    "requests": 40,
+    "transfer_kb": 115.1,
+    "svg_nodes": 116,
+    "heap_mb": 10.7
+   },
+   "interact": {
+    "fps": 54.4,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 33.3,
+    "frame_max_ms": 66.8,
+    "janky_pct": 2.0,
+    "renders": 34,
+    "render_p50_ms": 5.6,
+    "render_p95_ms": 15.6,
+    "reroutes": 4,
+    "routes_total_ms": 98.1,
+    "long_tasks": 3,
+    "long_task_ms": 212
+   },
+   "reload": {
+    "first_map_ms": 104.6,
+    "settled_ms": 104.6,
+    "data_ms": 15.4,
+    "layout_ms": null,
+    "routes_ms": 2.9,
+    "render_ms": 5.7,
+    "transfer_kb": 5.4
+   }
+  },
+  {
+   "bundle": "field",
+   "theme": "studio",
+   "profile": "phone",
+   "build": {
+    "notes": 1186,
+    "links": 3870,
+    "load_ms": 290.4,
+    "build_ms": 199.3
+   },
+   "load": {
+    "first_map_ms": 373.2,
+    "settled_ms": 683.6,
+    "data_ms": 51.4,
+    "model_ms": 71.4,
+    "place_ms": 16.3,
+    "layout_ms": 386.4,
+    "routes_ms": 13.6,
+    "render_ms": 24.2,
+    "dom_ready": 40.9,
+    "requests": 40,
+    "transfer_kb": 64.2,
+    "svg_nodes": 116,
+    "heap_mb": 13.6
+   },
+   "interact": {
+    "fps": 58.2,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 16.8,
+    "frame_max_ms": 66.7,
+    "janky_pct": 0.4,
+    "renders": 8,
+    "render_p50_ms": 7.5,
+    "render_p95_ms": 65.6,
+    "reroutes": 2,
+    "routes_total_ms": 81.3,
+    "long_tasks": 3,
+    "long_task_ms": 201
+   },
+   "reload": {
+    "first_map_ms": 225.9,
+    "settled_ms": 226,
+    "data_ms": 34.7,
+    "layout_ms": null,
+    "routes_ms": 9.6,
+    "render_ms": 14.6,
+    "transfer_kb": 5.4
+   }
+  },
+  {
+   "bundle": "field",
+   "theme": "studio",
+   "profile": "tunnel",
+   "build": {
+    "notes": 1186,
+    "links": 3870,
+    "load_ms": 290.4,
+    "build_ms": 199.3
+   },
+   "load": {
+    "first_map_ms": 1110.6,
+    "settled_ms": 1420.2,
+    "data_ms": 200.4,
+    "model_ms": 29.9,
+    "place_ms": 6.4,
+    "layout_ms": 351.1,
+    "routes_ms": 4.3,
+    "render_ms": 7.7,
+    "dom_ready": 511.6,
+    "requests": 40,
+    "transfer_kb": 115.1,
+    "svg_nodes": 116,
+    "heap_mb": 15.4
+   },
+   "interact": {
+    "fps": 53.8,
+    "frame_p50_ms": 16.7,
+    "frame_p95_ms": 16.8,
+    "frame_max_ms": 83.3,
+    "janky_pct": 3.0,
+    "renders": 34,
+    "render_p50_ms": 5.4,
+    "render_p95_ms": 17.5,
+    "reroutes": 4,
+    "routes_total_ms": 120.2,
+    "long_tasks": 4,
+    "long_task_ms": 271
+   },
+   "reload": {
+    "first_map_ms": 253.5,
+    "settled_ms": 253.5,
+    "data_ms": 20.3,
+    "layout_ms": null,
+    "routes_ms": 2.3,
+    "render_ms": 4.4,
+    "transfer_kb": 5.4
+   }
+  }
+ ]
+}

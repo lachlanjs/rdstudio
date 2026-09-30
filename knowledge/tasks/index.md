@@ -38,11 +38,11 @@
 * [T32 — Offline app shell](T32-offline-shell.md) - A service worker that caches the app and data, so reloads are instant and reading works offline.
 * [T33 — Map layout and routing in a Web Worker](T33-map-worker.md) - Move layout and routing off the main thread and cache the results by bundle and settings.
 * [T34 — Conformance fixtures](T34-conformance-fixtures.md) - Test bundles with the Python core's output recorded as expected JSON, which every implementation must match.
-* [T35 — Rust core: OKF parsing and lint](T35-rust-okf.md) - Frontmatter, links and ratings through a CommonMark parser, headings, trust and staleness, lint and index generation, matching the fixtures.
-* [T36 — Rust core: graph, search and learner record](T36-rust-graph-search-record.md) - Requires graph, reading order, implied links, PageRank, BM25 search and record merging in the Rust core.
-* [T37 — Core bindings: WASM and Python](T37-core-bindings.md) - Ship the core to the browser as WASM with TypeScript types and to the Python package through PyO3.
-* [T38 — Svelte UI with a build step](T38-typescript-ui.md) - Rewrite the dashboard in Svelte 5 and TypeScript as a SvelteKit single-page app, built at release time, still vendored and offline.
+* [T35 — TypeScript core: OKF parsing and lint](T35-core-okf.md) - packages/core: frontmatter as YAML 1.2, links and headings through markdown-it, trust and staleness, lint and index generation, matching the fixtures.
+* [T36 — TypeScript core: graph, search and learner record](T36-core-graph-search-record.md) - Requires graph, reading order, implied links, PageRank, BM25 search and record merging in the TypeScript core, matching the fixtures.
+* [T37 — Node command line, MCP server and rdstudio serve](T37-node-cli-mcp-serve.md) - The rdstudio command, MCP server and server rebuilt in Node on the TypeScript core, with OpenAPI and a HeyAPI client for the HTTP parts; the Python package retired part by part.
+* [T38 — Svelte UI with a build step](T38-svelte-ui.md) - Rewrite the dashboard in Svelte 5 and TypeScript as a SvelteKit single-page app, built at release time, still vendored and offline.
 * [T39 — GPU map renderer](T39-gpu-map.md) - A renderer interface, then a Canvas 2D or WebGL renderer with theme parity, hit-testing, accessibility and level of detail.
-* [T40 — Tauri desktop app](T40-tauri-desktop.md) - A desktop app with the UI bundled and the core linked natively, released through CI with signed updates.
+* [T40 — Tauri desktop app](T40-tauri-desktop.md) - A desktop app with the UI and core bundled in the webview, released through CI with signed updates.
 * [T41 — Local-first sync](T41-local-first-sync.md) - Delta updates, derivation on the device, git and home-server sync, and learner record merging.
 * [T42 — Mobile apps](T42-mobile-apps.md) - Android then iOS builds of the Tauri app, edits with merging, and several projects per device.

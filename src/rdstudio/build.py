@@ -146,7 +146,7 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
         changes["commits"] = [c for c in changes["commits"] if not c.get("pending")]
     report_items = reports.scan(cfg.reports_dir, cfg.knowledge, cfg.reports)
     skills = _skill_files(cfg.root, user=not export)
-    issues = [{"path": i.path, "level": i.level, "message": i.message} for i in bundle.lint()]
+    issues = [{"path": i.path, "level": i.level, "code": i.code, "message": i.message} for i in bundle.lint()]
 
     payload = {
         "concepts.json": _dump(concepts),

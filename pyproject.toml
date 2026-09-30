@@ -1,17 +1,20 @@
 [project]
 name = "rdstudio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agentic research and development studio: OKF knowledge bundles, a read-only dashboard, MCP and skills."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Lachlan Stewart" }]
 dependencies = [
+    "markdown-it-py>=4.2.0",
     "mcp>=2.2.0",
+    "nodejs-wheel-binaries>=24.19",
     "pyyaml>=6.0.3",
 ]
 
 [project.scripts]
-rdstudio = "rdstudio.cli:main"
+rdstudio = "rdstudio.launcher:main"      # the Node command line (see launcher.py)
+rdstudio-py = "rdstudio.cli:main"        # the Python one, while it lasts
 
 [build-system]
 requires = ["hatchling"]
@@ -19,6 +22,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rdstudio"]
+# The bundled Node program is built at release (npm run bundle) and not committed.
+artifacts = ["src/rdstudio/_node/*.mjs"]
+
+[tool.hatch.build.targets.sdist]
+# Only the Python package (the TypeScript sources are on GitHub and npm), and
+# the bundle, since uv builds the wheel from this archive.
+only-include = ["src/rdstudio", "README.md", "LICENSE"]
+artifacts = ["src/rdstudio/_node/*.mjs"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

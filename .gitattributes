@@ -1,0 +1,2 @@
+# Conformance fixtures are compared byte for byte (one uses CRLF line endings).
+fixtures/bundles/** -text

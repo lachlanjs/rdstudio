@@ -18,3 +18,18 @@ reference/papers/
 
 # Benchmark bundles and results (bench/run.py)
 .bench/
+
+# TypeScript packages
+node_modules/
+
+# The bundled Node command line, built at release (npm run bundle --workspace rdstudio)
+src/rdstudio/_node/
+
+# Release staging (mise run release:npm, and the release workflow)
+.release/
+npm-dist/
+# The SvelteKit app
+app/.svelte-kit/
+app/build/
+app/static/
+# openapi.json and src/lib/api/ are generated (npm run generate) but committed, so builds need no server.

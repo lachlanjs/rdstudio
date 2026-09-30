@@ -1,0 +1,451 @@
+{
+ "concepts": {
+  "headings": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "5e492f06be4c",
+   "headings": [
+    [
+     3,
+     "Indented three spaces",
+     "indented-three-spaces",
+     2
+    ],
+    [
+     1,
+     "Setext heading",
+     "setext-heading",
+     4
+    ],
+    [
+     1,
+     "Closing hashes",
+     "closing-hashes",
+     7
+    ]
+   ],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Heading syntax",
+    "type": "Concept"
+   },
+   "order": 0,
+   "path": "headings.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Heading syntax",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "links": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "Cases where a Markdown parser and simple patterns may disagree.",
+   "directory": "",
+   "generated_at": null,
+   "hash": "fc11d07a79e7",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [
+    [
+     "target-a",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "target(b)",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "target-d",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "target-e",
+     "concept",
+     false,
+     null
+    ],
+    [
+     "target-e",
+     "concept",
+     false,
+     null
+    ]
+   ],
+   "meta": {
+    "description": "Cases where a Markdown parser and simple patterns may disagree.",
+    "title": "Link syntax",
+    "type": "Concept"
+   },
+   "order": 1,
+   "path": "links.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Link syntax",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target(b)": {
+   "backlinks": [
+    "links"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target with parentheses",
+    "type": "Concept"
+   },
+   "order": 12,
+   "path": "target(b).md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target with parentheses",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-a": {
+   "backlinks": [
+    "links"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target a",
+    "type": "Concept"
+   },
+   "order": 2,
+   "path": "target-a.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target a",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-b": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target b",
+    "type": "Concept"
+   },
+   "order": 3,
+   "path": "target-b.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target b",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-c": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target c",
+    "type": "Concept"
+   },
+   "order": 4,
+   "path": "target-c.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target c",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-d": {
+   "backlinks": [
+    "links"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target d",
+    "type": "Concept"
+   },
+   "order": 5,
+   "path": "target-d.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target d",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-e": {
+   "backlinks": [
+    "links"
+   ],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target e",
+    "type": "Concept"
+   },
+   "order": 6,
+   "path": "target-e.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target e",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-f": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target f",
+    "type": "Concept"
+   },
+   "order": 7,
+   "path": "target-f.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target f",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-g": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target g",
+    "type": "Concept"
+   },
+   "order": 8,
+   "path": "target-g.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target g",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-h": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target h",
+    "type": "Concept"
+   },
+   "order": 9,
+   "path": "target-h.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target h",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-i": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target i",
+    "type": "Concept"
+   },
+   "order": 10,
+   "path": "target-i.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target i",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  },
+  "target-j": {
+   "backlinks": [],
+   "content_stale": false,
+   "depth": 0,
+   "description": "",
+   "directory": "",
+   "generated_at": null,
+   "hash": "e3b0c44298fc",
+   "headings": [],
+   "last_human_verification": null,
+   "links": [],
+   "meta": {
+    "title": "Target j",
+    "type": "Concept"
+   },
+   "order": 11,
+   "path": "target-j.md",
+   "prerequisites": [],
+   "requires": [],
+   "status": "stable",
+   "tags": [],
+   "title": "Target j",
+   "trust": "unverified",
+   "type": "Concept",
+   "verification_stale": false
+  }
+ },
+ "directories": {
+  "": {
+   "children": [],
+   "concepts": [
+    "headings",
+    "links",
+    "target(b)",
+    "target-a",
+    "target-b",
+    "target-c",
+    "target-d",
+    "target-e",
+    "target-f",
+    "target-g",
+    "target-h",
+    "target-i",
+    "target-j"
+   ],
+   "has_index": false,
+   "has_log": false
+  }
+ },
+ "format": 1,
+ "indexes": {
+  "": "---\nokf_version: \"0.2\"\n---\n\n# Concept\n\n* [Heading syntax](headings.md)\n* [Link syntax](links.md) - Cases where a Markdown parser and simple patterns may disagree.\n* [Target a](target-a.md)\n* [Target b](target-b.md)\n* [Target c](target-c.md)\n* [Target d](target-d.md)\n* [Target e](target-e.md)\n* [Target f](target-f.md)\n* [Target g](target-g.md)\n* [Target h](target-h.md)\n* [Target i](target-i.md)\n* [Target j](target-j.md)\n* [Target with parentheses](target(b).md)\n"
+ },
+ "issues": [],
+ "requires_cycles": [],
+ "root_meta": {},
+ "search": {
+  "heading syntax": [
+   [
+    "headings",
+    6.69,
+    "#Not a heading (no space)"
+   ],
+   [
+    "links",
+    1.615,
+    "Cases where a Markdown parser and simple patterns may disagree."
+   ]
+  ],
+  "link": [
+   [
+    "links",
+    2.834,
+    "- Escaped bracket: \\[not a link](/target-c.md)"
+   ]
+  ]
+ }
+}

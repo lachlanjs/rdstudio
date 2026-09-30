@@ -1,0 +1,38 @@
+{
+  "name": "@rdstudio/app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The rdstudio dashboard: a SvelteKit single-page app over the files rdstudio build writes.",
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/assets.ts",
+    "dev": "node scripts/assets.ts && vite dev",
+    "build": "node scripts/assets.ts && vite build",
+    "preview": "vite preview",
+    "generate": "node scripts/openapi.ts && openapi-ts",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@rdstudio/core": "*",
+    "d3": "^7.9.0",
+    "dompurify": "^3.4.16",
+    "highlight.js": "^11.12.0",
+    "katex": "^0.18.9",
+    "markdown-it": "^14.3.2",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-texmath": "^1.0.0",
+    "mermaid": "^12.0.0"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/d3": "^7.4.3",
+    "@types/markdown-it": "^14.2.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.1"
+  }
+}

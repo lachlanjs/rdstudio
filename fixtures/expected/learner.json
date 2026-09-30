@@ -1,0 +1,105 @@
+{
+ "format": 1,
+ "merged": [
+  {
+   "concept": "d",
+   "event": "no time",
+   "id": "00000000007SQ31SMJBB52MYH4"
+  },
+  {
+   "at": "2026-09-28T02:00:00Z",
+   "concept": "e",
+   "device": "phone9",
+   "event": "seen",
+   "id": "01K6A1Z9Y8X7W6V5T4S3R2Q1P0"
+  },
+  {
+   "at": "2026-09-28T03:00:00Z",
+   "concept": "c",
+   "device": "laptop1",
+   "event": "seen",
+   "id": "01K6A2B3C4D5E6F7G8H9J0KMNP"
+  },
+  {
+   "at": "2026-09-28T02:30:00.250+10:00",
+   "concept": "b",
+   "event": "attempt",
+   "grade": 2,
+   "id": "01M3HV7D1THE17Q7QP33HSS71N",
+   "kind": "interactive"
+  },
+  {
+   "at": "2026-09-28T01:00:00Z",
+   "concept": "a",
+   "event": "seen",
+   "hash": "abc",
+   "id": "01M3JRD7M0WW2K9TV32E04PQB3"
+  },
+  {
+   "at": "2026-09-28T04:00:00Z",
+   "event": "unicode",
+   "id": "01M3K2PTG0QJSWYHPMFGBYQGVD",
+   "note": "géométrie ℝⁿ"
+  }
+ ],
+ "read": {
+  "laptop.jsonl": [
+   {
+    "at": "2026-09-28T01:00:00Z",
+    "concept": "a",
+    "event": "seen",
+    "hash": "abc",
+    "id": "01M3JRD7M0WW2K9TV32E04PQB3"
+   },
+   {
+    "at": "2026-09-28T02:30:00.250+10:00",
+    "concept": "b",
+    "event": "attempt",
+    "grade": 2,
+    "id": "01M3HV7D1THE17Q7QP33HSS71N",
+    "kind": "interactive"
+   },
+   {
+    "at": "2026-09-28T03:00:00Z",
+    "concept": "c",
+    "device": "laptop1",
+    "event": "seen",
+    "id": "01K6A2B3C4D5E6F7G8H9J0KMNP"
+   },
+   {
+    "concept": "d",
+    "event": "no time",
+    "id": "00000000007SQ31SMJBB52MYH4"
+   },
+   {
+    "at": "2026-09-28T04:00:00Z",
+    "event": "unicode",
+    "id": "01M3K2PTG0QJSWYHPMFGBYQGVD",
+    "note": "géométrie ℝⁿ"
+   }
+  ],
+  "phone.jsonl": [
+   {
+    "at": "2026-09-28T03:00:00Z",
+    "concept": "c",
+    "device": "laptop1",
+    "event": "seen",
+    "id": "01K6A2B3C4D5E6F7G8H9J0KMNP"
+   },
+   {
+    "at": "2026-09-28T02:00:00Z",
+    "concept": "e",
+    "device": "phone9",
+    "event": "seen",
+    "id": "01K6A1Z9Y8X7W6V5T4S3R2Q1P0"
+   },
+   {
+    "at": "2026-09-28T01:00:00Z",
+    "concept": "a",
+    "event": "seen",
+    "hash": "abc",
+    "id": "01M3JRD7M0WW2K9TV32E04PQB3"
+   }
+  ]
+ }
+}

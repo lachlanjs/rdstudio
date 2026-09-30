@@ -19,12 +19,18 @@ for rdstudio's own knowledge base, rebuilt on every push to `main`.
 ## Install
 
 ```bash
-uv tool install git+https://github.com/lachlanjs/rdstudio@v0.1.0
+uv tool install rdstudio       # from PyPI; `uv tool upgrade rdstudio` later
 ```
 
-To upgrade later, run the same command with a newer tag, followed by
-`--force`. To work on rdstudio itself, clone the repository and run
-`uv tool install --editable .` inside it.
+or, with Node 24 or later, `npm install -g rdstudio` (or run it without
+installing: `npx rdstudio init`). Either way you get the same program: its
+command line runs on Node, which the Python package brings along as a
+dependency, so there is nothing else to install. `rdstudio-py` runs the older
+Python command line, which does the same things, while it lasts.
+
+To work on rdstudio itself, clone the repository, run `mise run setup`, then
+`uv tool install --editable . --force` inside it. Releases are made by pushing
+a version tag (see `knowledge/procedures/release.md`).
 
 ## Use it in a project
 
@@ -152,8 +158,10 @@ Tasks live in `mise.toml`; run them with `mise run <task>` (`mise tasks` lists
 them), or run the command each one names.
 
 ```sh
-mise run setup      # uv sync --all-groups, and Chromium for the benchmarks
-mise run test       # the Python tests
+mise run setup      # Node 24 (mise), Python and npm dependencies, Chromium for the benchmarks
+mise run test       # the Python tests, then the TypeScript packages
+mise run core:test  # the TypeScript core against the conformance fixtures
+mise run core:agree ~/notes/knowledge   # do the Python and TypeScript cores agree on a bundle?
 mise run bench      # load and map benchmarks, written to .bench/results/
 mise run bench:compare .bench/results/a.json .bench/results/b.json
 mise run bench:synth field /tmp/field   # a synthetic project of about 1,300 notes
@@ -165,6 +173,14 @@ to a whole field, then time the first map and a fixed pan and zoom in headless
 Chromium, as a desktop and as a phone. Compare any change that could affect
 speed against a baseline. The platform plan is in
 `knowledge/design/platform.md`.
+
+The TypeScript core (`packages/core`) and command line (`packages/cli`) are
+replacing the Python ones; `fixtures/` holds the contract both keep (see
+`fixtures/README.md`), and `mise run agree` runs every comparison between the
+two: the core on real bundles, every command's output, every file `build`,
+`export` and `init` write, the notes after the same writes, and the MCP
+server's tools and replies. In a checkout, `rdstudio` runs the TypeScript
+sources directly; `mise run bundle` builds the single file a release ships.
 
 ## Licence
 

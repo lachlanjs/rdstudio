@@ -23,6 +23,16 @@ territory.
 - **Bring your own AI, always:** any harness or model the user pays for or
   hosts themselves.
 
+# Ways to deliver it
+
+| Route | Status | For | Notes |
+|---|---|---|---|
+| `uv tool install rdstudio` | current; kept after the move to Node (see [platform](/design/platform.md), Installing) | Python users, and anyone with uv | Node arrives as a dependency (`nodejs-wheel-binaries`); nothing else to install. |
+| `npx rdstudio` (npm) | published: 0.1.0 on 2026-09-30 ([procedure](/procedures/publish-npm.md)) | JavaScript developers, who already have Node | Publish `packages/cli` (with the core and the built dashboard) to npm; `npx rdstudio serve` runs without installing, `npm i -g rdstudio` keeps it. `mise run release:npm` stages and packs it; the name was free on 2026-09-29. |
+| Static export | current | reading without a server (GitHub Pages) | `rdstudio export`. |
+| Desktop and mobile apps | planned (T40, T42) | people who are not developers | Tauri; GitHub Releases, app stores. |
+| Hosted service | an option (see funding) | people who want nothing to install | |
+
 # Options for funding (not yet decided)
 
 | Option | For | Against |
@@ -53,5 +63,5 @@ domain, and trademarks in software.
 The developer's view: in the AI age, marketing decides which tool wins, and
 it is still very human. Assets this project has: the map is visual and demos
 well; the [autoethnography](/ideas/learning/autoethnography.md) is evidence and
-a story at once; learning in public (a devlog of learning Rust with the tool)
+a story at once; learning in public (a devlog of learning TypeScript with the tool)
 markets the tool while testing it.

@@ -26,7 +26,7 @@ from typing import Any
 import yaml
 
 from .config import Config
-from .okf import now, render_concept
+from .okf import _Loader as YAML_LOADER, now, render_concept
 from .search import tokenize
 
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
@@ -123,7 +123,7 @@ def load(cfg: Config) -> dict[str, Entry]:
     entries: dict[str, Entry] = {}
     for info_path in sorted(root.glob("*/info.yaml")):
         try:
-            info = yaml.safe_load(info_path.read_text(encoding="utf-8")) or {}
+            info = yaml.load(info_path.read_text(encoding="utf-8"), Loader=YAML_LOADER) or {}  # YAML 1.2, as for notes
         except yaml.YAMLError:
             continue
         ref = str(info.get("ref") or info_path.parent.name)

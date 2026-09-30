@@ -1,0 +1,100 @@
+# Release: push a tag v<version> (matching the version in pyproject.toml,
+# packages/cli/package.json, packages/cli/src/main.ts and src/rdstudio/__init__.py;
+# mise run version sets them) to test, build and
+# publish rdstudio to npm and PyPI, then make a GitHub Release with the files.
+#
+# Publishing uses trusted publishing: npm and PyPI trust this workflow in this
+# repository (set up once on each site), so no password or token is stored.
+# The publish jobs run in the `release` environment, which can require your
+# approval before anything goes out. See knowledge/procedures/release.md.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the tests build dashboards with git history
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: astral-sh/setup-uv@v10
+      - run: npm ci
+      - name: The tag matches the version
+        run: node packages/cli/scripts/version.ts --tag "$GITHUB_REF_NAME"
+      - name: Test
+        run: |
+          uv run pytest -q
+          npm test
+          npm run check
+      - name: Build the npm package
+        run: |
+          node packages/cli/scripts/npm-package.ts
+          mkdir npm-dist && cp .release/npm/rdstudio-*.tgz npm-dist/ # not in dist/, which goes to PyPI
+      - name: Build the Python package (with the bundled Node program)
+        run: |
+          npm run bundle --workspace rdstudio
+          uv build
+      - name: Check the wheel carries the Node program
+        run: unzip -l dist/*.whl | grep -q "rdstudio/_node/rdstudio.mjs"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: |
+            dist/
+            npm-dist/
+          if-no-files-found: error
+
+  npm:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+      - run: npm publish npm-dist/rdstudio-*.tgz --access public
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  github:
+    needs: [npm, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the release
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* npm-dist/* --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag

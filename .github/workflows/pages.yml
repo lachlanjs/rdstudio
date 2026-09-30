@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history, for the Changes tab
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv run rdstudio check
       # This repository does not install rdstudio into itself, so stage the
       # bundled skills and agents for the Skills tab.
