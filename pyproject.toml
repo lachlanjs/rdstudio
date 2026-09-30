@@ -25,6 +25,12 @@ packages = ["src/rdstudio"]
 # The bundled Node program is built at release (npm run bundle) and not committed.
 artifacts = ["src/rdstudio/_node/*.mjs"]
 
+[tool.hatch.build.targets.sdist]
+# Only the Python package (the TypeScript sources are on GitHub and npm), and
+# the bundle, since uv builds the wheel from this archive.
+only-include = ["src/rdstudio", "README.md", "LICENSE"]
+artifacts = ["src/rdstudio/_node/*.mjs"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

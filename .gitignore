@@ -25,5 +25,6 @@ node_modules/
 # The bundled Node command line, built at release (npm run bundle --workspace rdstudio)
 src/rdstudio/_node/
 
-# Release staging (mise run release:npm)
+# Release staging (mise run release:npm, and the release workflow)
 .release/
+npm-dist/

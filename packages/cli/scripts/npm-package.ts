@@ -15,13 +15,8 @@ const OUT = join(REPO, ".release", "npm");
 const cli = JSON.parse(readFileSync(join(REPO, "packages", "cli", "package.json"), "utf8"));
 const version: string = cli.version;
 
-// One version everywhere.
-const python = /^version = "([^"]+)"/m.exec(readFileSync(join(REPO, "pyproject.toml"), "utf8"))?.[1];
-const main = /export const VERSION = "([^"]+)"/.exec(readFileSync(join(REPO, "packages", "cli", "src", "main.ts"), "utf8"))?.[1];
-if (python !== version || main !== version) {
-  console.error(`versions differ: packages/cli ${version}, pyproject.toml ${python}, main.ts VERSION ${main}`);
-  process.exit(1);
-}
+// One version everywhere (scripts/version.ts checks and sets it).
+execFileSync("node", [join(REPO, "packages", "cli", "scripts", "version.ts")], { stdio: ["ignore", "ignore", "inherit"] });
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });

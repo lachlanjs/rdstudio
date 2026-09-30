@@ -78,7 +78,7 @@ run = "npm run bundle --workspace rdstudio"
 
 [tasks."release:build"]
 description = "Build the wheel for release: bundle the Node command line, then uv build"
-run = ["npm run bundle --workspace rdstudio", "uv build"]
+run = ["node packages/cli/scripts/version.ts", "npm run bundle --workspace rdstudio", "uv build"]
 
 [tasks.agree]
 description = "Every comparison between the Python and Node implementations"
@@ -89,3 +89,7 @@ run = ["uv run python fixtures/agree.py knowledge", "uv run python fixtures/agre
 [tasks."release:npm"]
 description = "Stage and pack the npm package in .release/npm/ (publishing is manual: knowledge/procedures/publish-npm.md)"
 run = "node packages/cli/scripts/npm-package.ts"
+
+[tasks.version]
+description = "Print rdstudio's version, or set it everywhere: mise run version 0.2.0"
+run = "node packages/cli/scripts/version.ts"
