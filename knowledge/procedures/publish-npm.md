@@ -1,7 +1,7 @@
 ---
 type: Procedure
 title: Publish rdstudio to npm
-description: Put a version of rdstudio on the npm registry, so anyone can run it with npx rdstudio or npm install -g rdstudio.
+description: Put a version of rdstudio on the npm registry by hand, so anyone can run it with npx rdstudio or npm install -g rdstudio. Releases normally go through the release workflow instead.
 tags: [release, npm, distribution]
 start: account
 nodes:
@@ -22,6 +22,9 @@ edges:
   - {from: publish, to: check, relation: LEADS_TO, guidance: "cd .release/npm && npm publish; enter the authenticator's current code when asked (or npm publish --otp=<code>). The first publish claims the name rdstudio.", pitfalls: "Publishing is public at once. A version can be withdrawn only within 72 hours (npm unpublish rdstudio@<version>), and its number stays used."}
   - {from: check, to: automate, relation: LEADS_TO, condition: "After the first manual publish works.", guidance: "npx rdstudio@<version> --version in a fresh folder; the page is npmjs.com/package/rdstudio. Later: a GitHub Actions workflow on version tags with npm trusted publishing (no token stored), building the Python wheel in the same run."}
 ---
+
+Releases are normally made by pushing a tag: see [release rdstudio](/procedures/release.md).
+This is the manual way, used for the first publish.
 
 # What is published
 
