@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.2.0  # no major-version tags after v7
       - run: npm ci
       - name: The tag matches the version
         run: node packages/cli/scripts/version.ts --tag "$GITHUB_REF_NAME"
