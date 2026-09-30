@@ -69,7 +69,8 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: release
-      - run: npm publish npm-dist/rdstudio-*.tgz --access public
+      # "./" so npm reads a file path, not "owner/repo" GitHub shorthand
+      - run: npm publish ./npm-dist/rdstudio-*.tgz --access public
 
   pypi:
     needs: build
@@ -84,6 +85,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true  # a re-run after a later job failed
 
   github:
     needs: [npm, pypi]
