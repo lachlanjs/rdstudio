@@ -19,23 +19,18 @@ for rdstudio's own knowledge base, rebuilt on every push to `main`.
 ## Install
 
 ```bash
-uv tool install git+https://github.com/lachlanjs/rdstudio@v0.1.0
+uv tool install rdstudio       # from PyPI; `uv tool upgrade rdstudio` later
 ```
 
-To upgrade later, run the same command with a newer tag, followed by
-`--force`. To work on rdstudio itself, clone the repository, run
-`mise run setup`, then `uv tool install --editable . --force` inside it.
+or, with Node 24 or later, `npm install -g rdstudio` (or run it without
+installing: `npx rdstudio init`). Either way you get the same program: its
+command line runs on Node, which the Python package brings along as a
+dependency, so there is nothing else to install. `rdstudio-py` runs the older
+Python command line, which does the same things, while it lasts.
 
-With Node 24 or later you can also use npm: `npx rdstudio init`, or
-`npm install -g rdstudio` ([npmjs.com/package/rdstudio](https://www.npmjs.com/package/rdstudio)).
-Maintainers: `mise run release:npm` builds the package; see
-`knowledge/procedures/publish-npm.md`.
-
-rdstudio's command line is moving from Python to TypeScript (Node). Node comes
-with rdstudio as a Python dependency, so there is nothing else to install. A
-release wheel (built by `mise run release:build`) runs the Node command line;
-installing from a git tag builds without it and runs the Python one, which
-does the same things. `rdstudio-py` always runs the Python one.
+To work on rdstudio itself, clone the repository, run `mise run setup`, then
+`uv tool install --editable . --force` inside it. Releases are made by pushing
+a version tag (see `knowledge/procedures/release.md`).
 
 ## Use it in a project
 

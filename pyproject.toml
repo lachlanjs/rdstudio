@@ -1,6 +1,6 @@
 [project]
 name = "rdstudio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agentic research and development studio: OKF knowledge bundles, a read-only dashboard, MCP and skills."
 readme = "README.md"
 requires-python = ">=3.11"

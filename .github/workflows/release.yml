@@ -1,5 +1,6 @@
 # Release: push a tag v<version> (matching the version in pyproject.toml,
-# packages/cli/package.json and packages/cli/src/main.ts) to test, build and
+# packages/cli/package.json, packages/cli/src/main.ts and src/rdstudio/__init__.py;
+# mise run version sets them) to test, build and
 # publish rdstudio to npm and PyPI, then make a GitHub Release with the files.
 #
 # Publishing uses trusted publishing: npm and PyPI trust this workflow in this

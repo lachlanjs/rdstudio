@@ -1,6 +1,6 @@
 {
   "name": "rdstudio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agentic research and development studio: OKF knowledge bundles, a dashboard, an MCP server and skills.",
   "license": "MIT",
   "type": "module",

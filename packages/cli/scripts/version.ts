@@ -1,5 +1,5 @@
-// rdstudio's version, kept the same in pyproject.toml, packages/cli/package.json
-// and VERSION in packages/cli/src/main.ts:
+// rdstudio's version, kept the same in pyproject.toml, packages/cli/package.json,
+// VERSION in packages/cli/src/main.ts and __version__ in src/rdstudio/__init__.py:
 //   node packages/cli/scripts/version.ts            print it (and fail if they differ)
 //   node packages/cli/scripts/version.ts 0.2.0      set it everywhere (mise run version 0.2.0)
 //   node packages/cli/scripts/version.ts --tag v0.2.0   fail unless the tag names this version (CI)
@@ -13,6 +13,7 @@ const FILES = [
   { path: "pyproject.toml", re: /^(version = ")([^"]+)(")/m },
   { path: "packages/cli/package.json", re: /^( {2}"version": ")([^"]+)(")/m },
   { path: "packages/cli/src/main.ts", re: /^(export const VERSION = ")([^"]+)(")/m },
+  { path: "src/rdstudio/__init__.py", re: /^(__version__ = ")([^"]+)(")/m },
 ];
 
 const read = (p: string) => readFileSync(join(REPO, p), "utf8");

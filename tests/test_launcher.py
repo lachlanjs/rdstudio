@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from rdstudio import launcher
+from rdstudio import __version__, launcher
 
 RUN = [sys.executable, "-c", "from rdstudio.launcher import main; main()"]
 
@@ -12,13 +12,13 @@ def test_a_checkout_runs_the_typescript_sources_with_the_bundled_node():
     node = launcher.node_executable()
     assert node and os.path.exists(node)
     out = subprocess.run([*RUN, "--version"], capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == "rdstudio 0.1.0"
+    assert out.stdout.strip() == f"rdstudio {__version__}"
 
 
 def test_the_python_command_line_is_still_there():
     env = {**os.environ, "RDSTUDIO_PYTHON": "1"}
     out = subprocess.run([*RUN, "--version"], capture_output=True, text=True, env=env)
-    assert out.returncode == 0 and out.stdout.strip() == "rdstudio 0.1.0"
+    assert out.returncode == 0 and out.stdout.strip() == f"rdstudio {__version__}"
     out = subprocess.run([*RUN, "check", "--help"], capture_output=True, text=True, env=env)
     assert "--warnings" in out.stdout  # argparse's help: the Python command line answered
 
