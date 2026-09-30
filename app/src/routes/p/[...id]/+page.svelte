@@ -1,5 +1,6 @@
 <script lang="ts">
-  import NotYet from "$lib/components/NotYet.svelte";
+  import { page } from "$app/state";
+  import ProcedurePage from "$lib/components/ProcedurePage.svelte";
 </script>
 
-<NotYet name="Procedure" />
+{#key page.params.id}<ProcedurePage id={page.params.id ?? ""} />{/key}

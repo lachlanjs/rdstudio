@@ -1,5 +1,6 @@
 <script lang="ts">
-  import NotYet from "$lib/components/NotYet.svelte";
+  import { page } from "$app/state";
+  import SkillPage from "$lib/components/SkillPage.svelte";
 </script>
 
-<NotYet name="Skill" />
+<SkillPage kind="skill" name={page.params.name ?? ""} />

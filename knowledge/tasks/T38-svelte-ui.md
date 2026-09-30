@@ -20,7 +20,7 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
 
 1. **Scaffold and knowledge pages.** Done (see Progress).
 2. **The other pages:** Learn, Changes, Review, Reports, Skills and agents,
-   procedures.
+   procedures. Done.
 3. **Graph and map,** the imperative d3 code wrapped in components, with the
    renderer interface (B3) introduced here; the layout worker and the `rd:`
    measures kept, so the benchmarks compare.
@@ -58,3 +58,16 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
 - `npm audit` reports advisories in `cookie` (SvelteKit's server rendering,
   not used) and `js-yaml` (HeyAPI's generator, reading our own file); neither
   reaches the built dashboard, and the offered fixes are downgrades.
+- Slice 2: Learn, Changes, Review, Reports and the report viewer, Skills and
+  agents with their pages, and Procedures with the flow graph and inspector
+  (its layout now a pure function, `lib/flow.ts`, drawn declaratively).
+  Compared pixel for pixel with the old dashboard on the differential
+  geometry bundle and on this repository's (for its procedures), at desktop
+  and phone widths, with steps and transitions selected: identical, apart
+  from two bugs in the old dashboard, fixed here. The Learn page printed
+  "[object HTMLParagraphElement],[object HTMLPreElement]" instead of how to
+  turn the learner record on; and the tree differences above. The Review
+  page is a pixel shorter at the very end.
+- Found on the way: `<svelte:body class:...>` is not applied (the drawer did
+  not open; svelte-check does not flag it), and a selection held in `$state`
+  is proxied, so comparing it with the graph's own objects failed; both fixed.

@@ -29,6 +29,8 @@
   const canFullscreen = typeof document !== "undefined" && document.fullscreenEnabled && !matchMedia("(display-mode: fullscreen)").matches;
 
   afterNavigate(() => { drawer = false; });
+  // The drawer's styles hang off the body (the page behind it dims).
+  $effect(() => { document.body.classList.toggle("drawer-open", drawer); });
   $effect(() => store.watch()); // live updates, stopped if the shell ever goes away
 
   // highlight.js's stylesheet follows the mode, or the system when it is "system".
@@ -50,7 +52,6 @@
 
 <svelte:window onkeydown={(e) => { if (e.key === "Escape") drawer = false; }} />
 <svelte:document onfullscreenchange={() => (fullscreen = Boolean(document.fullscreenElement))} />
-<svelte:body class:drawer-open={drawer} />
 
 <header class="bar">
   <button class="menu" type="button" aria-label="Show contents" aria-expanded={drawer} hidden={tab !== "knowledge"} onclick={() => (drawer = !drawer)}>
