@@ -129,10 +129,16 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def start_server(root: Path) -> tuple[subprocess.Popen, str]:
+def start_server(root: Path, web_dir: Path | None = None) -> tuple[subprocess.Popen, str]:
+    """rdstudio serve for the bundle: the Python one, or with web_dir (a built
+    dashboard, such as app/build) the Node one, which serves that folder."""
     port = free_port()
-    proc = subprocess.Popen([sys.executable, "-m", "rdstudio.cli", "serve", "--no-watch", "--port", str(port)],
-                            cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    if web_dir:
+        cmd = ["node", str(REPO / "packages" / "cli" / "src" / "main.ts"), "serve", "--no-watch", "--port", str(port)]
+        env = {**os.environ, "RDSTUDIO_WEB_DIR": str(web_dir.resolve())}
+    else:
+        cmd, env = [sys.executable, "-m", "rdstudio.cli", "serve", "--no-watch", "--port", str(port)], None
+    proc = subprocess.Popen(cmd, cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env)
     deadline = time.time() + 120
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -298,6 +304,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--label", help="a name for this run, kept in the results")
     ap.add_argument("--fresh", action="store_true", help="regenerate the synthetic bundles")
     ap.add_argument("--no-sw", action="store_true", help="without the service worker (offline cache)")
+    ap.add_argument("--web-dir", type=Path, help="serve this built dashboard (such as app/build) with the Node server")
     ap.add_argument("--timeout", type=float, default=180, help="seconds to wait for a map")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
@@ -312,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
             if root is None:
                 continue
             built = build_times(root)
-            server, url = start_server(root)
+            server, url = start_server(root, args.web_dir)
             try:
                 for theme in args.themes.split(","):
                     for profile in args.profiles.split(","):
@@ -322,7 +329,8 @@ def main(argv: list[str] | None = None) -> int:
             finally:
                 server.terminate()
                 server.wait()
-        result = {"meta": {**meta(args.label), "chromium": browser.version, "service_worker": not args.no_sw}, "runs": runs}
+        result = {"meta": {**meta(args.label), "chromium": browser.version, "service_worker": not args.no_sw,
+                           "dashboard": str(args.web_dir) if args.web_dir else "python"}, "runs": runs}
         browser.close()
 
     out = args.out or WORK / "results" / f"{datetime.now():%Y%m%d-%H%M%S}-{result['meta']['commit']}.json"

@@ -23,7 +23,8 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
    procedures. Done.
 3. **Graph and map,** the imperative d3 code wrapped in components, with the
    renderer interface (B3) introduced here; the layout worker and the `rd:`
-   measures kept, so the benchmarks compare.
+   measures kept, so the benchmarks compare. Ported as they were (done);
+   the renderer interface is a follow-up.
 4. **Switch over:** `rdstudio build` uses the app's build; the old dashboard is
    deleted; the static files (themes, fonts, service worker) move into
    `app/static/`; the release bundles the built app.
@@ -71,3 +72,18 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
 - Found on the way: `<svelte:body class:...>` is not applied (the drawer did
   not open; svelte-check does not flag it), and a selection held in `$state`
   is proxied, so comparing it with the graph's own objects failed; both fixed.
+- Slice 3: the map (with study paths and the layout worker) and the graph,
+  ported as they were: plain JavaScript modules in `app/src/lib/views/` that
+  build their element with d3 (now from npm, not a global), mounted by
+  `Imperative.svelte`, which refreshes them in place on live updates. The map
+  pages match the old ones pixel for pixel apart from anti-aliasing; the
+  graph's force simulation settles differently each time in both.
+- `bench/run.py --web-dir app/build` serves a built dashboard with the Node
+  server. Old against new (bench/baselines/2026-09-30-t38-*.json), on the
+  differential geometry and field bundles, desktop, phone and slow-link
+  profiles: the first map 25 to 67% sooner (the test bed on a desktop 0.13 s
+  against 0.40 s, on the phone profile 0.25 s against 0.49 s), 60 to 85% less
+  to download (64 to 115 KB against 290 to 430 KB: the old dashboard loaded
+  every library on every page), reloads up to 59% faster. The layout itself,
+  in its worker, takes 5 to 35% longer (the worker now bundles its own d3);
+  it does not block the page.

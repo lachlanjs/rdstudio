@@ -1,5 +1,7 @@
 <script lang="ts">
-  import NotYet from "$lib/components/NotYet.svelte";
+  import { page } from "$app/state";
+  import Imperative from "$lib/components/Imperative.svelte";
+  import { mapView } from "$lib/views/map.js";
 </script>
 
-<NotYet name="Study path" />
+{#key page.params.id}<Imperative make={() => mapView("", { path: page.params.id ?? "" })} />{/key}

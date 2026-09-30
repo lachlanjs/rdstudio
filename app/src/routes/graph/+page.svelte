@@ -1,5 +1,6 @@
 <script lang="ts">
-  import NotYet from "$lib/components/NotYet.svelte";
+  import Imperative from "$lib/components/Imperative.svelte";
+  import { graphView, leaveGraph } from "$lib/views/graph.js";
 </script>
 
-<NotYet name="Graph" />
+<Imperative make={graphView} leave={leaveGraph} />

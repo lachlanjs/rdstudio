@@ -7,6 +7,8 @@ const serve = process.env.RDSTUDIO_SERVE ?? "http://127.0.0.1:8000";
 
 export default defineConfig({
   plugins: [sveltekit()],
+  // The map's layout worker imports modules (and d3).
+  worker: { format: "es" },
   server: {
     host: process.env.HOST ?? "127.0.0.1",
     proxy: Object.fromEntries(["/data", "/api", "/reports"].map((p) => [p, { target: serve, changeOrigin: false }])),
