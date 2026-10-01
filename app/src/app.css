@@ -61,6 +61,8 @@ button { font: inherit; color: inherit; }
 .live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   background: var(--reviewed); margin-right: 6px; vertical-align: 1px; }
 .live.offline::before { background: var(--ink-faint); }
+.live.signin { color: var(--stale); font-weight: 600; text-decoration: underline; }
+.live.signin::before { background: var(--stale); }
 
 /* ------------------------------------------------------------- layouts */
 

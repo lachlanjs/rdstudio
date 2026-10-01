@@ -16,6 +16,8 @@
   // else loads so it installs even when a file fails. Browsers allow it only
   // on https or localhost; everything works without it. ?nosw skips it.
   (function () {
+    // Back from signing in to a tunnel or proxy (the "Sign in" link): tidy the address.
+    if (new URLSearchParams(location.search).has("signin")) history.replaceState(null, "", location.pathname + location.hash);
     if (!("serviceWorker" in navigator) || new URLSearchParams(location.search).has("nosw")) return;
     if (location.port === "5173") return; // the Vite dev server: no service worker
     var had = Boolean(navigator.serviceWorker.controller);

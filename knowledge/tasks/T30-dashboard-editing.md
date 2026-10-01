@@ -98,3 +98,13 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     (slice 4's bottom panel); updating rdstudio while a page is open removes
     the files the open page would load the editor from, so the error now
     offers a reload.
+- Found trying it over a VS Code dev tunnel (2026-10-01): when the tunnel's
+  sign-in expires it redirects every request to a GitHub login on another
+  site. The service worker answered page loads from its copy, so the login
+  never showed; data requests failed on the redirect ("Offline"); and the
+  worker could not fetch its own update past it, so the browser kept the old
+  dashboard. Now the worker asks for the data version without following
+  redirects: a redirect makes it answer the page with 401, the header shows
+  "Sign in" instead of "Offline", and that link loads the page past the worker
+  so the login can show. `e2e/signin.py` reproduces it with a proxy and a
+  login on another origin.

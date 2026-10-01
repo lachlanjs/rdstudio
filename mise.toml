@@ -111,5 +111,5 @@ description = "Regenerate the dashboard's typed API client from rdstudio serve's
 run = "npm run generate --workspace @rdstudio/app"
 
 [tasks.e2e]
-description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing notes); screenshots in .e2e/"
-run = "uv run --group bench python e2e/edit.py"
+description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing notes, signing in again through a tunnel); screenshots in .e2e/"
+run = ["uv run --group bench python e2e/edit.py", "uv run --group bench python e2e/signin.py"]

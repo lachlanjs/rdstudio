@@ -6,6 +6,11 @@
 //   opening the dashboard costs one small request for the version, and only a
 //   new version fetches data again. Offline, the newest copy is used.
 // - The learner record (api/) and anything unknown go to the network as usual.
+// - When the server answers with a redirect instead (a dev tunnel or a proxy
+//   asking you to sign in again), this worker gets out of the way: the page is
+//   told (data/version.json answers 401) and page loads go to the network, so
+//   the sign-in page can show. Without this, the cached page hides it, and the
+//   worker cannot update itself past it either.
 
 const SHELL = "__SHELL__";
 const SHELL_CACHE = "rd-shell-" + SHELL;
@@ -16,6 +21,7 @@ const VERSION_TTL_MS = 3000; // how long a fetched version is trusted
 const TIMEOUT_MS = 4000; // then assume offline and use what is cached
 
 const scope = new URL(self.registration.scope);
+let signIn = false; // the server redirects to a sign-in page
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -32,6 +38,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  if (req.mode === "navigate" && (signIn || url.searchParams.has("signin"))) return; // let the sign-in page through
   const path = url.pathname.slice(scope.pathname.length);
   if (path.startsWith("api/")) return;
   if (path === "data/version.json") event.respondWith(versionResponse(req));
@@ -121,7 +128,9 @@ async function currentVersion() {
   if (known && Date.now() - known.at < VERSION_TTL_MS) return known.version;
   asking ||= (async () => {
     try {
-      const res = await timeout(fetch(scope.href + "data/version.json", { cache: "no-store" }));
+      const res = await timeout(fetch(scope.href + "data/version.json", { cache: "no-store", redirect: "manual" }));
+      signIn = res.type === "opaqueredirect";
+      if (signIn) return (await versions())[0] ?? null;
       const { version } = await res.clone().json();
       known = { version, at: Date.now() };
       await (await caches.open(META)).put("version.json", res);
@@ -141,6 +150,7 @@ async function currentVersion() {
 async function versionResponse() {
   known = null;
   await currentVersion();
+  if (signIn) return new Response('{"signin": true}', { status: 401, headers: { "Content-Type": "application/json" } });
   if (!known) return Response.error();
   return (await (await caches.open(META)).match("version.json")) || Response.error();
 }
