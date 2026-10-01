@@ -96,4 +96,5 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
   [dashboard editing](/ideas/learning/dashboard-editing.md),
   [discovery states and hiding what is undiscovered](/ideas/learning/discovery.md),
   [alpha trials](/ideas/learning/alpha-trials.md),
+  [a two-person trial building an agentic game design engine](/ideas/learning/game-design-trial.md),
   [autoethnography](/ideas/learning/autoethnography.md)
