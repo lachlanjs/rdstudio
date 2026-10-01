@@ -94,3 +94,27 @@ def test_service_worker_is_stamped_with_the_app_files(tmp_path, monkeypatch):
     assert "__SHELL__" not in first and first == build_mod.service_worker()
     (web / "app.js").write_text("two!")
     assert build_mod.service_worker() != first  # an edited app file makes a new cache
+
+
+def test_build_removes_dashboard_files_it_no_longer_has(tmp_path, monkeypatch):
+    from rdstudio import build as build_mod
+
+    web = tmp_path / "web"
+    (web / "_app" / "immutable").mkdir(parents=True)
+    (web / "sw.js").write_text('const SHELL = "__SHELL__";\n')
+    (web / "index.html").write_text("<html></html>")
+    (web / "_app" / "immutable" / "new.js").write_text("new")
+    monkeypatch.setattr(build_mod, "WEB_DIR", web)
+    root = tmp_path / "proj"
+    write(root, "rdstudio.toml", 'title = "P"\n')
+    write(root, "knowledge/a.md", "---\ntype: Note\ntitle: A\n---\n\nBody.\n")
+    cfg = config.load(root)
+    site = cfg.site_dir
+    for rel in ["_app/immutable/old.js", "js/map.js", "app.js", "style.css", "notes.txt"]:
+        write(site, rel, "stale")
+    build(cfg)
+    assert (site / "_app/immutable/new.js").exists() and (site / "index.html").exists()
+    assert not (site / "_app/immutable/old.js").exists()  # an earlier build's script
+    assert not (site / "js").exists() and not (site / "app.js").exists() and not (site / "style.css").exists()
+    assert (site / "notes.txt").exists()  # not the dashboard's, so left alone
+    assert (site / "data/site.json").exists() and (site / "sw.js").exists()
