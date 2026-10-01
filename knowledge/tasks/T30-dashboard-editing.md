@@ -111,3 +111,23 @@ desktop and on the phone, and see it appear on the map without leaving the app.
 - Checked by the user (2026-10-01): after signing in to the dev tunnel again,
   editing a note and saving worked over the tunnel, and the edit reached the
   file. The tunnel passes the host through, so the Origin check holds.
+- Slice 2 (2026-10-01): live preview, the default. `app/src/lib/editor/livePreview.ts`
+  decorates the Markdown from its syntax tree: headings set at the note page's
+  sizes in the reading typeface, bold, italics, strikethrough, inline code,
+  links shown as their text, bullets, quotes, rules and code blocks; the
+  markup (#, **, [..](..), >) is hidden except on the lines the cursor or a
+  selection touches. Decorations only: the text is never changed, checked by
+  opening and closing a note without typing. A Source button switches to
+  plain Markdown in the monospaced face, remembered per browser.
+  - Link suggestions (`links.ts`): `[[` offers notes by title and inserts
+    `[Title](/folder/note.md)`, the bundle's own link form; inside `](` it
+    offers note paths. Brackets close themselves; quotes do not, for
+    apostrophes.
+  - `mise run e2e` now has 25 editing checks, adding: headings without their
+    `#`, `**` hidden off the cursor's line and shown on it, links as text,
+    `[[` suggesting and inserting the right link, and Source.
+  - Not yet: maths and Mermaid in the editor, tables, and nested styles
+    inside link text (slice 4). Hard-wrapped notes show their line breaks in
+    the editor (the note page joins them), as Obsidian does: the editor
+    never rewraps text.
+  - The editor's code is now 187 KB compressed (autocomplete added).

@@ -4,14 +4,26 @@
   // the editor, what is happening, and a note changed meanwhile to compare.
   import { onMount, untrack } from "svelte";
   import type { EditorView } from "@codemirror/view";
+  import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
-  import { createEditor, setText } from "$lib/editor/codemirror.ts";
+  import { createEditor, setSource, setText } from "$lib/editor/codemirror.ts";
 
   let { session, onDone }: { session: EditSession; onDone: () => void } = $props();
 
   let host = $state<HTMLDivElement>();
   let view: EditorView | null = null;
   let comparing = $state(false);
+
+  // Live preview, or plain Markdown: remembered in this browser.
+  const SOURCE_KEY = "rdstudio.editor.source";
+  let source = $state((() => { try { return localStorage.getItem(SOURCE_KEY) === "1"; } catch { return false; } })());
+  function toggleSource() {
+    source = !source;
+    try { localStorage.setItem(SOURCE_KEY, source ? "1" : "0"); } catch { /* not remembered */ }
+    if (view) { setSource(view, source); view.focus(); }
+  }
+  const notes = () => [...store.concepts.values()].filter((c) => c.id !== session.id)
+    .map((c) => ({ id: c.id, title: c.title, folder: c.directory }));
 
   const STATUS: Record<string, string> = {
     loading: "Opening…", saving: "Saving…", saved: "Saved", conflict: "Changed elsewhere", error: "Not saved",
@@ -31,6 +43,8 @@
           label: `Text of ${session.fields.title || session.id}`,
           onChange: (text) => { session.body = text; session.changed(); },
           onSave: () => void session.save(),
+          notes,
+          source,
         });
         view.focus();
       } else if (revision && view.state.doc.toString() !== session.body) {
@@ -63,6 +77,8 @@
   <div class="edit-bar" role="toolbar" aria-label="Editing">
     <span class={["edit-status", session.status]} role="status" aria-live="polite">{status}</span>
     <span class="edit-actions">
+      <button class="toggle" type="button" aria-pressed={source} onclick={toggleSource}
+        title="Show the Markdown as it is written, instead of the live preview">Source</button>
       <button class="toggle" type="button" onclick={cancel}>Cancel</button>
       <button class="toggle" type="button" onclick={() => void session.save()}
         disabled={!session.dirty || session.status === "saving" || session.status === "conflict"}>Save</button>

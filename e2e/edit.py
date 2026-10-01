@@ -61,7 +61,7 @@ with sync_playwright() as pw:
     check("editor shows the note's text", "orientation" in p.inner_text(".cm-content").lower())
 
     # A small edit at the end of one line.
-    line = p.locator(".cm-line", has_text="# Examples").first
+    line = p.locator(".cm-line", has_text="Examples").first
     line.click()
     p.keyboard.press("End")
     p.keyboard.press("Enter"); p.keyboard.press("Enter")
@@ -76,6 +76,48 @@ with sync_playwright() as pw:
     stamp = lambda l: l[2:].startswith(("generated:", "  by:", "  at:"))
     check("nothing removed but the old generated stamp", all(stamp(l) for l in removed), str(removed))
     check("added: the new paragraph, a blank line and the stamp", sorted(l[2:] for l in added if not stamp(l)) == ["", "Every Lie group is orientable."], str(added))
+
+    # Live preview: markup hidden off the cursor's line, shown on it.
+    p.get_by_role("button", name="Done").click()
+    p.wait_for_selector("article.doc:not(.editing)")
+    untouched = NOTE.read_text()
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    p.evaluate("document.activeElement.blur()")  # no line is being edited
+    heading = p.locator(".cm-line.cm-lp-h1", has_text="Definition").first
+    check("live preview: headings are set as headings, without the #", heading.count() == 1 and not heading.inner_text().startswith("#"))
+    para = p.locator(".cm-line", has_text="is a continuous choice").first
+    check("live preview: ** hidden off the cursor's line", "**" not in para.inner_text(), para.inner_text())
+    link = p.locator(".cm-lp-link", has_text="exterior power").first
+    check("live preview: links show their text, not the address", link.count() == 1 and "/foundations/" not in p.locator(".cm-line", has=link).first.inner_text())
+    para.click()
+    check("live preview: the markup shows on the line being edited", "**orientation**" in p.locator(".cm-line", has_text="is a continuous choice").first.inner_text())
+    p.screenshot(path=str(OUT / "edit-desktop-live.png"))
+    p.get_by_role("button", name="Done").click()
+    p.wait_for_selector("article.doc:not(.editing)")
+    check("opening and closing the live preview changes nothing", NOTE.read_text() == untouched)
+
+    # Linking: [[ offers notes by title.
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    p.locator(".cm-line", has_text="Examples").first.click()
+    p.keyboard.press("End")
+    p.keyboard.press("Enter"); p.keyboard.press("Enter")
+    p.keyboard.type("See [[Stokes")
+    p.wait_for_selector(".cm-tooltip-autocomplete li", timeout=5000)
+    check("[[ suggests notes by title", "Stokes' theorem" in p.inner_text(".cm-tooltip-autocomplete"))
+    p.screenshot(path=str(OUT / "edit-desktop-link.png"))
+    p.keyboard.press("Enter")
+    p.keyboard.type(".")
+    p.keyboard.press("Control+s")
+    expect(p.locator(".edit-status")).to_have_text("Saved", timeout=5000)
+    check("choosing one inserts a Markdown link to the note", "See [Stokes' theorem](/forms/stokes-theorem.md)." in NOTE.read_text(), [l for l in NOTE.read_text().split("\n") if l.startswith("See")])
+
+    # Source: the Markdown as written.
+    p.get_by_role("button", name="Source").click()
+    check("Source shows the Markdown as written", p.locator(".cm-lp-h1").count() == 0 and p.locator(".cm-line", has_text="# Definition").count() == 1)
+    p.get_by_role("button", name="Source").click()  # back to the live preview, which is remembered
+    after = NOTE.read_text()
 
     # Details: the title.
     title = p.get_by_label("Title")
@@ -94,7 +136,7 @@ with sync_playwright() as pw:
     # Conflict: an agent writes while the editor is open.
     p.get_by_role("button", name="Edit").click()
     p.wait_for_selector(".cm-content")
-    p.locator(".cm-line", has_text="# Examples").first.click()
+    p.locator(".cm-line", has_text="Examples").first.click()
     p.keyboard.press("End")
     p.keyboard.type(" My sentence.")
     NOTE.write_text(NOTE.read_text() + "\nAn agent's addition.\n")
@@ -109,7 +151,7 @@ with sync_playwright() as pw:
     check("keep mine saves over the current version", "My sentence." in NOTE.read_text())
 
     # A draft survives a reload.
-    p.locator(".cm-line", has_text="# Examples").first.click()
+    p.locator(".cm-line", has_text="Examples").first.click()
     p.keyboard.press("End")
     p.keyboard.type(" Draft words.")
     time.sleep(0.8)  # the draft is kept a moment after typing
@@ -134,7 +176,7 @@ with sync_playwright() as pw:
     check("phone: buttons are at least 40px tall", box and box["height"] >= 40, str(box))
     sw = p.evaluate("document.documentElement.scrollWidth")
     check("phone: no sideways scrolling", sw <= 390, str(sw))
-    p.locator(".cm-line", has_text="# Examples").first.tap()
+    p.locator(".cm-line", has_text="Examples").first.tap()
     p.keyboard.press("End")
     p.keyboard.type(" Typed on a phone.")
     p.get_by_role("button", name="Done").tap()
