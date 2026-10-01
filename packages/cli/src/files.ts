@@ -1,6 +1,6 @@
 // File helpers shared by the build and the server.
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmdirSync, statSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cmpTuple } from "@rdstudio/core";
@@ -47,6 +47,27 @@ export function syncTree(src: string, dst: string, skip: ReadonlySet<string> = n
     mkdirSync(dirname(to), { recursive: true });
     copyFileSync(from, to);
     utimesSync(to, st.atime, st.mtime); // as shutil.copy2 does
+  }
+}
+
+/** Remove files under the top-level names `owned` in `dst` that are not in
+ *  `keep` (paths relative to `dst`), and the folders that leaves empty. Other
+ *  names in `dst` are not touched. */
+export function pruneOwned(dst: string, owned: Iterable<string>, keep: ReadonlySet<string>): void {
+  const prune = (dir: string, rel: string): boolean => { // true when dir is left empty
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const r = `${rel}/${e.name}`, full = join(dir, e.name);
+      if (e.isDirectory()) { if (prune(full, r)) rmdirSync(full); }
+      else if (!keep.has(r)) unlinkSync(full);
+    }
+    return readdirSync(dir).length === 0;
+  };
+  for (const name of [...owned].sort()) {
+    const top = join(dst, name);
+    let st;
+    try { st = lstatSync(top); } catch { continue; }
+    if (!st.isDirectory()) { if (!keep.has(name)) unlinkSync(top); }
+    else if (prune(top, name)) rmdirSync(top);
   }
 }
 

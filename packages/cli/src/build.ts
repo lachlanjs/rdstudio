@@ -2,7 +2,7 @@
 // that it is byte for byte what the Python build writes (src/rdstudio/build.py).
 
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,13 +12,25 @@ import {
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { categoryGlobs, type Config } from "./config.ts";
-import { assetDir, syncTree, walkFiles, writeIfChanged } from "./files.ts";
+import { assetDir, pruneOwned, syncTree, walkFiles, writeIfChanged } from "./files.ts";
 import { history } from "./gitlog.ts";
 import { scan } from "./reports.ts";
 
 /** The built dashboard: beside a bundled release, or where the Svelte app builds
  *  it when running from source (npm run build --workspace @rdstudio/app). */
 export const WEB_DIR = assetDir("web", "RDSTUDIO_WEB_DIR", fileURLToPath(new URL("../../../src/rdstudio/web/", import.meta.url)));
+
+/** Top-level names the old dashboard wrote that the Svelte one does not. */
+const FORMER_DASHBOARD = ["app.js", "js", "style.css", "style-tokens.css"];
+
+/** Remove dashboard files from `site` that the current dashboard does not have:
+ *  an earlier build's hashed scripts, or the old dashboard. Only names the
+ *  dashboard owns are touched, so other files in an export folder stay. */
+function pruneDashboard(site: string): void {
+  const owned = new Set([...readdirSync(WEB_DIR), ...FORMER_DASHBOARD]);
+  owned.delete("sw.js");
+  pruneOwned(site, owned, new Set(walkFiles(WEB_DIR)));
+}
 
 /** JSON as the Python build writes it: compact, not ASCII-escaped. */
 export const dump = (value: unknown): string => JSON.stringify(value);
@@ -123,6 +135,7 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     throw new Error(`the dashboard is not built (no ${join(WEB_DIR, "index.html")}): run npm run build --workspace @rdstudio/app`);
   }
   mkdirSync(site, { recursive: true });
+  pruneDashboard(site);
   syncTree(WEB_DIR, site, new Set(["sw.js"]));
   writeIfChanged(join(site, "sw.js"), serviceWorker());
 

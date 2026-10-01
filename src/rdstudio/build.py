@@ -37,6 +37,34 @@ def _sync_tree(src: Path, dst: Path, *, skip: frozenset[str] = frozenset()) -> N
         shutil.copy2(path, target)
 
 
+# Top-level names the old dashboard wrote that the Svelte one does not.
+_FORMER_DASHBOARD = frozenset({"app.js", "js", "style.css", "style-tokens.css"})
+
+
+def _prune_dashboard(site: Path) -> None:
+    """Remove dashboard files from ``site`` that the current dashboard does not
+    have: an earlier build's hashed scripts, or the old dashboard. Only names
+    the dashboard owns are touched, so other files in an export folder stay."""
+    keep = {p.relative_to(WEB_DIR).as_posix() for p in WEB_DIR.rglob("*") if p.is_file()}
+    owned = {p.name for p in WEB_DIR.iterdir()} | _FORMER_DASHBOARD
+    for name in sorted(owned - {"sw.js"}):
+        top = site / name
+        if top.is_file() or top.is_symlink():
+            if name not in keep:
+                top.unlink()
+            continue
+        if not top.is_dir():
+            continue
+        for path in sorted(top.rglob("*"), reverse=True):  # files before their folders
+            if path.is_dir() and not path.is_symlink():
+                if not any(path.iterdir()):
+                    path.rmdir()
+            elif path.relative_to(site).as_posix() not in keep:
+                path.unlink()
+        if not any(top.iterdir()):
+            top.rmdir()
+
+
 def service_worker() -> str:
     """The service worker, stamped with a fingerprint of the app's files, so a
     new rdstudio (or an edited app file) replaces what browsers have cached."""
@@ -135,6 +163,7 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
         raise RuntimeError(f"the dashboard is not built (no {WEB_DIR / 'index.html'}): "
                            "run npm run build --workspace @rdstudio/app")
     site.mkdir(parents=True, exist_ok=True)
+    _prune_dashboard(site)
     _sync_tree(WEB_DIR, site, skip=frozenset({"sw.js"}))
     _write_if_changed(site / "sw.js", service_worker())
 
