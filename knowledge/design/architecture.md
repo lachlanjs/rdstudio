@@ -26,7 +26,7 @@ generated:
 | MCP | `rdstudio.mcp_server` | search, outline, read, list_concepts, record, backlinks, review_queue, procedure_next, procedure_propose, promote, ref_search, ref_text. |
 | Scaffold | `rdstudio.scaffold` | `rdstudio init`: bundle placeholders, skills, agents, config. |
 | Brief | `rdstudio.brief` | Session-start orientation for agents. |
-| Dashboard | `rdstudio/web/` | Vanilla JS single-page app, vendored libraries, no CDN. |
+| Dashboard | `app/` → `rdstudio/web/` | SvelteKit single-page app (Svelte 5, TypeScript), built at release into the package; libraries bundled, no CDN. |
 
 # Layout in a host project
 

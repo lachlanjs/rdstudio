@@ -2,7 +2,7 @@
 type: Task
 title: "T38 — Svelte UI with a build step"
 description: "Rewrite the dashboard in Svelte 5 and TypeScript as a SvelteKit single-page app, built at release time, still vendored and offline."
-tags: [task, m9, todo]
+tags: [task, m9, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-09-29T01:14:28Z }
 ---
 
@@ -27,7 +27,7 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
    the renderer interface is a follow-up.
 4. **Switch over:** `rdstudio build` uses the app's build; the old dashboard is
    deleted; the static files (themes, fonts, service worker) move into
-   `app/static/`; the release bundles the built app.
+   `app/static/`; the release bundles the built app. Done.
 
 # Progress
 
@@ -87,3 +87,18 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
   every library on every page), reloads up to 59% faster. The layout itself,
   in its worker, takes 5 to 35% longer (the worker now bundles its own d3);
   it does not block the page.
+- Slice 4 (2026-10-01): the switch-over. The app builds into
+  `src/rdstudio/web/`, which is no longer committed: the Python and Node
+  builds, the npm package and the wheel all take it from there, and
+  `rdstudio build` says how to build it when it is missing. The release and
+  Pages workflows build it first; `npm-package.ts` rebuilds it so a package
+  never carries a stale one; `mise run setup` builds it too. The old
+  dashboard is deleted. `app/static/` now holds the shared files for good
+  (themes, fonts, the service worker, icons) and what reports still load
+  (`report.css`, `report.js`, KaTeX, Vega); the libraries the old dashboard
+  vendored as files (d3, highlight.js, markdown-it, Mermaid) come from npm,
+  their licences kept in `vendor/licenses/`. The core's graph test now checks
+  against the map view's own copies in `app/src/lib/views/map.js` until B3.
+  Checked: the tests, the type checks and every agreement check pass; the
+  wheel carries the dashboard, and an export of the differential geometry
+  bundle from it opens without errors in Chromium (home, map, graph, a note).

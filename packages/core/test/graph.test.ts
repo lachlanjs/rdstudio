@@ -1,6 +1,6 @@
-// The core's link graph against the functions the dashboard's map.js uses
-// today (pagerank, impliedLinks, stronglyConnected), until the Svelte
-// dashboard imports the core (T38).
+// The core's link graph against the copies the dashboard's map view still
+// carries (pagerank, impliedLinks, stronglyConnected), until the map imports
+// the core (the renderer refactor, B3).
 
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -9,7 +9,7 @@ import { impliedLinks, noteIds, pagerank, strengthEdges, type Edge } from "../sr
 import { loadBundle } from "../src/node.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
-const mapJs = readFileSync(ROOT + "src/rdstudio/web/js/map.js", "utf8");
+const mapJs = readFileSync(ROOT + "app/src/lib/views/map.js", "utf8");
 
 // Lift a top-level function out of map.js by name.
 function lift(name: string): string {

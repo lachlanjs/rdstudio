@@ -51,7 +51,7 @@ def test_build_and_history(tmp_path, bundle_dir):
     assert sorted(c["order"] for c in concepts) == list(range(len(concepts)))
     assert (data / "k/design/model.md").read_text().startswith("# Dynamics")
     assert (data / "k/research/fig.png").exists()
-    assert (site / "index.html").exists() and (site / "vendor/d3.min.js").exists()
+    assert (site / "index.html").exists() and (site / "_app").is_dir() and (site / "vendor/katex/katex.min.js").exists()
     skills = json.loads((data / "skills.json").read_text())
     assert skills["skills"][0]["name"] == "demo"
     assert (bundle_dir / "index.md").exists()  # indexes generated

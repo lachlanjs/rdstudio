@@ -5,9 +5,8 @@
   "description": "The rdstudio dashboard: a SvelteKit single-page app over the files rdstudio build writes.",
   "type": "module",
   "scripts": {
-    "assets": "node scripts/assets.ts",
-    "dev": "node scripts/assets.ts && vite dev",
-    "build": "node scripts/assets.ts && vite build",
+    "dev": "vite dev",
+    "build": "vite build",
     "preview": "vite preview",
     "generate": "node scripts/openapi.ts && openapi-ts",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"

@@ -6,7 +6,7 @@ node = "24"  # LTS; the TypeScript packages (npm workspaces)
 
 [tasks.setup]
 description = "Install every dependency group and the benchmark browser"
-run = ["mise install", "uv sync --all-groups", "npm install", "uv run --group bench playwright install chromium"]
+run = ["mise install", "uv sync --all-groups", "npm install", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
 description = "Run every test: Python, then the TypeScript packages"
@@ -99,7 +99,7 @@ description = "The Svelte dashboard with hot reloading; start rdstudio serve in 
 run = "npm run dev --workspace @rdstudio/app"
 
 [tasks."app:build"]
-description = "Build the Svelte dashboard into app/build/ (try it: RDSTUDIO_WEB_DIR=app/build rdstudio serve)"
+description = "Build the Svelte dashboard into src/rdstudio/web/, where rdstudio build and serve find it"
 run = "npm run build --workspace @rdstudio/app"
 
 [tasks."app:check"]
