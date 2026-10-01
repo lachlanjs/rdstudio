@@ -82,7 +82,7 @@
       if (store.tree[id]) throw new Error(`There is already a folder ${id}.`);
       // A folder is made by its first note: an overview, which describes it.
       await createNote(`${id}/overview`, { type: "Overview", title: title.trim(), ...(description.trim() ? { description: description.trim() } : {}) });
-      await goto(dirHref(id));
+      await goto(a.from === "map" ? `#/map/${id.split("/").map(encodeURIComponent).join("/")}` : dirHref(id));
     });
     if (a.kind === "move-note") return run(async () => {
       if (!name.trim()) throw new Error("Give the note a file name.");

@@ -16,8 +16,19 @@ class Editing {
   enabled = $state(false);
   actor = $state("");
   token: string | null = null;
+  /** Settles once it is known whether editing is on (for code outside components). */
+  readonly known: Promise<void>;
+  private settle!: () => void;
+
+  constructor() {
+    this.known = new Promise((resolve) => { this.settle = resolve; });
+  }
 
   async load(): Promise<void> {
+    try { await this.ask(); } finally { this.settle(); }
+  }
+
+  private async ask(): Promise<void> {
     if (store.site.static) return;
     client.setConfig({ baseUrl: new URL(".", location.href).href.replace(/\/$/, "") });
     try {
@@ -92,6 +103,8 @@ export class EditSession {
   conflict = $state.raw<{ current: NoteSource | null } | null>(null);
   /** The editor's text was replaced from outside (a restored draft, their version): it reloads. */
   revision = $state(0);
+  /** On a phone or a narrow window the details form is a sheet, open or not. */
+  detailsOpen = $state(false);
   private draftTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(id: string) {

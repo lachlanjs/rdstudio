@@ -6,6 +6,8 @@
 import { syntaxTree } from "@codemirror/language";
 import { RangeSetBuilder, type EditorState, type Range } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from "@codemirror/view";
+import katex from "katex";
+import { formula } from "./maths.ts";
 
 class BulletWidget extends WidgetType {
   eq(): boolean { return true; }
@@ -22,6 +24,19 @@ class RuleWidget extends WidgetType {
   toDOM(): HTMLElement {
     const span = document.createElement("span");
     span.className = "cm-lp-hr";
+    return span;
+  }
+}
+
+// Inline maths, set by KaTeX as on the note page.
+class MathsWidget extends WidgetType {
+  constructor(readonly source: string) { super(); }
+  eq(other: MathsWidget): boolean { return other.source === this.source; }
+  toDOM(): HTMLElement {
+    const span = document.createElement("span");
+    span.className = "cm-lp-imaths";
+    const { tex, display } = formula(this.source);
+    span.innerHTML = katex.renderToString(tex, { displayMode: display, throwOnError: false });
     return span;
   }
 }
@@ -92,6 +107,15 @@ function build(view: EditorView): DecorationSet {
             }
             return false;
           }
+          case "InlineMath":
+            if (isActive(node.from)) decos.push(mark("cm-lp-mathsrc").range(node.from, node.to));
+            else decos.push(Decoration.replace({ widget: new MathsWidget(state.sliceDoc(node.from, node.to)) }).range(node.from, node.to));
+            return false;
+          case "BlockMath":
+          case "Table":
+            // Drawn by blocks.ts away from the cursor; its source, when editing it.
+            lineClass(node.from, node.to, "cm-lp-codeblock");
+            return false;
           case "Link": {
             // [text](url "title"): the text as a link; the rest hidden off the editing line.
             const n = node.node;
@@ -180,5 +204,7 @@ export const livePreviewTheme = EditorView.theme({
   ".cm-lp-listmark, .cm-lp-task": { color: "var(--ink-faint)", fontFamily: "var(--font-mono)" },
   ".cm-lp-quote": { borderLeft: "3px solid var(--accent)", paddingLeft: "14px !important", color: "var(--ink-soft)" },
   ".cm-lp-codeblock": { fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "1.5", background: "color-mix(in srgb, var(--ink) 6%, transparent)", padding: "0 12px !important" },
+  ".cm-lp-mathsrc": { fontFamily: "var(--font-mono)", fontSize: ".86em", color: "var(--ink-soft)" },
+  ".cm-lp-imaths .katex": { fontSize: "1.05em" },
   ".cm-lp-hr": { display: "inline-block", width: "100%", borderTop: "1px solid var(--rule)", verticalAlign: "middle" },
 });

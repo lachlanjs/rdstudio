@@ -6,7 +6,8 @@
   import type { EditorView } from "@codemirror/view";
   import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
-  import { createEditor, setSource, setText } from "$lib/editor/codemirror.ts";
+  import { applyFormat, createEditor, setSource, setText, type Format } from "$lib/editor/codemirror.ts";
+  import FormatBar from "./FormatBar.svelte";
 
   let { session, onDone }: { session: EditSession; onDone: () => void } = $props();
 
@@ -61,6 +62,8 @@
     return () => { removeEventListener("beforeunload", leave); view?.destroy(); view = null; };
   });
 
+  const format = (what: Format) => { if (view) applyFormat(view, what); };
+
   async function done() {
     if (session.dirty && !(await session.save())) return;
     onDone();
@@ -74,16 +77,21 @@
 </script>
 
 <article class="doc editing" aria-busy={session.status === "loading" || session.status === "saving"}>
-  <div class="edit-bar" role="toolbar" aria-label="Editing">
-    <span class={["edit-status", session.status]} role="status" aria-live="polite">{status}</span>
-    <span class="edit-actions">
-      <button class="toggle" type="button" aria-pressed={source} onclick={toggleSource}
-        title="Show the Markdown as it is written, instead of the live preview">Source</button>
-      <button class="toggle" type="button" onclick={cancel}>Cancel</button>
-      <button class="toggle" type="button" onclick={() => void session.save()}
-        disabled={!session.dirty || session.status === "saving" || session.status === "conflict"}>Save</button>
-      <button class="toggle primary" type="button" onclick={done} disabled={session.status === "saving" || session.status === "conflict"}>Done</button>
-    </span>
+  <div class="edit-top">
+    <div class="edit-bar" role="toolbar" aria-label="Editing">
+      <span class={["edit-status", session.status]} role="status" aria-live="polite">{status}</span>
+      <span class="edit-actions">
+        <button class="toggle details-button" type="button" aria-expanded={session.detailsOpen} aria-controls="edit-details"
+          onclick={() => (session.detailsOpen = !session.detailsOpen)}>Details</button>
+        <button class="toggle" type="button" aria-pressed={source} onclick={toggleSource}
+          title="Show the Markdown as it is written, instead of the live preview">Source</button>
+        <button class="toggle" type="button" onclick={cancel}>Cancel</button>
+        <button class="toggle" type="button" onclick={() => void session.save()}
+          disabled={!session.dirty || session.status === "saving" || session.status === "conflict"}>Save</button>
+        <button class="toggle primary" type="button" onclick={done} disabled={session.status === "saving" || session.status === "conflict"}>Done</button>
+      </span>
+    </div>
+    <FormatBar onformat={format} hidden={!session.source || session.detailsOpen} />
   </div>
 
   {#if session.message && session.status !== "conflict"}

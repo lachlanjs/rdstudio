@@ -69,7 +69,7 @@ async function renderNow(root: HTMLElement): Promise<void> {
   mermaid.initialize(mermaidConfig());
   for (const el of blocks) {
     if (!el.isConnected) continue;
-    const source = el.dataset.src ?? "";
+    const source = el.querySelector(".mermaid-source code")?.textContent ?? "";
     el.dataset.rendered = "pending";
     const id = `rdstudio-mermaid-${++counter}`;
     try {

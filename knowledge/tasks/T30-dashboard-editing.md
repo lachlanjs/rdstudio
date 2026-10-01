@@ -173,7 +173,7 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     moved with no link broken, a delete, and the phone dialogs. Found on the
     way: after a delete the page refreshed before leaving, so it vanished
     under the action and never left it; now it leaves first.
-  - Not yet: creating notes from the map itself.
+  - Creating from the map itself came in slice 4.
 - Asked for by the user (2026-10-01): creating and deleting from the tree,
   with deletion confirmed more firmly.
   - Each folder and note in the tree has a menu (a "⋯" button, shown on
@@ -191,3 +191,36 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     Escape, the phone layout), the confirmation, and cancelling.
   - Found on the way: a live-preview check raced the editor's noticing that
     focus had left; it now waits for it.
+- Slice 4 (2026-10-01): writing comfortably on every screen.
+  - Maths, tables and diagrams in the editor. A parser extension
+    (`app/src/lib/editor/maths.ts`) recognises `$…$`, `$$…$$`, `\(…\)` and
+    `$$` or `\[` blocks with texmath's own rules, so prices ("$5 and $10"),
+    escaped dollars and code are left alone; a unit test checks each case
+    against the note page's renderer. Away from the cursor, inline maths is
+    set by KaTeX, and display maths, tables and Mermaid diagrams are drawn as
+    on the note page (`blocks.ts`); clicking one shows its source, and maths
+    and diagrams keep their rendering beneath it while you type.
+  - A formatting toolbar: heading (cycling # to ###), bold, italic, link
+    (`[[` to choose a note, or the selection made a link), maths, list,
+    undo and redo. Under the editing bar on a desktop, each with its
+    shortcut (Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+Shift+M, Ctrl+Shift+H,
+    Ctrl+Shift+8); on a phone fixed above the on-screen keyboard (placed
+    from the visual viewport). Buttons never take the focus, so the
+    keyboard stays up.
+  - The details form is a sheet from the bottom on a phone or narrow
+    window, opened by Details in the editing bar (Escape, Done or a tap
+    outside closes it); beside the editor on a wide screen as before.
+  - The map has New note and New folder for the folder in focus; a new
+    folder made there is shown on the map, in focus.
+  - The editor's code is 126 KB compressed, down from 190: the Markdown
+    language's HTML support (which brings HTML, CSS and JavaScript parsers)
+    is replaced by a stand-in (`no-html.ts`), so inline HTML is plain text
+    in the editor.
+  - `e2e/compose.py` (31 checks) covers all of it at desktop and phone
+    sizes, including the litmus test from the map; the app has unit tests
+    now (`npm test` in `app/`, 20).
+  - Found on the way: the note page drew no Mermaid flowcharts at all. The
+    sanitiser drops attributes containing `-->`, and the diagram's source
+    was kept in one; it is now read from the source shown before drawing.
+  - Not yet: nested styles inside link text in the live preview; HTML
+    highlighting in the editor (left out for size).

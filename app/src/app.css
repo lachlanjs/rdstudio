@@ -294,6 +294,9 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-soft); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.map-create { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; }
+.map-create[hidden] { display: none; }
+.map-create .toggle { background: var(--paper-raised); box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
 .graph-hint { position: absolute; bottom: 10px; left: 12px; font-size: 12.5px; color: var(--ink-faint); }
 .graph-tip {
   position: absolute; pointer-events: none; background: var(--paper-raised); border: 1px solid var(--rule);
@@ -430,6 +433,8 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   .graph-options > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
   .graph-hint { display: none; }
   .map-crumbs { top: auto; bottom: 10px; left: 8px; right: 8px; max-width: none; justify-content: flex-start; }
+  .map-create { bottom: 56px; right: 8px; }
+  .map-create .toggle { min-height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -607,8 +612,8 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .toggle.primary:disabled { background: var(--paper-raised); border-color: var(--rule); color: var(--ink-faint); }
 
 .doc.editing { padding-top: 0; }
+.edit-top { position: sticky; top: var(--bar-h); z-index: 5; max-width: 72ch; background: var(--paper); }
 .edit-bar {
-  position: sticky; top: var(--bar-h); z-index: 5;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   max-width: 72ch; padding: 12px 0; margin-bottom: 4px;
   background: var(--paper); border-bottom: 1px solid var(--rule);
@@ -646,9 +651,58 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .edit-details input:focus, .edit-details textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
 .edit-details .hint { display: block; font-weight: 400; color: var(--ink-faint); font-size: 12.5px; margin-top: 4px; }
 
+/* Formatting: under the editing bar on a desktop, above the keyboard on a phone. */
+.format-bar {
+  display: flex; gap: 2px; max-width: 72ch; padding: 4px 0; margin-bottom: 6px;
+  background: var(--paper); border-bottom: 1px solid var(--rule);
+}
+.format-bar[hidden] { display: none; }
+.format-bar .format {
+  display: inline-grid; place-items: center; min-width: 36px; height: 34px; padding: 0 6px;
+  border: 0; border-radius: 6px; background: none; color: var(--ink-soft); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.format-bar .format:hover, .format-bar .format:focus-visible { background: var(--paper-sunk); color: var(--ink); outline: none; }
+.format-bar .format:active { background: var(--accent-soft); color: var(--ink); }
+.format-bar .format.group { margin-left: auto; }
+.format-bar .glyph { font: 600 17px/1 var(--font-text); }
+.format-bar .glyph.bold { font-weight: 800; }
+.format-bar .glyph.italic { font-style: italic; font-weight: 500; }
+.format-bar .glyph.maths { font-weight: 400; font-size: 18px; }
+
+/* The details form: beside the editor on a wide screen; a sheet from the
+   bottom on a narrower one, opened from the editing bar. */
+.details-button, .details-close, .details-scrim { display: none; }
+.details-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+@media (max-width: 1180px) {
+  .details-button, .details-close { display: inline-block; }
+  .meta.edit-meta {
+    position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; top: auto; max-height: min(82vh, 640px); height: auto;
+    overflow-y: auto; overscroll-behavior: contain; padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    border: 1px solid var(--rule); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--paper-raised);
+    box-shadow: 0 -10px 30px rgb(0 0 0 / .18); transform: translateY(105%); visibility: hidden;
+    transition: transform .18s ease-out, visibility 0s .18s;
+  }
+  .meta.edit-meta.open { transform: none; visibility: visible; transition: transform .18s ease-out; }
+  .meta.edit-meta .meta-inner { max-width: 72ch; margin: 0 auto; }
+  .details-scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .25); }
+}
+
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1180px) {
+  .format-bar {
+    position: fixed; top: auto; left: 0; right: 0; bottom: var(--keyboard, 0px); z-index: 20; max-width: none; margin: 0;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)); overflow-x: auto;
+    border-top: 1px solid var(--rule); border-bottom: 0; background: var(--paper-raised);
+  }
+  .format-bar .format { min-width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .meta.edit-meta, .meta.edit-meta.open { transition: none; } }
+
 @media (max-width: 760px) {
   .edit-bar { padding: 8px 0; }
-  .edit-actions .toggle { min-height: 40px; padding: 6px 14px; }
+  .edit-actions { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .edit-actions .toggle { min-height: 40px; padding: 6px 11px; }
   .compare { grid-template-columns: 1fr; }
   .edit-details input, .edit-details textarea { font-size: 16px; } /* no zoom on focus in mobile Safari */
 }

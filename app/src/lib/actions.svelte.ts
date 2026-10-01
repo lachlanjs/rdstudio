@@ -4,7 +4,7 @@
 
 export type Action =
   | { kind: "new-note"; folder: string }
-  | { kind: "new-folder"; folder: string }
+  | { kind: "new-folder"; folder: string; from?: "map" } // from the map: shown there once made
   | { kind: "move-note"; id: string }
   | { kind: "delete-note"; id: string }
   | { kind: "move-folder"; id: string }

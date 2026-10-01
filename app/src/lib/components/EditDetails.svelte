@@ -13,9 +13,15 @@
   const others = $derived(Object.keys(session.source?.meta ?? {}).filter((k) => !["type", "title", "description", "tags", "status"].includes(k)));
 </script>
 
-<aside class="meta" aria-label="Details">
+<!-- On a narrow screen a sheet over the editor, opened from its bar. -->
+<svelte:window onkeydown={(e) => { if (e.key === "Escape" && session.detailsOpen) session.detailsOpen = false; }} />
+{#if session.detailsOpen}<div class="details-scrim" aria-hidden="true" onclick={() => (session.detailsOpen = false)}></div>{/if}
+<aside class={["meta", "edit-meta", session.detailsOpen && "open"]} id="edit-details" aria-label="Details">
   <div class="meta-inner edit-details">
-    <h2>Details</h2>
+    <div class="details-head">
+      <h2>Details</h2>
+      <button class="toggle details-close" type="button" onclick={() => (session.detailsOpen = false)}>Done</button>
+    </div>
     <label>Title
       <input type="text" bind:value={session.fields.title} oninput={() => session.changed()} disabled={!session.source} />
     </label>

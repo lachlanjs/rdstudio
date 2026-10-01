@@ -11,7 +11,12 @@ import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, placeholder } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { linkCompletion, type LinkTarget } from "./links.ts";
+import { blocksTheme, renderedBlocks } from "./blocks.ts";
+import { format, formatKeymap, type Format } from "./commands.ts";
 import { livePreview, livePreviewTheme } from "./livePreview.ts";
+import { mathsSyntax } from "./maths.ts";
+
+export type { Format };
 
 export interface EditorOptions {
   doc: string;
@@ -25,7 +30,7 @@ export interface EditorOptions {
 const mode = new Compartment();
 // Plain source is set in the monospaced face; the live preview in the reading one.
 const sourceTheme = EditorView.theme({ ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "1.6" } });
-const modeExtensions = (source: boolean) => (source ? [sourceTheme] : [livePreview, livePreviewTheme]);
+const modeExtensions = (source: boolean) => (source ? [sourceTheme] : [livePreview, livePreviewTheme, renderedBlocks, blocksTheme]);
 
 const theme = EditorView.theme({
   "&": { color: "var(--ink)", backgroundColor: "transparent", fontSize: "16px" },
@@ -69,7 +74,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       history(),
       drawSelection(),
       EditorView.lineWrapping,
-      markdown({ base: markdownLanguage }),
+      markdown({ base: markdownLanguage, extensions: [mathsSyntax], completeHTMLTags: false }),
       syntaxHighlighting(highlight),
       theme,
       mode.of(modeExtensions(Boolean(opts.source))),
@@ -81,6 +86,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       EditorView.contentAttributes.of({ "aria-label": opts.label, spellcheck: "true", autocapitalize: "sentences", autocorrect: "on" }),
       keymap.of([
         { key: "Mod-s", preventDefault: true, run: () => { opts.onSave(); return true; } },
+        ...formatKeymap,
         ...closeBracketsKeymap,
         ...completionKeymap,
         indentWithTab,
@@ -91,6 +97,12 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
     ],
   });
   return new EditorView({ state, parent });
+}
+
+/** Bold, a heading, a link…, from the toolbar; the editor keeps the focus. */
+export function applyFormat(view: EditorView, what: Format): void {
+  format(view, what);
+  view.focus();
 }
 
 /** Switch between the live preview and plain source. */
