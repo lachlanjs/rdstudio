@@ -46,6 +46,23 @@ graph LR
 
 Plain words here.
 """)
+CHART = ROOT / "knowledge/forms/chart.md"
+CHART.write_text("""---
+type: Note
+title: Chart
+description: A chart with a legend, which must not be cut off on a phone.
+---
+
+```mermaid
+xychart-beta
+  title "Before"
+  x-axis "Time (days)" 0 --> 10
+  y-axis "Understanding/Complexity" 0 --> 100
+  line "Understanding" [0, 10, 10, 30, 30, 30, 70, 70, 70]
+  line "Complexity"    [0, 0,  10, 10, 20, 25, 40, 60, 65]
+```
+
+""" + "\n\n".join(f"Paragraph {i} of a long note, so that it scrolls." for i in range(1, 41)) + "\n")
 with socket.socket() as s:
     s.bind(("127.0.0.1", 0))
     PORT = s.getsockname()[1]
@@ -196,6 +213,39 @@ with sync_playwright() as pw:
     p.wait_for_selector("article.doc:not(.editing)")
     time.sleep(0.3)
     check("phone: the title from the sheet saved", "title: Blocks on a phone" in NOTE.read_text())
+    ctx.close()
+
+    # The on-screen keyboard: Android is told to shrink the page for it (as
+    # a shorter window does here), so nothing is left under it or adrift.
+    ctx, p = page_for(**phone)
+    p.add_init_script("try { localStorage.setItem('rdstudio.look', 'space'); localStorage.setItem('rdstudio.mode', 'dark') } catch {}")
+    p.goto(URL + "?nosw#/k/forms/chart")
+    p.wait_for_selector(".prose .mermaid-block svg", timeout=20000)
+    time.sleep(0.5)
+    cut = p.evaluate("""(() => { const svg = document.querySelector('.prose .mermaid-block svg'), r = svg.getBoundingClientRect();
+      return [...svg.querySelectorAll('text')].filter(t => { const b = t.getBoundingClientRect(); return b.right > r.right + 0.5 || b.left < r.left - 0.5; }).map(t => t.textContent.trim()); })()""")
+    check("phone: a chart's legend is not cut off", not cut, str(cut))
+    meta = p.get_attribute('meta[name="viewport"]', "content")
+    check("phone: the keyboard shrinks the page (Android)", "interactive-widget=resizes-content" in meta, meta)
+    p.get_by_role("button", name="Edit").tap()
+    p.wait_for_selector(".cm-content")
+    p.set_viewport_size({"width": 390, "height": 470})  # the keyboard is up
+    p.locator(".cm-line").last.tap()
+    p.keyboard.press("Control+End")  # well down the note, scrolled
+    for i in range(8):
+        p.keyboard.press("Enter")
+        p.keyboard.type(f"New line {i}")
+    time.sleep(0.4)
+    head = p.locator("header.bar, .bar").first.bounding_box()
+    top = p.locator(".edit-top").bounding_box()
+    check("phone, keyboard up: the header stays at the top", head and abs(head["y"]) < 1, str(head))
+    check("phone, keyboard up: the editing bar sits flush under it", head and top and abs(top["y"] - (head["y"] + head["height"])) < 1.5, f"{head} {top}")
+    tb = p.get_by_role("toolbar", name="Formatting").bounding_box()
+    check("phone, keyboard up: the toolbar sits just above the keyboard", tb and abs(tb["y"] + tb["height"] - 470) < 1.5, str(tb))
+    cursor = p.locator(".cm-cursor-primary, .cm-cursor").first.bounding_box()
+    check("phone, keyboard up: the cursor stays clear of the toolbar while typing", cursor and tb and cursor["y"] + cursor["height"] <= tb["y"], f"{cursor} {tb}")
+    p.screenshot(path=str(OUT / "compose-phone-keyboard.png"))
+    p.get_by_role("button", name="Cancel").tap()
     ctx.close()
 
     # ------------------------------------------------ creating from the map

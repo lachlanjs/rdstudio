@@ -22,17 +22,36 @@
     { what: "redo", label: "Redo", keys: mac ? "⌘Shift+Z" : "Ctrl+Y" },
   ];
 
-  // Above the on-screen keyboard: the gap between the bottom of the visible
-  // part of the page and the bottom of the window.
+  // Above the on-screen keyboard. Android shrinks the page for the keyboard
+  // (app.html), so the bar simply sits at the bottom. Where the keyboard
+  // covers the page instead (iOS), it is lifted by the gap between the
+  // visible part of the page and the bottom of the window. The browser's
+  // last report can come before the keyboard or a scroll has settled, so it
+  // is checked again each frame until the gap has stayed the same for a while.
   let bar = $state<HTMLDivElement>();
   onMount(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const place = () => bar?.style.setProperty("--keyboard", `${Math.max(0, innerHeight - vv.height - vv.offsetTop)}px`);
-    place();
+    let gap = -1, still = 0, frame = 0;
+    const measure = () => Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    const tick = () => {
+      const now = measure();
+      if (now !== gap) { gap = now; still = 0; bar?.style.setProperty("--keyboard", `${gap}px`); }
+      frame = ++still < 20 ? requestAnimationFrame(tick) : 0;
+    };
+    const place = () => { still = 0; if (!frame) frame = requestAnimationFrame(tick); };
+    tick();
     vv.addEventListener("resize", place);
     vv.addEventListener("scroll", place);
-    return () => { vv.removeEventListener("resize", place); vv.removeEventListener("scroll", place); };
+    addEventListener("focusin", place);
+    addEventListener("focusout", place);
+    return () => {
+      cancelAnimationFrame(frame);
+      vv.removeEventListener("resize", place);
+      vv.removeEventListener("scroll", place);
+      removeEventListener("focusin", place);
+      removeEventListener("focusout", place);
+    };
   });
 </script>
 

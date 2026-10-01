@@ -224,3 +224,22 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     was kept in one; it is now read from the source shown before drawing.
   - Not yet: nested styles inside link text in the live preview; HTML
     highlighting in the editor (left out for size).
+- Reported by the user from their phone (2026-10-01): the toolbar was
+  sometimes half under the keyboard; scrolled down a note, the header was
+  gone and the editing bar hung a header's height down; a chart's legend
+  was cut off.
+  - The header scrolled away on any long page on a phone: the body was one
+    screen tall, and a sticky header only sticks within it. The body now
+    grows with the page.
+  - On Android the keyboard now shrinks the page (`interactive-widget=
+    resizes-content`), so the toolbar sits at the bottom of what is left.
+    Where the keyboard covers the page instead (iOS), the toolbar is placed
+    from the visual viewport and checked again each frame until it settles,
+    since the browser's last report can come too early.
+  - Scrolling to the cursor keeps it clear of the bars (`scrollMargins`).
+  - Mermaid sizes a chart's legend by measuring text without the theme's
+    font, so wider type ran past the edge; a drawing's frame is now widened
+    to what it holds. Its legend and data labels were also dark in dark
+    mode (colours left to Mermaid's light defaults).
+  - `e2e/compose.py` (37 checks) adds a long note with a chart in the space
+    theme, dark, with a shorter window standing in for the keyboard.

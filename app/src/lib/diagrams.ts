@@ -47,6 +47,24 @@ export function mermaidConfig() {
   };
 }
 
+/** Widen a drawing's frame to what it holds. Mermaid sizes some diagrams (a
+ *  chart's legend) by measuring text in a scratch element without the
+ *  theme's font, so wider type runs past the edge and is cut off. */
+function fit(svg: SVGSVGElement | null): void {
+  if (!svg || !svg.viewBox.baseVal || !svg.viewBox.baseVal.width) return;
+  let box: DOMRect;
+  try { box = svg.getBBox(); } catch { return; } // not laid out
+  const vb = svg.viewBox.baseVal, pad = 4;
+  const x0 = Math.min(vb.x, box.x - pad), y0 = Math.min(vb.y, box.y - pad);
+  const x1 = Math.max(vb.x + vb.width, box.x + box.width + pad), y1 = Math.max(vb.y + vb.height, box.y + box.height + pad);
+  if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+  const scale = (x1 - x0) / vb.width;
+  svg.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  // Mermaid caps the width at the frame's; keep the type the same size.
+  const max = parseFloat(svg.style.maxWidth);
+  if (max) svg.style.maxWidth = `${Math.round(max * scale)}px`;
+}
+
 let counter = 0;
 let queue: Promise<void> = Promise.resolve();
 
@@ -77,6 +95,7 @@ async function renderNow(root: HTMLElement): Promise<void> {
     try {
       const { svg } = await mermaid.render(id, source);
       el.innerHTML = svg;
+      fit(el.querySelector("svg"));
       el.dataset.rendered = "done";
     } catch (err) {
       // Mermaid can leave its scratch container behind when parsing fails.

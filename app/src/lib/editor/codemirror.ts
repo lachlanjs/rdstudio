@@ -67,6 +67,18 @@ const highlight = HighlightStyle.define([
   { tag: tags.quote, color: "var(--ink-soft)", fontStyle: "italic" },
 ]);
 
+/** How much of the window a bar covers, from the top (its bottom edge) or
+ *  from the bottom (its top edge); 0 when it is not fixed there or hidden. */
+function covered(selector: string, edge: "top" | "bottom"): number {
+  const el = document.querySelector<HTMLElement>(selector);
+  if (!el || el.hidden) return 0;
+  // Only a fixed bar covers the bottom (on a desktop the toolbar is sticky, at the top).
+  const pos = getComputedStyle(el).position;
+  if (edge === "top" ? pos !== "fixed" : pos !== "fixed" && pos !== "sticky") return 0;
+  const r = el.getBoundingClientRect();
+  return edge === "bottom" ? Math.max(0, r.bottom) : Math.max(0, innerHeight - r.top);
+}
+
 export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorView {
   const state = EditorState.create({
     doc: opts.doc,
@@ -93,6 +105,9 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
         ...defaultKeymap,
         ...historyKeymap,
       ]),
+      // Scrolling to the cursor keeps it clear of the sticky bars above and
+      // the toolbar below (fixed above the keyboard on a phone).
+      EditorView.scrollMargins.of(() => ({ top: covered(".edit-top", "bottom"), bottom: covered(".format-bar", "top") + 8 })),
       EditorView.updateListener.of((u) => { if (u.docChanged) opts.onChange(u.state.doc.toString()); }),
     ],
   });
