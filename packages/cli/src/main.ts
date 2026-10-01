@@ -22,7 +22,7 @@ import * as learner from "./learner.ts";
 import { resolve as resolveProposal } from "./procedures.ts";
 import { PyFloat, pyDumps, pyRepr, pyStr } from "./pyjson.ts";
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
