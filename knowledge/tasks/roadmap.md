@@ -86,6 +86,7 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
 - [Distribution, funding and naming](/ideas/distribution-and-naming.md)
+- [Testing on real phones](/ideas/device-testing.md)
 - Understanding layer (proposed; see the [manifesto](/ideas/manifesto/motivation.md)):
   [where it lives](/ideas/learning/tool-boundary.md),
   [PID feature map](/ideas/learning/pid-feature-map.md),
