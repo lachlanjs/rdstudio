@@ -1,0 +1,154 @@
+"""End to end: editing notes in the dashboard, in headless Chromium, against
+a real rdstudio serve on a throwaway copy of the differential geometry test
+bed (RDSTUDIO_BENCH_DG, or ~/Repositories/differential-geometry), at desktop
+and phone sizes. Run with: mise run e2e
+
+Screenshots go to .e2e/ for a person to look at; the checks print PASS/FAIL.
+"""
+import difflib, os, shutil, socket, subprocess, sys, tempfile, time
+from pathlib import Path
+from playwright.sync_api import sync_playwright, expect
+
+REPO = Path(__file__).resolve().parent.parent
+DG = Path(os.environ.get("RDSTUDIO_BENCH_DG", Path.home() / "Repositories/differential-geometry"))
+if (DG / "knowledge").is_dir() is False and DG.name == "knowledge":
+    DG = DG.parent
+OUT = REPO / ".e2e"
+OUT.mkdir(exist_ok=True)
+ROOT = Path(tempfile.mkdtemp(prefix="rdstudio-e2e-")) / "project"
+shutil.copytree(DG, ROOT, ignore=shutil.ignore_patterns(".rdstudio"))
+NOTE = ROOT / "knowledge/forms/orientation.md"
+with socket.socket() as s:
+    s.bind(("127.0.0.1", 0))
+    PORT = s.getsockname()[1]
+URL = f"http://localhost:{PORT}/"
+server = subprocess.Popen(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "serve", "--port", str(PORT)],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+for _ in range(100):
+    try:
+        socket.create_connection(("127.0.0.1", PORT), timeout=0.2).close()
+        break
+    except OSError:
+        time.sleep(0.1)
+results = []
+
+def check(name, ok, detail=""):
+    results.append((name, ok))
+    print(("PASS " if ok else "FAIL ") + name + (f"  ({detail})" if detail and not ok else ""))
+
+with sync_playwright() as pw:
+    browser = pw.chromium.launch()
+    errors = []
+
+    def page_for(**kw):
+        ctx = browser.new_context(**kw)
+        p = ctx.new_page()
+        p.on("pageerror", lambda e: errors.append(str(e)))
+        p.on("console", lambda m: m.type == "error" and errors.append(m.text))
+        p.on("dialog", lambda d: d.accept())
+        return ctx, p
+
+    # ---------------------------------------------------------------- desktop
+    ctx, p = page_for(viewport={"width": 1280, "height": 860})
+    p.goto(URL + "?nosw#/k/forms/orientation")
+    p.wait_for_selector("h1")
+    edit = p.get_by_role("button", name="Edit")
+    check("Edit button shown when served", edit.is_visible())
+    before = NOTE.read_text()
+    edit.click()
+    p.wait_for_selector(".cm-content")
+    p.screenshot(path=str(OUT / "edit-desktop-open.png"))
+    check("editor shows the note's text", "orientation" in p.inner_text(".cm-content").lower())
+
+    # A small edit at the end of one line.
+    line = p.locator(".cm-line", has_text="# Examples").first
+    line.click()
+    p.keyboard.press("End")
+    p.keyboard.press("Enter"); p.keyboard.press("Enter")
+    p.keyboard.type("Every Lie group is orientable.")
+    expect(p.locator(".edit-status")).to_have_text("Unsaved changes")
+    p.keyboard.press("Control+s")
+    expect(p.locator(".edit-status")).to_have_text("Saved", timeout=5000)
+    after = NOTE.read_text()
+    check("saved to disk", "Every Lie group is orientable." in after)
+    removed = [l for l in difflib.ndiff(before.split("\n"), after.split("\n")) if l.startswith("- ")]
+    added = [l for l in difflib.ndiff(before.split("\n"), after.split("\n")) if l.startswith("+ ")]
+    stamp = lambda l: l[2:].startswith(("generated:", "  by:", "  at:"))
+    check("nothing removed but the old generated stamp", all(stamp(l) for l in removed), str(removed))
+    check("added: the new paragraph, a blank line and the stamp", sorted(l[2:] for l in added if not stamp(l)) == ["", "Every Lie group is orientable."], str(added))
+
+    # Details: the title.
+    title = p.get_by_label("Title")
+    title.fill("Orientation of manifolds")
+    p.get_by_role("button", name="Done").click()
+    p.wait_for_selector("article.doc:not(.editing) h1")
+    time.sleep(0.5)
+    t = NOTE.read_text()
+    check("title saved, frontmatter edited in place", "title: Orientation of manifolds" in t and t.count("\n") == after.count("\n"))
+    expect(p.locator(".doc-head h1")).to_have_text("Orientation of manifolds", timeout=6000)
+    check("the page shows the new title without reloading", True)
+    expect(p.locator(".prose")).to_contain_text("Every Lie group is orientable.", timeout=6000)
+    check("the page shows the new text", True)
+    p.screenshot(path=str(OUT / "edit-desktop-after.png"))
+
+    # Conflict: an agent writes while the editor is open.
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    p.locator(".cm-line", has_text="# Examples").first.click()
+    p.keyboard.press("End")
+    p.keyboard.type(" My sentence.")
+    NOTE.write_text(NOTE.read_text() + "\nAn agent's addition.\n")
+    p.get_by_role("button", name="Save", exact=True).click()
+    p.wait_for_selector("section.edit-conflict")
+    check("a save over a changed note is refused and shown", "changed since you opened it" in p.inner_text("section.edit-conflict"))
+    check("the agent's text is untouched", "An agent's addition." in NOTE.read_text() and "My sentence." not in NOTE.read_text())
+    p.get_by_role("button", name="Compare").click()
+    p.screenshot(path=str(OUT / "edit-desktop-conflict.png"))
+    p.get_by_role("button", name="Keep mine").click()
+    expect(p.locator(".edit-status")).to_have_text("Saved", timeout=5000)
+    check("keep mine saves over the current version", "My sentence." in NOTE.read_text())
+
+    # A draft survives a reload.
+    p.locator(".cm-line", has_text="# Examples").first.click()
+    p.keyboard.press("End")
+    p.keyboard.type(" Draft words.")
+    time.sleep(0.8)  # the draft is kept a moment after typing
+    p.reload()
+    p.wait_for_selector("h1")
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    check("an unsaved draft is restored", "Draft words." in p.inner_text(".cm-content") and "Restored" in p.inner_text(".editing"))
+    check("the draft was not saved to disk", "Draft words." not in NOTE.read_text())
+    p.get_by_role("button", name="Cancel").click()
+    p.wait_for_selector("article.doc:not(.editing)")
+    ctx.close()
+
+    # ---------------------------------------------------------------- phone
+    ctx, p = page_for(viewport={"width": 390, "height": 844}, device_scale_factor=3, is_mobile=True, has_touch=True)
+    p.goto(URL + "?nosw#/k/forms/orientation")
+    p.wait_for_selector("h1")
+    p.get_by_role("button", name="Edit").tap()
+    p.wait_for_selector(".cm-content")
+    p.screenshot(path=str(OUT / "edit-phone-open.png"))
+    box = p.get_by_role("button", name="Done").bounding_box()
+    check("phone: buttons are at least 40px tall", box and box["height"] >= 40, str(box))
+    sw = p.evaluate("document.documentElement.scrollWidth")
+    check("phone: no sideways scrolling", sw <= 390, str(sw))
+    p.locator(".cm-line", has_text="# Examples").first.tap()
+    p.keyboard.press("End")
+    p.keyboard.type(" Typed on a phone.")
+    p.get_by_role("button", name="Done").tap()
+    p.wait_for_selector("article.doc:not(.editing)")
+    time.sleep(0.5)
+    check("phone: saved", "Typed on a phone." in NOTE.read_text())
+    p.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    ctx.close()
+    browser.close()
+
+server.terminate()
+shutil.rmtree(ROOT.parent, ignore_errors=True)
+# The browser logs the deliberate conflict's 409; anything else is a problem.
+unexpected = [e for e in errors if "409" not in e]
+check("no unexpected console errors", not unexpected, str(unexpected[:5]))
+print(f"{sum(ok for _, ok in results)}/{len(results)} passed; screenshots in {OUT}")
+sys.exit(0 if all(ok for _, ok in results) else 1)

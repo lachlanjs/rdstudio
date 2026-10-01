@@ -55,6 +55,15 @@ class Store {
     measure("data", start);
   }
 
+  /** Load now if the build has a new version (after a save, say), instead of
+   *  waiting for the next look. */
+  async refresh(): Promise<void> {
+    const v = await currentVersion();
+    if (v !== null && v !== this.version) {
+      try { await this.load(); } catch { /* the watcher tries again */ }
+    }
+  }
+
   /** A note's Markdown body, fetched once per data version. */
   async body(id: string): Promise<string> {
     const hit = this.bodies.get(id);

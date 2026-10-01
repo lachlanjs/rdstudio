@@ -63,3 +63,38 @@ after it (sync, mobile) build on its write path.
 Add a "Philosophy" folder on the map with a note on the project's
 foundations and motivation, written and then edited from the dashboard, on the
 desktop and on the phone, and see it appear on the map without leaving the app.
+
+# Progress
+
+- Slice 1 (2026-10-01): saving, conflicts and the server's protection, with a
+  plain CodeMirror editor.
+  - `packages/cli/src/edit.ts`: a note's source and saving. The body is
+    replaced verbatim and a frontmatter field by splicing its own lines (the
+    YAML parser's source ranges), so other fields keep their formatting and
+    comments; an unchanged save writes nothing; CRLF files stay CRLF. Each
+    save names the file version it started from (a hash of the whole file)
+    and is refused with the current note when the file changed. Significant
+    edits stamp `generated` with the human from `rdstudio.toml`.
+  - The agents' write path (`store.record`, the MCP tools) still reprints the
+    whole frontmatter; moving it onto the splicing editor is a follow-up.
+  - `rdstudio serve`: `GET /api/edit`, `GET` and `PUT /api/notes/{id}`, with
+    the learner record's protection (Origin, per-run token, JSON only), a
+    rebuild straight after a save, and `--read-only`. Described in the
+    OpenAPI schema; the app uses the generated client.
+  - The app: an Edit button on notes when the server allows it; the editor
+    (CodeMirror 6, loaded only then: 174 KB compressed, most of it the HTML,
+    CSS and JavaScript modes the Markdown mode brings for embedded HTML, to
+    trim later) in place of the page; the details panel becomes a form.
+    Drafts are kept in the browser until saved, and restored on reopening; a
+    note changed meanwhile is shown to compare, keep mine, or use theirs.
+  - Checked: tests over every note in the fixtures, this repository and the
+    test bed (the source splits into exactly the file; an unchanged save
+    writes nothing; a one-line edit changes one line), server tests for the
+    refusals, conflicts and read-only, and `mise run e2e`: 17 checks in
+    headless Chromium against a real server on a copy of the test bed, at
+    desktop and phone sizes (save, title, live update, conflict, draft,
+    touch targets, no sideways scrolling).
+  - Found on the way: on a phone the details form is below the whole note
+    (slice 4's bottom panel); updating rdstudio while a page is open removes
+    the files the open page would load the editor from, so the error now
+    offers a reload.

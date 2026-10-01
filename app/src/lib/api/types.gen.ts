@@ -25,6 +25,74 @@ export type Error = {
     error: string;
 };
 
+export type EditState = {
+    enabled: boolean;
+    /**
+     * Send as X-Rdstudio-Token when saving.
+     */
+    token: string | null;
+    /**
+     * Who edits are attributed to, such as human:lachlan.
+     */
+    actor: string;
+};
+
+export type NoteSource = {
+    id: string;
+    /**
+     * Relative to the knowledge folder.
+     */
+    path: string;
+    /**
+     * Of the whole file; send it back as `base` when saving.
+     */
+    version: string;
+    meta: NoteMeta;
+    /**
+     * The YAML between the --- lines.
+     */
+    frontmatter: string;
+    /**
+     * Everything after the frontmatter, verbatim.
+     */
+    body: string;
+};
+
+/**
+ * Frontmatter fields.
+ */
+export type NoteMeta = {
+    [key: string]: unknown;
+};
+
+export type NoteSaved = {
+    note: NoteSource;
+    created: boolean;
+    changed: boolean;
+    significant: boolean;
+};
+
+export type NoteConflict = {
+    error: string;
+    current: NoteSource & ({
+        [key: string]: unknown;
+    } | null);
+};
+
+export type NoteSave = {
+    /**
+     * The version the edit started from; null creates the note.
+     */
+    base: string | null;
+    body?: string | null;
+    /**
+     * Fields to set; null removes one.
+     */
+    meta?: {
+        [key: string]: unknown;
+    } | null;
+};
+
 export type GetApiLearnerData = {
     body?: never;
     path?: never;
@@ -93,3 +161,115 @@ export type PostApiLearnerResponses = {
 };
 
 export type PostApiLearnerResponse = PostApiLearnerResponses[keyof PostApiLearnerResponses];
+
+export type GetApiEditData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/edit';
+};
+
+export type GetApiEditErrors = {
+    /**
+     * Host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiEditError = GetApiEditErrors[keyof GetApiEditErrors];
+
+export type GetApiEditResponses = {
+    /**
+     * The editing state
+     */
+    200: EditState;
+};
+
+export type GetApiEditResponse = GetApiEditResponses[keyof GetApiEditResponses];
+
+export type GetApiNotesByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}';
+};
+
+export type GetApiNotesByIdErrors = {
+    /**
+     * Not a valid note id
+     */
+    400: Error;
+    /**
+     * Host not allowed
+     */
+    403: Error;
+    /**
+     * No such note
+     */
+    404: Error;
+};
+
+export type GetApiNotesByIdError = GetApiNotesByIdErrors[keyof GetApiNotesByIdErrors];
+
+export type GetApiNotesByIdResponses = {
+    /**
+     * The note
+     */
+    200: NoteSource;
+};
+
+export type GetApiNotesByIdResponse = GetApiNotesByIdResponses[keyof GetApiNotesByIdResponses];
+
+export type PutApiNotesByIdData = {
+    body: NoteSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}';
+};
+
+export type PutApiNotesByIdErrors = {
+    /**
+     * Not a valid edit
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base` (or exists, when creating): the current note is included
+     */
+    409: NoteConflict;
+    /**
+     * Too large
+     */
+    413: Error;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type PutApiNotesByIdError = PutApiNotesByIdErrors[keyof PutApiNotesByIdErrors];
+
+export type PutApiNotesByIdResponses = {
+    /**
+     * Saved
+     */
+    200: NoteSaved;
+};
+
+export type PutApiNotesByIdResponse = PutApiNotesByIdResponses[keyof PutApiNotesByIdResponses];

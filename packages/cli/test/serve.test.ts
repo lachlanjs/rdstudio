@@ -88,8 +88,9 @@ test("text is compressed and vendored files are cached", async () => {
   expect((await call("GET", "/vendor")).status).toBe(301);
 });
 
-test("the learner API is described as OpenAPI", async () => {
+test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths)).toEqual(["/api/learner"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/learner", "/api/notes/{id}"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
+  expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["get", "put"]);
 });

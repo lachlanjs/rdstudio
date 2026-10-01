@@ -54,6 +54,147 @@
         "required": [
           "error"
         ]
+      },
+      "EditState": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Send as X-Rdstudio-Token when saving."
+          },
+          "actor": {
+            "type": "string",
+            "description": "Who edits are attributed to, such as human:lachlan."
+          }
+        },
+        "required": [
+          "enabled",
+          "token",
+          "actor"
+        ]
+      },
+      "NoteSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Relative to the knowledge folder."
+          },
+          "version": {
+            "type": "string",
+            "description": "Of the whole file; send it back as `base` when saving."
+          },
+          "meta": {
+            "$ref": "#/components/schemas/NoteMeta"
+          },
+          "frontmatter": {
+            "type": "string",
+            "description": "The YAML between the --- lines."
+          },
+          "body": {
+            "type": "string",
+            "description": "Everything after the frontmatter, verbatim."
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "version",
+          "meta",
+          "frontmatter",
+          "body"
+        ]
+      },
+      "NoteMeta": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "Frontmatter fields."
+      },
+      "NoteSaved": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "$ref": "#/components/schemas/NoteSource"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "changed": {
+            "type": "boolean"
+          },
+          "significant": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "note",
+          "created",
+          "changed",
+          "significant"
+        ]
+      },
+      "NoteConflict": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "current": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NoteSource"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "error",
+          "current"
+        ]
+      },
+      "NoteSave": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The version the edit started from; null creates the note."
+          },
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Fields to set; null removes one."
+          }
+        },
+        "required": [
+          "base"
+        ]
       }
     },
     "parameters": {}
@@ -150,6 +291,187 @@
           },
           "413": {
             "description": "Event too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/edit": {
+      "get": {
+        "summary": "Whether notes can be edited here, and the token to do it with",
+        "responses": {
+          "200": {
+            "description": "The editing state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{id}": {
+      "get": {
+        "summary": "A note's source, to edit",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The note's id, such as design/model (slashes encoded)."
+            },
+            "required": true,
+            "description": "The note's id, such as design/model (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteSource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid note id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such note",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save an edit to a note, or create it",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The note's id, such as design/model (slashes encoded)."
+            },
+            "required": true,
+            "description": "The note's id, such as design/model (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteSaved"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid edit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The note changed since `base` (or exists, when creating): the current note is included",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteConflict"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Too large",
             "content": {
               "application/json": {
                 "schema": {

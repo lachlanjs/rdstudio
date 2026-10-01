@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses } from './types.gen.js';
+import type { GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -28,6 +28,28 @@ export const getApiLearner = <ThrowOnError extends boolean = false>(options?: Op
  */
 export const postApiLearner = <ThrowOnError extends boolean = false>(options: Options<PostApiLearnerData, ThrowOnError>): RequestResult<PostApiLearnerResponses, PostApiLearnerErrors, ThrowOnError> => (options.client ?? client).post<PostApiLearnerResponses, PostApiLearnerErrors, ThrowOnError>({
     url: '/api/learner',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Whether notes can be edited here, and the token to do it with
+ */
+export const getApiEdit = <ThrowOnError extends boolean = false>(options?: Options<GetApiEditData, ThrowOnError>): RequestResult<GetApiEditResponses, GetApiEditErrors, ThrowOnError> => (options?.client ?? client).get<GetApiEditResponses, GetApiEditErrors, ThrowOnError>({ url: '/api/edit', ...options });
+
+/**
+ * A note's source, to edit
+ */
+export const getApiNotesById = <ThrowOnError extends boolean = false>(options: Options<GetApiNotesByIdData, ThrowOnError>): RequestResult<GetApiNotesByIdResponses, GetApiNotesByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiNotesByIdResponses, GetApiNotesByIdErrors, ThrowOnError>({ url: '/api/notes/{id}', ...options });
+
+/**
+ * Save an edit to a note, or create it
+ */
+export const putApiNotesById = <ThrowOnError extends boolean = false>(options: Options<PutApiNotesByIdData, ThrowOnError>): RequestResult<PutApiNotesByIdResponses, PutApiNotesByIdErrors, ThrowOnError> => (options.client ?? client).put<PutApiNotesByIdResponses, PutApiNotesByIdErrors, ThrowOnError>({
+    url: '/api/notes/{id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

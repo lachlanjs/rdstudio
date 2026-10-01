@@ -1,12 +1,12 @@
 // rdstudio serve: the dashboard's files, the private learner record's API, and
 // a rebuild whenever a source changes. A port of src/rdstudio/serve.py on Hono.
 //
-// Writes to the learner record are accepted only from the dashboard's own
-// pages: the Origin must match the Host, the body must be JSON, and the
-// request must carry the token handed out by GET (which other sites cannot
-// read). When bound to localhost, the API answers only to localhost names,
-// Tailscale names (*.ts.net, which `tailscale serve` passes through) and
-// --allow-host names, against DNS rebinding.
+// Writes (to the learner record, and edits to notes) are accepted only from
+// the dashboard's own pages: the Origin must match the Host, the body must be
+// JSON, and the request must carry the token handed out by GET (which other
+// sites cannot read). When bound to localhost, the API answers only to
+// localhost names, Tailscale names (*.ts.net, which `tailscale serve` passes
+// through) and --allow-host names, against DNS rebinding.
 
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -18,6 +18,8 @@ import type { Context } from "hono";
 import { MAX_EVENT_BYTES } from "@rdstudio/core";
 import { build, WEB_DIR } from "./build.ts";
 import type { Config } from "./config.ts";
+import { ConflictError, noteSource, saveNote } from "./edit.ts";
+import { StoreError } from "./store.ts";
 import * as learner from "./learner.ts";
 import { pyDumps } from "./pyjson.ts";
 
@@ -40,7 +42,13 @@ export interface ServerOptions {
   token: string;
   loopback: boolean;
   allowHosts?: Iterable<string>;
+  /** Refuse edits to notes (rdstudio serve --read-only). */
+  readOnly?: boolean;
+  /** Called after a note is written, before the reply: rebuild the site. */
+  onWrite?: () => void;
 }
+
+const MAX_NOTE_BYTES = 2_000_000;
 
 // ------------------------------------------------------------------ learner API (documented as OpenAPI)
 
@@ -78,7 +86,68 @@ const postLearner = createRoute({
   },
 });
 
-export function createApp({ cfg, site, token, loopback, allowHosts = [] }: ServerOptions): OpenAPIHono {
+// ------------------------------------------------------------------ notes API
+
+const Meta = z.record(z.string(), z.unknown()).openapi("NoteMeta", { description: "Frontmatter fields." });
+const NoteSourceSchema = z.object({
+  id: z.string(),
+  path: z.string().openapi({ description: "Relative to the knowledge folder." }),
+  version: z.string().openapi({ description: "Of the whole file; send it back as `base` when saving." }),
+  meta: Meta,
+  frontmatter: z.string().openapi({ description: "The YAML between the --- lines." }),
+  body: z.string().openapi({ description: "Everything after the frontmatter, verbatim." }),
+}).openapi("NoteSource");
+const EditState = z.object({
+  enabled: z.boolean(),
+  token: z.string().nullable().openapi({ description: "Send as X-Rdstudio-Token when saving." }),
+  actor: z.string().openapi({ description: "Who edits are attributed to, such as human:lachlan." }),
+}).openapi("EditState");
+const SaveBody = z.object({
+  base: z.string().nullable().openapi({ description: "The version the edit started from; null creates the note." }),
+  body: z.string().nullable().optional(),
+  meta: Meta.nullable().optional().openapi({ description: "Fields to set; null removes one." }),
+}).openapi("NoteSave");
+const SaveReply = z.object({
+  note: NoteSourceSchema, created: z.boolean(), changed: z.boolean(), significant: z.boolean(),
+}).openapi("NoteSaved");
+const Conflict = z.object({ error: z.string(), current: NoteSourceSchema.nullable() }).openapi("NoteConflict");
+const NoteId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The note's id, such as design/model (slashes encoded)." }) });
+
+const getEdit = createRoute({
+  method: "get", path: "/api/edit", summary: "Whether notes can be edited here, and the token to do it with",
+  responses: {
+    200: { description: "The editing state", content: { "application/json": { schema: EditState } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+const getNote = createRoute({
+  method: "get", path: "/api/notes/{id}", summary: "A note's source, to edit",
+  request: { params: NoteId },
+  responses: {
+    200: { description: "The note", content: { "application/json": { schema: NoteSourceSchema } } },
+    400: { description: "Not a valid note id", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+    404: { description: "No such note", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+const putNote = createRoute({
+  method: "put", path: "/api/notes/{id}", summary: "Save an edit to a note, or create it",
+  request: {
+    params: NoteId,
+    headers: z.object({ "x-rdstudio-token": z.string() }),
+    body: { content: { "application/json": { schema: SaveBody } }, required: true },
+  },
+  responses: {
+    200: { description: "Saved", content: { "application/json": { schema: SaveReply } } },
+    400: { description: "Not a valid edit", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "The note changed since `base` (or exists, when creating): the current note is included", content: { "application/json": { schema: Conflict } } },
+    413: { description: "Too large", content: { "application/json": { schema: ErrorBody } } },
+    415: { description: "Not JSON", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+
+export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnly = false, onWrite }: ServerOptions): OpenAPIHono {
   const allowed = new Set([...allowHosts].map((h) => h.toLowerCase()));
   // No automatic validation: the checks below run in a fixed order, as in the Python server.
   const app = new OpenAPIHono({ defaultHook: () => undefined });
@@ -100,23 +169,70 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [] }: Serve
     return json(c, 200, { enabled: on, token: on ? token : null, dir: on ? learner.recordDir(cfg) : null, events: on ? learner.events(cfg) : [] });
   }) as never);
 
-  app.openapi(postLearner, (async (c: Context) => {
-    // A refused body is never read, so this connection is not reused.
-    const refuse = (status: number, error: string) => json(c, status, { error }, true);
+  // A refused body is never read, so that connection is not reused.
+  const refuse = (c: Context, status: number, error: string) => json(c, status, { error }, true);
+  /** Why a write is refused (the Origin, the token, the content type), or null. */
+  const writeRefused = (c: Context) => {
     let origin = "";
     try { origin = new URL(c.req.header("origin") ?? "").host; } catch { /* no origin */ }
-    if (!hostOk(c) || !c.req.header("origin") || origin !== c.req.header("host")) return refuse(403, "cross-origin request refused");
-    if (c.req.header("x-rdstudio-token") !== token) return refuse(403, "bad token");
-    if (!(c.req.header("content-type") ?? "").startsWith("application/json")) return refuse(415, "JSON only");
-    if (!learner.enabled(cfg)) return refuse(409, "the learner record is off ([learner] enabled in the user config)");
-    if (Number(c.req.header("content-length") ?? 0) > MAX_EVENT_BYTES) return refuse(413, "event too large");
+    if (!hostOk(c) || !c.req.header("origin") || origin !== c.req.header("host")) return refuse(c, 403, "cross-origin request refused");
+    if (c.req.header("x-rdstudio-token") !== token) return refuse(c, 403, "bad token");
+    if (!(c.req.header("content-type") ?? "").startsWith("application/json")) return refuse(c, 415, "JSON only");
+    return null;
+  };
+
+  app.openapi(postLearner, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (!learner.enabled(cfg)) return refuse(c, 409, "the learner record is off ([learner] enabled in the user config)");
+    if (Number(c.req.header("content-length") ?? 0) > MAX_EVENT_BYTES) return refuse(c, 413, "event too large");
     const raw = await c.req.text();
     let event: unknown;
-    try { event = raw ? JSON.parse(raw) : null; } catch (err) { return refuse(400, (err as Error).message); }
+    try { event = raw ? JSON.parse(raw) : null; } catch (err) { return refuse(c, 400, (err as Error).message); }
     try {
       return json(c, 200, learner.append(cfg, event), true);
     } catch (err) {
-      return refuse(400, (err as Error).message);
+      return refuse(c, 400, (err as Error).message);
+    }
+  }) as never);
+
+  const actor = cfg.human || "human:unknown";
+  app.openapi(getEdit, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    return json(c, 200, { enabled: !readOnly, token: readOnly ? null : token, actor });
+  }) as never);
+
+  app.openapi(getNote, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    try {
+      return json(c, 200, noteSource(cfg.knowledgeDir, c.req.param("id") ?? ""));
+    } catch (err) {
+      return json(c, String((err as Error).message).startsWith("no such note") ? 404 : 400, { error: (err as Error).message });
+    }
+  }) as never);
+
+  app.openapi(putNote, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    if (Number(c.req.header("content-length") ?? 0) > MAX_NOTE_BYTES) return refuse(c, 413, "note too large");
+    let edit: { base?: unknown; body?: unknown; meta?: unknown };
+    try { edit = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    if (typeof edit !== "object" || edit === null || !("base" in edit) || (edit.base !== null && typeof edit.base !== "string")
+      || (edit.body != null && typeof edit.body !== "string")
+      || (edit.meta != null && (typeof edit.meta !== "object" || Array.isArray(edit.meta)))) {
+      return refuse(c, 400, "expected {base, body?, meta?}");
+    }
+    try {
+      const saved = saveNote(cfg.knowledgeDir, c.req.param("id") ?? "", {
+        actor, base: edit.base as string | null, body: edit.body as string | null | undefined, meta: edit.meta as Record<string, unknown> | null | undefined,
+      });
+      if (saved.changed) onWrite?.();
+      return json(c, 200, saved, true);
+    } catch (err) {
+      if (err instanceof ConflictError) return json(c, 409, { error: err.message, current: err.current }, true);
+      if (err instanceof StoreError || (err as Error).name === "FrontmatterError") return refuse(c, 400, (err as Error).message);
+      throw err;
     }
   }) as never);
 
@@ -201,12 +317,17 @@ function fingerprint(cfg: Config): string {
 
 const clock = () => new Date().toTimeString().slice(0, 8);
 
-export function serve(cfg: Config, { host = "127.0.0.1", port = 8000, watch = true, allowHosts = [] as string[] } = {}): void {
+export function serve(cfg: Config, { host = "127.0.0.1", port = 8000, watch = true, allowHosts = [] as string[], readOnly = false } = {}): void {
   const site = build(cfg);
-  const app = createApp({ cfg, site, token: randomBytes(24).toString("base64url"), loopback: LOOPBACK.has(host), allowHosts });
+  let last = fingerprint(cfg);
+  // After an edit, rebuild at once, so the page sees it on its next look.
+  const onWrite = () => {
+    try { build(cfg); } catch (err) { console.error(`[${clock()}] build failed: ${(err as Error).message}`); }
+    last = fingerprint(cfg);
+  };
+  const app = createApp({ cfg, site, token: randomBytes(24).toString("base64url"), loopback: LOOPBACK.has(host), allowHosts, readOnly, onWrite });
   const server = nodeServe({ fetch: app.fetch, hostname: host, port });
   if (watch) {
-    let last = fingerprint(cfg);
     setInterval(() => {
       const current = fingerprint(cfg);
       if (current === last) return;
@@ -222,6 +343,7 @@ export function serve(cfg: Config, { host = "127.0.0.1", port = 8000, watch = tr
   const shown = host === "127.0.0.1" || host === "0.0.0.0" ? "localhost" : host;
   console.log(`Serving ${cfg.title} at http://${shown}:${port}/  (Ctrl+C to stop)`);
   if (host === "0.0.0.0") console.log("Listening on all interfaces (reachable over your tailnet/LAN).");
+  if (!readOnly) console.log("Notes can be edited from the dashboard (--read-only to turn that off).");
   const stop = () => { server.close(); process.exit(0); };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);

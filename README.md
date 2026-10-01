@@ -71,6 +71,11 @@ tailscale serve --bg --https=8003 http://127.0.0.1:8003
 Use one port per project. `rdstudio serve --host 0.0.0.0` also works, but
 serves plain HTTP to your whole network.
 
+Anyone who can open the dashboard from `rdstudio serve` can edit notes in it
+(the Edit button on a note), with edits recorded as yours. Keep it to your own
+devices, as above, or start it with `rdstudio serve --read-only`. Exported
+snapshots (`rdstudio export`) are always read-only.
+
 Over HTTPS (or on localhost) the dashboard keeps a copy of itself and of the
 notes in the browser: after the first visit it reopens at once, even over a
 slow tunnel, and it can be read offline. Only changed notes are fetched again.
