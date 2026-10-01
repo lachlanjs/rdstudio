@@ -34,8 +34,11 @@ const theme = EditorView.theme({
   ".cm-content": { padding: "12px 0 40vh", caretColor: "var(--accent)" },
   ".cm-line": { padding: "0 2px" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)", borderLeftWidth: "2px" },
-  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-    backgroundColor: "var(--accent-soft) !important",
+  // The selection, clearly visible in every theme: the soft accent alone is
+  // too close to the paper in some dark ones (space). Dimmer when not focused.
+  ".cm-selectionBackground": { backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent) !important" },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "color-mix(in srgb, var(--accent) 40%, transparent) !important",
   },
   ".cm-placeholder": { color: "var(--ink-faint)" },
   ".cm-tooltip-autocomplete": {

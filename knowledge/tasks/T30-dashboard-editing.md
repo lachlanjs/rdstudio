@@ -131,3 +131,9 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     the editor (the note page joins them), as Obsidian does: the editor
     never rewraps text.
   - The editor's code is now 187 KB compressed (autocomplete added).
+- Reported by the user (2026-10-01): selected text was hard to see in the
+  dark space theme, where the soft accent the selection used is close to the
+  page. The selection is now the theme's accent at 40% (22% when the editor
+  is not focused), and code backgrounds are translucent so a selection
+  shows through them. `e2e/edit.py` checks the selection's contrast with the
+  page in all five themes, light and dark.

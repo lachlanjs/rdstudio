@@ -119,6 +119,33 @@ with sync_playwright() as pw:
     p.get_by_role("button", name="Source").click()  # back to the live preview, which is remembered
     after = NOTE.read_text()
 
+    # A selection is clearly visible in every theme, dark ones included.
+    p.locator(".cm-line", has_text="Examples").first.click()
+    p.keyboard.press("Home"); p.keyboard.press("Shift+ArrowDown"); p.keyboard.press("Shift+End")
+    weak = []
+    for look in ["studio", "notebook", "map", "space", "cyber"]:
+        for mode in ["light", "dark"]:
+            p.evaluate(f"""() => {{ document.getElementById('theme-css').href = 'themes/{look}.css'; document.documentElement.dataset.mode = '{mode}'; }}""")
+            p.wait_for_timeout(150)
+            # Contrast between the selection (over the paper) and the paper itself.
+            ratio = p.evaluate("""() => {
+              const c = document.createElement('canvas').getContext('2d');
+              const rgb = (css) => { c.fillStyle = '#000'; c.fillStyle = css; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data]; };
+              const cs = getComputedStyle(document.documentElement);
+              const paper = rgb(cs.getPropertyValue('--paper').trim());
+              const sel = getComputedStyle(document.querySelector('.cm-selectionBackground')).backgroundColor;
+              c.fillStyle = cs.getPropertyValue('--paper').trim(); c.fillRect(0, 0, 1, 1);
+              c.fillStyle = sel; c.fillRect(0, 0, 1, 1);
+              const over = [...c.getImageData(0, 0, 1, 1).data];
+              const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+              const [a, b] = [lum(paper), lum(over)].sort((x, y) => y - x);
+              return (a + 0.05) / (b + 0.05);
+            }""")
+            if ratio < 1.5: weak.append(f"{look} {mode}: {ratio:.2f}")
+    p.evaluate("() => { document.getElementById('theme-css').href = 'themes/studio.css'; delete document.documentElement.dataset.mode; }")
+    check("a selection stands out from the page in every theme and mode", not weak, ", ".join(weak))
+    p.keyboard.press("ArrowRight")
+
     # Details: the title.
     title = p.get_by_label("Title")
     title.fill("Orientation of manifolds")

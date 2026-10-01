@@ -159,7 +159,8 @@ export const livePreview = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
-/** How live preview looks: the note's own reading type, from the theme's variables. */
+/** How live preview looks: the note's own reading type, from the theme's variables.
+ *  Backgrounds are translucent so a selection (drawn beneath the text) shows through. */
 export const livePreviewTheme = EditorView.theme({
   ".cm-scroller": { fontFamily: "var(--font-text)", fontSize: "var(--text-size)", lineHeight: "1.68" },
   ".cm-content": { fontVariationSettings: '"opsz" 18' },
@@ -173,11 +174,11 @@ export const livePreviewTheme = EditorView.theme({
   ".cm-lp-em": { fontStyle: "italic" },
   ".cm-lp-strong": { fontWeight: "700" },
   ".cm-lp-strike": { textDecoration: "line-through" },
-  ".cm-lp-code": { fontFamily: "var(--font-mono)", fontSize: ".86em", background: "var(--paper-sunk)", borderRadius: "4px", padding: ".1em .2em" },
+  ".cm-lp-code": { fontFamily: "var(--font-mono)", fontSize: ".86em", background: "color-mix(in srgb, var(--ink) 8%, transparent)", borderRadius: "4px", padding: ".1em .2em" },
   ".cm-lp-link": { color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: "2px" },
   ".cm-lp-bullet": { color: "var(--ink-faint)", display: "inline-block", minWidth: "1ch" },
   ".cm-lp-listmark, .cm-lp-task": { color: "var(--ink-faint)", fontFamily: "var(--font-mono)" },
   ".cm-lp-quote": { borderLeft: "3px solid var(--accent)", paddingLeft: "14px !important", color: "var(--ink-soft)" },
-  ".cm-lp-codeblock": { fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "1.5", background: "var(--paper-sunk)", padding: "0 12px !important" },
+  ".cm-lp-codeblock": { fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "1.5", background: "color-mix(in srgb, var(--ink) 6%, transparent)", padding: "0 12px !important" },
   ".cm-lp-hr": { display: "inline-block", width: "100%", borderTop: "1px solid var(--rule)", verticalAlign: "middle" },
 });
