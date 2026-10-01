@@ -108,3 +108,6 @@ desktop and on the phone, and see it appear on the map without leaving the app.
   "Sign in" instead of "Offline", and that link loads the page past the worker
   so the login can show. `e2e/signin.py` reproduces it with a proxy and a
   login on another origin.
+- Checked by the user (2026-10-01): after signing in to the dev tunnel again,
+  editing a note and saving worked over the tunnel, and the edit reached the
+  file. The tunnel passes the host through, so the Origin check holds.
