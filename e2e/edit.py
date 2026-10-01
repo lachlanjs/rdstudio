@@ -125,7 +125,7 @@ with sync_playwright() as pw:
     p.locator(".cm-line", has_text="Examples").first.click()
     p.keyboard.press("Home"); p.keyboard.press("Shift+ArrowDown"); p.keyboard.press("Shift+End")
     weak = []
-    for look in ["studio", "notebook", "map", "space", "cyber"]:
+    for look in ["studio", "minimalist", "space", "terminal"]:
         for mode in ["light", "dark"]:
             p.evaluate(f"""() => {{ document.getElementById('theme-css').href = 'themes/{look}.css'; document.documentElement.dataset.mode = '{mode}'; }}""")
             p.wait_for_timeout(150)

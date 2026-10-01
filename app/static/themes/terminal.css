@@ -1,0 +1,206 @@
+/* Terminal: one monospace face for everything, square corners, Markdown's own marks on headings and lists, and inverse video for what is current. Dark is an amber phosphor screen; light is a line-printer listing on green-bar paper. */
+
+:root {
+  --font-text: "JetBrains Mono", ui-monospace, monospace;
+  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-heading: "JetBrains Mono", ui-monospace, monospace;
+  --h1-size: 26px;
+  --h1-doc-size: 28px;
+  --h2-size: 18px;
+  --brand-size: 15px;
+  --text-size: 15.5px;
+  --radius: 0px;
+  --map-image: var(--cells);
+  --map-size: 24px 24px;
+  --page-image: var(--greenbar, none);
+  --page-size: auto;
+  --region-dash: 6 4;
+  --region-open-alpha: .03;
+  --region-closed-alpha: .09;
+  --route-opacity: .6;
+  --territory-font: "JetBrains Mono", monospace;
+  --territory-weight: 700;
+  --territory-spacing: 0.02em;
+  --territory-size: 13.5px;
+  --place-font: "JetBrains Mono", monospace;
+  --place-size: 11.5px;
+  --paper: #f7f6ef;
+  --paper-raised: #fbfaf5;
+  --paper-sunk: #ecebe0;
+  --ink: #1d221d;
+  --ink-soft: #485048;
+  --ink-faint: #7b8479;
+  --rule: #cdd2c3;
+  --grid: #e2e7da;
+  --accent: #1d5a9e;
+  --accent-soft: #dce6f2;
+  /* Bands four lines deep, as on continuous stationery. */
+  --greenbar: repeating-linear-gradient(180deg, transparent 0 100px, rgb(120 170 110 / .08) 100px 200px);
+  --cells: radial-gradient(circle at 1px 1px, rgb(29 34 29 / .16) 1px, transparent 1.2px);
+  --map-canvas: #f7f6ef;
+  --route-from: #1d5a9e;
+  --route-to: #b4471c;
+  --route-both: #8a9187;
+  --territory-ink: #1d221d;
+  color-scheme: light;
+  --reviewed: #2b7a3d;
+  --machine: #5b6670;
+  --unverified: #9a6a00;
+  --stale: #b3261e;
+  --cat-knowledge: #1d5a9e;
+  --cat-code: #00797a;
+  --cat-reports: #9a6a00;
+  --cat-agent: #8a3a8f;
+  --cat-other: #485048;
+  --g0: #1d5a9e;
+  --g1: #00797a;
+  --g2: #9a6a00;
+  --g3: #b3261e;
+  --g4: #8a3a8f;
+  --g5: #2b7a3d;
+  --g6: #b4471c;
+  --g7: #485048;
+}
+
+:root[data-mode="dark"] {
+  --paper: #16120b;
+  --paper-raised: #1c170e;
+  --paper-sunk: #100d07;
+  --ink: #f4d9a6;
+  --ink-soft: #c9a46b;
+  --ink-faint: #8a7350;
+  --rule: #3a2f1c;
+  --grid: #251e12;
+  --accent: #ffb000;
+  --accent-soft: #4a3409;
+  --greenbar: none;
+  --cells: radial-gradient(circle at 1px 1px, rgb(255 176 0 / .13) 1px, transparent 1.2px);
+  --map-canvas: #120f09;
+  --route-from: #ffb000;
+  --route-to: #6cd0c4;
+  --route-both: #8a7350;
+  --territory-ink: #ffcf73;
+  color-scheme: dark;
+  --reviewed: #9fd06b;
+  --machine: #a9a08c;
+  --unverified: #ffb000;
+  --stale: #ff6f59;
+  --cat-knowledge: #ffb000;
+  --cat-code: #6cd0c4;
+  --cat-reports: #ff8c42;
+  --cat-agent: #d79ad4;
+  --cat-other: #c9a46b;
+  --g0: #ffb000;
+  --g1: #6cd0c4;
+  --g2: #9fd06b;
+  --g3: #ff6f59;
+  --g4: #93aef0;
+  --g5: #d79ad4;
+  --g6: #ff8c42;
+  --g7: #c9b48a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #16120b;
+    --paper-raised: #1c170e;
+    --paper-sunk: #100d07;
+    --ink: #f4d9a6;
+    --ink-soft: #c9a46b;
+    --ink-faint: #8a7350;
+    --rule: #3a2f1c;
+    --grid: #251e12;
+    --accent: #ffb000;
+    --accent-soft: #4a3409;
+    --greenbar: none;
+    --cells: radial-gradient(circle at 1px 1px, rgb(255 176 0 / .13) 1px, transparent 1.2px);
+    --map-canvas: #120f09;
+    --route-from: #ffb000;
+    --route-to: #6cd0c4;
+    --route-both: #8a7350;
+    --territory-ink: #ffcf73;
+    color-scheme: dark;
+    --reviewed: #9fd06b;
+    --machine: #a9a08c;
+    --unverified: #ffb000;
+    --stale: #ff6f59;
+    --cat-knowledge: #ffb000;
+    --cat-code: #6cd0c4;
+    --cat-reports: #ff8c42;
+    --cat-agent: #d79ad4;
+    --cat-other: #c9a46b;
+    --g0: #ffb000;
+    --g1: #6cd0c4;
+    --g2: #9fd06b;
+    --g3: #ff6f59;
+    --g4: #93aef0;
+    --g5: #d79ad4;
+    --g6: #ff8c42;
+    --g7: #c9b48a;
+  }
+}
+
+/* The look beyond colours. Plain rules only: no filters or shadows, and the
+   one animation (the cursor) stops after a few blinks. */
+
+html ::selection { background: var(--accent); color: var(--paper); }
+html :focus-visible { outline: 1px dashed var(--accent); outline-offset: 3px; border-radius: 0; }
+html { scrollbar-color: var(--ink-faint) transparent; }
+
+/* The header: a prompt before the bundle's name, a double rule beneath, and
+   the current tab in inverse video. */
+html .bar { border-bottom: 3px double var(--rule); }
+html .brand { font-weight: 700; }
+html .brand::before { content: ">\00a0"; color: var(--accent); }
+html .tabs a { border-bottom: 0; margin-bottom: 0; height: auto; padding: 4px 10px; }
+html .tabs a[aria-current="page"] { background: var(--ink); color: var(--paper); font-weight: 700; }
+html .tabs a[aria-current="page"] .count { background: var(--paper); color: var(--ink); }
+
+/* Square everything that was round. */
+html .count, html .chip, html .trust, html .toggle, html .dot, html .live::before { border-radius: 0; }
+html .chip::before { content: "#"; color: var(--ink-faint); }
+html .chip { background: none; padding: 0 4px 0 0; }
+
+/* The tree: the current note in inverse video. */
+html .tree .item a, html .tree .dir { border-radius: 0; }
+html .tree .item a[aria-current="page"], html .tree .dir.current { background: var(--accent); color: var(--paper); }
+html .tree .item a[aria-current="page"] .dot { box-shadow: inset 0 0 0 1.5px var(--paper); }
+
+/* Headings carry their Markdown marks, and the title a block cursor. */
+html .page > h1, html .doc-head h1 { font-weight: 800; letter-spacing: 0; }
+html .page > h1::after, html .doc-head h1::after {
+  content: ""; display: inline-block; width: .55em; height: .9em; margin-left: .25em;
+  vertical-align: -.08em; background: var(--accent);
+  animation: terminal-cursor 1.1s steps(1) 6;
+}
+@keyframes terminal-cursor { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { html .page > h1::after, html .doc-head h1::after { animation: none; } }
+html .doc-head .description { font-style: normal; font-size: 16px; color: var(--ink-soft); }
+html .doc-head .description::before { content: "// "; color: var(--ink-faint); }
+html .prose { line-height: 1.7; max-width: 78ch; }
+html .prose h1, html .prose h2, html .prose h3, html .prose h4 { font-weight: 700; }
+html .prose h1 { font-size: 20px; } html .prose h2 { font-size: 17.5px; } html .prose h3, html .prose h4 { font-size: 15.5px; }
+html .prose h1::before { content: "# "; }
+html .prose h2::before { content: "## "; }
+html .prose h3::before { content: "### "; }
+html .prose h4::before { content: "#### "; }
+html .prose h1::before, html .prose h2::before, html .prose h3::before, html .prose h4::before { color: var(--accent); font-weight: 400; }
+html .prose ul > li::marker { content: "- "; color: var(--accent); }
+html .prose ol > li::marker { color: var(--accent); }
+html .prose ul.contains-task-list > li::marker { content: none; }
+html .prose em { font-style: italic; }
+html .prose strong { color: var(--ink); font-weight: 800; }
+html .prose blockquote { border-left: 0; padding-left: 2ch; position: relative; }
+html .prose blockquote::before { content: ">"; position: absolute; left: 0; top: 2px; color: var(--accent); }
+html .prose code { background: none; color: var(--accent); padding: 0; font-size: 1em; }
+html .prose pre { background: var(--paper-sunk); border-style: dashed; }
+html .prose pre code { color: inherit; }
+html .prose hr { border-top: 1px dashed var(--ink-faint); }
+html .prose th, html .prose td { border-bottom-style: dashed; }
+html .prose th { border-bottom: 1px solid var(--ink-soft); }
+html .prose table { font-size: 14px; }
+html .section-h { font-weight: 700; }
+html .section-h::before { content: "## "; color: var(--accent); font-weight: 400; }
+html .meta h2::before { content: "-- "; }
+html .rows .title { font-weight: 700; font-size: 16px; }

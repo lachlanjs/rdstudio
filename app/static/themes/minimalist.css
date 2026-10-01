@@ -1,0 +1,164 @@
+/* Minimalist: black, white and one blue. One typeface (Inter), large confident titles, space instead of boxes and lines; on the map, notes are plain dots and folders bare outlines. */
+
+:root {
+  --font-text: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-heading: "Inter", "Segoe UI", system-ui, sans-serif;
+  --h1-size: 40px;
+  --h1-doc-size: 46px;
+  --h2-size: 22px;
+  --brand-size: 16px;
+  --text-size: 17px;
+  --radius: 2px;
+  --region-open-alpha: 0;
+  --region-closed-alpha: .04;
+  --route-opacity: .45;
+  --territory-font: "Inter", sans-serif;
+  --territory-weight: 500;
+  --territory-spacing: 0;
+  --territory-size: 14px;
+  --place-font: "Inter", sans-serif;
+  --place-size: 11.5px;
+  --place-fill: var(--ink);
+  --paper: #ffffff;
+  --paper-raised: #ffffff;
+  --paper-sunk: #f4f4f4;
+  --ink: #000000;
+  --ink-soft: #545454;
+  --ink-faint: #8f8f8f;
+  --rule: #e8e8e8;
+  --grid: #f2f2f2;
+  --accent: #002fa7;
+  --accent-soft: #e5eaf7;
+  --map-canvas: #ffffff;
+  --route-from: #002fa7;
+  --route-to: #000000;
+  --route-both: #b3b3b3;
+  --territory-ink: #000000;
+  color-scheme: light;
+  --reviewed: #1f7a4a;
+  --machine: #6b6b6b;
+  --unverified: #9c6b00;
+  --stale: #c4281c;
+  --cat-knowledge: #002fa7;
+  --cat-code: #3f6f86;
+  --cat-reports: #8c6a3c;
+  --cat-agent: #5d6b3f;
+  --cat-other: #545454;
+  --g0: #002fa7;
+  --g1: #4b6f83;
+  --g2: #7a6a8c;
+  --g3: #8c6a3c;
+  --g4: #5d7a5f;
+  --g5: #8a5a62;
+  --g6: #3c3c3c;
+  --g7: #8f8f8f;
+}
+
+:root[data-mode="dark"] {
+  --paper: #000000;
+  --paper-raised: #000000;
+  --paper-sunk: #141414;
+  --ink: #f0f0f0;
+  --ink-soft: #a6a6a6;
+  --ink-faint: #6e6e6e;
+  --rule: #242424;
+  --grid: #121212;
+  --accent: #8ea8ff;
+  --accent-soft: #10204d;
+  --map-canvas: #000000;
+  --route-from: #8ea8ff;
+  --route-to: #f0f0f0;
+  --route-both: #5c5c5c;
+  --territory-ink: #f0f0f0;
+  color-scheme: dark;
+  --reviewed: #6cc493;
+  --machine: #9a9a9a;
+  --unverified: #e0b04d;
+  --stale: #ff7a6e;
+  --cat-knowledge: #8ea8ff;
+  --cat-code: #86b3c9;
+  --cat-reports: #d1ad7c;
+  --cat-agent: #a9b98a;
+  --cat-other: #a6a6a6;
+  --g0: #8ea8ff;
+  --g1: #86b3c9;
+  --g2: #b4a4c9;
+  --g3: #d1ad7c;
+  --g4: #98bf9b;
+  --g5: #cf9aa2;
+  --g6: #d6d6d6;
+  --g7: #7a7a7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --paper: #000000;
+    --paper-raised: #000000;
+    --paper-sunk: #141414;
+    --ink: #f0f0f0;
+    --ink-soft: #a6a6a6;
+    --ink-faint: #6e6e6e;
+    --rule: #242424;
+    --grid: #121212;
+    --accent: #8ea8ff;
+    --accent-soft: #10204d;
+    --map-canvas: #000000;
+    --route-from: #8ea8ff;
+    --route-to: #f0f0f0;
+    --route-both: #5c5c5c;
+    --territory-ink: #f0f0f0;
+    color-scheme: dark;
+    --reviewed: #6cc493;
+    --machine: #9a9a9a;
+    --unverified: #e0b04d;
+    --stale: #ff7a6e;
+    --cat-knowledge: #8ea8ff;
+    --cat-code: #86b3c9;
+    --cat-reports: #d1ad7c;
+    --cat-agent: #a9b98a;
+    --cat-other: #a6a6a6;
+    --g0: #8ea8ff;
+    --g1: #86b3c9;
+    --g2: #b4a4c9;
+    --g3: #d1ad7c;
+    --g4: #98bf9b;
+    --g5: #cf9aa2;
+    --g6: #d6d6d6;
+    --g7: #7a7a7a;
+  }
+}
+
+/* The look beyond colours: no panels, borders or pills where space will do.
+   Plain rules only, no filters. */
+
+html ::selection { background: var(--accent); color: var(--paper); }
+html .bar, html .tree, html .meta { border-color: transparent; }
+html .brand { font-weight: 700; letter-spacing: -0.01em; }
+html .tabs a { font-weight: 450; }
+html .tabs a[aria-current="page"] { font-weight: 600; border-bottom-color: var(--ink); }
+html .count { background: none; border-radius: 0; font-weight: 500; color: var(--ink-faint); padding: 0 2px; min-width: 0; }
+html .count.alert { background: none; color: var(--stale); }
+html .tree .item a[aria-current="page"], html .tree .dir.current { background: none; font-weight: 650; }
+html .tree ul ul { border-left-color: transparent; }
+html .filter { border-width: 0 0 1px; border-radius: 0; padding-left: 0; background: none; }
+
+html .page > h1, html .doc-head h1 { font-weight: 650; letter-spacing: -0.03em; line-height: 1.08; }
+html .doc-head .description { font-style: normal; font-size: 20px; line-height: 1.45; letter-spacing: -0.01em; }
+html .doc-kind, html .meta h2 { color: var(--ink-faint); font-weight: 500; }
+html .prose { line-height: 1.7; max-width: 66ch; }
+html .prose h1, html .prose h2, html .prose h3, html .prose h4 { font-weight: 650; letter-spacing: -0.015em; }
+html .prose h1 { font-size: 28px; } html .prose h2 { font-size: 23px; } html .prose h3 { font-size: 19px; }
+html a { text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); }
+html .prose blockquote { border-left-width: 1px; border-left-color: var(--ink); }
+html .prose pre { background: var(--paper-sunk); border: 0; }
+html .prose th { border-bottom: 1px solid var(--ink); font-weight: 600; }
+html .section-h { font-weight: 650; letter-spacing: -0.015em; }
+
+/* Pills become text. */
+html .chip { background: none; padding: 0; margin-right: 12px; color: var(--ink-soft); }
+html .trust { border: 0; padding: 0; font-weight: 600; }
+html .toggle { border-radius: 0; border-color: transparent; background: none; padding: 4px 2px; margin-right: 6px; color: var(--ink); }
+html .toggle[aria-pressed="true"], html .toggle[role="radio"][aria-checked="true"] { background: none; border-color: transparent; border-bottom-color: var(--ink); }
+html .toggle:hover { border-bottom-color: var(--ink-faint); }

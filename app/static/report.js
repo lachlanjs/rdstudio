@@ -6,9 +6,10 @@
   function applyTheme() {
     return new Promise((resolve) => {
       try {
-        const themes = ["studio", "notebook", "map", "space", "cyber"];
-        const former = { notebook: "studio", journal: "studio", modern: "studio", blueprint: "map", terminal: "cyber" };
-        const theme = localStorage.getItem("rdstudio.look") || former[localStorage.getItem("rdstudio.theme")];
+        const themes = ["studio", "minimalist", "space", "terminal"];
+        const former = { notebook: "studio", journal: "studio", modern: "minimalist", blueprint: "studio", map: "studio", cyber: "terminal", terminal: "terminal" };
+        const look = localStorage.getItem("rdstudio.look");
+        const theme = themes.includes(look) ? look : former[look] || former[localStorage.getItem("rdstudio.theme")];
         const mode = localStorage.getItem("rdstudio.mode");
         if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode;
         if (SCRIPT_SRC && themes.includes(theme) && theme !== "studio") {

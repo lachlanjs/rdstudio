@@ -32,6 +32,13 @@ canvas (`--map-canvas`, `--map-image`, `--map-size`), folder regions
 `--route-both`, `--route-opacity`) and territory names (`--territory-font`,
 `-style`, `-size`, `-weight`, `-spacing`, `-ink`).
 
+A theme can also carry its own rules after its tokens, for what tokens cannot
+say: Terminal's Markdown marks on headings, Minimalist's pills turned to text.
+Theme files load before the app's stylesheet, so each rule starts with `html`
+to win over the app's rule for the same selector. Only plain rules: no filters
+or shadows, and no animation that runs on (Terminal's cursor blinks six times,
+and not at all with reduced motion).
+
 **No filters on the map.** Glows, blurs and the pencil wobble were SVG and CSS
 filters, repainted on every zoom step; on a 1,186-note bundle they turned
 0.2 s of pauses during a pan and zoom into 6 to 19 s
@@ -41,13 +48,19 @@ dashes and opacity only.
 | Theme | Reading / interface | Light | Dark |
 |---|---|---|---|
 | Studio (default) | Literata / Atkinson Hyperlegible Next | engineering paper, violet | slate, lavender |
-| Notebook | Literata / Atkinson, Caveat headings and map labels | ruled exercise book, blue-black ink, broken pencil outlines | chalkboard |
-| Map | Source Serif 4 / Source Sans 3 | topographic chart: land tints, dash-dot borders, contour sea, cased roads | night navigation chart |
+| Minimalist | Inter throughout | white, black and one blue (Klein blue); large titles, no panels, borders or pills; plain dots and bare outlines on the map | black, white, pale blue |
 | Space | IBM Plex Sans, Plex Mono labels | celestial atlas | star field, nebulae, bright stars |
-| Cyber | IBM Plex Sans / JetBrains Mono | hard-edged daylight grid | neon on black, grid and scanlines |
+| Terminal | JetBrains Mono throughout | a line-printer listing on green-bar paper | amber phosphor |
 
-The choice is stored as `rdstudio.look`; choices from before this set
-(`rdstudio.theme`) map to Studio, Map or Cyber.
+Terminal also shows the Markdown marks on headings (`#`, `##`) and lists
+(`-`), a prompt before the bundle's name, inverse video for the current tab and
+note, square corners, and a block cursor after the title.
+
+The choice is stored as `rdstudio.look`. Themes that have gone map to their
+nearest successor, whether saved under `rdstudio.look` or the older
+`rdstudio.theme`: Notebook, Map and Blueprint to Studio, Cyber to Terminal,
+Modern to Minimalist. Notebook and Map were dropped on 2026-10-02 (they did not
+feel right), and Cyber was reworked as Terminal.
 
 Mode is `system` (follows the OS), `light` or `dark`, set with
 `data-mode` on the root element. Settings live in localStorage.
