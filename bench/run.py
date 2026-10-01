@@ -131,7 +131,7 @@ def free_port() -> int:
 
 def start_server(root: Path, web_dir: Path | None = None) -> tuple[subprocess.Popen, str]:
     """rdstudio serve for the bundle: the Python one, or with web_dir (a built
-    dashboard, such as app/build) the Node one, which serves that folder."""
+    dashboard, such as a saved copy of an older build) the Node one, which serves that folder."""
     port = free_port()
     if web_dir:
         cmd = ["node", str(REPO / "packages" / "cli" / "src" / "main.ts"), "serve", "--no-watch", "--port", str(port)]
@@ -304,7 +304,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--label", help="a name for this run, kept in the results")
     ap.add_argument("--fresh", action="store_true", help="regenerate the synthetic bundles")
     ap.add_argument("--no-sw", action="store_true", help="without the service worker (offline cache)")
-    ap.add_argument("--web-dir", type=Path, help="serve this built dashboard (such as app/build) with the Node server")
+    ap.add_argument("--web-dir", type=Path, help="serve this built dashboard (such as a saved copy of an older build) with the Node server")
     ap.add_argument("--timeout", type=float, default=180, help="seconds to wait for a map")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)

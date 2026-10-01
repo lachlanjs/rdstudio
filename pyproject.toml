@@ -22,14 +22,15 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rdstudio"]
-# The bundled Node program is built at release (npm run bundle) and not committed.
-artifacts = ["src/rdstudio/_node/*.mjs"]
+# The bundled Node program and the dashboard are built at release (npm run
+# bundle, npm run build --workspace @rdstudio/app) and not committed.
+artifacts = ["src/rdstudio/_node/*.mjs", "src/rdstudio/web/**"]
 
 [tool.hatch.build.targets.sdist]
 # Only the Python package (the TypeScript sources are on GitHub and npm), and
-# the bundle, since uv builds the wheel from this archive.
+# the built files, since uv builds the wheel from this archive.
 only-include = ["src/rdstudio", "README.md", "LICENSE"]
-artifacts = ["src/rdstudio/_node/*.mjs"]
+artifacts = ["src/rdstudio/_node/*.mjs", "src/rdstudio/web/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

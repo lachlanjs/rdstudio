@@ -158,7 +158,7 @@ Tasks live in `mise.toml`; run them with `mise run <task>` (`mise tasks` lists
 them), or run the command each one names.
 
 ```sh
-mise run setup      # Node 24 (mise), Python and npm dependencies, Chromium for the benchmarks
+mise run setup      # Node 24 (mise), Python and npm dependencies, the dashboard, Chromium for the benchmarks
 mise run test       # the Python tests, then the TypeScript packages
 mise run core:test  # the TypeScript core against the conformance fixtures
 mise run core:agree ~/notes/knowledge   # do the Python and TypeScript cores agree on a bundle?
@@ -182,7 +182,12 @@ two: the core on real bundles, every command's output, every file `build`,
 server's tools and replies. In a checkout, `rdstudio` runs the TypeScript
 sources directly; `mise run bundle` builds the single file a release ships.
 
+The dashboard is a SvelteKit app in `app/`. `mise run app:build` builds it into
+`src/rdstudio/web/`, where `rdstudio build` and `serve` find it (it is not
+committed, so a fresh checkout needs it once); `mise run app:dev` runs it with
+live reloading.
+
 ## Licence
 
 MIT. The bundled libraries and fonts keep their own licences, which are in
-`src/rdstudio/web/vendor/licenses/`.
+`app/static/vendor/licenses/`.

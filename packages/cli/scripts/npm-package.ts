@@ -6,7 +6,7 @@
 // knowledge/procedures/publish-npm.md).
 
 import { execFileSync } from "node:child_process";
-import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,6 +17,10 @@ const version: string = cli.version;
 
 // One version everywhere (scripts/version.ts checks and sets it).
 execFileSync("node", [join(REPO, "packages", "cli", "scripts", "version.ts")], { stdio: ["ignore", "ignore", "inherit"] });
+
+// The dashboard, built fresh so the package never carries a stale one.
+execFileSync("npm", ["run", "build", "--workspace", "@rdstudio/app"], { cwd: REPO, stdio: ["ignore", "ignore", "inherit"] });
+if (!existsSync(join(REPO, "src", "rdstudio", "web", "index.html"))) throw new Error("the dashboard build wrote no index.html");
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });

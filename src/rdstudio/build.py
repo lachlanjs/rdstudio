@@ -12,6 +12,8 @@ from . import gitlog, learner, reports
 from .config import Config
 from .okf import Bundle, FrontmatterError, headings, iso, jsonable, now, split_frontmatter
 
+# The built dashboard: the Svelte app builds it here (npm run build --workspace
+# @rdstudio/app); releases carry it.
 WEB_DIR = Path(__file__).parent / "web"
 
 
@@ -129,6 +131,9 @@ def build(cfg: Config, *, write_indexes: bool | None = None, export: bool = Fals
     uncommitted changes, and the page does not poll for updates."""
     site = site or cfg.site_dir
     data = site / "data"
+    if not (WEB_DIR / "index.html").is_file():
+        raise RuntimeError(f"the dashboard is not built (no {WEB_DIR / 'index.html'}): "
+                           "run npm run build --workspace @rdstudio/app")
     site.mkdir(parents=True, exist_ok=True)
     _sync_tree(WEB_DIR, site, skip=frozenset({"sw.js"}))
     _write_if_changed(site / "sw.js", service_worker())

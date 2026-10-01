@@ -16,8 +16,8 @@ import { assetDir, syncTree, walkFiles, writeIfChanged } from "./files.ts";
 import { history } from "./gitlog.ts";
 import { scan } from "./reports.ts";
 
-/** The dashboard's files: beside a bundled release, or the Python package's web
- *  folder when running from source (until the Svelte app replaces it, T38). */
+/** The built dashboard: beside a bundled release, or where the Svelte app builds
+ *  it when running from source (npm run build --workspace @rdstudio/app). */
 export const WEB_DIR = assetDir("web", "RDSTUDIO_WEB_DIR", fileURLToPath(new URL("../../../src/rdstudio/web/", import.meta.url)));
 
 /** JSON as the Python build writes it: compact, not ASCII-escaped. */
@@ -119,6 +119,9 @@ export interface BuildOptions {
 export function build(cfg: Config, opts: BuildOptions = {}): string {
   const site = opts.site ?? cfg.siteDir;
   const data = join(site, "data");
+  if (!existsSync(join(WEB_DIR, "index.html"))) {
+    throw new Error(`the dashboard is not built (no ${join(WEB_DIR, "index.html")}): run npm run build --workspace @rdstudio/app`);
+  }
   mkdirSync(site, { recursive: true });
   syncTree(WEB_DIR, site, new Set(["sw.js"]));
   writeIfChanged(join(site, "sw.js"), serviceWorker());
