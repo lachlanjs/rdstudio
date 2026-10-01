@@ -62,7 +62,7 @@ See the [understanding layer design](/design/understanding-layer.md).
 - [ ] [T27 Coverage and review](/tasks/T27-coverage-review.md)
 - [ ] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
 - [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
-- [ ] [T30 Editing from the dashboard](/tasks/T30-dashboard-editing.md)
+- T30 Editing in the app: moved to M9
 
 # M9 — Performance and platform (current priority)
 
@@ -72,10 +72,11 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
 - [x] [T32 Offline app shell](/tasks/T32-offline-shell.md)
 - [x] [T33 Map layout and routing in a Web Worker](/tasks/T33-map-worker.md)
 - [x] [T34 Conformance fixtures](/tasks/T34-conformance-fixtures.md)
-- [ ] [T35 TypeScript core: OKF parsing and lint](/tasks/T35-core-okf.md)
-- [ ] [T36 TypeScript core: graph, search and learner record](/tasks/T36-core-graph-search-record.md)
-- [ ] [T37 Node command line, MCP server and rdstudio serve](/tasks/T37-node-cli-mcp-serve.md)
-- [ ] [T38 Svelte UI with a build step](/tasks/T38-svelte-ui.md)
+- [x] [T35 TypeScript core: OKF parsing and lint](/tasks/T35-core-okf.md)
+- [x] [T36 TypeScript core: graph, search and learner record](/tasks/T36-core-graph-search-record.md)
+- [x] [T37 Node command line, MCP server and rdstudio serve](/tasks/T37-node-cli-mcp-serve.md)
+- [x] [T38 Svelte UI with a build step](/tasks/T38-svelte-ui.md)
+- [ ] [T30 Editing in the app: create, edit, move and delete notes](/tasks/T30-dashboard-editing.md) (next)
 - [ ] [T39 GPU map renderer](/tasks/T39-gpu-map.md)
 - [ ] [T40 Tauri desktop app](/tasks/T40-tauri-desktop.md)
 - [ ] [T41 Local-first sync](/tasks/T41-local-first-sync.md)
