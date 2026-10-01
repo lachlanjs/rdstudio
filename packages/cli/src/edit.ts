@@ -10,7 +10,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { Document, isMap, isScalar, type Pair } from "yaml";
 import { RulesClassifier, frontmatterText, parseYaml, type Classifier } from "@rdstudio/core";
-import { StoreError, conceptPath, node, now } from "./store.ts";
+import { StoreError, conceptPath, existingNotePath, node, now } from "./store.ts";
 
 /** The text a note's file holds, with a version to send back when saving. */
 export interface NoteSource {
@@ -56,7 +56,7 @@ function relId(root: string, path: string): string {
 }
 
 export function noteSource(root: string, cid: string): NoteSource {
-  const path = conceptPath(root, cid);
+  const path = existingNotePath(root, cid);
   if (!existsSync(path)) throw new StoreError(`no such note: ${cid}`);
   return sourceOf(root, path, readFileSync(path, "utf8"));
 }
@@ -139,7 +139,7 @@ export interface SaveResult {
 
 /** Save an edit to a note, or create one (base null). */
 export function saveNote(root: string, cid: string, opts: SaveOptions): SaveResult {
-  const path = conceptPath(root, cid);
+  const path = opts.base === null ? conceptPath(root, cid) : existingNotePath(root, cid);
   const exists = existsSync(path);
   if (opts.base === null) {
     if (exists) throw new ConflictError(`${relId(root, path)} already exists`, sourceOf(root, path, readFileSync(path, "utf8")));

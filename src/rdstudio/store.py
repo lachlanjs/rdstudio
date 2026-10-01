@@ -17,7 +17,8 @@ from .okf import (
     split_frontmatter,
 )
 
-_SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
+# Letters and digits in any script (géométrie), then also . _ / -.
+_SAFE_ID = re.compile(r"^[^\W_][\w./-]*$")
 
 
 class StoreError(ValueError):

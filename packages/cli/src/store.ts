@@ -11,7 +11,8 @@ import { Document, isMap, isScalar, isSeq, Scalar, type Node } from "yaml";
 import { FrontmatterError, RulesClassifier, frontmatterText, headings, iso, parseYaml, strip, type Classifier } from "@rdstudio/core";
 import { normpathPosix } from "./files.ts";
 
-const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+// Letters and digits in any script (géométrie), then also . _ / -.
+const SAFE_ID = /^[\p{L}\p{N}][\p{L}\p{N}._/-]*$/u;
 const RESERVED = new Set(["index.md", "log.md"]);
 
 export class StoreError extends Error {}
@@ -35,6 +36,22 @@ export function conceptPath(root: string, cid: string): string {
   const base = norm.slice(norm.lastIndexOf("/") + 1);
   if (RESERVED.has(base + ".md")) throw new StoreError(`${base}.md is reserved by OKF`);
   return join(root, `${norm}.md`);
+}
+
+/** The file of a note that exists, by any name inside the bundle (new notes
+ *  are held to conceptPath's stricter names); refuses names that escape it. */
+export function existingNotePath(root: string, cid: string): string {
+  let id = strip(cid).replace(/^\/+/, "");
+  if (id.endsWith(".md")) id = id.slice(0, -3);
+  const norm = normpathPosix(id);
+  if (!norm || norm === "." || norm.startsWith("..") || norm.split("/").some((p) => p.startsWith(".")) || /[\0\\]/.test(norm)) {
+    throw new StoreError(`invalid concept id: '${id}'`);
+  }
+  const path = join(root, `${norm}.md`);
+  if (!existsSync(path)) return conceptPath(root, cid); // not there: the usual rules and message
+  const base = norm.slice(norm.lastIndexOf("/") + 1);
+  if (RESERVED.has(base + ".md")) throw new StoreError(`${base}.md is reserved by OKF`);
+  return path;
 }
 
 /** Replace the content under `heading` (keeping the heading line); append the

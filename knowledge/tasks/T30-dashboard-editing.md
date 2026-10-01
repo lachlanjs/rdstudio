@@ -137,3 +137,40 @@ desktop and on the phone, and see it appear on the map without leaving the app.
   is not focused), and code backgrounds are translucent so a selection
   shows through them. `e2e/edit.py` checks the selection's contrast with the
   page in all five themes, light and dark.
+- Slice 3 (2026-10-01): creating, moving and deleting.
+  - `packages/cli/src/reshape.ts`: moving or renaming a note or a folder
+    rewrites the links to what moved, where they are written
+    (`[text](target)` and `[ref]: target`, outside code), each in its own
+    style: absolute links stay absolute, relative ones are recomputed, and
+    anchors, titles (the link ratings) and angle brackets are kept. A link is
+    only touched if it would otherwise break, including a moved note's own
+    relative links and links that point outside the knowledge folder. A
+    folder left holding only its generated index is removed. Deleting a note
+    reports the notes that linked to it; their links then show as broken.
+    Empty folders can be deleted.
+  - Checked on every fixture bundle, this repository's and the test bed: the
+    most linked-to note and a whole folder moved, then the core reloaded:
+    the same links, renamed, no new broken ones, and every file without such
+    a link byte for byte the same. Found on the way: a note with unreadable
+    frontmatter stopped a move (now its links are rewritten in all of it); a
+    link to `../../elsewhere.md` changed meaning when its folder moved deeper
+    (outside links are recomputed too); and notes named in other scripts
+    (`géométrie`) could not be moved. New names may now use letters and digits
+    in any script, in the Python store as well.
+  - `rdstudio serve`: `POST /api/notes/{id}/move`, `DELETE /api/notes/{id}`,
+    `POST /api/folders/move` and `DELETE /api/folders/{path}`, with the same
+    protection as saving, and a rebuild after each.
+  - The app: Move and Delete beside Edit on a note; New note, New folder,
+    Move and (when empty) Delete on a folder's page. Dialogs (the browser's
+    own, so Escape and focus work) say what will happen first: how many
+    notes' links follow a move, which notes' links a delete breaks. On a
+    phone they rise from the bottom. A new note opens straight in the
+    editor; a new folder is made with an overview note holding its
+    description, which the map shows.
+  - `e2e/reshape.py` (17 checks) rehearses the litmus test on a copy of the
+    test bed: a Philosophy folder and a Motivation note made from the
+    dashboard, the bubble on the map, a much-linked note and then the folder
+    moved with no link broken, a delete, and the phone dialogs. Found on the
+    way: after a delete the page refreshed before leaving, so it vanished
+    under the action and never left it; now it leaves first.
+  - Not yet: creating notes from the map itself, and from the tree.

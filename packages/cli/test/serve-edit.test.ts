@@ -121,3 +121,34 @@ test("a read-only server hands out no token and refuses saves", async () => {
   const r = await ro("PUT", `/api/notes/${id}`, { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" }, { base: src.version, body: "x\n" });
   expect(r.status).toBe(403);
 });
+
+test("moving and deleting through the API: protected, checked, rebuilt", async () => {
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const k = (rel: string) => join(tmp, "project", "knowledge", rel);
+  writeFileSync(k("a/m.md"), "---\ntype: Note\ntitle: M\n---\n\nSee [n](/a/n.md).\n");
+  const before = writes;
+
+  // Refused without the token or from another site.
+  expect((await call("POST", `/api/notes/${id}/move`, { ...good, "X-Rdstudio-Token": "no" }, { to: "b/n" })).status).toBe(403);
+  expect((await call("DELETE", `/api/notes/${id}`, { ...good, Origin: "http://evil.example" })).status).toBe(403);
+  expect(writes).toBe(before);
+
+  // Move with the version it started from: the link in m follows.
+  const { json: src } = await call("GET", `/api/notes/${id}`);
+  const moved = await call("POST", `/api/notes/${id}/move`, good, { to: "b/n", base: src.version });
+  expect(moved.status).toBe(200);
+  expect(moved.json).toEqual({ moved: [{ from: "a/n", to: "b/n" }], rewritten: ["a/m.md"] });
+  expect(readFileSync(k("a/m.md"), "utf8")).toContain("[n](/b/n.md)");
+  expect(writes).toBe(before + 1);
+  expect((await call("POST", `/api/notes/${id}/move`, good, { to: "c/n" })).status).toBe(409); // gone from a/n
+
+  // Folder move, then delete: stale versions refused; backlinks reported.
+  expect((await call("POST", "/api/folders/move", good, { from: "b", to: "c/b" })).status).toBe(200);
+  expect(readFileSync(k("a/m.md"), "utf8")).toContain("[n](/c/b/n.md)");
+  const nid = encodeURIComponent("c/b/n");
+  expect((await call("DELETE", `/api/notes/${nid}?base=0123456789abcdef`, good)).status).toBe(409);
+  const del = await call("DELETE", `/api/notes/${nid}`, good);
+  expect(del.json).toEqual({ deleted: "c/b/n", backlinks: ["a/m"] });
+  expect((await call("DELETE", `/api/folders/${encodeURIComponent("a")}`, good)).status).toBe(400); // not empty
+});

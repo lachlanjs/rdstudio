@@ -2,8 +2,9 @@
   import { untrack } from "svelte";
   import { beforeNavigate } from "$app/navigation";
   import { learner, store } from "$lib/data.svelte.ts";
-  import { EditSession, editing } from "$lib/edit.svelte.ts";
+  import { EditSession, arriving, editing } from "$lib/edit.svelte.ts";
   import EditDetails from "./EditDetails.svelte";
+  import NoteActions from "./NoteActions.svelte";
   import { render } from "$lib/markdown.ts";
   import KnowledgeLayout from "./KnowledgeLayout.svelte";
   import MetaPanel from "./MetaPanel.svelte";
@@ -15,7 +16,11 @@
 
   // Editing replaces the page with the editor (loaded only then) and the
   // details panel with a form; both share one session.
-  let session = $state<EditSession | null>(null);
+  // A note just created opens straight in the editor. (This component is
+  // made afresh for each note: the page keys it by id.)
+  const arrived = untrack(() => arriving.edit !== null && arriving.edit === id);
+  let session = $state<EditSession | null>(arrived ? untrack(() => new EditSession(id)) : null);
+  if (arrived) arriving.edit = null;
   const loadEditor = () => import("./NoteEditor.svelte");
   const startEditing = () => { session = new EditSession(id); };
 
@@ -69,7 +74,12 @@
             <span>{c.type || "Concept"}</span>
             {#if c.status !== "stable"}<span class="chip">{c.status}</span>{/if}
             {#if c.generated_at}<span>Updated <Time iso={c.generated_at} /></span>{/if}
-            {#if editing.enabled}<button class="toggle edit-button" type="button" onclick={startEditing}>Edit</button>{/if}
+            {#if editing.enabled}
+              <span class="note-actions">
+                <button class="toggle edit-button" type="button" onclick={startEditing}>Edit</button>
+                <NoteActions {c} />
+              </span>
+            {/if}
           </p>
           <h1>{c.title}</h1>
           {#if c.description}<p class="description">{c.description}</p>{/if}

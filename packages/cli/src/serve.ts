@@ -19,6 +19,7 @@ import { MAX_EVENT_BYTES } from "@rdstudio/core";
 import { build, WEB_DIR } from "./build.ts";
 import type { Config } from "./config.ts";
 import { ConflictError, noteSource, saveNote } from "./edit.ts";
+import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
 import { StoreError } from "./store.ts";
 import * as learner from "./learner.ts";
 import { pyDumps } from "./pyjson.ts";
@@ -147,6 +148,50 @@ const putNote = createRoute({
   },
 });
 
+const MoveBody = z.object({
+  to: z.string().openapi({ description: "The new id, such as philosophy/motivation." }),
+  base: z.string().nullable().optional().openapi({ description: "The note's version; refused if it changed since." }),
+}).openapi("NoteMove");
+const Moved = z.object({
+  moved: z.array(z.object({ from: z.string(), to: z.string() })),
+  rewritten: z.array(z.string()).openapi({ description: "Files whose links were updated." }),
+}).openapi("Moved");
+const FolderMoveBody = z.object({ from: z.string(), to: z.string() }).openapi("FolderMove");
+const Deleted = z.object({
+  deleted: z.string(),
+  backlinks: z.array(z.string()).openapi({ description: "Notes that linked to it; those links are now broken." }),
+}).openapi("NoteDeleted");
+const FolderDeleted = z.object({ deleted: z.string() }).openapi("FolderDeleted");
+const FolderPath = z.object({ path: z.string().openapi({ param: { name: "path", in: "path" }, description: "The folder, such as design/old (slashes encoded)." }) });
+const Token = z.object({ "x-rdstudio-token": z.string() });
+const writeErrors = {
+  400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
+  403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } },
+  409: { description: "The note changed since `base`, or is gone", content: { "application/json": { schema: Conflict } } },
+  415: { description: "Not JSON", content: { "application/json": { schema: ErrorBody } } },
+};
+
+const postMove = createRoute({
+  method: "post", path: "/api/notes/{id}/move", summary: "Move or rename a note, updating the links to it",
+  request: { params: NoteId, headers: Token, body: { content: { "application/json": { schema: MoveBody } }, required: true } },
+  responses: { 200: { description: "Moved", content: { "application/json": { schema: Moved } } }, ...writeErrors },
+});
+const deleteNoteRoute = createRoute({
+  method: "delete", path: "/api/notes/{id}", summary: "Delete a note",
+  request: { params: NoteId, headers: Token, query: z.object({ base: z.string().optional() }) },
+  responses: { 200: { description: "Deleted", content: { "application/json": { schema: Deleted } } }, ...writeErrors },
+});
+const postFolderMove = createRoute({
+  method: "post", path: "/api/folders/move", summary: "Move or rename a folder with everything in it, updating links",
+  request: { headers: Token, body: { content: { "application/json": { schema: FolderMoveBody } }, required: true } },
+  responses: { 200: { description: "Moved", content: { "application/json": { schema: Moved } } }, ...writeErrors },
+});
+const deleteFolderRoute = createRoute({
+  method: "delete", path: "/api/folders/{path}", summary: "Delete an empty folder",
+  request: { params: FolderPath, headers: Token },
+  responses: { 200: { description: "Deleted", content: { "application/json": { schema: FolderDeleted } } }, ...writeErrors },
+});
+
 export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnly = false, onWrite }: ServerOptions): OpenAPIHono {
   const allowed = new Set([...allowHosts].map((h) => h.toLowerCase()));
   // No automatic validation: the checks below run in a fixed order, as in the Python server.
@@ -172,13 +217,40 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   // A refused body is never read, so that connection is not reused.
   const refuse = (c: Context, status: number, error: string) => json(c, status, { error }, true);
   /** Why a write is refused (the Origin, the token, the content type), or null. */
-  const writeRefused = (c: Context) => {
+  const writeRefused = (c: Context, json = true) => {
     let origin = "";
     try { origin = new URL(c.req.header("origin") ?? "").host; } catch { /* no origin */ }
     if (!hostOk(c) || !c.req.header("origin") || origin !== c.req.header("host")) return refuse(c, 403, "cross-origin request refused");
     if (c.req.header("x-rdstudio-token") !== token) return refuse(c, 403, "bad token");
-    if (!(c.req.header("content-type") ?? "").startsWith("application/json")) return refuse(c, 415, "JSON only");
+    if (json && !(c.req.header("content-type") ?? "").startsWith("application/json")) return refuse(c, 415, "JSON only");
     return null;
+  };
+
+  /** Run a change to the bundle for an endpoint: the checks, then `act`, a
+   *  rebuild, and errors as replies. */
+  const change = async (c: Context, act: (body: Record<string, unknown>) => unknown, json = true) => {
+    const refused = writeRefused(c, json);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: Record<string, unknown> = {};
+    if (json) {
+      try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+      if (typeof body !== "object" || body === null || Array.isArray(body)) return refuse(c, 400, "expected a JSON object");
+    }
+    try {
+      const result = act(body);
+      onWrite?.();
+      return jsonReply(c, result);
+    } catch (err) {
+      if (err instanceof ConflictError) return jsonReply(c, { error: err.message, current: err.current }, 409);
+      if (err instanceof StoreError || (err as Error).name === "FrontmatterError") return refuse(c, 400, (err as Error).message);
+      throw err;
+    }
+  };
+  const jsonReply = (c: Context, value: unknown, status = 200) => json(c, status, value, true);
+  const str = (v: unknown, name: string): string => {
+    if (typeof v !== "string" || !v) throw new StoreError(`expected '${name}'`);
+    return v;
   };
 
   app.openapi(postLearner, (async (c: Context) => {
@@ -210,6 +282,15 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
       return json(c, String((err as Error).message).startsWith("no such note") ? 404 : 400, { error: (err as Error).message });
     }
   }) as never);
+
+  app.openapi(postMove, ((c: Context) => change(c, (b) =>
+    moveNote(cfg.knowledgeDir, c.req.param("id") ?? "", str(b.to, "to"), typeof b.base === "string" ? b.base : null))) as never);
+  app.openapi(deleteNoteRoute, ((c: Context) => change(c, () =>
+    deleteNote(cfg.knowledgeDir, c.req.param("id") ?? "", c.req.query("base") ?? null), false)) as never);
+  app.openapi(postFolderMove, ((c: Context) => change(c, (b) =>
+    moveFolder(cfg.knowledgeDir, str(b.from, "from"), str(b.to, "to")))) as never);
+  app.openapi(deleteFolderRoute, ((c: Context) => change(c, () =>
+    deleteFolder(cfg.knowledgeDir, c.req.param("path") ?? ""), false)) as never);
 
   app.openapi(putNote, (async (c: Context) => {
     const refused = writeRefused(c);

@@ -65,11 +65,15 @@ export type NoteMeta = {
     [key: string]: unknown;
 };
 
-export type NoteSaved = {
-    note: NoteSource;
-    created: boolean;
-    changed: boolean;
-    significant: boolean;
+export type Moved = {
+    moved: Array<{
+        from: string;
+        to: string;
+    }>;
+    /**
+     * Files whose links were updated.
+     */
+    rewritten: Array<string>;
 };
 
 export type NoteConflict = {
@@ -77,6 +81,41 @@ export type NoteConflict = {
     current: NoteSource & ({
         [key: string]: unknown;
     } | null);
+};
+
+export type NoteMove = {
+    /**
+     * The new id, such as philosophy/motivation.
+     */
+    to: string;
+    /**
+     * The note's version; refused if it changed since.
+     */
+    base?: string | null;
+};
+
+export type NoteDeleted = {
+    deleted: string;
+    /**
+     * Notes that linked to it; those links are now broken.
+     */
+    backlinks: Array<string>;
+};
+
+export type FolderMove = {
+    from: string;
+    to: string;
+};
+
+export type FolderDeleted = {
+    deleted: string;
+};
+
+export type NoteSaved = {
+    note: NoteSource;
+    created: boolean;
+    changed: boolean;
+    significant: boolean;
 };
 
 export type NoteSave = {
@@ -187,6 +226,53 @@ export type GetApiEditResponses = {
 
 export type GetApiEditResponse = GetApiEditResponses[keyof GetApiEditResponses];
 
+export type DeleteApiNotesByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: {
+        base?: string;
+    };
+    url: '/api/notes/{id}';
+};
+
+export type DeleteApiNotesByIdErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base`, or is gone
+     */
+    409: NoteConflict;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type DeleteApiNotesByIdError = DeleteApiNotesByIdErrors[keyof DeleteApiNotesByIdErrors];
+
+export type DeleteApiNotesByIdResponses = {
+    /**
+     * Deleted
+     */
+    200: NoteDeleted;
+};
+
+export type DeleteApiNotesByIdResponse = DeleteApiNotesByIdResponses[keyof DeleteApiNotesByIdResponses];
+
 export type GetApiNotesByIdData = {
     body?: never;
     path: {
@@ -273,3 +359,133 @@ export type PutApiNotesByIdResponses = {
 };
 
 export type PutApiNotesByIdResponse = PutApiNotesByIdResponses[keyof PutApiNotesByIdResponses];
+
+export type PostApiNotesByIdMoveData = {
+    body: NoteMove;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}/move';
+};
+
+export type PostApiNotesByIdMoveErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base`, or is gone
+     */
+    409: NoteConflict;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type PostApiNotesByIdMoveError = PostApiNotesByIdMoveErrors[keyof PostApiNotesByIdMoveErrors];
+
+export type PostApiNotesByIdMoveResponses = {
+    /**
+     * Moved
+     */
+    200: Moved;
+};
+
+export type PostApiNotesByIdMoveResponse = PostApiNotesByIdMoveResponses[keyof PostApiNotesByIdMoveResponses];
+
+export type PostApiFoldersMoveData = {
+    body: FolderMove;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/folders/move';
+};
+
+export type PostApiFoldersMoveErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base`, or is gone
+     */
+    409: NoteConflict;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type PostApiFoldersMoveError = PostApiFoldersMoveErrors[keyof PostApiFoldersMoveErrors];
+
+export type PostApiFoldersMoveResponses = {
+    /**
+     * Moved
+     */
+    200: Moved;
+};
+
+export type PostApiFoldersMoveResponse = PostApiFoldersMoveResponses[keyof PostApiFoldersMoveResponses];
+
+export type DeleteApiFoldersByPathData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The folder, such as design/old (slashes encoded).
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/folders/{path}';
+};
+
+export type DeleteApiFoldersByPathErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base`, or is gone
+     */
+    409: NoteConflict;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type DeleteApiFoldersByPathError = DeleteApiFoldersByPathErrors[keyof DeleteApiFoldersByPathErrors];
+
+export type DeleteApiFoldersByPathResponses = {
+    /**
+     * Deleted
+     */
+    200: FolderDeleted;
+};
+
+export type DeleteApiFoldersByPathResponse = DeleteApiFoldersByPathResponses[keyof DeleteApiFoldersByPathResponses];

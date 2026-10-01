@@ -6,7 +6,9 @@
 // another device) is shown to compare instead of being overwritten.
 
 import { client } from "./api/client.gen.ts";
-import { getApiEdit, getApiNotesById, putApiNotesById } from "./api/sdk.gen.ts";
+import {
+  deleteApiFoldersByPath, deleteApiNotesById, getApiEdit, getApiNotesById, postApiFoldersMove, postApiNotesByIdMove, putApiNotesById,
+} from "./api/sdk.gen.ts";
 import type { NoteConflict, NoteSource } from "./api/types.gen.ts";
 import { store } from "./data.svelte.ts";
 
@@ -208,3 +210,58 @@ export class EditSession {
     }
   }
 }
+
+// ------------------------------------------------------------------ creating, moving, deleting
+
+/** A file name from a title: lower case, words joined by hyphens, letters and
+ *  digits in any script kept (géométrie). */
+export function slug(title: string): string {
+  return title.normalize("NFC").toLowerCase().replace(/['’]/g, "").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "");
+}
+
+/** The error a write came back with, as a sentence. */
+function failure(error: unknown, status: number | undefined): Error {
+  const message = (error as { error?: string } | undefined)?.error;
+  return new Error(message ? message.charAt(0).toUpperCase() + message.slice(1) : `The server refused (${status ?? "no reply"})`);
+}
+
+const auth = () => ({ "x-rdstudio-token": editing.token ?? "" });
+
+/** Create a note; the note as saved. */
+export async function createNote(id: string, meta: Record<string, unknown>, body = ""): Promise<NoteSource> {
+  const { data, error, response } = await putApiNotesById({ path: { id }, headers: auth(), body: { base: null, meta, body } });
+  if (!data) throw failure(error, response?.status);
+  await store.refresh();
+  return data.note;
+}
+
+export async function moveNoteTo(id: string, to: string): Promise<{ moved: { from: string; to: string }[]; rewritten: string[] }> {
+  const { data, error, response } = await postApiNotesByIdMove({ path: { id }, headers: auth(), body: { to } });
+  if (!data) throw failure(error, response?.status);
+  await store.refresh();
+  return data;
+}
+
+/** Delete a note. The data is not reloaded here: leave its page first, then
+ *  call store.refresh(), or the page vanishes under whatever is leaving it. */
+export async function deleteNoteAt(id: string): Promise<{ deleted: string; backlinks: string[] }> {
+  const { data, error, response } = await deleteApiNotesById({ path: { id }, headers: auth() });
+  if (!data) throw failure(error, response?.status);
+  return data;
+}
+
+export async function moveFolderTo(from: string, to: string): Promise<{ moved: { from: string; to: string }[]; rewritten: string[] }> {
+  const { data, error, response } = await postApiFoldersMove({ headers: auth(), body: { from, to } });
+  if (!data) throw failure(error, response?.status);
+  await store.refresh();
+  return data;
+}
+
+/** Delete an empty folder; as with deleteNoteAt, leave its page, then refresh. */
+export async function deleteFolderAt(path: string): Promise<void> {
+  const { data, error, response } = await deleteApiFoldersByPath({ path: { path }, headers: auth() });
+  if (!data) throw failure(error, response?.status);
+}
+
+/** A note to open in the editor when its page next appears (just created). */
+export const arriving = { edit: null as string | null };
