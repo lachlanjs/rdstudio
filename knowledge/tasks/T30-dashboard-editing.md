@@ -173,4 +173,21 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     moved with no link broken, a delete, and the phone dialogs. Found on the
     way: after a delete the page refreshed before leaving, so it vanished
     under the action and never left it; now it leaves first.
-  - Not yet: creating notes from the map itself, and from the tree.
+  - Not yet: creating notes from the map itself.
+- Asked for by the user (2026-10-01): creating and deleting from the tree,
+  with deletion confirmed more firmly.
+  - Each folder and note in the tree has a menu (a "⋯" button, shown on
+    hover or focus on a desktop and always on a touch screen; the menu
+    rises from the bottom on a phone): a new note or folder in a folder,
+    and moving or deleting either. The root has New note and New folder.
+  - The dialogs are one component (`ActionDialog`, opened through
+    `lib/actions.svelte.ts`), used by the tree, folder pages and note pages.
+  - Deleting asks twice: the dialog warns what is deleted (for a folder,
+    every note in it) and whose links break, and Delete stays disabled
+    until "Yes, delete …" is ticked. Folders with notes can now be deleted
+    (a new folder holds its overview note); folders holding other files
+    (images, data) are still refused, so nothing goes unseen.
+  - `e2e/reshape.py` now has 28 checks, adding the tree's menus (keyboard,
+    Escape, the phone layout), the confirmation, and cancelling.
+  - Found on the way: a live-preview check raced the editor's noticing that
+    focus had left; it now waits for it.

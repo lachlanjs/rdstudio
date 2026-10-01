@@ -14,7 +14,8 @@ import { StoreError, conceptPath, existingNotePath } from "./store.ts";
 import { normpathPosix } from "./files.ts";
 
 const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
-const FOLDER = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
+// Folder names: letters and digits in any script first, then also . _ -.
+const FOLDER = /^[\p{L}\p{N}][\p{L}\p{N}._-]*(?:\/[\p{L}\p{N}][\p{L}\p{N}._-]*)*$/u;
 
 // ------------------------------------------------------------------ paths
 
@@ -203,21 +204,42 @@ export function deleteNote(root: string, id: string, base?: string | null): Dele
   return { deleted: idOf(rel), backlinks };
 }
 
-/** Delete a folder that holds no notes (only a generated index.md, if any). */
-export function deleteFolder(root: string, folder: string): { deleted: string } {
+export interface FolderDeleteResult {
+  deleted: string;
+  notes: string[]; // the notes deleted with it
+  /** Notes elsewhere that linked into it: their links are now broken. */
+  backlinks: string[];
+}
+
+/** Delete a folder. One holding notes is deleted only with `withNotes`; one
+ *  holding other files (images, data) is refused, so nothing goes unseen. */
+export function deleteFolder(root: string, folder: string, withNotes = false): FolderDeleteResult {
   const f = normpathPosix(folder.replace(/^\/+|\/+$/g, ""));
   if (!FOLDER.test(f) || f.startsWith("..")) throw new StoreError(`invalid folder: '${f}'`);
   const dir = join(root, f);
   if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new StoreError(`no such folder: ${f}`);
-  const left = markdownFiles(root, f).filter((p) => !p.endsWith("/index.md"));
-  const other = (function walk(d: string): number {
-    let n = 0;
-    for (const e of readdirSync(d, { withFileTypes: true })) n += e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith(".md") ? 0 : 1;
-    return n;
+  const others: string[] = [];
+  (function walk(d: string, rel: string): void {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(join(d, e.name), `${rel}/${e.name}`);
+      else if (!e.name.endsWith(".md")) others.push(`${rel}/${e.name}`);
+    }
+  })(dir, f);
+  if (others.length) throw new StoreError(`${f} holds files other than notes (${others.slice(0, 3).join(", ")}${others.length > 3 ? ", …" : ""}): move or delete them first`);
+  const notes = markdownFiles(root, f).filter((p) => !/(^|\/)(index|log)\.md$/.test(p)).map(idOf);
+  const logs = markdownFiles(root, f).filter((p) => p.endsWith("/log.md"));
+  if (logs.length && !withNotes) throw new StoreError(`${f} has a log (${logs[0]}): delete it with its contents`);
+  if (notes.length && !withNotes) throw new StoreError(`${f} is not empty: move or delete what is in it first`);
+  const inside = new Set(notes);
+  const b = loadBundle(root);
+  const backlinks = [...new Set(notes.flatMap((n) => b.backlinks(n)).filter((n) => !inside.has(n)))].sort(cmp);
+  for (const rel of markdownFiles(root, f)) unlinkSync(join(root, rel));
+  (function prune(d: string): void {
+    for (const e of readdirSync(d, { withFileTypes: true })) if (e.isDirectory()) prune(join(d, e.name));
+    rmdirSync(d);
   })(dir);
-  if (left.length || other) throw new StoreError(`${f} is not empty: move or delete what is in it first`);
-  removeEmptyFolders(root, f);
-  return { deleted: f };
+  removeEmptyFolders(root, posixDirname(f));
+  return { deleted: f, notes, backlinks };
 }
 
 /** Remove `folder` and the folders above it while they hold nothing but a

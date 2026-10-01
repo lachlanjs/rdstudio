@@ -5,7 +5,7 @@ and phone sizes. Run with: mise run e2e
 
 Screenshots go to .e2e/ for a person to look at; the checks print PASS/FAIL.
 """
-import difflib, os, shutil, socket, subprocess, sys, tempfile, time
+import difflib, os, re, shutil, socket, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 
@@ -85,6 +85,8 @@ with sync_playwright() as pw:
     p.wait_for_selector(".cm-content")
     p.evaluate("document.activeElement.blur()")  # no line is being edited
     heading = p.locator(".cm-line.cm-lp-h1", has_text="Definition").first
+    # The editor notices the focus leaving a moment after the blur.
+    expect(heading).not_to_have_text(re.compile(r"^#"), timeout=3000)
     check("live preview: headings are set as headings, without the #", heading.count() == 1 and not heading.inner_text().startswith("#"))
     para = p.locator(".cm-line", has_text="is a continuous choice").first
     check("live preview: ** hidden off the cursor's line", "**" not in para.inner_text(), para.inner_text())

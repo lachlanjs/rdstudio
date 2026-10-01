@@ -236,10 +236,26 @@
         "properties": {
           "deleted": {
             "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The notes deleted with it."
+          },
+          "backlinks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Notes elsewhere that linked into it; those links are now broken."
           }
         },
         "required": [
-          "deleted"
+          "deleted",
+          "notes",
+          "backlinks"
         ]
       },
       "NoteSaved": {
@@ -840,7 +856,7 @@
     },
     "/api/folders/{path}": {
       "delete": {
-        "summary": "Delete an empty folder",
+        "summary": "Delete a folder (with the notes in it, given withNotes)",
         "parameters": [
           {
             "schema": {
@@ -851,6 +867,18 @@
             "description": "The folder, such as design/old (slashes encoded).",
             "name": "path",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "withNotes",
+            "in": "query"
           },
           {
             "schema": {

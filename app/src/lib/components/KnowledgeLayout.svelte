@@ -2,7 +2,10 @@
   // The knowledge pages' three columns: the tree, the page, and (for notes) details.
   import type { Snippet } from "svelte";
   import { wireAnchors } from "$lib/markdown.ts";
+  import { actions } from "$lib/actions.svelte.ts";
+  import { editing } from "$lib/edit.svelte.ts";
   import { dirLabel, tree } from "$lib/tree.svelte.ts";
+  import RowMenu from "./RowMenu.svelte";
   import TreeList from "./TreeList.svelte";
 
   let { current, children, meta }: { current: string | null; children: Snippet; meta?: Snippet } = $props();
@@ -14,7 +17,15 @@
     <input class="filter" type="search" placeholder="Filter by title, type or tag" aria-label="Filter knowledge"
       value={tree.filter} oninput={(e) => (tree.filter = e.currentTarget.value.trim())} />
     <div>
-      <a class="root-link" href="#/">{dirLabel("")}</a>
+      <div class="root-row">
+        <a class="root-link" href="#/">{dirLabel("")}</a>
+        {#if editing.enabled}
+          <RowMenu label="Add to the knowledge base" items={[
+            { label: "New note", run: () => actions.open({ kind: "new-note", folder: "" }) },
+            { label: "New folder", run: () => actions.open({ kind: "new-folder", folder: "" }) },
+          ]} />
+        {/if}
+      </div>
       <TreeList id="" {current} />
     </div>
   </aside>

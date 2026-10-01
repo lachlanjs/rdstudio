@@ -161,7 +161,11 @@ const Deleted = z.object({
   deleted: z.string(),
   backlinks: z.array(z.string()).openapi({ description: "Notes that linked to it; those links are now broken." }),
 }).openapi("NoteDeleted");
-const FolderDeleted = z.object({ deleted: z.string() }).openapi("FolderDeleted");
+const FolderDeleted = z.object({
+  deleted: z.string(),
+  notes: z.array(z.string()).openapi({ description: "The notes deleted with it." }),
+  backlinks: z.array(z.string()).openapi({ description: "Notes elsewhere that linked into it; those links are now broken." }),
+}).openapi("FolderDeleted");
 const FolderPath = z.object({ path: z.string().openapi({ param: { name: "path", in: "path" }, description: "The folder, such as design/old (slashes encoded)." }) });
 const Token = z.object({ "x-rdstudio-token": z.string() });
 const writeErrors = {
@@ -187,8 +191,8 @@ const postFolderMove = createRoute({
   responses: { 200: { description: "Moved", content: { "application/json": { schema: Moved } } }, ...writeErrors },
 });
 const deleteFolderRoute = createRoute({
-  method: "delete", path: "/api/folders/{path}", summary: "Delete an empty folder",
-  request: { params: FolderPath, headers: Token },
+  method: "delete", path: "/api/folders/{path}", summary: "Delete a folder (with the notes in it, given withNotes)",
+  request: { params: FolderPath, headers: Token, query: z.object({ withNotes: z.enum(["true", "false"]).optional() }) },
   responses: { 200: { description: "Deleted", content: { "application/json": { schema: FolderDeleted } } }, ...writeErrors },
 });
 
@@ -290,7 +294,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   app.openapi(postFolderMove, ((c: Context) => change(c, (b) =>
     moveFolder(cfg.knowledgeDir, str(b.from, "from"), str(b.to, "to")))) as never);
   app.openapi(deleteFolderRoute, ((c: Context) => change(c, () =>
-    deleteFolder(cfg.knowledgeDir, c.req.param("path") ?? ""), false)) as never);
+    deleteFolder(cfg.knowledgeDir, c.req.param("path") ?? "", c.req.query("withNotes") === "true"), false)) as never);
 
   app.openapi(putNote, (async (c: Context) => {
     const refused = writeRefused(c);

@@ -8,6 +8,8 @@
   import { page } from "$app/state";
   import { afterNavigate } from "$app/navigation";
   import { store } from "$lib/data.svelte.ts";
+  import { editing } from "$lib/edit.svelte.ts";
+  import ActionDialogs from "$lib/components/ActionDialogs.svelte";
   import { procedures, reviewCount } from "$lib/review.ts";
   import { settings } from "$lib/settings.svelte.ts";
 
@@ -94,3 +96,4 @@
 <main id="view" tabindex="-1">
   {@render children()}
 </main>
+{#if editing.enabled}<ActionDialogs />{/if}

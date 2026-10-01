@@ -168,7 +168,23 @@ describe("moving and deleting", () => {
     expect(existsSync(join(root, "a"))).toBe(false); // emptied: removed with its index
     mkdirSync(join(root, "empty"));
     writeFileSync(join(root, "empty/index.md"), "# empty\n");
-    expect(deleteFolder(root, "empty")).toEqual({ deleted: "empty" });
+    expect(deleteFolder(root, "empty")).toEqual({ deleted: "empty", notes: [], backlinks: [] });
     expect(existsSync(join(root, "empty"))).toBe(false);
+  });
+
+  test("deleting a folder with its notes: only when asked, never with other files", () => {
+    const root = setup();
+    mkdirSync(join(root, "b/c"), { recursive: true });
+    writeFileSync(join(root, "b/overview.md"), "---\ntype: Overview\ntitle: B\n---\n");
+    writeFileSync(join(root, "b/c/deep.md"), "---\ntype: Note\ntitle: D\n---\n\nTo [n](/a/n.md).\n");
+    writeFileSync(join(root, "a/m.md"), "---\ntype: Note\ntitle: M\n---\n\nTo [deep](/b/c/deep.md).\n");
+    expect(() => deleteFolder(root, "b")).toThrow(/not empty/);
+    expect(deleteFolder(root, "b", true)).toEqual({ deleted: "b", notes: ["b/c/deep", "b/overview"], backlinks: ["a/m"] });
+    expect(existsSync(join(root, "b"))).toBe(false);
+    mkdirSync(join(root, "pics"));
+    writeFileSync(join(root, "pics/overview.md"), "---\ntype: Overview\ntitle: P\n---\n");
+    writeFileSync(join(root, "pics/fig.png"), "png");
+    expect(() => deleteFolder(root, "pics", true)).toThrow(/other than notes/);
+    expect(existsSync(join(root, "pics/fig.png"))).toBe(true);
   });
 });

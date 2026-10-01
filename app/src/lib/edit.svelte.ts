@@ -257,9 +257,10 @@ export async function moveFolderTo(from: string, to: string): Promise<{ moved: {
   return data;
 }
 
-/** Delete an empty folder; as with deleteNoteAt, leave its page, then refresh. */
-export async function deleteFolderAt(path: string): Promise<void> {
-  const { data, error, response } = await deleteApiFoldersByPath({ path: { path }, headers: auth() });
+/** Delete a folder (with the notes in it, given withNotes); as with
+ *  deleteNoteAt, leave its page, then refresh. */
+export async function deleteFolderAt(path: string, withNotes = false): Promise<void> {
+  const { data, error, response } = await deleteApiFoldersByPath({ path: { path }, headers: auth(), query: { withNotes: withNotes ? "true" : "false" } });
   if (!data) throw failure(error, response?.status);
 }
 

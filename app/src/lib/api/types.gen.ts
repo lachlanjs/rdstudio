@@ -109,6 +109,14 @@ export type FolderMove = {
 
 export type FolderDeleted = {
     deleted: string;
+    /**
+     * The notes deleted with it.
+     */
+    notes: Array<string>;
+    /**
+     * Notes elsewhere that linked into it; those links are now broken.
+     */
+    backlinks: Array<string>;
 };
 
 export type NoteSaved = {
@@ -456,7 +464,9 @@ export type DeleteApiFoldersByPathData = {
          */
         path: string;
     };
-    query?: never;
+    query?: {
+        withNotes?: 'true' | 'false';
+    };
     url: '/api/folders/{path}';
 };
 

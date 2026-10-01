@@ -87,6 +87,6 @@ export const postApiFoldersMove = <ThrowOnError extends boolean = false>(options
 });
 
 /**
- * Delete an empty folder
+ * Delete a folder (with the notes in it, given withNotes)
  */
 export const deleteApiFoldersByPath = <ThrowOnError extends boolean = false>(options: Options<DeleteApiFoldersByPathData, ThrowOnError>): RequestResult<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError>({ url: '/api/folders/{path}', ...options });
