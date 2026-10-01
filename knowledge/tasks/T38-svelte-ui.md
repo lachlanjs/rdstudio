@@ -102,3 +102,11 @@ The old dashboard (`src/rdstudio/web/`) stays the one served until the new one
   Checked: the tests, the type checks and every agreement check pass; the
   wheel carries the dashboard, and an export of the differential geometry
   bundle from it opens without errors in Chromium (home, map, graph, a note).
+- Found after merging (2026-10-01): the GitHub Pages preview was a blank page.
+  With hash routing SvelteKit writes index.html as a fallback page, whose file
+  addresses start at the site root (`/_app/...`) even with `paths.relative`;
+  `rdstudio serve` is at the root, so only Pages (under `/rdstudio/`) showed it.
+  Page options that would prerender it instead are refused with hash routing,
+  so `app/scripts/relative.ts` rewrites the addresses to `./` after the build,
+  and fails the build if any root-relative one is left. Checked by exporting
+  this repository and opening it under `/rdstudio/` in Chromium: no errors.

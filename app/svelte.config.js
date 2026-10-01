@@ -3,13 +3,15 @@
 // from any folder: rdstudio serve, a static export, Tauri), built with
 // adapter-static into src/rdstudio/web/, where the Python package, the Node
 // command line and the npm package find it; rdstudio build copies it into a site.
-// Built, not committed: npm run build --workspace @rdstudio/app.
+// Built, not committed: npm run build --workspace @rdstudio/app, which then
+// makes index.html's file addresses relative (scripts/relative.ts), so the
+// dashboard also works below a site root, as on GitHub Pages.
 import adapter from "@sveltejs/adapter-static";
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {
   kit: {
-    adapter: adapter({ pages: "../src/rdstudio/web", assets: "../src/rdstudio/web", fallback: "index.html", strict: false }),
+    adapter: adapter({ pages: "../src/rdstudio/web", assets: "../src/rdstudio/web", strict: false }),
     router: { type: "hash" },
     paths: { relative: true },
     output: { bundleStrategy: "split" },
