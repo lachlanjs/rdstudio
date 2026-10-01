@@ -94,5 +94,6 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
   [learner record](/ideas/learning/learner-record.md),
   [tours and exercises](/ideas/learning/tours-and-exercises.md),
   [dashboard editing](/ideas/learning/dashboard-editing.md),
+  [discovery states and hiding what is undiscovered](/ideas/learning/discovery.md),
   [alpha trials](/ideas/learning/alpha-trials.md),
   [autoethnography](/ideas/learning/autoethnography.md)
