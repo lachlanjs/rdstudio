@@ -35,8 +35,10 @@ export function mermaidConfig() {
       edgeLabelBackground: paper, noteBkgColor: accentSoft, noteTextColor: ink, noteBorderColor: accent,
       actorBkg: raised, actorBorder: faint, actorTextColor: ink, signalColor: soft, signalTextColor: ink,
       // xychart: bars muted, the first line in the accent, so both read.
+      // Every colour is given: one left out is worked out from Mermaid's own
+      // light defaults, not from these, so it is dark on a dark page.
       xyChart: {
-        backgroundColor: paper, titleColor: ink,
+        backgroundColor: paper, titleColor: ink, legendTextColor: ink, dataLabelColor: ink,
         xAxisLabelColor: soft, xAxisTitleColor: soft, xAxisTickColor: faint, xAxisLineColor: faint,
         yAxisLabelColor: soft, yAxisTitleColor: soft, yAxisTickColor: faint, yAxisLineColor: faint,
         plotColorPalette: [faint, accent, soft, ink].join(", "),
