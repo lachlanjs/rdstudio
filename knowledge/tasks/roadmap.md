@@ -57,11 +57,11 @@ See the [understanding layer design](/design/understanding-layer.md).
 
 - [x] [T23 Learner record and landmarks](/tasks/T23-learner-record.md)
 - [x] [T24 Study paths and reading order](/tasks/T24-study-paths.md)
-- [ ] [T25 Tours](/tasks/T25-tours.md)
-- [ ] [T26 Interactive exercises](/tasks/T26-exercises.md)
-- [ ] [T27 Coverage and review](/tasks/T27-coverage-review.md)
-- [ ] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
-- [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
+- [x] [T25 Tours](/tasks/T25-tours.md)
+- [x] [T26 Interactive exercises](/tasks/T26-exercises.md)
+- [x] [T27 Coverage and review](/tasks/T27-coverage-review.md)
+- [x] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
+- [x] [T29 Catching up on change](/tasks/T29-catch-up.md)
 - T30 Editing in the app: moved to M9
 
 # M9 — Performance and platform (current priority)

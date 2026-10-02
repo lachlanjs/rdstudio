@@ -81,3 +81,46 @@ export function history(root: string, categories: Record<string, string[]>, limi
   const branch = (git(root, "rev-parse", "--abbrev-ref", "HEAD") ?? "").trim();
   return { available: true, branch, commits };
 }
+
+export interface NoteHistory {
+  /** Whether the project is a git repository at all. */
+  available: boolean;
+  /** Commits that touched the file after `since`, newest first. */
+  commits: { hash: string; short: string; author: string; date: string; subject: string }[];
+  /** The file at `since` (the last commit before it) against the file now,
+   *  uncommitted changes included, as a unified diff; null when it did not
+   *  exist then or nothing differs. */
+  diff: string | null;
+  /** The commit compared against, or null. */
+  base: string | null;
+  /** The file existed at `since`. */
+  existed: boolean;
+}
+
+/** What happened to one file since a time: for catching up on a note
+ *  (T29). `path` is relative to `root`; renames are followed. */
+export function historySince(root: string, path: string, since: string): NoteHistory {
+  if (git(root, "rev-parse", "--is-inside-work-tree") === null) return { available: false, commits: [], diff: null, base: null, existed: false };
+  const log = git(root, "log", "--follow", `--since=${since}`, "--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s", "--", path) ?? "";
+  const commits = splitlines(log).filter(Boolean).map((line) => {
+    const [hash = "", short = "", author = "", date = "", subject = ""] = line.split("\x1f");
+    return { hash, short, author, date, subject };
+  });
+  // The project as it was then, and the note's name then: renames since are followed back.
+  const base = (git(root, "rev-list", "-1", `--before=${since}`, "HEAD") ?? "").trim() || null;
+  let then = path;
+  if (base) {
+    const moves = git(root, "log", "--follow", "--name-status", "--format=", `${base}..HEAD`, "--", path) ?? "";
+    for (const line of splitlines(moves)) {
+      const [status = "", from, to] = line.split("\t");
+      if (status.startsWith("R") && to === then && from) then = from;
+    }
+  }
+  const existed = !!base && git(root, "cat-file", "-e", `${base}:${then}`) !== null;
+  let diff: string | null = null;
+  if (existed) {
+    diff = git(root, "diff", "--no-color", "-M", base!, "--", then, path) || null;
+    if (diff !== null && !diff.trim()) diff = null;
+  }
+  return { available: true, commits, diff, base: base ? base.slice(0, 7) : null, existed };
+}

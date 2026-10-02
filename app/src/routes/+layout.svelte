@@ -18,7 +18,7 @@
   // Which tab a route belongs to.
   const TABS: Record<string, string> = {
     "/": "knowledge", "/d/[...id]": "knowledge", "/k/[...id]": "knowledge", "/map/[...focus]": "map", "/path/[...id]": "map",
-    "/graph": "graph", "/learn": "learn", "/changes": "changes", "/review": "review", "/reports": "reports",
+    "/graph": "graph", "/learn": "learn", "/tour/[...id]": "learn", "/tours/[...name]": "learn", "/practice/[...rest]": "learn", "/changes": "changes", "/review": "review", "/reports": "reports",
     "/r/[...path]": "reports", "/procedures": "procedures", "/p/[...id]": "procedures", "/settings": "settings",
     "/skills": "skills", "/skill/[...name]": "skills", "/agent/[...name]": "skills",
   };

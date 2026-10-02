@@ -10,7 +10,7 @@
 
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { extname, join, resolve, sep } from "node:path";
+import { extname, join, relative, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import { serve as nodeServe } from "@hono/node-server";
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
@@ -20,8 +20,9 @@ import { build, WEB_DIR } from "./build.ts";
 import type { Config } from "./config.ts";
 import { ConflictError, noteSource, saveNote } from "./edit.ts";
 import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
-import { StoreError } from "./store.ts";
+import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
+import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -87,6 +88,38 @@ const postLearner = createRoute({
   },
 });
 
+const Tour = z.object({
+  name: z.string().openapi({ description: "Lowercase letters, digits and dashes." }),
+  title: z.string(),
+  description: z.string(),
+  body: z.string().openapi({ description: "Markdown: a list whose items each start with a link to a stop, then its narration." }),
+}).openapi("PrivateTour");
+const TourName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" } }) });
+const TourSave = z.object({ title: z.string(), description: z.string().optional(), body: z.string() }).openapi("PrivateTourSave");
+const tourErrors = {
+  400: { description: "Not a valid tour", content: { "application/json": { schema: ErrorBody } } },
+  403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  409: { description: "The learner record is off", content: { "application/json": { schema: ErrorBody } } },
+  415: { description: "Not JSON", content: { "application/json": { schema: ErrorBody } } },
+};
+const getTours = createRoute({
+  method: "get", path: "/api/learner/tours", summary: "Your private tours (none while the learner record is off)",
+  responses: {
+    200: { description: "The tours", content: { "application/json": { schema: z.array(Tour) } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+const putTour = createRoute({
+  method: "put", path: "/api/learner/tours/{name}", summary: "Write one of your private tours",
+  request: { params: TourName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: TourSave } }, required: true } },
+  responses: { 200: { description: "The tour as saved", content: { "application/json": { schema: Tour } } }, ...tourErrors },
+});
+const deleteTourRoute = createRoute({
+  method: "delete", path: "/api/learner/tours/{name}", summary: "Delete one of your private tours",
+  request: { params: TourName, headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Deleted", content: { "application/json": { schema: z.object({ name: z.string() }) } } }, ...tourErrors },
+});
+
 // ------------------------------------------------------------------ notes API
 
 const Meta = z.record(z.string(), z.unknown()).openapi("NoteMeta", { description: "Frontmatter fields." });
@@ -113,6 +146,23 @@ const SaveReply = z.object({
 }).openapi("NoteSaved");
 const Conflict = z.object({ error: z.string(), current: NoteSourceSchema.nullable() }).openapi("NoteConflict");
 const NoteId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The note's id, such as design/model (slashes encoded)." }) });
+
+const History = z.object({
+  available: z.boolean().openapi({ description: "Whether the project is a git repository." }),
+  commits: z.array(z.object({ hash: z.string(), short: z.string(), author: z.string(), date: z.string(), subject: z.string() })),
+  diff: z.string().nullable().openapi({ description: "The note then against now, as a unified diff, uncommitted changes included." }),
+  base: z.string().nullable(),
+  existed: z.boolean(),
+}).openapi("NoteHistory");
+const getHistory = createRoute({
+  method: "get", path: "/api/history/{id}", summary: "What changed in a note since a time: commits and a diff (catching up)",
+  request: { params: NoteId, query: z.object({ since: z.string().openapi({ description: "An ISO time, such as when you last looked." }) }) },
+  responses: {
+    200: { description: "The history", content: { "application/json": { schema: History } } },
+    400: { description: "Not a valid note or time", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
 
 const getEdit = createRoute({
   method: "get", path: "/api/edit", summary: "Whether notes can be edited here, and the token to do it with",
@@ -272,10 +322,45 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     }
   }) as never);
 
+  app.openapi(getTours, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    return json(c, 200, learner.enabled(cfg) ? learner.tours(cfg) : []);
+  }) as never);
+  /** A write to your private tours: the same checks as the record's. */
+  const tourChange = async (c: Context, act: (body: Record<string, unknown>) => unknown, withBody = true) => {
+    const refused = writeRefused(c, withBody);
+    if (refused) return refused;
+    if (!learner.enabled(cfg)) return refuse(c, 409, "the learner record is off ([learner] enabled in the user config)");
+    let body: Record<string, unknown> = {};
+    if (withBody) {
+      try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+      if (typeof body !== "object" || body === null || Array.isArray(body)) return refuse(c, 400, "expected a JSON object");
+    }
+    try {
+      return json(c, 200, act(body), true);
+    } catch (err) {
+      return refuse(c, 400, (err as Error).message);
+    }
+  };
+  app.openapi(putTour, ((c: Context) => tourChange(c, (b) => learner.saveTour(cfg, c.req.param("name") ?? "", b))) as never);
+  app.openapi(deleteTourRoute, ((c: Context) => tourChange(c, () => learner.deleteTour(cfg, c.req.param("name") ?? ""), false)) as never);
+
   const actor = cfg.human || "human:unknown";
   app.openapi(getEdit, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     return json(c, 200, { enabled: !readOnly, token: readOnly ? null : token, actor });
+  }) as never);
+
+  app.openapi(getHistory, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    const since = c.req.query("since") ?? "";
+    if (Number.isNaN(Date.parse(since))) return json(c, 400, { error: "'since' is an ISO time" });
+    try {
+      const path = existingNotePath(cfg.knowledgeDir, c.req.param("id") ?? "");
+      return json(c, 200, historySince(cfg.root, relative(cfg.root, path).split("\\").join("/"), new Date(since).toISOString()));
+    } catch (err) {
+      return json(c, 400, { error: (err as Error).message });
+    }
   }) as never);
 
   app.openapi(getNote, ((c: Context) => {

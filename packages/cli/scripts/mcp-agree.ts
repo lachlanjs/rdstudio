@@ -156,7 +156,10 @@ const py = await session(python, ["-m", "rdstudio.cli", "mcp"], join(tmp, "py"))
 const nd = await session("node", [join(REPO, "packages", "cli", "src", "main.ts"), "mcp"], join(tmp, "node"));
 
 const diffs: string[] = [];
-const toolNames = (t: typeof py.tools) => t.map((x) => x.name).join(", ");
+// Tools added after the port, to the Node server only: the Python server is
+// kept as it was until it is retired (design/platform.md).
+const NODE_ONLY = new Set(["learner_state", "explain_question", "explain_pending", "explain_record", "explain_mark"]);
+const toolNames = (t: typeof py.tools) => t.filter((x) => !NODE_ONLY.has(x.name)).map((x) => x.name).join(", ");
 if (toolNames(py.tools) !== toolNames(nd.tools)) diffs.push(`tools: ${toolNames(py.tools)}\n  vs   ${toolNames(nd.tools)}`);
 for (const t of py.tools) {
   const n = nd.tools.find((x) => x.name === t.name);
@@ -176,6 +179,6 @@ py.replies.forEach((_, i) => {
   if (a !== b) diffs.push(`${name} ${JSON.stringify(args)}:\n  python ${JSON.stringify(a).slice(0, 700)}\n  node   ${JSON.stringify(b).slice(0, 700)}`);
 });
 if (process.env.SHOW) for (const i of process.env.SHOW.split(",").map(Number)) console.log(`--- ${CALLS[i]![0]} ${JSON.stringify(CALLS[i]![1])}\n${nd.replies[i]}`);
-console.log(`${py.tools.length} tools, ${CALLS.length} calls, ${COMMANDS.length} commands and the stubs they write: ${diffs.length ? `${diffs.length} differences` : "the same"}`);
+console.log(`${py.tools.length} tools (and ${NODE_ONLY.size} in Node only), ${CALLS.length} calls, ${COMMANDS.length} commands and the stubs they write: ${diffs.length ? `${diffs.length} differences` : "the same"}`);
 if (diffs.length) console.log(diffs.join("\n"));
 process.exitCode = diffs.length ? 1 : 0;

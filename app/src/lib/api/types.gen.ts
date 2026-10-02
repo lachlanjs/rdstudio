@@ -25,6 +25,25 @@ export type Error = {
     error: string;
 };
 
+export type PrivateTour = {
+    /**
+     * Lowercase letters, digits and dashes.
+     */
+    name: string;
+    title: string;
+    description: string;
+    /**
+     * Markdown: a list whose items each start with a link to a stop, then its narration.
+     */
+    body: string;
+};
+
+export type PrivateTourSave = {
+    title: string;
+    description?: string;
+    body: string;
+};
+
 export type EditState = {
     enabled: boolean;
     /**
@@ -35,6 +54,26 @@ export type EditState = {
      * Who edits are attributed to, such as human:lachlan.
      */
     actor: string;
+};
+
+export type NoteHistory = {
+    /**
+     * Whether the project is a git repository.
+     */
+    available: boolean;
+    commits: Array<{
+        hash: string;
+        short: string;
+        author: string;
+        date: string;
+        subject: string;
+    }>;
+    /**
+     * The note then against now, as a unified diff, uncommitted changes included.
+     */
+    diff: string | null;
+    base: string | null;
+    existed: boolean;
 };
 
 export type NoteSource = {
@@ -209,6 +248,117 @@ export type PostApiLearnerResponses = {
 
 export type PostApiLearnerResponse = PostApiLearnerResponses[keyof PostApiLearnerResponses];
 
+export type GetApiLearnerToursData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/learner/tours';
+};
+
+export type GetApiLearnerToursErrors = {
+    /**
+     * Host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiLearnerToursError = GetApiLearnerToursErrors[keyof GetApiLearnerToursErrors];
+
+export type GetApiLearnerToursResponses = {
+    /**
+     * The tours
+     */
+    200: Array<PrivateTour>;
+};
+
+export type GetApiLearnerToursResponse = GetApiLearnerToursResponses[keyof GetApiLearnerToursResponses];
+
+export type DeleteApiLearnerToursByNameData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/learner/tours/{name}';
+};
+
+export type DeleteApiLearnerToursByNameErrors = {
+    /**
+     * Not a valid tour
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type DeleteApiLearnerToursByNameError = DeleteApiLearnerToursByNameErrors[keyof DeleteApiLearnerToursByNameErrors];
+
+export type DeleteApiLearnerToursByNameResponses = {
+    /**
+     * Deleted
+     */
+    200: {
+        name: string;
+    };
+};
+
+export type DeleteApiLearnerToursByNameResponse = DeleteApiLearnerToursByNameResponses[keyof DeleteApiLearnerToursByNameResponses];
+
+export type PutApiLearnerToursByNameData = {
+    body: PrivateTourSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/learner/tours/{name}';
+};
+
+export type PutApiLearnerToursByNameErrors = {
+    /**
+     * Not a valid tour
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type PutApiLearnerToursByNameError = PutApiLearnerToursByNameErrors[keyof PutApiLearnerToursByNameErrors];
+
+export type PutApiLearnerToursByNameResponses = {
+    /**
+     * The tour as saved
+     */
+    200: PrivateTour;
+};
+
+export type PutApiLearnerToursByNameResponse = PutApiLearnerToursByNameResponses[keyof PutApiLearnerToursByNameResponses];
+
 export type GetApiEditData = {
     body?: never;
     path?: never;
@@ -233,6 +383,45 @@ export type GetApiEditResponses = {
 };
 
 export type GetApiEditResponse = GetApiEditResponses[keyof GetApiEditResponses];
+
+export type GetApiHistoryByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query: {
+        /**
+         * An ISO time, such as when you last looked.
+         */
+        since: string;
+    };
+    url: '/api/history/{id}';
+};
+
+export type GetApiHistoryByIdErrors = {
+    /**
+     * Not a valid note or time
+     */
+    400: Error;
+    /**
+     * Host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiHistoryByIdError = GetApiHistoryByIdErrors[keyof GetApiHistoryByIdErrors];
+
+export type GetApiHistoryByIdResponses = {
+    /**
+     * The history
+     */
+    200: NoteHistory;
+};
+
+export type GetApiHistoryByIdResponse = GetApiHistoryByIdResponses[keyof GetApiHistoryByIdResponses];
 
 export type DeleteApiNotesByIdData = {
     body?: never;

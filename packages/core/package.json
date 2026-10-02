@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./learning": "./src/learning.ts",
     "./node": "./src/node.ts"
   },
   "scripts": {

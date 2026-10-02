@@ -6,6 +6,8 @@
   import { hasRequires, prerequisites } from "$lib/learn.ts";
   import FmValue from "./FmValue.svelte";
   import TrustBadge from "./TrustBadge.svelte";
+  import YourUnderstanding from "./YourUnderstanding.svelte";
+  import { understanding } from "$lib/understanding.svelte.ts";
 
   let { c }: { c: ConceptRecord } = $props();
 
@@ -36,6 +38,7 @@
 
 <aside class="meta" aria-label="Details">
   <div class="meta-inner">
+    {#if understanding.on}<YourUnderstanding {c} />{/if}
     <h2>Trust</h2>
     <TrustBadge {c} />
     {#if c.verification_stale}<p class="section-note">Meaningfully edited after the last human review.</p>{/if}
