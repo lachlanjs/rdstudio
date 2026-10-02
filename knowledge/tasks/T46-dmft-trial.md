@@ -2,7 +2,7 @@
 type: Task
 title: "T46 — Trial: dynamical mean-field theory"
 description: "Learn the DMFT of random neural networks from first principles to Clark and Abbott's theory of coupled neuronal-synaptic dynamics, in a separate repository, using the teacher throughout."
-tags: [task, m10, todo]
+tags: [task, m10, active]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-02T12:00:00Z }
 ---
 
@@ -71,3 +71,18 @@ Each item is to be checked by `source`; none is assumed.
 
 Tuning the skills, and finding what the platform lacks. Problems found are
 written to the task, as they are met.
+
+# Log
+
+## 2026-10-02: set up
+
+- The repository is `~/Repositories/dmft`, made with `rdstudio init --profile
+  topic` and committed once, so its project id (`88c75507cf417b7f`) is fixed
+  from the start.
+- The learner record is on in the user config.
+- The teacher answers through MCP in that repository, with the seven
+  default skills.
+- **Finding:** `init` writes the same bootstrap task for every profile, and
+  that task is written for a code repository ("read the README, propose
+  directories"). For a topic, the teach skill's goals and diagnostic replace
+  it. Make the bootstrap depend on the profile.
