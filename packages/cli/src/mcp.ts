@@ -298,7 +298,7 @@ questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) =>
       if (cid === null) return `No concept ${pyRepr(id)}.`;
       const s = states.get(cid)!, r = schedule.get(cid);
       const recent = events.filter((e) => e.concept === cid).slice(-6)
-        .map((e) => ({ event: e.event, at: e.at, ...(e.result ? { result: e.result } : {}), ...(e.state ? { state: e.state } : {}) }));
+        .map((e) => ({ id: e.id, event: e.event, at: e.at, ...(e.result ? { result: e.result } : {}), ...(e.state ? { state: e.state } : {}) }));
       return fmt({ id: cid, title: b.concepts.get(cid)!.title, state: s.state, changed: s.changed, by: s.kind,
         review: r ? { box: r.box, due: new Date(r.due).toISOString() } : null, recent });
     }
@@ -447,6 +447,73 @@ default), with the profile. Follow it.`, { name: z.string() }, ({ name }) => {
       if (err instanceof LearnerError) return err.message;
       throw err;
     }
+  });
+
+  tool("teacher_read", `Read one of the teacher's private files about the developer: "profile.md"
+(what they find easy and hard, how they learn, what to retest; each claim
+citing evidence as [e:<event id>]) or "sources.md" (the research log: what was
+searched, found, chosen or rejected and why). Gives its recent history; with
+developer_edit=true, the developer's own latest edit as a diff, to answer
+(they may dispute a claim). Never quote these to anyone else.`, { name: z.string(), developer_edit: z.boolean().default(false) }, ({ name, developer_edit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    try {
+      const f = teacher.readFile(cfg, name);
+      const edited = f.history.find((h) => h.message === `${f.name}: ${teacher.BY_DEVELOPER}`);
+      const head = `${f.name}: ${f.text === null ? "not written yet" : `${f.text.length} characters`}. ` +
+        `History: ${f.history.length ? f.history.slice(0, 5).map((h) => `${h.at.slice(0, 16)} ${h.message}`).join("; ") : "none"}.` +
+        (edited && !developer_edit ? ` The developer edited it on ${edited.at.slice(0, 10)}: read that with developer_edit=true.` : "");
+      if (developer_edit) {
+        const d = teacher.developerEdit(cfg, f.name);
+        return `${head}\n\n${d ? `The developer's edit of ${d.at}:\n${d.diff}` : "The developer has not edited it."}`;
+      }
+      return f.text === null ? head : `${head}\n\n${f.text}`;
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
+  });
+
+  tool("teacher_write", `Write one of the teacher's private files ("profile.md" or "sources.md"),
+replacing it whole: read it first, and keep what still holds. In the profile,
+every claim cites the events behind it as [e:<event id>] (from learner_events);
+a claim without evidence is not written. Each write is kept in the teacher's
+history, with \`message\` saying what changed.`, { name: z.string(), text: z.string(), message: opt(z.string()), actor: opt(z.string()) }, ({ name, text, message, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    if (!text.trim()) return "Text is needed.";
+    try {
+      const f = teacher.writeFile(cfg, name, text, (message?.trim() || "updated") + ` (${actor || cfg.agent})`);
+      return fmt({ written: f.name, characters: f.text?.length ?? 0 });
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
+  });
+
+  tool("learner_events", `The developer's learner record as evidence, newest first, each with its id
+(cite one as [e:<id>] in the profile): what they opened, marked, practised,
+explained and answered, with results and feedback. Filter by note or
+exercise id (\`about\`), event names (\`events\`, such as attempt, attempt_marked,
+exercise, explain_marked, mark) and \`since\` (an ISO date).`, {
+    about: opt(z.string()), events: opt(z.array(z.string())), since: opt(z.string()), limit: z.number().int().default(40),
+  }, ({ about, events: names, since, limit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle();
+    const id = about ? b.resolveId(about) ?? about : null;
+    const all = learner.events(cfg);
+    const attemptsById = new Map(all.filter((e) => e.event === "attempt").map((e) => [e.id, e]));
+    const touches = (e: Record<string, unknown>): boolean => {
+      if (id === null) return true;
+      if (e.concept === id || e.exercise === id) return true;
+      const a = e.event === "attempt" ? e : e.event === "attempt_marked" ? attemptsById.get(e.ref as string) : undefined;
+      return Array.isArray(a?.tests) && (a!.tests as string[]).includes(id);
+    };
+    const out = all.filter((e) => touches(e) && (!names?.length || names.includes(String(e.event))) && (!since || String(e.at) >= since))
+      .slice(-Math.max(1, Math.min(limit, 200))).reverse()
+      .map(({ device: _d, hash: _h, hashes: _hs, ...rest }) => {
+        const c = typeof rest.concept === "string" ? b.concepts.get(rest.concept) : typeof rest.exercise === "string" ? b.concepts.get(rest.exercise) : undefined;
+        return c ? { ...rest, title: c.title } : rest;
+      });
+    return out.length ? fmt(out) : "No events match.";
   });
 
   tool("promote", `Move a project concept into the developer's global knowledge base (for

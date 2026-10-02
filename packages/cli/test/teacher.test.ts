@@ -119,3 +119,52 @@ test("the profile is guessed from the repository, and set in rdstudio.toml", () 
   teacher.setProfile(loadConfig(root), "topic");
   expect(readFileSync(join(root, "rdstudio.toml"), "utf8")).toBe(toml.replace('profile = "project"', 'profile = "topic"'));
 });
+
+test("the profile and sources log: written by agents, edited by the developer, each a commit", async () => {
+  const cfg = loadConfig(project());
+  expect(() => teacher.readFile(cfg, "secrets.md")).toThrow(/profile.md and sources.md/);
+  expect(teacher.readFile(cfg, "profile.md")).toEqual({ name: "profile.md", text: null, history: [] });
+
+  const call = await connect(cfg.root);
+  const a = learner.append(cfg, { event: "attempt", exercise: "ex/one", tests: ["n"], answer: "2", result: "missed", by: "dashboard" });
+  expect(await call("teacher_read", { name: "profile.md" })).toBe("profile.md: not written yet. History: none.");
+  expect(await call("teacher_write", { name: "profile.md", text: " " })).toBe("Text is needed.");
+  expect(await call("teacher_write", { name: "notes.md", text: "x" })).toMatch(/profile.md and sources.md/);
+  const written = `# Struggling\n\n- Values off by one [e:${a.id}].\n`;
+  expect(JSON.parse(await call("teacher_write", { name: "profile.md", text: written.replace("\n", "\r\n"), message: "First picture", actor: "agent/test" })))
+    .toEqual({ written: "profile.md", characters: written.length });
+  let read = await call("teacher_read", { name: "profile.md" });
+  expect(read.startsWith(`profile.md: ${written.length} characters. History: `)).toBe(true);
+  expect(read).toMatch(/^profile\.md: \d+ characters\. History: \d{4}-\d\d-\d\dT\d\d:\d\d profile\.md: First picture \(agent\/test\)\.\n\n# Struggling/);
+
+  // The developer disputes it in the dashboard; the agent is told, and reads the edit.
+  teacher.writeFile(cfg, "profile.md", "# Struggling\n\n- Nothing: that was a typo.\n", teacher.BY_DEVELOPER);
+  read = await call("teacher_read", { name: "profile.md" });
+  expect(read).toMatch(/The developer edited it on \d{4}-\d\d-\d\d: read that with developer_edit=true\./);
+  const edit = await call("teacher_read", { name: "profile.md", developer_edit: true });
+  expect(edit).toMatch(/The developer's edit of .*:\n/);
+  expect(edit).toContain(`-- Values off by one [e:${a.id}].`);
+  expect(edit).toContain("+- Nothing: that was a typo.");
+  expect(teacher.history(cfg).map((h) => h.message)).toEqual(["profile.md: edited by the developer", "profile.md: First picture (agent/test)"]);
+  expect(teacher.developerEdit(cfg, "sources.md")).toBeNull();
+});
+
+test("learner_events gives the evidence with ids, filtered by note, event and time", async () => {
+  const root = project();
+  mkdirSync(join(root, "knowledge", "f"), { recursive: true });
+  writeFileSync(join(root, "knowledge", "f", "n.md"), "---\ntype: Definition\ntitle: N\n---\n\nN.\n");
+  writeFileSync(join(root, "knowledge", "f", "ex.md"), "---\ntype: Exercise\ntitle: Ex\ntests: [n.md]\n---\n\nQ\n\n# Solution\n\nA\n");
+  const cfg = loadConfig(root);
+  const call = await connect(root);
+  const seen = learner.append(cfg, { event: "seen", concept: "f/n", hash: "h" });
+  const att = learner.append(cfg, { event: "attempt", exercise: "f/ex", tests: ["f/n"], hashes: { "f/n": "h" }, answer: "A", kind: "ai" });
+  const mark = learner.append(cfg, { event: "attempt_marked", ref: att.id, result: "got", feedback: "Yes.", by: "agent/x" });
+  learner.append(cfg, { event: "seen", concept: "f/other", hash: "h" });
+  const about = JSON.parse(await call("learner_events", { about: "f/n" }));
+  expect(about.map((e: { id: string }) => e.id)).toEqual([mark.id, att.id, seen.id]);
+  expect(about[1]).toEqual({ id: att.id, at: att.at, event: "attempt", exercise: "f/ex", tests: ["f/n"], answer: "A", kind: "ai", title: "Ex" });
+  expect(about[2]).toMatchObject({ concept: "f/n", title: "N" });
+  expect(JSON.parse(await call("learner_events", { events: ["attempt_marked"] })).map((e: { id: string }) => e.id)).toEqual([mark.id]);
+  expect(await call("learner_events", { since: "2999-01-01" })).toBe("No events match.");
+  expect(JSON.parse(await call("learner_events", { limit: 1 }))).toHaveLength(1);
+});

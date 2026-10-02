@@ -139,13 +139,18 @@
                 },
                 "message": {
                   "type": "string"
+                },
+                "commit": {
+                  "type": "string"
                 }
               },
               "required": [
                 "at",
-                "message"
+                "message",
+                "commit"
               ]
-            }
+            },
+            "description": "The teacher folder's commits, newest first."
           }
         },
         "required": [
@@ -220,6 +225,63 @@
               "base"
             ]
           }
+        ]
+      },
+      "TeacherFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "profile.md",
+              "sources.md"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Null until written."
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "commit": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at",
+                "message",
+                "commit"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "text",
+          "history"
+        ]
+      },
+      "TeacherFileSave": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
         ]
       },
       "SkillSave": {
@@ -1046,6 +1108,140 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SkillReset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/files/{name}": {
+      "get": {
+        "summary": "One of the teacher's files about you: the profile or the sources log",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "profile.md or sources.md"
+            },
+            "required": true,
+            "description": "profile.md or sources.md",
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherFile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Edit one of the teacher's files (to dispute a claim, say); agents see the edit",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "profile.md or sources.md"
+            },
+            "required": true,
+            "description": "profile.md or sources.md",
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeacherFileSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherFile"
                 }
               }
             }

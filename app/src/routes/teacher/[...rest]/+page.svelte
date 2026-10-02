@@ -1,9 +1,11 @@
 <script lang="ts">
-  // The teacher (T43): how the agent teaches here. #/teacher shows the
-  // profile, the skills and the teacher's history; #/teacher/skills/<name>
-  // shows one skill, where it can be customised, compared with rdstudio's
-  // default and reset. Kept off the main navigation: the defaults are meant
-  // to be enough.
+  // The teacher (T43, T45): how the agent teaches here, and what it knows of
+  // you. #/teacher shows its picture of you, the sources log, the profile,
+  // the skills and the history; #/teacher/profile and #/teacher/sources open
+  // those files to read and edit; #/teacher/evidence/<id> is one event cited
+  // as evidence; #/teacher/skills/<name> shows one skill, where it can be
+  // customised, compared with rdstudio's default and reset. Kept off the main
+  // navigation: the defaults are meant to be enough.
   import { untrack } from "svelte";
   import { page } from "$app/state";
   import type { Skill } from "$lib/api/types.gen.ts";
@@ -13,9 +15,14 @@
   import { PROFILE_LABEL, teacher } from "$lib/teacher.svelte.ts";
   import Prose from "$lib/components/Prose.svelte";
   import Time from "$lib/components/Time.svelte";
+  import TeacherFile from "$lib/components/TeacherFile.svelte";
+  import EvidenceView from "$lib/components/EvidenceView.svelte";
 
   const rest = $derived((page.params.rest ?? "").split("/").filter(Boolean));
   const skillName = $derived(rest[0] === "skills" && rest[1] ? rest[1] : null);
+  const fileName = $derived(rest[0] === "profile" ? "profile.md" : rest[0] === "sources" ? "sources.md" : null);
+  const evidenceId = $derived(rest[0] === "evidence" && rest[1] ? rest[1] : null);
+  const FILE_TITLE = { "profile.md": "About you", "sources.md": "Sources" } as const;
   const STATUS: Record<Skill["status"], string> = { default: "default", changed: "customised", own: "your own" };
 
   $effect(() => { if (!teacher.loaded) void teacher.load(); });
@@ -64,17 +71,34 @@
   }
 </script>
 
-<svelte:head><title>{skillName ? `${skillName} · Teacher` : "Teacher"} · {store.site.title}</title></svelte:head>
+<svelte:head><title>{skillName ? `${skillName} · Teacher` : fileName ? `${FILE_TITLE[fileName]} · Teacher` : evidenceId ? "Evidence · Teacher" : "Teacher"} · {store.site.title}</title></svelte:head>
 
 <div class="page teacher">
   {#if store.site.static}
     <h1>Teacher</h1>
     <p class="lede">This is an exported snapshot, so the teacher, which is private to whoever runs rdstudio serve, is not part of it.</p>
 
+  {:else if fileName}
+    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Teacher</a></p>
+    <h1>{FILE_TITLE[fileName]}</h1>
+    <p class="lede">{fileName === "profile.md" ? "What the agent has learnt about how you learn, from the evidence in your learner record. Private to you. If a claim is wrong, edit it: the next agent to update the profile is told, and answers." : "Where the knowledge base's sources came from: what was searched, what was chosen and rejected, and why."}</p>
+    <TeacherFile name={fileName} full />
+
+  {:else if evidenceId}
+    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Teacher</a><a href="#/teacher/profile">About you</a><span>Evidence</span></p>
+    <EvidenceView id={evidenceId} />
+
   {:else if !skillName}
     <p class="doc-kind"><a href="#/learn">Learn</a></p>
     <h1>Teacher</h1>
-    <p class="lede">How the agent teaches you here: the skills it follows when you ask to learn, be tested or plan what is next. They are rdstudio's defaults unless you change them, and your changes stay private, beside your learner record.</p>
+    <p class="lede">How the agent teaches you here, and what it has learnt about you. The skills it follows are rdstudio's defaults unless you change them; all of this stays private, beside your learner record.</p>
+
+    {#if learner.enabled}
+      <h2 class="section-h">About you</h2>
+      <TeacherFile name="profile.md" />
+      <h2 class="section-h">Sources</h2>
+      <details class="teacher-sources"><summary>The research log</summary><TeacherFile name="sources.md" /></details>
+    {/if}
 
     {#if !teacher.loaded}
       <p class="section-note">Loading…</p>

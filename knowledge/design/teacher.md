@@ -116,7 +116,9 @@ and solve it numerically."
 
 Goals follow tours:
 - **Shared goals** are notes with `type: Goal`.
-- **Private goals** are in `teacher/goals/`.
+- **Private goals** are in `teacher/goals/`. These are not built yet:
+  they wait for [mounts](/tasks/T47-mounts.md), as in a repository of your
+  own a shared goal is already yours.
 
 Both are kept off the map. Each goal has three parts:
 - `requires`: the notes it needs. Its prerequisites are their closure,
@@ -212,9 +214,11 @@ It answers "where did this come from" without cluttering the notes.
 
 New MCP tools, in the Node server only (like the learner tools):
 - **Skills:** `teacher_skills`, `teacher_skill`.
-- **Teacher files:** `teacher_read` and `teacher_write`, for `profile.md`,
-  `sources.md`, `goals/*.md` and `exercises/*.md`. They exist because the
-  harness usually cannot write outside the repository.
+- **Teacher files:** `teacher_read` and `teacher_write`, for `profile.md`
+  and `sources.md`. They exist because the harness usually cannot write
+  outside the repository. `teacher_read` also gives the developer's own
+  latest edit as a diff.
+- **Evidence:** `learner_events`, the record with event ids to cite.
 - **Exercises:** `exercise_pending`, `exercise_record`, `exercise_mark`.
 - **`learner_state`** gains goals and per-goal coverage.
 

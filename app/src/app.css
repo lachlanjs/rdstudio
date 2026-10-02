@@ -966,3 +966,12 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .rows.goals .chip, .written-exercises .chip { margin: 0 0 0 8px; vertical-align: 2px; }
 .exercise-answer blockquote .prose > :last-child, .exercise-attempts blockquote .prose > :last-child { margin-bottom: 0; }
 .exercise-answer blockquote .prose > :first-child, .exercise-attempts blockquote .prose > :first-child { margin-top: 0; }
+.teacher-file { padding: 2px 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); }
+.teacher-file .prose h1 { font-size: 1.25em; margin-top: 18px; }
+.teacher-sources > summary { cursor: pointer; color: var(--ink-soft); font: 14.5px var(--font-ui); margin-bottom: 10px; }
+.ev-ref { display: inline-block; font: 12.5px/1.5 var(--font-ui); padding: 0 7px; margin: 0 2px; border-radius: 9px; background: var(--paper-sunk); color: var(--ink-soft); text-decoration: none; vertical-align: 1px; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-ref:hover { color: var(--accent); }
+.ev-ref.r-got { background: color-mix(in srgb, var(--reviewed) 16%, transparent); }
+.ev-ref.r-missed, .ev-ref.r-partly { background: color-mix(in srgb, var(--stale) 13%, transparent); }
+.ev-ref.missing { opacity: .6; }
+.evidence-answer { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--rule); }

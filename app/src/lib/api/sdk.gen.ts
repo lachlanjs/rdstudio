@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherErrors, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -77,6 +77,23 @@ export const getApiTeacherSkillsByName = <ThrowOnError extends boolean = false>(
  */
 export const putApiTeacherSkillsByName = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherSkillsByNameData, ThrowOnError>): RequestResult<PutApiTeacherSkillsByNameResponses, PutApiTeacherSkillsByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherSkillsByNameResponses, PutApiTeacherSkillsByNameErrors, ThrowOnError>({
     url: '/api/teacher/skills/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * One of the teacher's files about you: the profile or the sources log
+ */
+export const getApiTeacherFilesByName = <ThrowOnError extends boolean = false>(options: Options<GetApiTeacherFilesByNameData, ThrowOnError>): RequestResult<GetApiTeacherFilesByNameResponses, GetApiTeacherFilesByNameErrors, ThrowOnError> => (options.client ?? client).get<GetApiTeacherFilesByNameResponses, GetApiTeacherFilesByNameErrors, ThrowOnError>({ url: '/api/teacher/files/{name}', ...options });
+
+/**
+ * Edit one of the teacher's files (to dispute a claim, say); agents see the edit
+ */
+export const putApiTeacherFilesByName = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherFilesByNameData, ThrowOnError>): RequestResult<PutApiTeacherFilesByNameResponses, PutApiTeacherFilesByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherFilesByNameResponses, PutApiTeacherFilesByNameErrors, ThrowOnError>({
+    url: '/api/teacher/files/{name}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

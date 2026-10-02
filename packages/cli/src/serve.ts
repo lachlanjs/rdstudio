@@ -142,8 +142,15 @@ const TeacherState = z.object({
   profileSet: z.boolean().openapi({ description: "False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile." }),
   dir: z.string().nullable(),
   skills: z.array(SkillInfo),
-  history: z.array(z.object({ at: z.string(), message: z.string() })),
+  history: z.array(z.object({ at: z.string(), message: z.string(), commit: z.string() })).openapi({ description: "The teacher folder's commits, newest first." }),
 }).openapi("TeacherState");
+const TeacherFileSchema = z.object({
+  name: z.enum(["profile.md", "sources.md"]),
+  text: z.string().nullable().openapi({ description: "Null until written." }),
+  history: z.array(z.object({ at: z.string(), message: z.string(), commit: z.string() })),
+}).openapi("TeacherFile");
+const FileName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" }, description: "profile.md or sources.md" }) });
+const FileSave = z.object({ text: z.string() }).openapi("TeacherFileSave");
 const SkillName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" } }) });
 const SkillSave = z.object({ text: z.string() }).openapi("SkillSave");
 const SkillReset = z.object({ skill: SkillSchema.nullable() }).openapi("SkillReset");
@@ -168,6 +175,16 @@ const putSkill = createRoute({
   method: "put", path: "/api/teacher/skills/{name}", summary: "Customise a skill (or write one of your own)",
   request: { params: SkillName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: SkillSave } }, required: true } },
   responses: { 200: { description: "Saved", content: { "application/json": { schema: SkillSchema } } }, ...teacherErrors },
+});
+const getTeacherFile = createRoute({
+  method: "get", path: "/api/teacher/files/{name}", summary: "One of the teacher's files about you: the profile or the sources log",
+  request: { params: FileName },
+  responses: { 200: { description: "The file", content: { "application/json": { schema: TeacherFileSchema } } }, ...teacherErrors },
+});
+const putTeacherFile = createRoute({
+  method: "put", path: "/api/teacher/files/{name}", summary: "Edit one of the teacher's files (to dispute a claim, say); agents see the edit",
+  request: { params: FileName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: FileSave } }, required: true } },
+  responses: { 200: { description: "Saved", content: { "application/json": { schema: TeacherFileSchema } } }, ...teacherErrors },
 });
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
@@ -410,6 +427,12 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { found = teacher.skill(cfg, c.req.param("name") ?? ""); } catch { /* a bad name */ }
     return found ? json(c, 200, found) : json(c, 404, { error: "no such skill" });
   }) as never);
+  app.openapi(getTeacherFile, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    if (!learner.enabled(cfg)) return json(c, 409, { error: "the learner record is off ([learner] enabled in the user config)" });
+    try { return json(c, 200, teacher.readFile(cfg, c.req.param("name") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
+  }) as never);
+  app.openapi(putTeacherFile, ((c: Context) => tourChange(c, (b) => teacher.writeFile(cfg, c.req.param("name") ?? "", b.text, teacher.BY_DEVELOPER))) as never);
   app.openapi(putSkill, ((c: Context) => tourChange(c, (b) => teacher.saveSkill(cfg, c.req.param("name") ?? "", b.text))) as never);
   app.openapi(deleteSkill, ((c: Context) => tourChange(c, () => ({ skill: teacher.resetSkill(cfg, c.req.param("name") ?? "") }), false)) as never);
 

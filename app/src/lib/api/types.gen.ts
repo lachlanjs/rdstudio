@@ -56,9 +56,13 @@ export type TeacherState = {
     profileSet: boolean;
     dir: string | null;
     skills: Array<SkillInfo>;
+    /**
+     * The teacher folder's commits, newest first.
+     */
     history: Array<{
         at: string;
         message: string;
+        commit: string;
     }>;
 };
 
@@ -88,6 +92,23 @@ export type Skill = SkillInfo & {
      * The default the customisation was made from.
      */
     base: string | null;
+};
+
+export type TeacherFile = {
+    name: 'profile.md' | 'sources.md';
+    /**
+     * Null until written.
+     */
+    text: string | null;
+    history: Array<{
+        at: string;
+        message: string;
+        commit: string;
+    }>;
+};
+
+export type TeacherFileSave = {
+    text: string;
 };
 
 export type SkillSave = {
@@ -544,6 +565,85 @@ export type PutApiTeacherSkillsByNameResponses = {
 };
 
 export type PutApiTeacherSkillsByNameResponse = PutApiTeacherSkillsByNameResponses[keyof PutApiTeacherSkillsByNameResponses];
+
+export type GetApiTeacherFilesByNameData = {
+    body?: never;
+    path: {
+        /**
+         * profile.md or sources.md
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/teacher/files/{name}';
+};
+
+export type GetApiTeacherFilesByNameErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type GetApiTeacherFilesByNameError = GetApiTeacherFilesByNameErrors[keyof GetApiTeacherFilesByNameErrors];
+
+export type GetApiTeacherFilesByNameResponses = {
+    /**
+     * The file
+     */
+    200: TeacherFile;
+};
+
+export type GetApiTeacherFilesByNameResponse = GetApiTeacherFilesByNameResponses[keyof GetApiTeacherFilesByNameResponses];
+
+export type PutApiTeacherFilesByNameData = {
+    body: TeacherFileSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * profile.md or sources.md
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/teacher/files/{name}';
+};
+
+export type PutApiTeacherFilesByNameErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PutApiTeacherFilesByNameError = PutApiTeacherFilesByNameErrors[keyof PutApiTeacherFilesByNameErrors];
+
+export type PutApiTeacherFilesByNameResponses = {
+    /**
+     * Saved
+     */
+    200: TeacherFile;
+};
+
+export type PutApiTeacherFilesByNameResponse = PutApiTeacherFilesByNameResponses[keyof PutApiTeacherFilesByNameResponses];
 
 export type GetApiEditData = {
     body?: never;

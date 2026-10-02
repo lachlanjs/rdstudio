@@ -155,6 +155,55 @@ export function skillForAgent(cfg: Config, name: string): string {
   return `Profile: ${p.profile}${p.set ? "" : " (guessed; not set)"}. This skill: ${note}.\n\n${s.text}`;
 }
 
+// ------------------------------------------------------------------ the teacher's files
+// What the teacher keeps about the learner: profile.md (strengths, struggles,
+// how they learn, what to retest, each claim citing events as [e:<id>]) and
+// sources.md (the research log). Written by agents through MCP, and by the
+// developer from the dashboard (to dispute a claim, say); each write a commit.
+
+export const FILES = ["profile.md", "sources.md"] as const;
+export type TeacherFile = (typeof FILES)[number];
+const MAX_FILE_BYTES = 500_000;
+/** The commit message of a write from the dashboard, so agents can find the developer's edits. */
+export const BY_DEVELOPER = "edited by the developer";
+
+function checkFile(name: string): TeacherFile {
+  if (!(FILES as readonly string[]).includes(name)) throw new LearnerError(`the teacher's files are ${FILES.join(" and ")}`);
+  return name as TeacherFile;
+}
+
+export interface FileState {
+  name: TeacherFile;
+  text: string | null; // null: not written yet
+  history: { at: string; message: string; commit: string }[];
+}
+
+export function readFile(cfg: Config, name: string): FileState {
+  const f = checkFile(name);
+  return { name: f, text: cfg.isProject ? maybe(join(teacherDir(cfg), f)) : null, history: history(cfg, 10, `teacher/${f}`) };
+}
+
+export function writeFile(cfg: Config, name: string, text: unknown, by: string): FileState {
+  const f = checkFile(name);
+  if (typeof text !== "string") throw new LearnerError("expected the file's text");
+  if (Buffer.byteLength(text) > MAX_FILE_BYTES) throw new LearnerError("that is too long");
+  const body = text.replace(/\r\n?/g, "\n").replace(/\s*$/, "\n");
+  writeMany(cfg, [[f, body]], `${f}: ${by}`);
+  return readFile(cfg, f);
+}
+
+/** The developer's latest edit to a file, as a diff, for an agent to answer. */
+export function developerEdit(cfg: Config, name: string): { at: string; diff: string } | null {
+  const f = checkFile(name);
+  const last = history(cfg, 30, `teacher/${f}`).find((h) => h.message === `${f}: ${BY_DEVELOPER}`);
+  if (!last) return null;
+  try {
+    return { at: last.at, diff: git(learner.recordDir(cfg), ["show", "--format=", "--no-color", last.commit, "--", `teacher/${f}`]) };
+  } catch {
+    return null;
+  }
+}
+
 // ------------------------------------------------------------------ writing, with history
 
 function writeMany(cfg: Config, files: [string, string][], message: string): void {
@@ -210,14 +259,14 @@ export function commit(cfg: Config, message: string): boolean {
   }
 }
 
-/** The teacher's history, newest first. */
-export function history(cfg: Config, limit = 30): { at: string; message: string }[] {
+/** The teacher's history (of one path in the learner folder, if given), newest first. */
+export function history(cfg: Config, limit = 30, path?: string): { at: string; message: string; commit: string }[] {
   const dir = learner.recordDir(cfg);
   if (!existsSync(join(dir, ".git"))) return [];
   try {
-    return git(dir, ["log", `-${limit}`, "--format=%cI%x09%s"]).split("\n").filter(Boolean).map((l) => {
-      const [at, ...rest] = l.split("\t");
-      return { at: at!, message: rest.join("\t") };
+    return git(dir, ["log", `-${limit}`, "--format=%cI%x09%h%x09%s", ...(path ? ["--", path] : [])]).split("\n").filter(Boolean).map((l) => {
+      const [at, commit, ...rest] = l.split("\t");
+      return { at: at!, commit: commit!, message: rest.join("\t") };
     });
   } catch {
     return [];

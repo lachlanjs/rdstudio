@@ -11,6 +11,10 @@ Goals and exercises (T44): Goal and Exercise notes kept off the map; a value
 exercise checked here, wrong then right; a choice exercise after giving up;
 a text exercise marked by yourself, then left for an agent who marks it
 through MCP; the evidence on the tested notes; a goal met.
+Profile, sources and skills (T45): the default skills listed; an agent
+writing the profile through MCP, citing events; the citations shown as links
+to the evidence; the developer disputing a claim, and the agent told of it;
+the sources log.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from pathlib import Path
@@ -134,6 +138,7 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("link", name="How the agent teaches you here").click()
     p.get_by_role("heading", name="Teacher", exact=True).wait_for()
+    p.locator(".teacher-skills li").first.wait_for()
     check("the Teacher page is reached from the Learn tab, which stays the current tab",
           p.locator("nav a[aria-current=page]", has_text="Learn").count() == 1)
     check("the profile is guessed from the repository", p.get_by_text("Learning a topic, guessed from what is in the repository").count() == 1)
@@ -308,6 +313,56 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/k/manifolds/smooth-manifold")
     p.locator(".doc-head").wait_for()
     check("a note tested by a passed exercise is understood", "st-understood" in (p.locator(".doc-head").get_attribute("class") or ""))
+
+    # ------------------------------------------------------------ profile, sources and skills (T45)
+    p.goto(URL + "?nosw&t45#/teacher")
+    rows.first.wait_for()
+    names = rows.locator("a.title").all_inner_texts()
+    check("the default skills are listed, teach first", names[:1] == ["teach"] and set(names) >= {"assess", "map", "source", "exercise", "next", "review-changes"}, names)
+    check("with no profile yet, the page says what one will hold", p.get_by_text("No profile yet.").count() == 1)
+
+    partly = next(a for a in attempts() if a.get("result") == "partly")
+    gave_up = next(a for a in attempts() if a.get("gave_up"))
+    mark = attempts("attempt_marked")[-1]
+    profile = f"""# Strong
+
+- Values checked first time once read carefully [e:{attempts()[1]['id']}].
+
+# Struggling
+
+- Saying why an atlas is needed: covered coverage, missed the transition maps [e:{partly['id']}], then got both [e:{mark['id']}].
+- Gives up on counting charts [e:{gave_up['id']}].
+
+# Changes
+
+- First picture.
+"""
+    wrote = mcp(("teacher_write", {"name": "profile.md", "text": profile, "message": "First picture"}),
+                ("teacher_write", {"name": "sources.md", "text": "## Charts\n\n- Chose: Lee, *Introduction to Smooth Manifolds*, ch. 1.\n"}))
+    p.goto(URL + "?nosw&t45b#/teacher")
+    p.locator(".teacher-file").first.wait_for()
+    refs = p.locator(".teacher-file .ev-ref")
+    labels = refs.all_inner_texts()
+    check("the profile written through MCP shows, its citations as links to the evidence",
+          refs.count() == 4 and "Why an atlas: Partly" in labels and "Charts for the sphere: gave up" in labels, labels or wrote)
+    p.locator(".teacher-sources summary").click()
+    check("the sources log is there too", p.locator(".teacher-sources", has_text="Introduction to Smooth Manifolds").count() == 1)
+    p.locator(".teacher-file .ev-ref", has_text="Why an atlas: Got it").click()
+    p.get_by_role("heading", name="Marking").wait_for()
+    body = p.locator(".page").inner_text()
+    check("a citation opens the evidence: the answer and its marking", "smoothness comes from the transition maps" in body and "transition maps." in body and "Got it" in body, body[:300])
+
+    p.goto(URL + "?nosw#/teacher/profile")
+    p.get_by_role("button", name="Edit").click()
+    ed = p.locator("textarea.teacher-editor")
+    ed.fill(ed.input_value().replace("- Gives up on counting charts", "- Gives up on counting charts. Disputed: I clicked by mistake."))
+    p.get_by_role("button", name="Save").click()
+    expect(p.locator(".edit-status")).to_contain_text("Saved", timeout=5000)
+    check("the developer's edit is kept in the file's history", p.locator(".teacher-history li", has_text="edited by you").count() == 1)
+    told = mcp(("teacher_read", {"name": "profile.md"}), ("teacher_read", {"name": "profile.md", "developer_edit": True}))
+    check("an agent reading the profile is told of the edit, and can read it as a diff",
+          "The developer edited it on" in told[0] and "+- Gives up on counting charts. Disputed: I clicked by mistake." in told[1], told[1][:300])
+    p.screenshot(path=str(OUT / "teacher-profile.png"), full_page=True)
 
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
