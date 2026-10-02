@@ -90,7 +90,7 @@ test("text is compressed and vendored files are cached", async () => {
 
 test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move", "/api/teacher", "/api/teacher/skills/{name}"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
   expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["delete", "get", "put"]);
 });
@@ -108,4 +108,30 @@ test("private tours are kept beside the record, written only from the dashboard"
   expect(list).toEqual([{ name: "first", title: "First steps", description: "Where to begin.", body: "1. [A](/a.md): start here.\n" }]);
   expect((await call("DELETE", "/api/learner/tours/first", { Origin: base, "X-Rdstudio-Token": "tok" })).status).toBe(200);
   expect(JSON.parse((await call("GET", "/api/learner/tours")).body.toString())).toEqual([]);
+});
+
+test("the teacher's skills are read by anyone here, customised only from the dashboard", async () => {
+  const good = { Origin: base, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const state = JSON.parse((await call("GET", "/api/teacher")).body.toString());
+  expect(state).toMatchObject({ enabled: true, profile: "topic", profileSet: false, history: [] });
+  expect(state.skills[0]).toMatchObject({ name: "teach", status: "default" });
+
+  const teach = JSON.parse((await call("GET", "/api/teacher/skills/teach")).body.toString());
+  expect(teach).toMatchObject({ name: "teach", status: "default", base: null });
+  expect(teach.text).toBe(teach.default);
+  expect((await call("GET", "/api/teacher/skills/nope")).status).toBe(404);
+  expect((await call("GET", "/api/teacher/skills/..%2Fx")).status).toBe(404);
+
+  const put = (headers: Record<string, string>, body = '{"text": "Mine."}', name = "teach") => call("PUT", `/api/teacher/skills/${name}`, headers, body);
+  expect((await put({ ...good, "X-Rdstudio-Token": "bad" })).status).toBe(403);
+  expect((await put({ ...good, Origin: "http://evil.example" })).status).toBe(403);
+  expect((await put(good, '{"text": ""}')).status).toBe(400);
+  expect((await put(good, '{"text": "x"}', "Bad")).status).toBe(400);
+  const saved = JSON.parse((await put(good)).body.toString());
+  expect(saved).toMatchObject({ status: "changed", text: "Mine.\n", base: teach.default });
+  const after = JSON.parse((await call("GET", "/api/teacher")).body.toString());
+  expect(after.history.map((h: { message: string }) => h.message)).toEqual(["Skill teach: customised"]);
+
+  const reset = JSON.parse((await call("DELETE", "/api/teacher/skills/teach", { Origin: base, "X-Rdstudio-Token": "tok" })).body.toString());
+  expect(reset.skill).toMatchObject({ status: "default", text: teach.default });
 });

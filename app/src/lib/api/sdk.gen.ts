@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherErrors, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -50,6 +50,33 @@ export const deleteApiLearnerToursByName = <ThrowOnError extends boolean = false
  */
 export const putApiLearnerToursByName = <ThrowOnError extends boolean = false>(options: Options<PutApiLearnerToursByNameData, ThrowOnError>): RequestResult<PutApiLearnerToursByNameResponses, PutApiLearnerToursByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiLearnerToursByNameResponses, PutApiLearnerToursByNameErrors, ThrowOnError>({
     url: '/api/learner/tours/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The teacher: profile, skills (default or customised), and its recent history
+ */
+export const getApiTeacher = <ThrowOnError extends boolean = false>(options?: Options<GetApiTeacherData, ThrowOnError>): RequestResult<GetApiTeacherResponses, GetApiTeacherErrors, ThrowOnError> => (options?.client ?? client).get<GetApiTeacherResponses, GetApiTeacherErrors, ThrowOnError>({ url: '/api/teacher', ...options });
+
+/**
+ * Reset a skill to rdstudio's default (a skill of your own is deleted)
+ */
+export const deleteApiTeacherSkillsByName = <ThrowOnError extends boolean = false>(options: Options<DeleteApiTeacherSkillsByNameData, ThrowOnError>): RequestResult<DeleteApiTeacherSkillsByNameResponses, DeleteApiTeacherSkillsByNameErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiTeacherSkillsByNameResponses, DeleteApiTeacherSkillsByNameErrors, ThrowOnError>({ url: '/api/teacher/skills/{name}', ...options });
+
+/**
+ * One skill as the agent reads it, with rdstudio's default
+ */
+export const getApiTeacherSkillsByName = <ThrowOnError extends boolean = false>(options: Options<GetApiTeacherSkillsByNameData, ThrowOnError>): RequestResult<GetApiTeacherSkillsByNameResponses, GetApiTeacherSkillsByNameErrors, ThrowOnError> => (options.client ?? client).get<GetApiTeacherSkillsByNameResponses, GetApiTeacherSkillsByNameErrors, ThrowOnError>({ url: '/api/teacher/skills/{name}', ...options });
+
+/**
+ * Customise a skill (or write one of your own)
+ */
+export const putApiTeacherSkillsByName = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherSkillsByNameData, ThrowOnError>): RequestResult<PutApiTeacherSkillsByNameResponses, PutApiTeacherSkillsByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherSkillsByNameResponses, PutApiTeacherSkillsByNameErrors, ThrowOnError>({
+    url: '/api/teacher/skills/{name}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

@@ -162,6 +162,11 @@ class Learner {
     this.tours = this.tours.filter((t) => t.name !== name);
   }
 
+  /** Headers for a write beside the record (tours, the teacher). */
+  writeHeaders(): { "x-rdstudio-token": string } {
+    return { "x-rdstudio-token": this.token ?? "" };
+  }
+
   /** Append one event ({event, concept, kind, ...}); the stored event, or null. */
   async record(event: Record<string, unknown>): Promise<LearnerEvent | null> {
     if (!this.enabled || !this.token) return null;

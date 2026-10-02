@@ -909,3 +909,21 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .catch-diff .d-hunk { color: var(--ink-faint); background: var(--paper-sunk); }
 .catch-diff .d-same { color: var(--ink-faint); }
 .stale-note { color: var(--stale); }
+
+/* ------------------------------------------------------------ teacher */
+
+.teacher h1 .chip { vertical-align: middle; margin-left: 8px; }
+.chip.skill-changed, .chip.skill-own { background: var(--accent-soft); color: var(--ink); }
+.chip.stale-note { background: transparent; border: 1px solid currentColor; line-height: 18px; }
+.teacher-skills li .chip { margin: 0 0 0 8px; }
+.teacher-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 4px; }
+.teacher-editor {
+  display: block; width: 100%; min-height: 60vh; box-sizing: border-box; padding: 12px 14px; resize: vertical;
+  font: 14px/1.55 var(--font-mono); color: var(--ink); background: var(--paper); tab-size: 2;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.teacher-editor:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.teacher-history { list-style: none; padding: 0; margin: 0; font-size: 14px; color: var(--ink-soft); }
+.teacher-history li { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.teacher-history time { color: var(--ink-faint); margin-right: 8px; }
+.teacher-link { margin-top: 28px; }

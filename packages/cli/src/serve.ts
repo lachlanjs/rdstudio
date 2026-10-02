@@ -22,6 +22,7 @@ import { ConflictError, noteSource, saveNote } from "./edit.ts";
 import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
 import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
+import * as teacher from "./teacher.ts";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
@@ -121,6 +122,58 @@ const deleteTourRoute = createRoute({
 });
 
 // ------------------------------------------------------------------ notes API
+
+// ------------------------------------------------------------------ teacher API
+
+const SkillInfo = z.object({
+  name: z.string(),
+  description: z.string(),
+  status: z.enum(["default", "changed", "own"]).openapi({ description: "rdstudio's default, customised here, or written here with no default." }),
+  defaultChanged: z.boolean().openapi({ description: "Customised, and rdstudio's default has changed since." }),
+}).openapi("SkillInfo");
+const SkillSchema = SkillInfo.extend({
+  text: z.string().openapi({ description: "What the agent reads." }),
+  default: z.string().nullable().openapi({ description: "rdstudio's current default." }),
+  base: z.string().nullable().openapi({ description: "The default the customisation was made from." }),
+}).openapi("Skill");
+const TeacherState = z.object({
+  enabled: z.boolean().openapi({ description: "Whether the teacher folder can be written (the learner record is on)." }),
+  profile: z.enum(["topic", "codebase", "project"]),
+  profileSet: z.boolean().openapi({ description: "False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile." }),
+  dir: z.string().nullable(),
+  skills: z.array(SkillInfo),
+  history: z.array(z.object({ at: z.string(), message: z.string() })),
+}).openapi("TeacherState");
+const SkillName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" } }) });
+const SkillSave = z.object({ text: z.string() }).openapi("SkillSave");
+const SkillReset = z.object({ skill: SkillSchema.nullable() }).openapi("SkillReset");
+const teacherErrors = {
+  400: { description: "Bad name or text", content: { "application/json": { schema: ErrorBody } } },
+  403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  409: { description: "The learner record is off", content: { "application/json": { schema: ErrorBody } } },
+};
+const getTeacher = createRoute({
+  method: "get", path: "/api/teacher", summary: "The teacher: profile, skills (default or customised), and its recent history",
+  responses: { 200: { description: "The teacher", content: { "application/json": { schema: TeacherState } } }, 403: teacherErrors[403] },
+});
+const getSkill = createRoute({
+  method: "get", path: "/api/teacher/skills/{name}", summary: "One skill as the agent reads it, with rdstudio's default",
+  request: { params: SkillName },
+  responses: {
+    200: { description: "The skill", content: { "application/json": { schema: SkillSchema } } },
+    403: teacherErrors[403], 404: { description: "No such skill", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+const putSkill = createRoute({
+  method: "put", path: "/api/teacher/skills/{name}", summary: "Customise a skill (or write one of your own)",
+  request: { params: SkillName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: SkillSave } }, required: true } },
+  responses: { 200: { description: "Saved", content: { "application/json": { schema: SkillSchema } } }, ...teacherErrors },
+});
+const deleteSkill = createRoute({
+  method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
+  request: { params: SkillName, headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Reset", content: { "application/json": { schema: SkillReset } } }, ...teacherErrors },
+});
 
 const Meta = z.record(z.string(), z.unknown()).openapi("NoteMeta", { description: "Frontmatter fields." });
 const NoteSourceSchema = z.object({
@@ -326,7 +379,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     return json(c, 200, learner.enabled(cfg) ? learner.tours(cfg) : []);
   }) as never);
-  /** A write to your private tours: the same checks as the record's. */
+  /** A write to your private tours or the teacher folder: the same checks as the record's. */
   const tourChange = async (c: Context, act: (body: Record<string, unknown>) => unknown, withBody = true) => {
     const refused = writeRefused(c, withBody);
     if (refused) return refused;
@@ -344,6 +397,21 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   };
   app.openapi(putTour, ((c: Context) => tourChange(c, (b) => learner.saveTour(cfg, c.req.param("name") ?? "", b))) as never);
   app.openapi(deleteTourRoute, ((c: Context) => tourChange(c, () => learner.deleteTour(cfg, c.req.param("name") ?? ""), false)) as never);
+
+  app.openapi(getTeacher, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    const on = learner.enabled(cfg), p = teacher.profile(cfg);
+    return json(c, 200, { enabled: on, profile: p.profile, profileSet: p.set, dir: on ? teacher.teacherDir(cfg) : null,
+      skills: teacher.skills(cfg), history: on ? teacher.history(cfg) : [] });
+  }) as never);
+  app.openapi(getSkill, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    let found: teacher.Skill | null = null;
+    try { found = teacher.skill(cfg, c.req.param("name") ?? ""); } catch { /* a bad name */ }
+    return found ? json(c, 200, found) : json(c, 404, { error: "no such skill" });
+  }) as never);
+  app.openapi(putSkill, ((c: Context) => tourChange(c, (b) => teacher.saveSkill(cfg, c.req.param("name") ?? "", b.text))) as never);
+  app.openapi(deleteSkill, ((c: Context) => tourChange(c, () => ({ skill: teacher.resetSkill(cfg, c.req.param("name") ?? "") }), false)) as never);
 
   const actor = cfg.human || "human:unknown";
   app.openapi(getEdit, ((c: Context) => {

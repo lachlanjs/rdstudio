@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  ProcedureError, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
+  LearnerError, ProcedureError, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
   text, type Bundle,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
@@ -22,6 +22,7 @@ import { PyFloat, pyDumps } from "./pyjson.ts";
 import { ScopeError, globalConfig, promote, scoped } from "./scopes.ts";
 import { StoreError, conceptPath, record } from "./store.ts";
 import * as learner from "./learner.ts";
+import * as teacher from "./teacher.ts";
 
 export const INSTRUCTIONS = `Project knowledge base (OKF markdown bundle). Retrieve progressively:
 search -> outline -> read(section). Prefer reading one section over a whole
@@ -352,6 +353,25 @@ mistaken points, briefly. A "got" counts as evidence the note is understood.`, {
     const e = learner.append(cfg, { event: "explain_marked", ref, concept: answer.concept, hash: answer.hash, result, feedback: feedback.trim(),
       ...(gaps?.length ? { gaps } : {}), kind: "ai", by: actor || cfg.agent });
     return fmt({ marked: ref, result, event: e.id });
+  });
+
+  tool("teacher_skills", `The teaching skills: how to assess, map, source, set exercises, plan and
+review for the developer's learning. Lists each with its description,
+whether the developer customised it, and the teacher's profile (topic,
+codebase or project). Read "teach" with teacher_skill first.`, {}, () => {
+    const p = teacher.profile(cfg);
+    return fmt({ profile: p.profile, profile_set: p.set, record: learner.enabled(cfg) ? "on" : "off",
+      skills: teacher.skills(cfg).map((s) => ({ name: s.name, description: s.description, status: s.status })) });
+  });
+
+  tool("teacher_skill", `Read one teaching skill, as the developer has it (customised or rdstudio's
+default), with the profile. Follow it.`, { name: z.string() }, ({ name }) => {
+    try {
+      return teacher.skillForAgent(cfg, name);
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
   });
 
   tool("promote", `Move a project concept into the developer's global knowledge base (for

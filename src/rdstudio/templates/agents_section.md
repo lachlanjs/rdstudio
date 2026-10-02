@@ -21,8 +21,10 @@ are also slash commands.
   rdstudio MCP tools so provenance is stamped. Do not edit `index.md` files.
 - **Report substantial work** as HTML in `{reports}/` (the `report` skill).
 - **Close sessions** with the `handoff` skill.
-- **Learning:** when the developer asks to be tested on the knowledge, or has
-  explain-back answers waiting, use the `explain-back` skill.
+- **Learning:** when the developer asks to learn, be taught, tested or
+  assessed, or what to study next, use the `teach` skill; it reads how to
+  teach through the rdstudio MCP tools. For explain-back answers waiting,
+  the `explain-back` skill.
 - **Global knowledge:** if the developer has a cross-project knowledge base,
   search it with `scope: "global"` (or `"all"`); suggest the `promote` skill
   for knowledge that is not specific to this project.

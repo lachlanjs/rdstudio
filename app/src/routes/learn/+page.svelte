@@ -162,4 +162,7 @@ enabled = true</pre>
   {:else}
     <p class="section-note">On. {learner.events.length} {learner.events.length === 1 ? "event" : "events"}, stored privately in <code>{learner.dir}</code>. Only you see it; it is never part of the project or an export.</p>
   {/if}
+  {#if !store.site.static}
+    <p class="section-note teacher-link"><a href="#/teacher">How the agent teaches you here</a>: its profile and skills, which you can customise.</p>
+  {/if}
 </div>

@@ -44,6 +44,60 @@ export type PrivateTourSave = {
     body: string;
 };
 
+export type TeacherState = {
+    /**
+     * Whether the teacher folder can be written (the learner record is on).
+     */
+    enabled: boolean;
+    profile: 'topic' | 'codebase' | 'project';
+    /**
+     * False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile.
+     */
+    profileSet: boolean;
+    dir: string | null;
+    skills: Array<SkillInfo>;
+    history: Array<{
+        at: string;
+        message: string;
+    }>;
+};
+
+export type SkillInfo = {
+    name: string;
+    description: string;
+    /**
+     * rdstudio's default, customised here, or written here with no default.
+     */
+    status: 'default' | 'changed' | 'own';
+    /**
+     * Customised, and rdstudio's default has changed since.
+     */
+    defaultChanged: boolean;
+};
+
+export type Skill = SkillInfo & {
+    /**
+     * What the agent reads.
+     */
+    text: string;
+    /**
+     * rdstudio's current default.
+     */
+    default: string | null;
+    /**
+     * The default the customisation was made from.
+     */
+    base: string | null;
+};
+
+export type SkillSave = {
+    text: string;
+};
+
+export type SkillReset = {
+    skill: Skill;
+};
+
 export type EditState = {
     enabled: boolean;
     /**
@@ -358,6 +412,138 @@ export type PutApiLearnerToursByNameResponses = {
 };
 
 export type PutApiLearnerToursByNameResponse = PutApiLearnerToursByNameResponses[keyof PutApiLearnerToursByNameResponses];
+
+export type GetApiTeacherData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/teacher';
+};
+
+export type GetApiTeacherErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiTeacherError = GetApiTeacherErrors[keyof GetApiTeacherErrors];
+
+export type GetApiTeacherResponses = {
+    /**
+     * The teacher
+     */
+    200: TeacherState;
+};
+
+export type GetApiTeacherResponse = GetApiTeacherResponses[keyof GetApiTeacherResponses];
+
+export type DeleteApiTeacherSkillsByNameData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/teacher/skills/{name}';
+};
+
+export type DeleteApiTeacherSkillsByNameErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type DeleteApiTeacherSkillsByNameError = DeleteApiTeacherSkillsByNameErrors[keyof DeleteApiTeacherSkillsByNameErrors];
+
+export type DeleteApiTeacherSkillsByNameResponses = {
+    /**
+     * Reset
+     */
+    200: SkillReset;
+};
+
+export type DeleteApiTeacherSkillsByNameResponse = DeleteApiTeacherSkillsByNameResponses[keyof DeleteApiTeacherSkillsByNameResponses];
+
+export type GetApiTeacherSkillsByNameData = {
+    body?: never;
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/teacher/skills/{name}';
+};
+
+export type GetApiTeacherSkillsByNameErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such skill
+     */
+    404: Error;
+};
+
+export type GetApiTeacherSkillsByNameError = GetApiTeacherSkillsByNameErrors[keyof GetApiTeacherSkillsByNameErrors];
+
+export type GetApiTeacherSkillsByNameResponses = {
+    /**
+     * The skill
+     */
+    200: Skill;
+};
+
+export type GetApiTeacherSkillsByNameResponse = GetApiTeacherSkillsByNameResponses[keyof GetApiTeacherSkillsByNameResponses];
+
+export type PutApiTeacherSkillsByNameData = {
+    body: SkillSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/teacher/skills/{name}';
+};
+
+export type PutApiTeacherSkillsByNameErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PutApiTeacherSkillsByNameError = PutApiTeacherSkillsByNameErrors[keyof PutApiTeacherSkillsByNameErrors];
+
+export type PutApiTeacherSkillsByNameResponses = {
+    /**
+     * Saved
+     */
+    200: Skill;
+};
+
+export type PutApiTeacherSkillsByNameResponse = PutApiTeacherSkillsByNameResponses[keyof PutApiTeacherSkillsByNameResponses];
 
 export type GetApiEditData = {
     body?: never;

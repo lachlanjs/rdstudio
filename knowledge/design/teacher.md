@@ -45,7 +45,9 @@ first use. Two things follow from that:
   remote; rdstudio never adds one itself.
 
 The server commits teacher files when an agent or the dashboard writes them,
-one commit per write. The record is committed with them.
+one commit per write. The record is committed with them. If the learner folder
+is already inside another repository (a learner path set in a private
+knowledge base, say), its history is left to that repository.
 
 # Skills served through MCP
 
@@ -73,9 +75,11 @@ Customising is possible but not the default:
 
 ## Profiles
 
-`rdstudio init --profile topic|codebase|project` writes `profile` to
-`teacher/teacher.toml`, which can be changed later. The default is `topic` when
-the repository holds no code, and `codebase` otherwise.
+The profile belongs to the project, not the learner: a codebase is a codebase
+for everyone who learns it. So it is kept in `rdstudio.toml`, as
+`[teacher] profile`. It is set with `rdstudio init --profile
+topic|codebase|project` or `rdstudio teacher profile`. When unset, it is
+guessed: `codebase` when the repository holds code, `topic` otherwise.
 
 The skills are the same for every profile; each has short sections per
 profile, and the stub tells the agent which applies.
