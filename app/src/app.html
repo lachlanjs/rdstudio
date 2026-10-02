@@ -52,8 +52,8 @@
   // Apply the saved theme and mode before first paint (see lib/settings.svelte.ts).
   (function () {
     try {
-      var themes = ["studio", "minimalist", "space", "terminal"];
-      var former = { notebook: "studio", journal: "studio", modern: "minimalist", blueprint: "studio", map: "studio", cyber: "terminal", terminal: "terminal" };
+      var themes = ["studio", "minimalist", "blueprint", "space", "terminal", "brutalist"];
+      var former = { notebook: "studio", journal: "studio", modern: "minimalist", map: "studio", cyber: "terminal", terminal: "terminal" };
       var look = localStorage.getItem("rdstudio.look");
       var theme = themes.indexOf(look) >= 0 ? look : former[look] || former[localStorage.getItem("rdstudio.theme")];
       var mode = localStorage.getItem("rdstudio.mode");

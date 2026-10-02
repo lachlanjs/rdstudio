@@ -49,18 +49,39 @@ dashes and opacity only.
 |---|---|---|---|
 | Studio (default) | Literata / Atkinson Hyperlegible Next | engineering paper, violet | slate, lavender |
 | Minimalist | Inter throughout | white, black and one blue (Klein blue); large titles, no panels, borders or pills; plain dots and bare outlines on the map | black, white, pale blue |
-| Space | IBM Plex Sans, Plex Mono labels | celestial atlas | star field, nebulae, bright stars |
-| Terminal | JetBrains Mono throughout | a line-printer listing on green-bar paper | amber phosphor |
+| Blueprint | IBM Plex Sans / Martian Mono lettering | a whiteprint: blue lines on pale paper, red markup | a cyanotype: white lines on Prussian blue, yellow markup |
+| Space | IBM Plex Sans, Ioskeley Mono labels | celestial atlas | star field, nebulae, bright stars |
+| Terminal | Ioskeley Mono throughout | a line-printer listing on green-bar paper | a neutral grey screen with a green prompt |
+| Brutalist | Charter / Inter, Departure Mono labels | white, black rules, link blue, highlighter yellow | black, white rules, the same yellow |
 
-Terminal also shows the Markdown marks on headings (`#`, `##`) and lists
-(`-`), a prompt before the bundle's name, inverse video for the current tab and
-note, square corners, and a block cursor after the title.
+Ioskeley Mono is the monospace face in every theme (code, the source
+editor, Terminal's text). Fonts the user chose on 2026-10-02: Ioskeley Mono,
+Charter, Martian Mono and Departure Mono, all vendored under `vendor/fonts`
+with their licences; Ioskeley and Departure are cut to Latin, punctuation,
+arrows and box drawing.
+
+- **Terminal** shows the Markdown marks on headings (`#`, `##`) and lists
+  (`-`), a prompt before the bundle's name, inverse video for the current tab
+  and note, square corners, and a block cursor after the title.
+- **Blueprint** puts a title block (a ruled box with the note's type and
+  actions) at the head of each note, sets sections on dimension lines (a rule
+  with a tick at each end), and lays a drafting grid under the page and map.
+  Martian Mono is narrow (87.5%) for the interface and wide (112.5%) for titles.
+- **Brutalist** sets titles in Inter Black at up to 64 px, boxes panels in
+  3 to 4 px rules, gives buttons and panels hard offset shadows (no blur) that
+  sink when pressed, marks whatever is current in highlighter yellow, and
+  fills map folders with flat primaries inside heavy black outlines.
+
+A benchmark on the 1,186-note bundle (desktop, 2026-10-02) found every theme
+within noise of Studio for panning and zooming the map: 53 to 55 fps, jank
+under 3%.
 
 The choice is stored as `rdstudio.look`. Themes that have gone map to their
 nearest successor, whether saved under `rdstudio.look` or the older
-`rdstudio.theme`: Notebook, Map and Blueprint to Studio, Cyber to Terminal,
-Modern to Minimalist. Notebook and Map were dropped on 2026-10-02 (they did not
-feel right), and Cyber was reworked as Terminal.
+`rdstudio.theme`: Notebook and Map to Studio, Cyber to Terminal, Modern to
+Minimalist. Notebook and Map were dropped on 2026-10-02 (they did not feel
+right), Cyber was reworked as Terminal, and Blueprint and Brutalist were
+added.
 
 Mode is `system` (follows the OS), `light` or `dark`, set with
 `data-mode` on the root element. Settings live in localStorage.

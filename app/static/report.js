@@ -6,8 +6,8 @@
   function applyTheme() {
     return new Promise((resolve) => {
       try {
-        const themes = ["studio", "minimalist", "space", "terminal"];
-        const former = { notebook: "studio", journal: "studio", modern: "minimalist", blueprint: "studio", map: "studio", cyber: "terminal", terminal: "terminal" };
+        const themes = ["studio", "minimalist", "blueprint", "space", "terminal", "brutalist"];
+        const former = { notebook: "studio", journal: "studio", modern: "minimalist", map: "studio", cyber: "terminal", terminal: "terminal" };
         const look = localStorage.getItem("rdstudio.look");
         const theme = themes.includes(look) ? look : former[look] || former[localStorage.getItem("rdstudio.theme")];
         const mode = localStorage.getItem("rdstudio.mode");

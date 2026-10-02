@@ -3,14 +3,14 @@
 :root {
   --font-text: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-mono: "Ioskeley Mono", ui-monospace, monospace;
   --text-size: 17px;
   --radius: 10px;
   --map-image: var(--stars);
   --map-size: 260px 260px, 310px 310px, 370px 370px, 230px 230px, 410px 410px, 290px 290px, 100% 100%, 100% 100%;
   --page-image: var(--page-stars, none);
   --page-size: 260px 260px, 310px 310px, 370px 370px, 230px 230px;
-  --territory-font: "IBM Plex Mono", monospace;
+  --territory-font: "Ioskeley Mono", monospace;
   --territory-weight: 500;
   --territory-spacing: 0.22em;
   --territory-size: 13px;

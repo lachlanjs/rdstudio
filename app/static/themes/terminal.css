@@ -1,10 +1,10 @@
-/* Terminal: one monospace face for everything, square corners, Markdown's own marks on headings and lists, and inverse video for what is current. Dark is an amber phosphor screen; light is a line-printer listing on green-bar paper. */
+/* Terminal: one monospace face for everything, square corners, Markdown's own marks on headings and lists, and inverse video for what is current. Dark is a neutral grey screen with a green prompt; light is a line-printer listing on green-bar paper. */
 
 :root {
-  --font-text: "JetBrains Mono", ui-monospace, monospace;
-  --font-ui: "JetBrains Mono", ui-monospace, monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-heading: "JetBrains Mono", ui-monospace, monospace;
+  --font-text: "Ioskeley Mono", ui-monospace, monospace;
+  --font-ui: "Ioskeley Mono", ui-monospace, monospace;
+  --font-mono: "Ioskeley Mono", ui-monospace, monospace;
+  --font-heading: "Ioskeley Mono", ui-monospace, monospace;
   --h1-size: 26px;
   --h1-doc-size: 28px;
   --h2-size: 18px;
@@ -19,11 +19,11 @@
   --region-open-alpha: .03;
   --region-closed-alpha: .09;
   --route-opacity: .6;
-  --territory-font: "JetBrains Mono", monospace;
+  --territory-font: "Ioskeley Mono", monospace;
   --territory-weight: 700;
   --territory-spacing: 0.02em;
   --territory-size: 13.5px;
-  --place-font: "JetBrains Mono", monospace;
+  --place-font: "Ioskeley Mono", monospace;
   --place-size: 11.5px;
   --paper: #f7f6ef;
   --paper-raised: #fbfaf5;
@@ -64,80 +64,80 @@
 }
 
 :root[data-mode="dark"] {
-  --paper: #16120b;
-  --paper-raised: #1c170e;
-  --paper-sunk: #100d07;
-  --ink: #f4d9a6;
-  --ink-soft: #c9a46b;
-  --ink-faint: #8a7350;
-  --rule: #3a2f1c;
-  --grid: #251e12;
-  --accent: #ffb000;
-  --accent-soft: #4a3409;
+  --paper: #121313;
+  --paper-raised: #18191a;
+  --paper-sunk: #0d0e0e;
+  --ink: #d9dbd4;
+  --ink-soft: #a3a69d;
+  --ink-faint: #6f726b;
+  --rule: #2d2f2c;
+  --grid: #1c1e1c;
+  --accent: #8fd694;
+  --accent-soft: #1e3421;
   --greenbar: none;
-  --cells: radial-gradient(circle at 1px 1px, rgb(255 176 0 / .13) 1px, transparent 1.2px);
-  --map-canvas: #120f09;
-  --route-from: #ffb000;
-  --route-to: #6cd0c4;
-  --route-both: #8a7350;
-  --territory-ink: #ffcf73;
+  --cells: radial-gradient(circle at 1px 1px, rgb(217 219 212 / .10) 1px, transparent 1.2px);
+  --map-canvas: #0f1010;
+  --route-from: #8fd694;
+  --route-to: #e3b75e;
+  --route-both: #6f726b;
+  --territory-ink: #e6e8e1;
   color-scheme: dark;
-  --reviewed: #9fd06b;
-  --machine: #a9a08c;
-  --unverified: #ffb000;
-  --stale: #ff6f59;
-  --cat-knowledge: #ffb000;
-  --cat-code: #6cd0c4;
-  --cat-reports: #ff8c42;
-  --cat-agent: #d79ad4;
-  --cat-other: #c9a46b;
-  --g0: #ffb000;
-  --g1: #6cd0c4;
-  --g2: #9fd06b;
-  --g3: #ff6f59;
-  --g4: #93aef0;
-  --g5: #d79ad4;
-  --g6: #ff8c42;
-  --g7: #c9b48a;
+  --reviewed: #8fd694;
+  --machine: #a3a69d;
+  --unverified: #e3b75e;
+  --stale: #f07a6a;
+  --cat-knowledge: #8fd694;
+  --cat-code: #7cc4e0;
+  --cat-reports: #e3b75e;
+  --cat-agent: #c99be0;
+  --cat-other: #a3a69d;
+  --g0: #8fd694;
+  --g1: #7cc4e0;
+  --g2: #e3b75e;
+  --g3: #f07a6a;
+  --g4: #9aa8f0;
+  --g5: #c99be0;
+  --g6: #6fd6c4;
+  --g7: #b8bab2;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-mode="light"]):not([data-mode="dark"]) {
-    --paper: #16120b;
-    --paper-raised: #1c170e;
-    --paper-sunk: #100d07;
-    --ink: #f4d9a6;
-    --ink-soft: #c9a46b;
-    --ink-faint: #8a7350;
-    --rule: #3a2f1c;
-    --grid: #251e12;
-    --accent: #ffb000;
-    --accent-soft: #4a3409;
+    --paper: #121313;
+    --paper-raised: #18191a;
+    --paper-sunk: #0d0e0e;
+    --ink: #d9dbd4;
+    --ink-soft: #a3a69d;
+    --ink-faint: #6f726b;
+    --rule: #2d2f2c;
+    --grid: #1c1e1c;
+    --accent: #8fd694;
+    --accent-soft: #1e3421;
     --greenbar: none;
-    --cells: radial-gradient(circle at 1px 1px, rgb(255 176 0 / .13) 1px, transparent 1.2px);
-    --map-canvas: #120f09;
-    --route-from: #ffb000;
-    --route-to: #6cd0c4;
-    --route-both: #8a7350;
-    --territory-ink: #ffcf73;
+    --cells: radial-gradient(circle at 1px 1px, rgb(217 219 212 / .10) 1px, transparent 1.2px);
+    --map-canvas: #0f1010;
+    --route-from: #8fd694;
+    --route-to: #e3b75e;
+    --route-both: #6f726b;
+    --territory-ink: #e6e8e1;
     color-scheme: dark;
-    --reviewed: #9fd06b;
-    --machine: #a9a08c;
-    --unverified: #ffb000;
-    --stale: #ff6f59;
-    --cat-knowledge: #ffb000;
-    --cat-code: #6cd0c4;
-    --cat-reports: #ff8c42;
-    --cat-agent: #d79ad4;
-    --cat-other: #c9a46b;
-    --g0: #ffb000;
-    --g1: #6cd0c4;
-    --g2: #9fd06b;
-    --g3: #ff6f59;
-    --g4: #93aef0;
-    --g5: #d79ad4;
-    --g6: #ff8c42;
-    --g7: #c9b48a;
+    --reviewed: #8fd694;
+    --machine: #a3a69d;
+    --unverified: #e3b75e;
+    --stale: #f07a6a;
+    --cat-knowledge: #8fd694;
+    --cat-code: #7cc4e0;
+    --cat-reports: #e3b75e;
+    --cat-agent: #c99be0;
+    --cat-other: #a3a69d;
+    --g0: #8fd694;
+    --g1: #7cc4e0;
+    --g2: #e3b75e;
+    --g3: #f07a6a;
+    --g4: #9aa8f0;
+    --g5: #c99be0;
+    --g6: #6fd6c4;
+    --g7: #b8bab2;
   }
 }
 
