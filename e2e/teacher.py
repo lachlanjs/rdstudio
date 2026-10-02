@@ -15,6 +15,9 @@ Profile, sources and skills (T45): the default skills listed; an agent
 writing the profile through MCP, citing events; the citations shown as links
 to the evidence; the developer disputing a claim, and the agent told of it;
 the sources log.
+Set for you (T46 finding): an agent sets exercises through MCP; they show at
+the top of the Learn tab with a count on the tab, lead one to the next, and
+the agent sees the set's progress.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from pathlib import Path
@@ -363,6 +366,28 @@ with sync_playwright() as pw:
     check("an agent reading the profile is told of the edit, and can read it as a diff",
           "The developer edited it on" in told[0] and "+- Gives up on counting charts. Disputed: I clicked by mistake." in told[1], told[1][:300])
     p.screenshot(path=str(OUT / "teacher-profile.png"), full_page=True)
+
+    # ------------------------------------------------------------ set for you
+    got = mcp(("exercise_assign", {"ids": ["exercises/two-charts", "exercises/sphere-dimension"], "note": "Diagnostic: charts"}))[0]
+    p.goto(URL + "?nosw&set#/learn")
+    p.get_by_role("heading", name="Set for you").wait_for()
+    check("exercises an agent sets are at the top of the Learn tab, with a count on the tab",
+          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=learn] .count").inner_text().strip() == "2", got)
+    p.locator(".set-for-you").get_by_role("link", name="Start").click()
+    p.locator(".exercise-choice").first.wait_for()
+    p.locator(".exercise-choice", has_text="Two charts").click()
+    p.get_by_role("button", name="Check").click()
+    nxt = p.get_by_role("link", name="Next in “Diagnostic: charts”: The dimension of the sphere")
+    nxt.wait_for()
+    check("answering one leads to the next in the set", nxt.count() == 1)
+    nxt.click()
+    p.locator(".exercise-value input").fill("2")
+    p.get_by_role("button", name="Check").click()
+    p.get_by_role("link", name="Set finished: back to Learn").click()
+    p.get_by_role("heading", name="Learn", exact=True).wait_for()
+    check("a finished set leaves the Learn tab, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=learn] .count").count() == 0)
+    state = json.loads(mcp(("learner_state", {}))[0])
+    check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)

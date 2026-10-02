@@ -6,7 +6,7 @@
   import type { ConceptRecord } from "@rdstudio/core";
   import { checkAnswer, splitSolution, type Attempt, type Result } from "@rdstudio/core/learning";
   import { learner, store } from "$lib/data.svelte.ts";
-  import { BY_LABEL, STATUS_LABEL, goalsOf, markYourself, spec, statusOf, submitAttempt, testsOf, tried } from "$lib/exercises.ts";
+  import { BY_LABEL, STATUS_LABEL, goalsOf, markYourself, sets, spec, statusOf, submitAttempt, testsOf, tried } from "$lib/exercises.ts";
   import { conceptHref } from "$lib/format.ts";
   import { render } from "$lib/markdown.ts";
   import Prose from "./Prose.svelte";
@@ -22,6 +22,9 @@
   const tests = $derived(testsOf(c));
   const goals = $derived(goalsOf(c));
   const recording = $derived(learner.enabled && !store.site.static);
+  // The newest set this exercise was set in, and what is left in it.
+  const set = $derived(sets().find((a) => a.exercises.includes(c.id)) ?? null);
+  const nextInSet = $derived(set ? set.exercises.find((x) => x !== c.id && !set.done.includes(x)) ?? null : null);
   const html = (md: string) => render(md, { dir: c.directory });
 
   // ---------------------------------------------------------------- answering
@@ -188,7 +191,11 @@
       </div>
     {/if}
     {#if stage === "done" || stage === "queued"}
-      <p><button class="toggle" type="button" onclick={again}>Try again</button></p>
+      <p class="exercise-next">
+        {#if set && nextInSet}<a class="toggle primary" href={conceptHref(nextInSet)}>Next in “{set.note}”: {store.concepts.get(nextInSet)?.title ?? nextInSet}</a>
+        {:else if set}<a class="toggle primary" href="#/learn">Set finished: back to Learn</a>{/if}
+        <button class="toggle" type="button" onclick={again}>Try again</button>
+      </p>
     {/if}
   </div>
 

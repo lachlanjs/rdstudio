@@ -86,3 +86,27 @@ written to the task, as they are met.
   that task is written for a code repository ("read the README, propose
   directories"). For a topic, the teach skill's goals and diagnostic replace
   it. Make the bootstrap depend on the profile.
+
+## 2026-10-02: the diagnostic ran in the chat
+
+- **Finding:** the agent quizzed the developer in the terminal to gauge
+  their level. That is what `assess` said ("ask in the conversation"), but
+  the developer expected the questions in rdstudio, where they are checked,
+  kept and seen again. Agents also had no way to put exercises in front of
+  the developer.
+- **Fixed:**
+  - **Rule:** `teach` gains "Deliver through rdstudio". `assess` writes
+    diagnostic questions as Exercise notes in `exercises/diagnostic/`
+    (choice or value where possible) and sets them; `exercise` sets
+    exercises the same way. The chat is for explaining, and for quizzing
+    only when asked.
+  - **MCP:** `exercise_assign` sets Exercise notes with a note saying what
+    the set is for (an `assigned` event). `learner_state` shows open sets
+    and their progress.
+  - **The dashboard:** "Set for you" at the top of the Learn tab, with a
+    count on the tab. Each exercise leads to the next in its set, and a set
+    can be put aside (`assigned_closed`). A set is done when every exercise
+    has been attempted since it was set.
+  - **Checked:** core, MCP and `e2e/teacher.py` (4 more checks, 53 in all).
+- **Noticed:** `e2e/learn.py` failed once on a map-filter step and passed on
+  the rerun. That step is flaky.

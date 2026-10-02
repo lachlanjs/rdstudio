@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  answerSpec, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, parseNumber, refId, refIds, requiresClosure,
+  answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, parseNumber, refId, refIds, requiresClosure,
   reviewSchedule, splitSolution, studyLoad, tourBody, tourStops, type AnswerSpec, type LearnerEvent,
 } from "../src/index.ts";
 
@@ -201,4 +201,21 @@ test("a goal's progress: the notes it needs, through requires, and its exercises
 
 test("tours, goals and exercises are kept off the map", () => {
   expect(["Tour", "Goal", "Exercise", "Definition"].map((type) => isStudyNote({ type }))).toEqual([false, false, false, true]);
+});
+
+test("exercises set by an agent: done when each is attempted since, or put aside", () => {
+  const t = (h: number) => `2026-10-02T${String(h).padStart(2, "0")}:00:00.000Z`;
+  const events = [
+    { id: "0", event: "attempt", exercise: "x/a", tests: [], result: "got", by: "dashboard", at: t(1) }, // before it was set: not counted
+    { id: "1", event: "assigned", exercises: ["x/a", "x/b", "x/a"], note: "Diagnostic", by: "agent/t", at: t(2) },
+    { id: "2", event: "attempt", exercise: "x/b", tests: [], answer: "…", at: t(3) }, // waiting for marking: counts
+    { id: "3", event: "assigned", exercises: ["x/c"], note: "Later", at: t(4) },
+    { id: "4", event: "assigned", exercises: [], at: t(5) },
+  ];
+  expect(assignments(events)).toEqual([
+    { id: "3", at: t(4), by: null, note: "Later", exercises: ["x/c"], done: [], closed: false },
+    { id: "1", at: t(2), by: "agent/t", note: "Diagnostic", exercises: ["x/a", "x/b"], done: ["x/b"], closed: false },
+  ]);
+  const more = [...events, { id: "5", event: "attempt", exercise: "x/a", tests: [], result: "missed", by: "self", at: t(6) }, { id: "6", event: "assigned_closed", ref: "3", at: t(7) }];
+  expect(assignments(more).map((a) => [a.id, a.closed, a.done])).toEqual([["3", true, []], ["1", true, ["x/a", "x/b"]]]);
 });

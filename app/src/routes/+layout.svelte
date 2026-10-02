@@ -11,6 +11,7 @@
   import { editing } from "$lib/edit.svelte.ts";
   import ActionDialogs from "$lib/components/ActionDialogs.svelte";
   import { procedures, reviewCount } from "$lib/review.ts";
+  import { setCount } from "$lib/exercises.ts";
   import { settings } from "$lib/settings.svelte.ts";
 
   let { children }: { children: Snippet } = $props();
@@ -24,6 +25,7 @@
   };
   const tab = $derived(TABS[page.route.id ?? ""] ?? "knowledge");
   const review = $derived(store.loaded ? reviewCount() : 0);
+  const setForYou = $derived(store.loaded ? setCount() : 0);
   const showProcedures = $derived(procedures().length > 0 || tab === "procedures");
 
   let drawer = $state(false);
@@ -67,7 +69,7 @@
     {@render link("knowledge", "#/", "Knowledge")}
     {@render link("map", "#/map", "Map")}
     {@render link("graph", "#/graph", "Graph")}
-    {@render link("learn", "#/learn", "Learn")}
+    {@render link("learn", "#/learn", "Learn", setForYou)}
     {@render link("changes", "#/changes", "Changes")}
     {@render link("review", "#/review", "Review", review)}
     {@render link("reports", "#/reports", "Reports", store.reports.length)}

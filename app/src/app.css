@@ -975,3 +975,10 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .ev-ref.r-missed, .ev-ref.r-partly { background: color-mix(in srgb, var(--stale) 13%, transparent); }
 .ev-ref.missing { opacity: .6; }
 .evidence-answer { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--rule); }
+.set-for-you { margin: 0 0 18px; padding: 12px 16px 4px; border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--paper-raised); }
+.set-for-you .set-note { font: 600 16px/1.4 var(--font-ui); margin: 0 0 2px; }
+.set-exercises { list-style: decimal; padding-left: 1.6em; border-top: 0; }
+.set-exercises li { display: list-item; }
+.set-exercises li.done .title { color: var(--ink-soft); }
+.set-exercises .chip { margin: 0 0 0 8px; vertical-align: 2px; }
+.exercise-next { display: flex; flex-wrap: wrap; gap: 8px; }

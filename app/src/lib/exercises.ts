@@ -6,7 +6,7 @@
 // learner record by @rdstudio/core/learning.
 
 import type { ConceptRecord } from "@rdstudio/core";
-import { answerSpec, attempts, exerciseStatus, goalProgress, refIds, type Attempt, type ExerciseStatus, type GoalProgress, type Result } from "@rdstudio/core/learning";
+import { answerSpec, assignments, attempts, exerciseStatus, goalProgress, refIds, type Assignment, type Attempt, type ExerciseStatus, type GoalProgress, type Result } from "@rdstudio/core/learning";
 import { learner, store } from "./data.svelte.ts";
 import { understanding } from "./understanding.svelte.ts";
 
@@ -60,4 +60,15 @@ export async function submitAttempt(ex: ConceptRecord, answer: string, settled: 
  *  event is kept; the marking is a second event, as an agent's would be. */
 export async function markYourself(ref: string, result: Result): Promise<boolean> {
   return (await learner.record({ event: "attempt_marked", ref, result, by: "self", kind: "interactive" })) !== null;
+}
+
+/** Sets of exercises an agent set for you, newest first; open ones have something left to do. */
+export const sets = (): Assignment[] => (learner.enabled ? assignments(learner.events, tried()) : []);
+export const openSets = (): Assignment[] => sets().filter((a) => !a.closed);
+/** How many exercises are set for you and not yet answered: the Learn tab's count. */
+export const setCount = (): number => openSets().reduce((n, a) => n + a.exercises.length - a.done.length, 0);
+
+/** Put a set aside without answering the rest. */
+export async function putAside(ref: string): Promise<boolean> {
+  return (await learner.record({ event: "assigned_closed", ref, kind: "ai" })) !== null;
 }

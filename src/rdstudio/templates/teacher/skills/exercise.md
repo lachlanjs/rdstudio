@@ -53,10 +53,16 @@ Write exercises at three depths for a goal: recognising (choice), doing
 
 ## Setting them
 
-In the conversation, give one exercise at a time and let the developer
-answer there or in the dashboard (each Exercise note is answered on its
-page). Choose from `learner_state`: a goal's exercises not yet passed,
-starting with those testing notes only opened, then misses due another go.
+Set exercises through rdstudio: `exercise_assign` with the exercises and a
+note saying what the set is for. They appear under "Set for you" at the top
+of the Learn tab, one after another, and the dashboard checks choices and
+values at once. Keep a set short (three to eight) and say in the
+conversation that it is there.
+
+Choose from `learner_state`: a goal's exercises not yet passed, starting
+with those testing notes only opened, then misses due another go. Quiz in
+the conversation only when the developer asks for it; record each answer
+there with `exercise_record`, so it counts the same.
 
 ## Marking
 

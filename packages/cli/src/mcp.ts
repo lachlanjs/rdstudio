@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  LearnerError, ProcedureError, answerSpec, attempts, goalProgress, isStudyNote, refIds, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
+  LearnerError, ProcedureError, answerSpec, assignments, attempts, goalProgress, isStudyNote, refIds, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
   text, type Bundle,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
@@ -315,8 +315,10 @@ questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) =>
       return { id: g.id, title: g.title, met: p.met, exercises: Object.fromEntries(p.exercises.map((e) => [e.id, e.status])), notes: p.coverage };
     });
     const exerciseWaiting = [...tried.values()].flat().filter((a) => a.result === null).length;
+    const open = assignments(events, tried).filter((a) => !a.closed)
+      .map((a) => ({ ref: a.id, note: a.note, at: a.at, to_do: a.exercises.filter((x) => !a.done.includes(x)), done: a.done }));
     return fmt({ by_folder: byFolder, due: due.map((r) => r.id), more_due: more, explain_waiting: unmarked(events).length,
-      ...(goals.length ? { goals } : {}), exercises_waiting: exerciseWaiting });
+      ...(goals.length ? { goals } : {}), exercises_waiting: exerciseWaiting, ...(open.length ? { set_for_developer: open } : {}) });
   });
 
   tool("explain_question", `Set an explain-back question on a note for the developer to answer in their own
@@ -407,6 +409,27 @@ Returns its ref. For a choice or value exercise, mark it straight after.`, { id:
     const e = learner.append(cfg, { event: "attempt", exercise: cid, tests: ex.tests,
       hashes: Object.fromEntries(ex.tests.map((t) => [t, contentHash(b.concepts.get(t)!.body)])), answer: answer.trim(), kind: "ai", via: "harness" });
     return fmt({ ref: e.id, exercise: cid, tests: ex.tests });
+  });
+
+  tool("exercise_assign", `Set Exercise notes for the developer to answer in the dashboard, where they
+appear at the top of the Learn tab under "Set for you", with \`note\` saying
+what the set is for (such as "Diagnostic: prerequisites for the cavity
+method"). Prefer this to quizzing in the conversation. Choice and value
+answers are checked there; text answers come back through exercise_pending.
+learner_state shows each open set's progress.`, { ids: z.array(z.string()), note: z.string(), actor: opt(z.string()) }, ({ ids, note, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle();
+    const out: string[] = [];
+    for (const id of ids) {
+      const cid = b.resolveId(id);
+      if (cid === null) return `No concept ${pyRepr(id)}.`;
+      if (b.concepts.get(cid)!.type !== "Exercise") return `${cid} is not an Exercise note (type: Exercise).`;
+      if (!out.includes(cid)) out.push(cid);
+    }
+    if (!out.length) return "Name at least one exercise.";
+    if (!note.trim()) return "A note is needed: what the set is for.";
+    const e = learner.append(cfg, { event: "assigned", exercises: out, note: note.trim(), kind: "ai", by: actor || cfg.agent });
+    return fmt({ ref: e.id, exercises: out });
   });
 
   tool("exercise_mark", `Mark an answer to an Exercise note (ref from exercise_pending or

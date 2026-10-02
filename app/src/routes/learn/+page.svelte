@@ -8,7 +8,7 @@
   import { understanding } from "$lib/understanding.svelte.ts";
   import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
   import { allPrerequisitesChanged, changedSince } from "$lib/catchup.ts";
-  import { STATUS_LABEL, exerciseNotes, exercisesFor, goalNotes, progressOf, waiting as waitingAttempts } from "$lib/exercises.ts";
+  import { STATUS_LABEL, exerciseNotes, exercisesFor, goalNotes, openSets, progressOf, putAside, statusOf, waiting as waitingAttempts } from "$lib/exercises.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
@@ -28,6 +28,7 @@
   const goals = $derived(goalNotes());
   const exerciseCount = $derived(exerciseNotes().length);
   const attemptsWaiting = $derived(understanding.on ? waitingAttempts() : []);
+  const forYou = $derived(understanding.on ? openSets() : []);
 </script>
 
 <svelte:head><title>Learn · {store.site.title}</title></svelte:head>
@@ -35,6 +36,25 @@
 <div class="page">
   <h1>Learn</h1>
   <p class="lede">Ways into this knowledge base: your goals, where you stand, practice, tours, and a reading order from the links rated requires.</p>
+  {#if forYou.length}
+    <h2 class="section-h">Set for you</h2>
+    {#each forYou as set (set.id)}
+      {@const next = set.exercises.find((x) => !set.done.includes(x))}
+      <section class="set-for-you">
+        <p class="set-note">{set.note}</p>
+        <p class="section-note">{set.done.length} of {set.exercises.length} answered · set {sinceDay(set.at)}{set.by ? ` by ${set.by.replace(/^[^:]*:/, "")}` : ""}</p>
+        <ol class="rows set-exercises">
+          {#each set.exercises as x (x)}
+            {@const c = store.concepts.get(x)}
+            {@const st = statusOf(x)}
+            <li class={set.done.includes(x) ? "done" : ""}><a class="title" href={conceptHref(x)}>{c?.title ?? x}</a>{#if set.done.includes(x)}<span class={["chip", "ex-" + st]}>{STATUS_LABEL[st]}</span>{/if}</li>
+          {/each}
+        </ol>
+        <p>{#if next}<a class="toggle primary" href={conceptHref(next)}>{set.done.length ? "Next" : "Start"}</a>{/if}
+          <button class="link" type="button" onclick={() => { if (confirm("Put this set aside? The exercises stay under Practice.")) void putAside(set.id); }}>Put aside</button></p>
+      </section>
+    {/each}
+  {/if}
   {#if goals.length}
     <h2 class="section-h">Goals</h2>
     <p class="section-note">What you are working towards. A goal is met when every exercise written for it is passed.</p>
