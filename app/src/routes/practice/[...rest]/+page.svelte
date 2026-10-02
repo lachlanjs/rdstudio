@@ -152,7 +152,7 @@
         <p><button class="toggle" type="button" onclick={start}>Again</button></p>
       {/if}
 
-    {:else if item}
+    {:else if item && item.kind === kind}
       <p class="practice-progress">{item.kind !== "recall" && item.chosen ? done.length : done.length + 1} of up to {ROUND}</p>
       <section class="practice-card" aria-live="polite">
         {#if item.kind === "recall"}

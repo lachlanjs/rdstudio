@@ -870,3 +870,26 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
   .coverage th, .coverage td { display: block; width: auto; padding: 2px 0; }
   .cov-text { white-space: normal; }
 }
+
+/* ------------------------------------------------------------ explain-back */
+
+.explain-back { max-width: var(--measure); margin: 40px auto 0; padding: 14px 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); }
+.explain-back > summary { cursor: pointer; font: 600 16px/1.3 var(--font-ui); }
+.explain-back > summary .count { margin-left: 8px; }
+.explain-q { font: 16.5px/1.5 var(--font-text); margin: 12px 0 8px; }
+.explain-back textarea { width: 100%; padding: 10px 12px; font: 16px/1.5 var(--font-text); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); resize: vertical; }
+.explain-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 8px; }
+.explain-back h3 { font: 600 14.5px var(--font-ui); margin: 20px 0 6px; color: var(--ink-soft); }
+.explain-list { list-style: none; padding: 0; margin: 0; }
+.explain-list > li { padding: 10px 0; border-top: 1px solid var(--rule); }
+.explain-meta { margin: 0; font-size: 13px; color: var(--ink-faint); }
+.explain-list li.got .explain-meta { color: var(--reviewed); }
+.explain-list li.missed .explain-meta { color: var(--stale); }
+.explain-list li.partly .explain-meta { color: var(--unverified); }
+.explain-asked { margin: 4px 0; font-style: italic; color: var(--ink-soft); }
+.explain-list blockquote { margin: 6px 0; padding-left: 12px; border-left: 2px solid var(--rule); font: 15.5px/1.5 var(--font-text); white-space: pre-wrap; }
+.explain-feedback { margin: 6px 0 2px; font-size: 15px; }
+.explain-gaps { margin: 2px 0; padding-left: 1.2em; font-size: 14px; color: var(--ink-soft); }
+.result-got { color: var(--reviewed); font-weight: 600; }
+.result-partly { color: var(--unverified); font-weight: 600; }
+.result-missed { color: var(--stale); font-weight: 600; }

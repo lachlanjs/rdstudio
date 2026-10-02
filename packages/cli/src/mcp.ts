@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  ProcedureError, SearchIndex, cmp, describe, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
+  ProcedureError, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
   text, type Bundle,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
@@ -21,6 +21,7 @@ import * as refs from "./references.ts";
 import { PyFloat, pyDumps } from "./pyjson.ts";
 import { ScopeError, globalConfig, promote, scoped } from "./scopes.ts";
 import { StoreError, conceptPath, record } from "./store.ts";
+import * as learner from "./learner.ts";
 
 export const INSTRUCTIONS = `Project knowledge base (OKF markdown bundle). Retrieve progressively:
 search -> outline -> read(section). Prefer reading one section over a whole
@@ -254,6 +255,103 @@ repeat them.`, { procedure: z.string(), edits: z.array(z.record(z.string(), z.un
       if (err instanceof ProcedureError || err instanceof StoreError) return `Not proposed: ${err.message}`;
       throw err;
     }
+  });
+
+  // ---------------------------------------------------------------- learner
+  // The developer's private learner record (understanding-layer.md): read to
+  // tailor help, written only to set explain-back questions and to mark
+  // answers. Off unless [learner] enabled = true in the user config.
+  const LEARNER_OFF = "The learner record is off. The developer turns it on with [learner] enabled = true in ~/.config/rdstudio/config.toml.";
+  const notesOf = (b: Bundle) => [...b.concepts.values()].filter((c) => c.type !== "Tour").map((c) => ({ id: c.id, hash: contentHash(c.body) }));
+  const unmarked = (events: Record<string, unknown>[]) => {
+    const marked = new Set(events.filter((e) => e.event === "explain_marked").map((e) => e.ref));
+    return events.filter((e) => e.event === "explain" && !marked.has(e.id));
+  };
+
+  tool("learner_state", `Where the developer stands with the project's knowledge, from their private
+learner record: with an id, that note's state (undiscovered, discovered,
+processed, understood; changed if the note changed meaningfully since),
+review and recent activity; without, counts by state per top-level folder,
+reviews due and explain-back answers waiting. Use it to aim explanations and
+questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle(), events = learner.events(cfg), notes = notesOf(b);
+    const states = discoveryStates(events, notes);
+    const schedule = reviewSchedule(events, notes);
+    if (id) {
+      const cid = b.resolveId(id);
+      if (cid === null) return `No concept ${pyRepr(id)}.`;
+      const s = states.get(cid)!, r = schedule.get(cid);
+      const recent = events.filter((e) => e.concept === cid).slice(-6)
+        .map((e) => ({ event: e.event, at: e.at, ...(e.result ? { result: e.result } : {}), ...(e.state ? { state: e.state } : {}) }));
+      return fmt({ id: cid, title: b.concepts.get(cid)!.title, state: s.state, changed: s.changed, by: s.kind,
+        review: r ? { box: r.box, due: new Date(r.due).toISOString() } : null, recent });
+    }
+    const groups = new Map<string, string[]>();
+    for (const n of notes) {
+      const top = n.id.includes("/") ? n.id.slice(0, n.id.indexOf("/")) : "(top level)";
+      groups.set(top, [...(groups.get(top) ?? []), n.id]);
+    }
+    const byFolder = Object.fromEntries([...groups].sort(([a], [z]) => cmp(a, z)).map(([f, ids]) => [f, coverage(states, ids)]));
+    const { due, more } = dueReviews(schedule, Date.now());
+    return fmt({ by_folder: byFolder, due: due.map((r) => r.id), more_due: more, explain_waiting: unmarked(events).length });
+  });
+
+  tool("explain_question", `Set an explain-back question on a note for the developer to answer in their own
+words, in the dashboard or here. Ask about meaning, reasons and connections
+(why, what would break without it, how it relates to a neighbour), not for
+recall of wording. One question per call.`, { id: z.string(), question: z.string(), actor: opt(z.string()) }, ({ id, question, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle(), cid = b.resolveId(id);
+    if (cid === null) return `No concept ${pyRepr(id)}.`;
+    if (!question.trim()) return "A question is needed.";
+    const e = learner.append(cfg, { event: "question", concept: cid, hash: contentHash(b.concepts.get(cid)!.body), question: question.trim(), kind: "ai", by: actor || cfg.agent });
+    return fmt({ question: e.id, concept: cid });
+  });
+
+  tool("explain_pending", `Explain-back answers the developer wrote that wait for marking: each with its
+ref, the note, the question and the answer. Read the note (and its sources)
+before marking with explain_mark.`, { limit: z.number().int().default(10) }, ({ limit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle();
+    const waiting = unmarked(learner.events(cfg)).slice(0, Math.max(1, Math.min(limit, 50)));
+    if (!waiting.length) return "No explain-back answers are waiting.";
+    return fmt(waiting.map((e) => {
+      const c = typeof e.concept === "string" ? b.concepts.get(e.concept) : undefined;
+      return { ref: e.id, concept: e.concept, title: c?.title ?? null, question: e.question ?? null, answer: e.answer, at: e.at,
+        note_changed_since: c ? contentHash(c.body) !== e.hash : null };
+    }));
+  });
+
+  tool("explain_record", `Record an explain-back answer the developer gave in this conversation (their
+words, unedited), so it can be marked with explain_mark like one written in
+the dashboard. Returns its ref.`, { id: z.string(), answer: z.string(), question: opt(z.string()) }, ({ id, answer, question }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle(), cid = b.resolveId(id);
+    if (cid === null) return `No concept ${pyRepr(id)}.`;
+    if (!answer.trim()) return "An answer is needed.";
+    const e = learner.append(cfg, { event: "explain", concept: cid, hash: contentHash(b.concepts.get(cid)!.body), ...(question ? { question } : {}),
+      answer: answer.trim(), kind: "ai", via: "harness" });
+    return fmt({ ref: e.id, concept: cid });
+  });
+
+  tool("explain_mark", `Mark an explain-back answer (ref from explain_pending) against the note and its
+sources: result "got" (right in substance, own words), "partly" (right but
+missing or blurring something that matters) or "missed". feedback: two to
+four sentences to the developer, naming what was right and what was missing
+or wrong, without rewriting their answer for them. gaps: the missing or
+mistaken points, briefly. A "got" counts as evidence the note is understood.`, {
+    ref: z.string(), result: z.enum(RESULTS), feedback: z.string(), gaps: opt(z.array(z.string())), actor: opt(z.string()),
+  }, ({ ref, result, feedback, gaps, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const events = learner.events(cfg);
+    const answer = events.find((e) => e.id === ref && e.event === "explain");
+    if (!answer) return `No explain-back answer ${pyRepr(ref)}.`;
+    if (!unmarked(events).includes(answer)) return `${ref} is already marked.`;
+    if (!feedback.trim()) return "Feedback is needed: what was right, and what was missing.";
+    const e = learner.append(cfg, { event: "explain_marked", ref, concept: answer.concept, hash: answer.hash, result, feedback: feedback.trim(),
+      ...(gaps?.length ? { gaps } : {}), kind: "ai", by: actor || cfg.agent });
+    return fmt({ marked: ref, result, event: e.id });
   });
 
   tool("promote", `Move a project concept into the developer's global knowledge base (for

@@ -23,7 +23,7 @@ generated:
 | Reports | `rdstudio.reports` | Report metadata and links into knowledge. |
 | Build | `rdstudio.build` | Emit a static site (web assets + JSON data) to `.rdstudio/site/`. |
 | Serve | `rdstudio.serve` | Stdlib HTTP server; watches files and rebuilds. |
-| MCP | `rdstudio.mcp_server` | search, outline, read, list_concepts, record, backlinks, review_queue, procedure_next, procedure_propose, promote, ref_search, ref_text. |
+| MCP | `rdstudio.mcp_server` | search, outline, read, list_concepts, record, backlinks, review_queue, procedure_next, procedure_propose, promote, ref_search, ref_text; in the Node server only, the learner tools learner_state, explain_question, explain_pending, explain_record, explain_mark ([T28](/tasks/T28-explain-back.md)). |
 | Scaffold | `rdstudio.scaffold` | `rdstudio init`: bundle placeholders, skills, agents, config. |
 | Brief | `rdstudio.brief` | Session-start orientation for agents. |
 | Dashboard | `app/` → `rdstudio/web/` | SvelteKit single-page app (Svelte 5, TypeScript), built at release into the package; libraries bundled, no CDN. |

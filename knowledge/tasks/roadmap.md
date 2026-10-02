@@ -60,7 +60,7 @@ See the [understanding layer design](/design/understanding-layer.md).
 - [x] [T25 Tours](/tasks/T25-tours.md)
 - [x] [T26 Interactive exercises](/tasks/T26-exercises.md)
 - [x] [T27 Coverage and review](/tasks/T27-coverage-review.md)
-- [ ] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
+- [x] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
 - [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
 - T30 Editing in the app: moved to M9
 

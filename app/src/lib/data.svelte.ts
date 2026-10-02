@@ -106,6 +106,9 @@ class Store {
     };
     const schedule = () => { timer = stopped || document.hidden ? null : setTimeout(tick, POLL_MS); };
     const onVisible = () => {
+      // Back from the terminal: an agent may have written to the learner
+      // record meanwhile (explain-back marking), which no build announces.
+      if (!document.hidden && learner.enabled) void learner.load();
       if (!document.hidden && timer === null && !stopped) { timer = -1; void tick(); }
     };
     document.addEventListener("visibilitychange", onVisible);

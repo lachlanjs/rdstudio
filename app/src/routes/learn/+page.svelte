@@ -5,9 +5,13 @@
   import { hasRequires } from "$lib/learn.ts";
   import { sharedTours, tourHref } from "$lib/tours.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
+  import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
+  const explained = $derived(understanding.on ? answers() : []);
+  const waiting = $derived(explained.filter((a) => !a.marked));
+  const asked = $derived(understanding.on ? openQuestions() : []);
   const folders = $derived(Object.keys(store.tree).filter((d) => d && !d.includes("/")).sort());
   const due = $derived(understanding.due());
   const next = $derived(due.due.length ? null : understanding.nextDue());
@@ -56,6 +60,30 @@
         {#if due.more}<span class="section-note"> {due.more} more {due.more === 1 ? "is" : "are"} waiting; they come a few at a time so the pile never grows.</span>{/if}</p>
     {:else}
       <p class="empty">Nothing is due.{#if next} The next review is {inDays(next)}.{:else} Mark a note worked through or understood, or practise recall, and it comes back for review.{/if}</p>
+    {/if}
+  {/if}
+  {#if understanding.on}
+    <h3 class="sub-h">Explain-back</h3>
+    <p class="section-note">Explain a note in your own words (under each note); an agent marks it against the note the next time you use the explain-back skill in your harness. The dashboard never calls a model.</p>
+    {#if asked.length}
+      <p>Questions for you:</p>
+      <ul class="rows explain-asked-list">
+        {#each asked.slice(0, 8) as q (q.id)}{@const c = store.concepts.get(q.concept)}
+          {#if c}<li><a class="title" href={conceptHref(c.id)}>{c.title}</a><div class="desc">{q.question}</div></li>{/if}
+        {/each}
+      </ul>
+    {/if}
+    {#if explained.length}
+      <p class="section-note">{waiting.length ? `${waiting.length} waiting for marking.` : "Nothing waiting for marking."}</p>
+      <ul class="rows explained">
+        {#each explained.filter((a) => a.marked).slice(0, 5) as a (a.id)}{@const c = store.concepts.get(a.concept)}
+          <li><a class="title" href={conceptHref(a.concept)}>{c?.title ?? a.concept}</a>
+            <div class="sub"><span class={"result-" + a.marked!.result}>{RESULT_LABEL[a.marked!.result] ?? a.marked!.result}</span><span>{new Date(a.marked!.at).toLocaleDateString()}</span></div>
+            <div class="desc">{a.marked!.feedback}</div></li>
+        {/each}
+      </ul>
+    {:else if !asked.length}
+      <p class="empty">None yet.</p>
     {/if}
   {/if}
   <h2 class="section-h">Practice</h2>

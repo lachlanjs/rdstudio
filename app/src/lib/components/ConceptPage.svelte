@@ -13,6 +13,7 @@
   import Time from "./Time.svelte";
   import { tourHref } from "$lib/tours.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
+  import ExplainBack from "./ExplainBack.svelte";
 
   let { id }: { id: string } = $props();
 
@@ -88,6 +89,7 @@
           {#if c.type === "Tour"}<p class="tour-follow"><a class="toggle primary" href={tourHref(c.id)}>Follow this tour</a></p>{/if}
         </header>
         {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
+        {#if understanding.on && c.type !== "Tour"}<ExplainBack {c} />{/if}
       </article>
     {/if}
     {#snippet meta()}{#if session}<EditDetails {session} />{:else}<MetaPanel {c} />{/if}{/snippet}

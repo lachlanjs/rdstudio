@@ -10,6 +10,9 @@ landmarks, each answer an event in the record.
 Coverage and review (T27): discovery states on the note, in the tree and on
 the map, marking, hiding what is not reached, coverage per folder, the review
 queue and the load note.
+Explain-back (T28): an answer written under a note, waiting; an agent's
+marking and question (appended as the MCP tools write them) shown on the note
+and the Learn tab.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from datetime import datetime, timedelta, timezone
@@ -298,6 +301,39 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("heading", name="Where you stand").wait_for()
     p.screenshot(path=str(OUT / "learn-tab.png"), full_page=True)
+
+    # ------------------------------------------------------- explain-back (T28)
+    p.goto(URL + "?nosw#/k/forms/orientation")
+    box = p.locator("details.explain-back")
+    box.locator("summary").click()
+    p.wait_for_timeout(400)  # the visit is recorded meanwhile, which must not close it
+    check("the explain-back section stays open while the visit is recorded", box.get_attribute("open") is not None)
+    p.get_by_label("Your explanation").fill("A consistent choice of which bases count as positive, everywhere at once.")
+    p.get_by_role("button", name="Save for marking").click()
+    expect(box.locator(".edit-status")).to_contain_text("Saved")
+    settle("explain", 1)
+    answer = events("explain")[-1]
+    check("an explanation is saved to the record, waiting for an agent", answer["concept"] == "forms/orientation" and answer["kind"] == "ai"
+          and "waiting for marking" in box.locator(".explain-list").inner_text(), answer)
+    with (record_dir() / "record.jsonl").open("a") as f:
+        f.write(json.dumps({"id": "01J" + "M" * 23, "at": ago(0), "device": "test", "event": "explain_marked", "ref": answer["id"], "concept": "forms/orientation",
+                            "hash": answer.get("hash"), "result": "partly", "feedback": "Right about consistency; say what positive means: an orientation of each tangent space.",
+                            "gaps": ["orientation of a vector space"], "kind": "ai", "by": "agent/test"}) + "\n")
+        f.write(json.dumps({"id": "01J" + "Q" * 23, "at": ago(0), "device": "test", "event": "question", "concept": "forms/stokes-theorem",
+                            "question": "Why does the boundary appear in Stokes' theorem?", "kind": "ai", "by": "agent/test"}) + "\n")
+    p.reload()
+    box = p.locator("details.explain-back")
+    box.locator("summary").click()
+    check("an agent's marking shows under the note, with the gaps", "Partly" in box.locator(".explain-meta").first.inner_text()
+          and "orientation of a vector space" in box.inner_text(), box.inner_text()[:300])
+    p.goto(URL + "?nosw#/k/forms/stokes-theorem")
+    box = p.locator("details.explain-back")
+    expect(box).to_have_attribute("open", "")
+    check("a question an agent set opens the section and is asked", "Why does the boundary appear" in box.locator(".explain-q").inner_text())
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Explain-back").wait_for()
+    learn = p.locator(".page").inner_text()
+    check("the Learn tab lists questions for you and marked answers", "Why does the boundary appear" in learn and "Right about consistency" in learn and "Nothing waiting for marking" in learn)
 
     # ----------------------------------------------------------------- phone
     ctx.close()
