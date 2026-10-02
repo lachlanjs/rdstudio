@@ -140,3 +140,20 @@ written to the task, as they are met.
   $\mathcal{N}(0, g^2/N)$ gives the variance or the standard deviation (it
   is the variance, as is conventional). **Fixed in the skill:** notation is
   defined in words on first use in each exercise.
+
+## 2026-10-02: settling what an exercise assumes
+
+- **The developer's refinement:** do not define notation in every exercise.
+  Instead, question what each exercise assumes (background, notation) and
+  explain only what the developer cannot be expected to know already.
+- **Changed:**
+  - **`exercise`:** list the exercise's assumptions and check each against
+    the notes it tests, their prerequisites, the conventions note and
+    `learner_state`. Something covered and reached is used without comment;
+    something covered but not reached is linked, or the exercise waits;
+    something not in the knowledge base (as in a diagnostic) is defined in
+    the problem and added to the conventions note if it recurs.
+  - **`map`:** the knowledge base keeps one conventions note, a landmark,
+    that notes and exercises rely on.
+- **Expect** a long run of refinements like these to the teaching skills.
+  This log is where they are recorded, each with its reason.

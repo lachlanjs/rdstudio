@@ -50,9 +50,20 @@ Choose the kind for what is being checked:
   goes in the Solution section, as a list headed "A full answer covers",
   which is what you and the developer mark against. Make the solution
   complete.
-- Define notation on first use, in words: "$J_j \sim \mathcal{N}(0, g^2/N)$,
-  that is, mean $0$ and variance $g^2/N$". A convention the developer has to
-  guess at tests the convention, not the idea.
+- Settle what the exercise assumes. List, for yourself, the background and
+  notation it relies on, and check each against what the developer can be
+  expected to know: the notes it tests, what those require (`study_path`),
+  the knowledge base's conventions note, and where the developer stands
+  (`learner_state`).
+  - **Covered there, and reached:** use it without comment.
+  - **Covered there, but not reached yet:** link the note in the problem, or
+    set the exercise later.
+  - **Not in the knowledge base** (common in a diagnostic, before notes
+    exist): define it in the problem, in words, such as "$\mathcal{N}(0,
+    g^2/N)$, that is, mean $0$ and variance $g^2/N$". If it will recur, add
+    it to the conventions note (the `map` skill).
+  A convention the developer has to guess at tests the convention, not the
+  idea.
 - For code, the exercise names the file to write or change and how to run
   it; the solution says what a passing run shows.
 - Each exercise tests a few notes at most (`tests`), and serves the goals it
@@ -65,8 +76,8 @@ the solution hidden, and check:
   not be made by rephrasing the question;
 - a choice exercise's right answer is not the longest, most qualified or
   only technical-sounding choice;
-- it can be answered from the notes it tests and their prerequisites,
-  without guessing at notation.
+- every assumption it makes is settled, as above: nothing is left to
+  guess, and nothing the developer already knows is explained again.
 
 Write exercises at three depths for a goal: recognising (choice), doing
 (value, short derivations), and transferring (a new situation, explained).
