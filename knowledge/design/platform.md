@@ -146,7 +146,7 @@ not for every screen.
 | A4 | **Sync backends** | git (the bundle is already a repository: libgit2 or gitoxide in Tauri, isomorphic-git in the browser); `rdstudio serve` as a sync endpoint at home; a hosted service later. |
 | A5 | **Learner record sync** | Events are only ever appended, so merging devices is a union. Each event needs a unique id (device id plus a sortable timestamp) before any sync exists; add it now to avoid a migration. End-to-end encryption for any hosted sync. |
 | A6 | **Edits from devices** | Three-way merge of note text, with a conflict view. Depends on [editing](/tasks/T30-dashboard-editing.md). |
-| A7 | **Several projects per device** | A project switcher; each project is a bundle plus a record. |
+| A7 | **Several projects per device** | A project switcher; each project is a bundle plus a record. Accounts, the project list, the private learner repository and self-hosted servers: see [projects, accounts and sync](/design/projects-and-sync.md). |
 
 # B. GPU map rendering
 
