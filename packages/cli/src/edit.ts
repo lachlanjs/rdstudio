@@ -8,9 +8,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { Document, isMap, isScalar, type Pair } from "yaml";
-import { RulesClassifier, frontmatterText, parseYaml, type Classifier } from "@rdstudio/core";
-import { StoreError, conceptPath, existingNotePath, node, now } from "./store.ts";
+import { isMap } from "yaml";
+import { RulesClassifier, parseYaml, type Classifier } from "@rdstudio/core";
+import { BOM, StoreError, conceptPath, editFrontmatter, existingNotePath, now, spliceText, splitSource } from "./store.ts";
+
+export { editFrontmatter, splitSource } from "./store.ts";
 
 /** The text a note's file holds, with a version to send back when saving. */
 export interface NoteSource {
@@ -32,25 +34,6 @@ export class ConflictError extends StoreError {
 
 export const fileVersion = (text: string): string => createHash("sha256").update(text).digest("hex").slice(0, 16);
 
-const BOM = "\uFEFF";
-
-/** [the text before the body, the frontmatter YAML or null, the body], so that
- *  prefix + body is the file exactly. */
-export function splitSource(text: string): [prefix: string, frontmatter: string | null, body: string] {
-  const [raw] = frontmatterText(text);
-  if (raw === null) return ["", null, text];
-  const open = text.indexOf("\n") + 1; // after the first ---
-  const lines = text.slice(open).split("\n");
-  let at = open;
-  for (const line of lines) {
-    at += line.length + 1;
-    if (line.replace(/\s+$/u, "") === "---") break;
-  }
-  at = Math.min(at, text.length);
-  while (text[at] === "\n" || (text[at] === "\r" && text[at + 1] === "\n")) at += text[at] === "\r" ? 2 : 1;
-  return [text.slice(0, at), raw, text.slice(at)];
-}
-
 function relId(root: string, path: string): string {
   return path.slice(root.replace(/\/+$/, "").length + 1).slice(0, -3);
 }
@@ -70,50 +53,6 @@ function sourceOf(root: string, path: string, text: string): NoteSource {
   }
   const id = relId(root, path);
   return { id, path: id + ".md", version: fileVersion(text), meta, frontmatter: raw ?? "", body };
-}
-
-// ------------------------------------------------------------------ frontmatter
-
-const YAML_STYLE = { lineWidth: 100, flowCollectionPadding: false, indentSeq: false } as const;
-
-/** One top-level field as the store writes it, ending in a line break. */
-function fieldText(key: string, value: unknown): string {
-  const doc = new Document({}, { version: "1.2" });
-  const n = node(doc, value);
-  // A flat mapping on one line, as {by: ..., at: ...} is written elsewhere.
-  if (isMap(n) && n.items.every((p) => isScalar(p.value) && !String(p.value.value).includes("\n"))) n.flow = true;
-  doc.set(key, n);
-  return doc.toString(YAML_STYLE);
-}
-
-const lineStart = (text: string, at: number): number => text.lastIndexOf("\n", at - 1) + 1;
-const lineEnd = (text: string, at: number): number => {
-  const nl = text.indexOf("\n", at);
-  return nl < 0 ? text.length : nl + 1;
-};
-
-/** Change top-level frontmatter fields in `raw` (null removes one), touching
- *  only their lines; new fields go at the end, or `type` at the start. */
-export function editFrontmatter(raw: string, changes: Record<string, unknown>): string {
-  let text = raw && !raw.endsWith("\n") ? raw + "\n" : raw;
-  for (const [key, value] of Object.entries(changes)) {
-    const doc = parseYaml(text);
-    if (doc.errors.length) throw new StoreError(`unparseable YAML frontmatter: ${doc.errors[0]!.message}`);
-    if (text.trim() && !isMap(doc.contents)) throw new StoreError("frontmatter is not a mapping");
-    const items = isMap(doc.contents) ? (doc.contents.items as Pair[]) : [];
-    const pair = items.find((p) => (isScalar(p.key) ? p.key.value : p.key) === key);
-    const replacement = value === null || value === undefined ? "" : fieldText(key, value);
-    if (pair) {
-      const keyRange = (pair.key as { range?: [number, number, number] }).range!;
-      const valueRange = (pair.value as { range?: [number, number, number] } | null)?.range;
-      const start = lineStart(text, keyRange[0]);
-      const end = lineEnd(text, Math.max(keyRange[1], (valueRange?.[1] ?? keyRange[1]) - 1));
-      text = text.slice(0, start) + replacement + text.slice(end);
-    } else if (replacement) {
-      text = key === "type" ? replacement + text : text + replacement;
-    }
-  }
-  return text;
 }
 
 // ------------------------------------------------------------------ saving
@@ -158,16 +97,12 @@ export function saveNote(root: string, cid: string, opts: SaveOptions): SaveResu
   if (fileVersion(before) !== opts.base) {
     throw new ConflictError(`${relId(root, path)} changed since you opened it`, sourceOf(root, path, before));
   }
-  const [prefix, raw, body] = splitSource(before.startsWith(BOM) ? before.slice(1) : before);
-  const bom = before.startsWith(BOM) ? BOM : "";
+  const [, , rawBody] = splitSource(before.startsWith(BOM) ? before.slice(1) : before);
+  const body = rawBody.replace(/\r\n/g, "\n");
   const old = sourceOf(root, path, before);
 
-  // The editor works in \n; a file written with \r\n keeps them.
-  let newBody = body;
-  if (opts.body !== undefined && opts.body !== null) {
-    newBody = opts.body.replace(/\r\n?/g, "\n");
-    if (before.includes("\r\n")) newBody = newBody.replace(/\n/g, "\r\n");
-  }
+  // The editor works in \n; spliceText keeps a file's \r\n.
+  const newBody = opts.body !== undefined && opts.body !== null ? opts.body.replace(/\r\n?/g, "\n") : body;
   const changes: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(opts.meta ?? {})) {
     const was = old.meta[k];
@@ -186,14 +121,7 @@ export function saveNote(root: string, cid: string, opts: SaveOptions): SaveResu
   }
   if (significant) changes.generated = { by: opts.actor, at: now() };
 
-  let head = prefix;
-  if (Object.keys(changes).length) {
-    const front = editFrontmatter(raw ?? "", changes);
-    // Keep the blank lines that separated the frontmatter from the body.
-    const gap = raw === null ? "\n" : prefix.slice(prefix.lastIndexOf("---") + 3).replace(/^[^\n]*\n/, "");
-    head = `---\n${front}---\n${gap}`;
-  }
-  const text = bom + head + newBody;
+  const text = spliceText(before, changes, newBody === body ? null : newBody);
   writeFileSync(path, text, "utf8");
   return { note: sourceOf(root, path, text), created: false, changed: true, significant: Boolean(significant) };
 }
