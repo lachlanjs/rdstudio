@@ -9,13 +9,14 @@
 //   seen            the note was opened
 //   mark            the reader marked it: state discovered, processed or understood
 //   exercise        an interactive exercise: exercise, result got | partly | missed
+//                   (recall and gap are evidence of understanding; placement
+//                   and landmarks are practice, recorded but not evidence)
 //   explain         an explain-back answer, waiting to be marked: answer, question?
 //   explain_marked  an agent marked one: ref (the explain event's id), result, feedback
 //   question        an agent set an explain-back question: question
 //   tour_step       a stop of a tour was reached: tour, stop
 
 import MarkdownIt from "markdown-it";
-import type { LearnerEvent } from "./record.ts";
 import { strip } from "./text.ts";
 
 export const STATES = ["undiscovered", "discovered", "processed", "understood"] as const;
@@ -39,7 +40,14 @@ export interface NoteState {
   at: string | null;
 }
 
+/** An event as read from a record (its id is not needed here). */
+type LearnerEvent = Record<string, unknown>;
+
 const rank = (s: Discovery): number => STATES.indexOf(s);
+/** Exercises whose right answer counts as evidence that a note is understood,
+ *  and that schedule its next review. */
+export const EVIDENCE = new Set(["recall", "gap"]);
+const evidence = (e: LearnerEvent): boolean => e.event === "explain_marked" || (e.event === "exercise" && EVIDENCE.has(String(e.exercise)));
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 
 /** Each note's discovery state. Opening a note discovers it; marking sets the
@@ -59,7 +67,7 @@ export function discoveryStates(events: readonly LearnerEvent[], notes: Iterable
     };
     if (e.event === "seen") reach("discovered", null);
     else if (e.event === "mark" && (STATES as readonly unknown[]).includes(e.state)) reach(e.state as Discovery, "autodidactic", true);
-    else if ((e.event === "exercise" || e.event === "explain_marked") && e.result === "got") reach("understood", e.event === "exercise" ? "interactive" : "ai");
+    else if (evidence(e) && e.result === "got") reach("understood", e.event === "exercise" ? "interactive" : "ai");
     else if (s.state === "undiscovered" && (e.event === "exercise" || e.event === "explain" || e.event === "tour_step")) reach("discovered", null);
   }
   const current = new Map([...notes].map((n) => [n.id, n.hash]));
@@ -110,7 +118,7 @@ export function reviewSchedule(events: readonly LearnerEvent[], notes: Iterable<
     if (e.event === "mark") {
       if (e.state === "processed" || e.state === "understood") { if (!r) out.set(id, { id, box: 0, due: at + DAY, last: null }); }
       else out.delete(id); // marked back down: out of review
-    } else if ((e.event === "exercise" || e.event === "explain_marked") && (RESULTS as readonly unknown[]).includes(e.result)) {
+    } else if (evidence(e) && (RESULTS as readonly unknown[]).includes(e.result)) {
       const box = e.result === "got" ? Math.min((r?.box ?? -1) + 1, INTERVALS.length - 1) : e.result === "partly" ? Math.max(r?.box ?? 0, 0) : 0;
       out.set(id, { id, box, due: at + INTERVALS[box]! * DAY, last: str(e.at) });
     }

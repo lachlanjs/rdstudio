@@ -5,6 +5,8 @@ folder (never the user's own). Run with: mise run e2e
 
 Tours (T25): a shared Tour note kept off the map, followed stop by stop; a
 tour of your own written, followed and published.
+Exercises (T26): recall with a self-grade, fill the gap, placement and the
+landmarks, each answer an event in the record.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from pathlib import Path
@@ -56,6 +58,12 @@ def record_dir():
     found = list((TMP / "data/rdstudio/learners").glob("*/record.jsonl"))
     return found[0].parent if found else None
 
+def settle(name, count, timeout=3.0):
+    """Wait until the record holds `count` events named `name` (the page writes them in the background)."""
+    end = time.time() + timeout
+    while time.time() < end and len(events(name)) < count:
+        time.sleep(0.05)
+
 def events(name=None):
     d = record_dir()
     if not d:
@@ -104,7 +112,7 @@ with sync_playwright() as pw:
     p.keyboard.press("ArrowRight")
     expect(card.locator(".tour-stop")).to_have_text("Smooth maps and diffeomorphisms")
     check("Next and the arrow keys step through the stops", card.get_by_role("button", name="Finish").is_visible())
-    p.wait_for_timeout(500)
+    settle("tour_step", 3)
     steps = events("tour_step")
     check("reaching each stop is recorded as an interactive task",
           [e.get("stop") for e in steps] == [0, 1, 2] and all(e["kind"] == "interactive" and e["tour"] == "tours/first-steps" for e in steps)
@@ -147,6 +155,61 @@ with sync_playwright() as pw:
     check("publishing makes it a Tour note in the project and removes your copy",
           published.exists() and "type: Tour" in published.read_text() and not saved.exists())
 
+    # -------------------------------------------------------- exercises (T26)
+    p.goto(URL + "?nosw#/practice")
+    p.locator(".practice-list li").first.wait_for()
+    check("Practice lists the four exercises", p.locator(".practice-list li").count() == 4)
+    p.get_by_label("Notes from").select_option("manifolds")
+    p.get_by_role("link", name="Recall").click()
+    p.wait_for_url("**#/practice/recall/manifolds")
+    card = p.locator(".practice-card")
+    first = card.locator("h2").inner_text()
+    p.get_by_role("button", name="Show the note").click()
+    check("recall shows the note's description to check against", card.locator(".practice-answer").is_visible())
+    p.get_by_role("button", name="Got it").click()
+    expect(p.locator(".practice-progress")).to_have_text("2 of up to 10")
+    settle("exercise", 1)
+    rec = [e for e in events("exercise") if e["exercise"] == "recall"]
+    check("a recall is recorded with its self-grade, as interactive",
+          len(rec) == 1 and rec[0]["result"] == "got" and rec[0]["kind"] == "interactive" and rec[0]["concept"].startswith("manifolds/")
+          and card.locator("h2").inner_text() != first, rec)
+
+    p.goto(URL + "?nosw#/practice/gap/manifolds")
+    card = p.locator(".practice-card")
+    check("fill the gap gives the folder and the links as clues", "is hidden" in card.inner_text() and ("links to" in card.inner_text() or "linked from" in card.inner_text()))
+    options = card.locator(".practice-options button")
+    check("…and four notes to choose among", options.count() == 4, options.count())
+    options.first.click()
+    verdict = card.locator(".practice-verdict").inner_text()
+    settle("exercise", 2)
+    gap = [e for e in events("exercise") if e["exercise"] == "gap"]
+    check("the answer is checked, shown, and recorded", card.locator(".practice-options .right").count() == 1
+          and len(gap) == 1 and gap[0]["result"] == ("got" if verdict.startswith("Right") else "missed"), (verdict, gap))
+    p.get_by_role("button", name="Next").click()
+    expect(p.locator(".practice-progress")).to_have_text("2 of up to 10")
+
+    p.goto(URL + "?nosw#/practice/placement")
+    card = p.locator(".practice-card")
+    card.locator(".practice-options button").first.click()
+    expect(card.locator(".practice-verdict")).to_be_visible()
+    settle("exercise", 3)
+    check("placement asks for the folder and checks it", len([e for e in events("exercise") if e["exercise"] == "placement"]) == 1)
+
+    p.goto(URL + "?nosw#/practice/landmarks/manifolds")
+    marked = sorted(str(f.relative_to(ROOT / "knowledge"))[:-3] for f in (ROOT / "knowledge/manifolds").rglob("*.md") if "\nlandmark: true\n" in f.read_text())
+    check("landmarks: the notes marked as landmarks", "marked as landmarks" in p.locator(".lede").inner_text() and f"are {len(marked)}" in p.locator(".lede").inner_text(), p.locator(".lede").inner_text())
+    box = p.get_by_label("A landmark's name")
+    box.fill("smooth manifold"); box.press("Enter")
+    box.fill("Vector bundles"); box.press("Enter")  # a slip is allowed
+    box.fill("Topology"); box.press("Enter")
+    check("names are matched, allowing a slip", p.get_by_text(f"2 of {len(marked)} named").is_visible() and "not one of them" in p.locator(".edit-status").inner_text())
+    p.get_by_role("button", name="Show the rest").click()
+    settle("exercise", 3 + len(marked))
+    lm = {e["concept"]: e["result"] for e in events("exercise") if e["exercise"] == "landmarks"}
+    check("each landmark is recorded, named or not", sorted(lm) == marked and lm["manifolds/smooth-manifold"] == "got"
+          and lm["manifolds/bundles/vector-bundle"] == "got" and list(lm.values()).count("missed") == len(marked) - 2, lm)
+    p.screenshot(path=str(OUT / "learn-practice.png"))
+
     # ----------------------------------------------------------------- phone
     ctx.close()
     ctx, p = page_for(viewport={"width": 390, "height": 800}, device_scale_factor=2, is_mobile=True, has_touch=True)
@@ -160,6 +223,12 @@ with sync_playwright() as pw:
     card.get_by_role("button", name="Next").tap()
     expect(card.locator(".tour-stop")).to_have_text("Charts and atlases")
     check("tapping Next steps on", True)
+    p.goto(URL + "?nosw#/practice/gap")
+    expect(p.locator(".practice-card")).to_be_visible()
+    check("exercises fit a phone with no sideways scrolling", p.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+    p.locator(".practice-options button").first.tap()
+    check("…and answer with a tap", p.locator(".practice-verdict").is_visible())
+    p.screenshot(path=str(OUT / "learn-practice-phone.png"))
 
     browser.close()
 

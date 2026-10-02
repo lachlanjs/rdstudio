@@ -31,6 +31,9 @@
   {:else}
     <p class="empty">No links are rated requires yet, so there is no order to give. Rate a link by giving it the title "requires", as in [Topology](/topology.md "requires").</p>
   {/if}
+  <h2 class="section-h">Practice</h2>
+  <p class="section-note">Short rounds of exercises, checked here: recall with a self-grade, fill the gap, placement, and naming the landmarks.</p>
+  <p><a class="toggle" href="#/practice">Practise</a></p>
   <h2 class="section-h">Tours</h2>
   <p class="section-note">Walks through the notes in a chosen order, with a sentence at each stop. Following one shows its route on the map. Tours are kept off the map and graph.</p>
   {#if shared.length}

@@ -14,6 +14,7 @@ test("discovery: opening discovers, marking sets the state up or down, evidence 
     ev("mark", { concept: "b", hash: "old", state: "processed" }),
     ev("exercise", { concept: "c", hash: "h3", result: "got", exercise: "recall" }),
     ev("seen", { concept: "gone", hash: "x" }),
+    ev("exercise", { concept: "a", hash: "h1", result: "got", exercise: "placement" }), // practice, not evidence
   ];
   const s = discoveryStates(events, notes);
   expect(s.get("a")).toMatchObject({ state: "understood", kind: "autodidactic", changed: false });
@@ -22,6 +23,8 @@ test("discovery: opening discovers, marking sets the state up or down, evidence 
   expect(s.has("gone")).toBe(false);
   const down = discoveryStates([...events, ev("mark", { concept: "a", hash: "h1", state: "discovered" })], notes);
   expect(down.get("a")!.state).toBe("discovered");
+  const placed = discoveryStates([ev("exercise", { concept: "b", hash: "h2", result: "got", exercise: "placement" })], notes);
+  expect(placed.get("b")!.state).toBe("discovered");
   expect(coverage(s, ["a", "b", "c"])).toEqual({ undiscovered: 0, discovered: 0, processed: 1, understood: 2, total: 3 });
 });
 
@@ -30,10 +33,11 @@ test("spaced review: boxes move with results; the queue is capped", () => {
   const iso = (d: number) => new Date(t0 + d * day).toISOString();
   const events = [
     ev("mark", { concept: "a", state: "processed" }, iso(0)),
-    ev("exercise", { concept: "b", result: "got" }, iso(0)),
-    ev("exercise", { concept: "b", result: "got" }, iso(1)),
-    ev("exercise", { concept: "c", result: "got" }, iso(0)),
-    ev("exercise", { concept: "c", result: "missed" }, iso(2)),
+    ev("exercise", { concept: "b", result: "got", exercise: "recall" }, iso(0)),
+    ev("exercise", { concept: "b", result: "got", exercise: "gap" }, iso(1)),
+    ev("exercise", { concept: "c", result: "got", exercise: "recall" }, iso(0)),
+    ev("exercise", { concept: "c", result: "missed", exercise: "recall" }, iso(2)),
+    ev("exercise", { concept: "c", result: "got", exercise: "placement" }, iso(2)),
   ];
   const s = reviewSchedule(events, notes);
   expect(s.get("a")).toMatchObject({ box: 0, due: t0 + day });
