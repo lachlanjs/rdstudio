@@ -46,4 +46,9 @@
       {graphReset ? "Graph reset. It lays out afresh after a reload." : "Reset graph layout and options"}
     </button>
   </div>
+
+  {#if !store.site.static}
+    <h2 class="section-h">Teacher</h2>
+    <p class="section-note">How the agent teaches you in this project: its profile, and the skills it follows. <a href="#/teacher">Open the teacher</a>.</p>
+  {/if}
 </div>

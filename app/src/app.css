@@ -909,3 +909,69 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .catch-diff .d-hunk { color: var(--ink-faint); background: var(--paper-sunk); }
 .catch-diff .d-same { color: var(--ink-faint); }
 .stale-note { color: var(--stale); }
+
+/* ------------------------------------------------------------ teacher */
+
+.teacher h1 .chip { vertical-align: middle; margin-left: 8px; }
+.chip.skill-changed, .chip.skill-own { background: var(--accent-soft); color: var(--ink); }
+.chip.stale-note { background: transparent; border: 1px solid currentColor; line-height: 18px; }
+.teacher-skills li .chip { margin: 0 0 0 8px; }
+.teacher-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 4px; }
+.teacher-editor {
+  display: block; width: 100%; min-height: 60vh; box-sizing: border-box; padding: 12px 14px; resize: vertical;
+  font: 14px/1.55 var(--font-mono); color: var(--ink); background: var(--paper); tab-size: 2;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.teacher-editor:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.teacher-history { list-style: none; padding: 0; margin: 0; font-size: 14px; color: var(--ink-soft); }
+.teacher-history li { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+.teacher-history time { color: var(--ink-faint); margin-right: 8px; }
+.teacher-link { margin-top: 28px; }
+
+/* ------------------------------------------------------------ goals and exercises */
+
+.exercise { margin-top: 4px; }
+.exercise-status { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 14px; font: 14px/1.5 var(--font-ui); color: var(--ink-soft); }
+.exercise-status .chip { margin: 0; }
+.chip.ex-passed { background: color-mix(in srgb, var(--reviewed) 18%, transparent); color: var(--ink); }
+.chip.ex-waiting { background: var(--accent-soft); color: var(--ink); }
+.chip.ex-missed, .chip.ex-partly { background: color-mix(in srgb, var(--stale) 14%, transparent); color: var(--ink); }
+.exercise-answer { margin: 22px 0 8px; padding: 14px 16px 6px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); font-family: var(--font-ui); }
+.exercise-answer h2 { font: 700 16px/1.3 var(--font-ui); margin: 0 0 10px; }
+.exercise-answer textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; font: 15px/1.55 var(--font-ui); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); resize: vertical; }
+.exercise-preview { padding: 4px 12px; border: 1px dashed var(--rule); border-radius: var(--radius); background: var(--paper); min-height: 120px; }
+.exercise-choices { display: grid; gap: 6px; }
+.exercise-choice { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); cursor: pointer; }
+.exercise-choice.on { border-color: var(--accent); }
+.exercise-choice input { margin-top: 5px; accent-color: var(--accent); }
+.exercise-choice .choice-text > :first-child { margin-top: 0; }
+.exercise-choice .choice-text > :last-child { margin-bottom: 0; }
+.exercise-value { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.exercise-value .section-note { flex-basis: 100%; margin: 0; }
+.exercise-value input { font: 16px var(--font-mono); padding: 6px 10px; width: min(220px, 100%); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); }
+.exercise-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 14px 0 4px; }
+.exercise-verdict { font-weight: 700; margin: 0 0 6px; }
+.exercise-verdict.got { color: var(--reviewed); }
+.exercise-verdict.missed, .exercise-verdict.partly { color: var(--stale); }
+.exercise-answer blockquote { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--rule); }
+.exercise-attempts blockquote .prose { font-size: 15px; }
+.goal-panel { margin-top: 28px; }
+.goal-panel h3 { font: 700 15px/1.3 var(--font-ui); margin: 20px 0 8px; }
+.goal-bar { max-width: 420px; margin: 6px 0 4px; }
+.goal-exercises .chip { margin: 0 0 0 8px; }
+.goal-notes { padding-left: 1.6em; font: 15px/1.6 var(--font-ui); }
+.goal-notes .goal-state { color: var(--ink-faint); margin-left: 8px; font-size: 13.5px; }
+.goal-notes .st-understood > a { font-weight: 700; }
+.goal-notes .st-undiscovered > a { color: var(--ink-soft); }
+.rows.goals .chip, .written-exercises .chip { margin: 0 0 0 8px; vertical-align: 2px; }
+.exercise-answer blockquote .prose > :last-child, .exercise-attempts blockquote .prose > :last-child { margin-bottom: 0; }
+.exercise-answer blockquote .prose > :first-child, .exercise-attempts blockquote .prose > :first-child { margin-top: 0; }
+.teacher-file { padding: 2px 18px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); }
+.teacher-file .prose h1 { font-size: 1.25em; margin-top: 18px; }
+.teacher-sources > summary { cursor: pointer; color: var(--ink-soft); font: 14.5px var(--font-ui); margin-bottom: 10px; }
+.ev-ref { display: inline-block; font: 12.5px/1.5 var(--font-ui); padding: 0 7px; margin: 0 2px; border-radius: 9px; background: var(--paper-sunk); color: var(--ink-soft); text-decoration: none; vertical-align: 1px; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-ref:hover { color: var(--accent); }
+.ev-ref.r-got { background: color-mix(in srgb, var(--reviewed) 16%, transparent); }
+.ev-ref.r-missed, .ev-ref.r-partly { background: color-mix(in srgb, var(--stale) 13%, transparent); }
+.ev-ref.missing { opacity: .6; }
+.evidence-answer { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--rule); }

@@ -68,3 +68,42 @@ test("an agent reads the state, sets a question and marks an answer", async () =
   expect(learner.events(cfg).at(-1)).toMatchObject({ id: ref, event: "explain", concept: "forms/orientation", via: "harness" });
   expect(JSON.parse(await call("explain_pending"))[0].ref).toBe(ref);
 });
+
+test("an agent records, lists and marks answers to exercises; goals are in the state", async () => {
+  const { cfg, call } = await connect(true);
+  const k = join(cfg.root, "knowledge");
+  writeFileSync(join(k, "forms", "goal.md"), "---\ntype: Goal\ntitle: Use Stokes\n---\n\nApply [Stokes](stokes.md \"requires\").\n");
+  writeFileSync(join(k, "forms", "ex1.md"), "---\ntype: Exercise\ntitle: Boundary of a disc\ntests: [stokes.md]\ngoals: [/forms/goal.md]\n---\n\nWhat is the boundary of a disc?\n\n# Solution\n\nA circle.\n");
+  writeFileSync(join(k, "forms", "ex2.md"), "---\ntype: Exercise\ntitle: Two\ngoals: [goal.md]\nanswer: { kind: value, value: 2 }\n---\n\nOne plus one.\n");
+
+  const before = JSON.parse(await call("learner_state"));
+  expect(before.goals).toEqual([{ id: "forms/goal", title: "Use Stokes", met: false, exercises: { "forms/ex1": "untried", "forms/ex2": "untried" },
+    notes: { undiscovered: 1, discovered: 0, processed: 0, understood: 0, total: 1 } }]);
+  expect(before.by_folder.forms.total).toBe(2); // goals and exercises are not notes to cover
+
+  expect(await call("exercise_record", { id: "forms/stokes", answer: "x" })).toMatch(/not an Exercise note/);
+  expect(await call("exercise_record", { id: "forms/ex1", answer: " " })).toMatch(/An answer is needed/);
+  const rec = JSON.parse(await call("exercise_record", { id: "forms/ex1", answer: "A circle, its rim." }));
+  expect(rec).toMatchObject({ exercise: "forms/ex1", tests: ["forms/stokes"] });
+  const pending = JSON.parse(await call("exercise_pending"));
+  expect(pending).toEqual([{ ref: rec.ref, exercise: "forms/ex1", title: "Boundary of a disc", tests: ["forms/stokes"], answer: "A circle, its rim.",
+    at: expect.any(String), notes_changed_since: [] }]);
+  expect(await call("exercise_mark", { ref: rec.ref, result: "got", feedback: " " })).toMatch(/Feedback is needed/);
+  expect(JSON.parse(await call("exercise_mark", { ref: rec.ref, result: "got", feedback: "Right: the circle bounds it.", actor: "agent/test" }))).toMatchObject({ marked: rec.ref, result: "got" });
+  expect(await call("exercise_mark", { ref: rec.ref, result: "got", feedback: "Again." })).toMatch(/already marked \(got, agent\/test\)/);
+  expect(await call("exercise_pending")).toBe("No exercise answers are waiting.");
+
+  // The developer checks the value one in the dashboard.
+  learner.append(cfg, { event: "attempt", exercise: "forms/ex2", tests: [], answer: "2", result: "got", by: "dashboard", kind: "interactive" });
+  const after = JSON.parse(await call("learner_state"));
+  expect(after.goals[0]).toMatchObject({ met: true, exercises: { "forms/ex1": "passed", "forms/ex2": "passed" }, notes: { understood: 1 } });
+  expect(JSON.parse(await call("learner_state", { id: "forms/stokes" }))).toMatchObject({ state: "understood", by: "ai" });
+});
+
+test("recording an Exercise note warns about answer settings the dashboard cannot use", async () => {
+  const { call } = await connect(false);
+  const out = JSON.parse(await call("record", { id: "forms/ex3", type: "Exercise", title: "Three", description: "d", body: "One plus two?\n", meta: { answer: { kind: "value" } } }));
+  expect(out.issues).toEqual(["warning: answer: a value exercise needs a number as its value", "warning: an Exercise note should end with a Solution section (a heading named Solution)"]);
+  const ok = JSON.parse(await call("record", { id: "forms/ex4", type: "Exercise", title: "Four", description: "d", body: "Two plus two?\n\n## Solution\n\n4.\n", meta: { answer: { kind: "value", value: 4 } } }));
+  expect(ok.issues).toBeUndefined();
+});

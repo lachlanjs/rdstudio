@@ -9,6 +9,8 @@
   import { dueReviews, reviewSchedule } from "@rdstudio/core/learning";
   import { learner, store } from "$lib/data.svelte.ts";
   import { conceptHref } from "$lib/format.ts";
+  import { STATUS_LABEL, exerciseNotes, goalsOf, statusOf, testsOf, tried } from "$lib/exercises.ts";
+  import { understanding } from "$lib/understanding.svelte.ts";
   import {
     EXERCISES, answered, folderLabel, gapItem, landmarks, matchName, notesIn, placementItem, recallItem,
     type Exercise, type GapItem, type PlaceItem, type Result,
@@ -21,6 +23,12 @@
   const pool = $derived(notesIn(folder));
   const info = $derived(EXERCISES.find((e) => e.kind === kind));
   const topFolders = $derived(Object.keys(store.tree).filter((d) => d && !d.includes("/")).sort());
+  // Exercises written as notes: those not passed first, then by title.
+  const written = $derived.by(() => {
+    const all = tried();
+    const rank = { waiting: 0, untried: 1, missed: 2, partly: 3, passed: 4 } as const;
+    return exerciseNotes().map((c) => ({ c, status: statusOf(c.id, all) })).sort((a, b) => rank[a.status] - rank[b.status] || a.c.title.localeCompare(b.c.title));
+  });
   let scope = $state("");
 
   // ---------------------------------------------------------------- a round
@@ -111,8 +119,23 @@
 <div class="page practice">
   {#if !kind}
     <h1>Practice</h1>
-    <p class="lede">Short rounds of exercises, checked here and kept to yourself. Recall and fill the gap count as evidence of understanding; placement and landmarks are practice.</p>
+    <p class="lede">Exercises written for this knowledge base, and short rounds of drills, checked here and kept to yourself.</p>
     {#if !learner.enabled && !store.site.static}<p class="section-note">The learner record is off, so answers are not kept. Turn it on in the Learn tab.</p>{/if}
+    {#if written.length}
+      <h2 class="section-h">Exercises</h2>
+      <p class="section-note">Problems with worked solutions: a choice or a number is checked here; a written answer you mark yourself against the solution, or leave for an agent. A right answer counts as evidence for the notes it tests.</p>
+      <ul class="rows written-exercises">
+        {#each written as { c, status } (c.id)}
+          {@const goals = goalsOf(c)}
+          <li><a class="title" href={conceptHref(c.id)}>{c.title}</a>{#if understanding.on}<span class={["chip", "ex-" + status]}>{STATUS_LABEL[status]}</span>{/if}
+            <div class="sub"><span>tests {testsOf(c).map((t) => store.concepts.get(t)?.title).join(", ") || "no notes named"}</span>{#if goals.length}<span>for {goals.map((g) => store.concepts.get(g)?.title).join(", ")}</span>{/if}</div></li>
+        {/each}
+      </ul>
+      <h2 class="section-h">Drills</h2>
+      <p class="section-note">Built from the notes themselves. Recall and fill the gap count as evidence of understanding; placement and landmarks are practice.</p>
+    {:else}
+      <p class="section-note">Recall and fill the gap count as evidence of understanding; placement and landmarks are practice. Exercises written as notes (type Exercise) are listed here too.</p>
+    {/if}
     <label class="practice-scope">Notes from
       <select bind:value={scope}>
         <option value="">everywhere</option>

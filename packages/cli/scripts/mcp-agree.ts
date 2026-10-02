@@ -158,7 +158,7 @@ const nd = await session("node", [join(REPO, "packages", "cli", "src", "main.ts"
 const diffs: string[] = [];
 // Tools added after the port, to the Node server only: the Python server is
 // kept as it was until it is retired (design/platform.md).
-const NODE_ONLY = new Set(["learner_state", "explain_question", "explain_pending", "explain_record", "explain_mark"]);
+const NODE_ONLY = new Set(["learner_state", "explain_question", "explain_pending", "explain_record", "explain_mark", "teacher_skills", "teacher_skill", "exercise_pending", "exercise_record", "exercise_mark", "teacher_read", "teacher_write", "learner_events"]);
 const toolNames = (t: typeof py.tools) => t.filter((x) => !NODE_ONLY.has(x.name)).map((x) => x.name).join(", ");
 if (toolNames(py.tools) !== toolNames(nd.tools)) diffs.push(`tools: ${toolNames(py.tools)}\n  vs   ${toolNames(nd.tools)}`);
 for (const t of py.tools) {

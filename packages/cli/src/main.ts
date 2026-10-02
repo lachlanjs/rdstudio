@@ -15,6 +15,7 @@ import { brief } from "./brief.ts";
 import * as refs from "./references.ts";
 import { runServer } from "./mcp.ts";
 import { init } from "./scaffold.ts";
+import * as teacher from "./teacher.ts";
 import { ScopeError, globalConfig, initGlobal, moveSkill, promote, skillDirs } from "./scopes.ts";
 import { StoreError, verify } from "./store.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
@@ -42,10 +43,15 @@ const PENDING: string[] = [];
 const COMMANDS: Record<string, Command> = {
   init: {
     help: "scaffold rdstudio into a repository",
-    usage: "[path] [--title TITLE] [--human HUMAN] [--force]",
-    options: { title: { type: "string" }, human: { type: "string" }, force: { type: "boolean" } },
+    usage: "[path] [--title TITLE] [--human HUMAN] [--profile {topic,codebase,project}] [--force]",
+    options: { title: { type: "string" }, human: { type: "string" }, profile: { type: "string" }, force: { type: "boolean" } },
     run(_cfg, v, [path = "."]) {
+      const p = v.profile as string | undefined;
+      if (p !== undefined && !(teacher.PROFILES as readonly string[]).includes(p)) {
+        return usageError("init", `argument --profile: invalid choice: ${pyRepr(p)} (choose from ${teacher.PROFILES.map((x) => `'${x}'`).join(", ")})`);
+      }
       for (const line of init(path, { title: v.title as string | undefined, human: v.human as string | undefined, force: Boolean(v.force) })) console.log(line);
+      if (p) console.log(`teacher profile: ${teacher.setProfile(loadConfig(path), p)}`);
       return 0;
     },
   },
@@ -144,6 +150,34 @@ const COMMANDS: Record<string, Command> = {
         console.log(`${at}  ${String(event).padEnd(10)} ${concept || ""}  ${Object.keys(rest).length ? pyDumps(rest) : ""}`);
       }
       return 0;
+    },
+  },
+
+  teacher: {
+    help: "the teacher: its profile, its skills (and which you customised), where it keeps them",
+    usage: "[where|profile [topic|codebase|project]|skills]",
+    run(cfg, _v, [action = "where", arg]) {
+      if (action === "where") {
+        const p = teacher.profile(cfg);
+        console.log(`profile: ${p.profile}${p.set ? "" : ` (guessed; set it with rdstudio teacher profile ${teacher.PROFILES.join("|")})`}`);
+        console.log(`folder:  ${teacher.teacherDir(cfg)}`);
+        console.log(`skills:  ${teacher.skills(cfg).map((s) => s.name + (s.status === "default" ? "" : ` (${s.status})`)).join(", ")}`);
+        return 0;
+      }
+      if (action === "profile") {
+        if (!arg) { console.log(teacher.profile(cfg).profile); return 0; }
+        if (!(teacher.PROFILES as readonly string[]).includes(arg)) {
+          return usageError("teacher", `invalid profile: ${pyRepr(arg)} (choose from ${teacher.PROFILES.map((x) => `'${x}'`).join(", ")})`);
+        }
+        if (!cfg.isProject) { console.log("not in an rdstudio project"); return 1; }
+        console.log(`teacher profile: ${teacher.setProfile(cfg, arg)}`);
+        return 0;
+      }
+      if (action === "skills") {
+        for (const s of teacher.skills(cfg)) console.log(`${s.name.padEnd(16)} ${s.status.padEnd(8)} ${s.defaultChanged ? "(default changed since) " : ""}${s.description}`);
+        return 0;
+      }
+      return usageError("teacher", `argument action: invalid choice: ${pyRepr(action)} (choose from 'where', 'profile', 'skills')`);
     },
   },
 

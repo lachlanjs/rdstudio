@@ -4,7 +4,7 @@
   // learner record; published, it becomes a Tour note in the project.
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { tourBody } from "@rdstudio/core/learning";
+  import { isStudyNote, tourBody } from "@rdstudio/core/learning";
   import { learner, store } from "$lib/data.svelte.ts";
   import { createNote, editing, slug } from "$lib/edit.svelte.ts";
   import { conceptHref } from "$lib/format.ts";
@@ -15,7 +15,7 @@
 
   // Notes to choose from, by title; a title shared by two notes says its folder.
   const choices = $derived.by(() => {
-    const notes = [...store.concepts.values()].filter((c) => c.type !== "Tour");
+    const notes = [...store.concepts.values()].filter(isStudyNote);
     const count = new Map<string, number>();
     for (const c of notes) count.set(c.title, (count.get(c.title) ?? 0) + 1);
     const byLabel = new Map<string, string>();

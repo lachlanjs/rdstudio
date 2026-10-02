@@ -14,6 +14,9 @@
   import { tourHref } from "$lib/tours.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
   import ExplainBack from "./ExplainBack.svelte";
+  import ExerciseView from "./ExerciseView.svelte";
+  import GoalPanel from "./GoalPanel.svelte";
+  import { isStudyNote } from "@rdstudio/core/learning";
   import CatchUp from "./CatchUp.svelte";
   import { lastLooks } from "$lib/catchup.ts";
 
@@ -93,8 +96,13 @@
           {#if understanding.on}<CatchUp {c} {look} />{/if}
           {#if c.type === "Tour"}<p class="tour-follow"><a class="toggle primary" href={tourHref(c.id)}>Follow this tour</a></p>{/if}
         </header>
-        {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
-        {#if understanding.on && c.type !== "Tour"}<ExplainBack {c} />{/if}
+        {#if c.type === "Exercise"}
+          {#await body then text}<ExerciseView {c} body={text} />{/await}
+        {:else}
+          {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
+        {/if}
+        {#if c.type === "Goal"}<GoalPanel {c} />{/if}
+        {#if understanding.on && isStudyNote(c)}<ExplainBack {c} />{/if}
       </article>
     {/if}
     {#snippet meta()}{#if session}<EditDetails {session} />{:else}<MetaPanel {c} />{/if}{/snippet}

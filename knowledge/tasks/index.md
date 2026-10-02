@@ -46,3 +46,8 @@
 * [T40 — Tauri desktop app](T40-tauri-desktop.md) - A desktop app with the UI and core bundled in the webview, released through CI with signed updates.
 * [T41 — Local-first sync](T41-local-first-sync.md) - Delta updates, derivation on the device, git and home-server sync, and learner record merging.
 * [T42 — Mobile apps](T42-mobile-apps.md) - Android then iOS builds of the Tauri app, edits with merging, and several projects per device.
+* [T43 — Teacher foundation](T43-teacher-foundation.md) - The private teacher folder as a git repository beside the learner record, the default skills served through MCP with profiles and overrides, and the Teacher page with its Skills section.
+* [T44 — Goals and exercises](T44-goals-and-exercises.md) - Goal and Exercise notes, shared or private; choice, value and text answers; marking by the dashboard, by yourself against the solution, or by an agent; coverage per goal.
+* [T45 — Profile, sources and the default skills](T45-profile-and-skills.md) - The evidence-linked learner profile and the sources log, shown on the Teacher page, and first versions of the assess, map, source, exercise, next and review-changes skills.
+* [T46 — Trial: dynamical mean-field theory](T46-dmft-trial.md) - Learn the DMFT of random neural networks from first principles to Clark and Abbott's theory of coupled neuronal-synaptic dynamics, in a separate repository, using the teacher throughout.
+* [T47 — Mounting a shared knowledge base](T47-mounts.md) - A personal repository that reads a team's knowledge base read-only underneath its own notes, links into it, follows its history, and promotes notes up to it as proposals.

@@ -9,4 +9,5 @@
 * [Dashboard design](dashboard-design.md) - Visual tokens and layout rules for the dashboard, and why they were chosen.
 * [Map view](map-view.md) - Criteria and design for the nested map of a knowledge base, where folders are regions and links are drawn at the scale they belong to.
 * [Platform, performance and deployment](platform.md) - Scope for making rdstudio fast on every device: local-first data, a GPU map renderer, a Tauri app, and one TypeScript core shared by the web, desktop, mobile, command line and MCP server.
+* [Teacher](teacher.md) - The agent's side of learning, kept apart from the knowledge base: skills served through MCP, goals, exercises with solutions, the sources log and an evidence-linked profile of the learner, in a private folder beside the learner record.
 * [Understanding layer](understanding-layer.md) - How the understanding features are built: three kinds of task, a private learner record, tours kept off the map, and the order of work.

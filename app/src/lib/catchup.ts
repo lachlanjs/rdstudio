@@ -4,6 +4,7 @@
 // understood whose prerequisites have changed since.
 
 import type { ConceptRecord } from "@rdstudio/core";
+import { isStudyNote } from "@rdstudio/core/learning";
 import { getApiHistoryById } from "./api/sdk.gen.ts";
 import type { NoteHistory } from "./api/types.gen.ts";
 import { learner, store } from "./data.svelte.ts";
@@ -36,7 +37,7 @@ export function changedSince(): { c: ConceptRecord; look: Look }[] {
   const out: { c: ConceptRecord; look: Look }[] = [];
   for (const [id, look] of lastLooks()) {
     const c = store.concepts.get(id);
-    if (c && c.type !== "Tour" && c.hash !== look.hash) out.push({ c, look });
+    if (c && isStudyNote(c) && c.hash !== look.hash) out.push({ c, look });
   }
   return out.sort((a, b) => rank(a.c.id) - rank(b.c.id) || (a.look.at < b.look.at ? 1 : -1));
 }

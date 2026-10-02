@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
-import { coverage, discoveryStates, dueReviews, loadNote, reviewSchedule, studyLoad, tourBody, tourStops, type LearnerEvent } from "../src/index.ts";
+import {
+  answerSpec, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, parseNumber, refId, refIds, requiresClosure,
+  reviewSchedule, splitSolution, studyLoad, tourBody, tourStops, type AnswerSpec, type LearnerEvent,
+} from "../src/index.ts";
+
+const DAY = 86_400_000;
 
 let n = 0;
 const ev = (event: string, rest: Record<string, unknown>, at = "2026-10-01T10:00:00Z"): LearnerEvent => ({ id: String(n++).padStart(26, "0"), at, event, ...rest });
@@ -79,4 +84,121 @@ test("tours: each outer list item's first link is a stop, the rest its narration
   const written = tourBody([{ title: "A [b]", href: "/a.md", text: "first\nstop" }, { title: "C", href: "/c.md", text: "" }], "Why.");
   expect(written).toBe("Why.\n\n1. [A \\[b\\]](/a.md): first stop\n2. [C](/c.md)\n");
   expect(tourStops(written).map((s) => [s.label, s.text])).toEqual([["A [b]", "first stop"], ["C", ""]]);
+});
+
+// ------------------------------------------------------------------ exercises and goals (T44)
+
+test("numbers are read as people type them", () => {
+  expect(parseNumber("0.5")).toBe(0.5);
+  expect(parseNumber(" 1/2 ")).toBe(0.5);
+  expect(parseNumber("−3")).toBe(-3);
+  expect(parseNumber("2×10^3")).toBe(2000);
+  expect(parseNumber("1.5e-3")).toBe(0.0015);
+  expect(parseNumber("1 000")).toBe(1000);
+  expect(parseNumber(".25")).toBe(0.25);
+  expect(parseNumber(7)).toBe(7);
+  for (const bad of ["", "abc", "1/0", "1/2/3", "1,5", "--1", null, Number.NaN]) expect(parseNumber(bad)).toBeNull();
+});
+
+test("an exercise's answer is read from its frontmatter, with what is wrong said", () => {
+  expect(answerSpec({})).toEqual({ kind: "text" });
+  expect(answerSpec({ answer: { kind: "text" } })).toEqual({ kind: "text" });
+  expect(answerSpec({ answer: { kind: "choice", choices: ["a", "b", "c"], correct: 2 } })).toEqual({ kind: "choice", choices: ["a", "b", "c"], correct: [1], multiple: false });
+  expect(answerSpec({ answer: { kind: "choice", choices: ["a", "b", "c"], correct: [3, 1] } })).toMatchObject({ correct: [0, 2], multiple: true });
+  expect(answerSpec({ answer: { kind: "choice", choices: ["a", "b"], correct: 3 } })).toEqual({ error: "correct should be the number of the right choice, 1 to 2" });
+  expect(answerSpec({ answer: { kind: "choice", choices: ["a"], correct: 1 } })).toMatchObject({ error: expect.stringMatching(/two choices/) });
+  expect(answerSpec({ answer: { kind: "value", value: "1/4" } })).toEqual({ kind: "value", value: 0.25, tolerance: 1e-6, relative: true, unit: null });
+  expect(answerSpec({ answer: { kind: "value", value: 0 } })).toEqual({ kind: "value", value: 0, tolerance: 1e-9, relative: false, unit: null });
+  expect(answerSpec({ answer: { kind: "value", value: 2, tolerance: 0.1, unit: "s" } })).toEqual({ kind: "value", value: 2, tolerance: 0.1, relative: false, unit: "s" });
+  expect(answerSpec({ answer: { kind: "value", value: 2, tolerance: -1 } })).toMatchObject({ error: expect.stringMatching(/tolerance/) });
+  expect(answerSpec({ answer: { kind: "value" } })).toMatchObject({ error: expect.stringMatching(/needs a number/) });
+  expect(answerSpec({ answer: { kind: "essay" } })).toMatchObject({ error: expect.stringMatching(/unknown answer kind "essay"/) });
+  expect(answerSpec({ answer: "42" })).toMatchObject({ error: expect.stringMatching(/should be a table/) });
+});
+
+test("choices and values are checked; text is not", () => {
+  const one = answerSpec({ answer: { kind: "choice", choices: ["a", "b", "c"], correct: 2 } }) as AnswerSpec;
+  expect(checkAnswer(one, [1])).toBe("got");
+  expect(checkAnswer(one, [0])).toBe("missed");
+  expect(checkAnswer(one, [1, 2])).toBe("missed");
+  const many = answerSpec({ answer: { kind: "choice", choices: ["a", "b", "c"], correct: [1, 3] } }) as AnswerSpec;
+  expect(checkAnswer(many, [2, 0])).toBe("got");
+  expect(checkAnswer(many, [0])).toBe("missed");
+  const rel = answerSpec({ answer: { kind: "value", value: 1000, tolerance: 0.01, relative: true } }) as AnswerSpec;
+  expect(checkAnswer(rel, "1009")).toBe("got");
+  expect(checkAnswer(rel, "1011")).toBe("missed");
+  expect(checkAnswer(rel, "about a thousand")).toBeNull();
+  const abs = answerSpec({ answer: { kind: "value", value: 0.5, tolerance: 0.1 } }) as AnswerSpec;
+  expect(checkAnswer(abs, "0.6")).toBe("got");
+  expect(checkAnswer(abs, "1/2")).toBe("got");
+  expect(checkAnswer(abs, "0.61")).toBe("missed");
+  expect(checkAnswer({ kind: "text" }, "anything")).toBeNull();
+});
+
+test("an exercise's solution is split off at its heading", () => {
+  const body = "Find $x$.\n\n```md\n# Solution\n```\n\n## Worked solution\n\nIt is $2$.\n\n# Notes\n\nMore.\n";
+  expect(splitSolution(body)).toEqual({ problem: "Find $x$.\n\n```md\n# Solution\n```\n", solution: "It is $2$.\n\n# Notes\n\nMore.\n" });
+  expect(splitSolution("No solution here.\n")).toEqual({ problem: "No solution here.\n", solution: null });
+});
+
+test("links in frontmatter become note ids", () => {
+  expect(refId("/dmft/cavity.md", "exercises")).toBe("dmft/cavity");
+  expect(refId("cavity.md", "dmft")).toBe("dmft/cavity");
+  expect(refId("../dmft/cavity.md#eq-3", "exercises/one")).toBe("exercises/dmft/cavity");
+  expect(refId("../../x.md", "a")).toBeNull();
+  expect(refId(3, "")).toBeNull();
+  expect(refIds(["/a.md", "/a.md", "b"], "d")).toEqual(["a", "d/b"]);
+  expect(refIds("/a.md", "")).toEqual(["a"]);
+});
+
+test("an attempt is evidence for every note it tests, settled there and then or by an agent later", () => {
+  const notes = [{ id: "a", hash: "ha" }, { id: "b", hash: "hb" }, { id: "c", hash: "hc" }];
+  const t = (d: number) => new Date(Date.UTC(2026, 9, d)).toISOString();
+  const events = [
+    { id: "1", event: "attempt", exercise: "ex/one", tests: ["a", "b"], hashes: { a: "ha", b: "old" }, answer: "0.5", result: "got", by: "dashboard", at: t(1) },
+    { id: "2", event: "attempt", exercise: "ex/two", tests: ["c"], hashes: { c: "hc" }, answer: "Because…", at: t(2) },
+  ];
+  let states = discoveryStates(events, notes);
+  expect(states.get("a")).toMatchObject({ state: "understood", kind: "interactive", changed: false });
+  expect(states.get("b")).toMatchObject({ state: "understood", changed: true });
+  expect(states.get("c")).toMatchObject({ state: "discovered" }); // waiting for marking
+  const marked = [...events, { id: "3", event: "attempt_marked", ref: "2", result: "got", feedback: "Right.", by: "agent/x", at: t(3) }];
+  states = discoveryStates(marked, notes);
+  expect(states.get("c")).toMatchObject({ state: "understood", kind: "ai", hash: "hc" });
+  const schedule = reviewSchedule(marked, notes);
+  expect(schedule.get("a")).toMatchObject({ box: 0, due: Date.parse(t(1)) + DAY });
+  expect(schedule.get("c")).toMatchObject({ box: 0, due: Date.parse(t(3)) + DAY });
+  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  expect(studyLoad(marked, Date.parse(t(2)) + 1000, day).today).toBe(1); // the attempt; a marking is not your study
+  expect(studyLoad(marked, Date.parse(t(3)) + 1000, day).today).toBe(0);
+
+  const tried = attempts(marked);
+  expect(tried.get("ex/two")).toEqual([{ id: "2", exercise: "ex/two", at: t(2), answer: "Because…", result: "got", by: "agent/x", feedback: "Right.", gaps: [], gaveUp: false }]);
+  expect(exerciseStatus(tried.get("ex/one"))).toBe("passed");
+  expect(exerciseStatus(attempts(events).get("ex/two"))).toBe("waiting");
+  expect(exerciseStatus(undefined)).toBe("untried");
+  const later = attempts([...marked, { id: "4", event: "attempt", exercise: "ex/one", tests: ["a"], answer: "", result: "missed", by: "self", gave_up: true, at: t(4) }]);
+  expect(exerciseStatus(later.get("ex/one"))).toBe("missed");
+  expect(later.get("ex/one")!.at(-1)).toMatchObject({ gaveUp: true, by: "self" });
+});
+
+test("a goal's progress: the notes it needs, through requires, and its exercises", () => {
+  const req: Record<string, string[]> = { goal: ["c"], c: ["b"], b: ["a"], a: [] };
+  expect(requiresClosure(["c"], (id) => req[id]).sort()).toEqual(["a", "b"]);
+  expect(requiresClosure(["a", "b"], (id) => req[id])).toEqual([]);
+  const notes = ["a", "b", "c"].map((id) => ({ id, hash: "h" }));
+  const events = [{ id: "1", event: "mark", concept: "a", state: "understood", at: "2026-10-01T00:00:00Z" },
+    { id: "2", event: "attempt", exercise: "ex", tests: ["c"], result: "got", by: "self", at: "2026-10-01T00:00:00Z" }];
+  const states = discoveryStates(events, notes);
+  const p = goalProgress(["c"], (id) => req[id], ["ex", "ex2"], states, attempts(events));
+  expect(p.notes.sort()).toEqual(["a", "b", "c"]);
+  expect(p.coverage).toMatchObject({ understood: 2, undiscovered: 1, total: 3 });
+  expect(p.exercises).toEqual([{ id: "ex", status: "passed" }, { id: "ex2", status: "untried" }]);
+  expect(p.met).toBe(false);
+  expect(goalProgress(["c"], (id) => req[id], ["ex"], states, attempts(events)).met).toBe(true);
+  expect(goalProgress(["c"], (id) => req[id], [], states, attempts(events)).met).toBe(false);
+});
+
+test("tours, goals and exercises are kept off the map", () => {
+  expect(["Tour", "Goal", "Exercise", "Definition"].map((type) => isStudyNote({ type }))).toEqual([false, false, false, true]);
 });

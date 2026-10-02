@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  ProcedureError, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
+  LearnerError, ProcedureError, answerSpec, attempts, goalProgress, isStudyNote, refIds, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
   text, type Bundle,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
@@ -22,6 +22,7 @@ import { PyFloat, pyDumps } from "./pyjson.ts";
 import { ScopeError, globalConfig, promote, scoped } from "./scopes.ts";
 import { StoreError, conceptPath, record } from "./store.ts";
 import * as learner from "./learner.ts";
+import * as teacher from "./teacher.ts";
 
 export const INSTRUCTIONS = `Project knowledge base (OKF markdown bundle). Retrieve progressively:
 search -> outline -> read(section). Prefer reading one section over a whole
@@ -176,6 +177,13 @@ not specific to this project, and only when the developer asked for it.`, {
     const b = loadBundle(target.knowledgeDir);
     writeIndexes(b, target.knowledgeDir);
     const issues = b.lint().filter((i) => i.path === result.path).map((i) => `${i.level}: ${i.message}`);
+    // An Exercise note's answer settings, which the dashboard needs to check answers.
+    const written = [...b.concepts.values()].find((c) => c.path === result.path);
+    if (written?.type === "Exercise") {
+      const spec = answerSpec(written.meta);
+      if ("error" in spec) issues.push(`warning: answer: ${spec.error}`);
+      if (!/^#{1,6}\s+(?:worked\s+)?solutions?\s*$/im.test(written.body)) issues.push("warning: an Exercise note should end with a Solution section (a heading named Solution)");
+    }
     return fmt(issues.length ? { ...result, issues } : result);
   });
 
@@ -262,11 +270,18 @@ repeat them.`, { procedure: z.string(), edits: z.array(z.record(z.string(), z.un
   // tailor help, written only to set explain-back questions and to mark
   // answers. Off unless [learner] enabled = true in the user config.
   const LEARNER_OFF = "The learner record is off. The developer turns it on with [learner] enabled = true in ~/.config/rdstudio/config.toml.";
-  const notesOf = (b: Bundle) => [...b.concepts.values()].filter((c) => c.type !== "Tour").map((c) => ({ id: c.id, hash: contentHash(c.body) }));
+  const notesOf = (b: Bundle) => [...b.concepts.values()].filter(isStudyNote).map((c) => ({ id: c.id, hash: contentHash(c.body) }));
   const unmarked = (events: Record<string, unknown>[]) => {
     const marked = new Set(events.filter((e) => e.event === "explain_marked").map((e) => e.ref));
     return events.filter((e) => e.event === "explain" && !marked.has(e.id));
   };
+
+  const requiresOf = (b: Bundle, id: string): string[] => b.requiresGraph().get(id) ?? [];
+  /** Exercise notes, with the notes they test and the goals they serve. */
+  const exercisesOf = (b: Bundle) => [...b.concepts.values()].filter((c) => c.type === "Exercise").map((c) => {
+    const dir = c.id.includes("/") ? c.id.slice(0, c.id.lastIndexOf("/")) : "";
+    return { id: c.id, title: c.title, tests: refIds(c.meta.tests, dir).filter((t) => b.concepts.has(t)), goals: refIds(c.meta.goals, dir) };
+  });
 
   tool("learner_state", `Where the developer stands with the project's knowledge, from their private
 learner record: with an id, that note's state (undiscovered, discovered,
@@ -283,7 +298,7 @@ questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) =>
       if (cid === null) return `No concept ${pyRepr(id)}.`;
       const s = states.get(cid)!, r = schedule.get(cid);
       const recent = events.filter((e) => e.concept === cid).slice(-6)
-        .map((e) => ({ event: e.event, at: e.at, ...(e.result ? { result: e.result } : {}), ...(e.state ? { state: e.state } : {}) }));
+        .map((e) => ({ id: e.id, event: e.event, at: e.at, ...(e.result ? { result: e.result } : {}), ...(e.state ? { state: e.state } : {}) }));
       return fmt({ id: cid, title: b.concepts.get(cid)!.title, state: s.state, changed: s.changed, by: s.kind,
         review: r ? { box: r.box, due: new Date(r.due).toISOString() } : null, recent });
     }
@@ -294,7 +309,14 @@ questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) =>
     }
     const byFolder = Object.fromEntries([...groups].sort(([a], [z]) => cmp(a, z)).map(([f, ids]) => [f, coverage(states, ids)]));
     const { due, more } = dueReviews(schedule, Date.now());
-    return fmt({ by_folder: byFolder, due: due.map((r) => r.id), more_due: more, explain_waiting: unmarked(events).length });
+    const tried = attempts(events);
+    const goals = [...b.concepts.values()].filter((c) => c.type === "Goal").sort((x, y) => cmp(x.id, y.id)).map((g) => {
+      const p = goalProgress(requiresOf(b, g.id), (id) => requiresOf(b, id), exercisesOf(b).filter((e) => e.goals.includes(g.id)).map((e) => e.id), states, tried);
+      return { id: g.id, title: g.title, met: p.met, exercises: Object.fromEntries(p.exercises.map((e) => [e.id, e.status])), notes: p.coverage };
+    });
+    const exerciseWaiting = [...tried.values()].flat().filter((a) => a.result === null).length;
+    return fmt({ by_folder: byFolder, due: due.map((r) => r.id), more_due: more, explain_waiting: unmarked(events).length,
+      ...(goals.length ? { goals } : {}), exercises_waiting: exerciseWaiting });
   });
 
   tool("explain_question", `Set an explain-back question on a note for the developer to answer in their own
@@ -352,6 +374,146 @@ mistaken points, briefly. A "got" counts as evidence the note is understood.`, {
     const e = learner.append(cfg, { event: "explain_marked", ref, concept: answer.concept, hash: answer.hash, result, feedback: feedback.trim(),
       ...(gaps?.length ? { gaps } : {}), kind: "ai", by: actor || cfg.agent });
     return fmt({ marked: ref, result, event: e.id });
+  });
+
+  tool("exercise_pending", `Answers to Exercise notes that wait for marking (the developer chose an agent
+over marking it themselves): each with its ref, the exercise, the notes it
+tests and the answer. Read the exercise (its Solution section) and the notes
+before marking with exercise_mark.`, { limit: z.number().int().default(10) }, ({ limit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle();
+    const waiting = [...attempts(learner.events(cfg)).values()].flat().filter((a) => a.result === null)
+      .sort((x, y) => cmp(x.at, y.at)).slice(0, Math.max(1, Math.min(limit, 50)));
+    if (!waiting.length) return "No exercise answers are waiting.";
+    const raw = new Map(learner.events(cfg).filter((e) => e.event === "attempt").map((e) => [e.id, e]));
+    return fmt(waiting.map((a) => {
+      const e = raw.get(a.id)!;
+      const tests = Array.isArray(e.tests) ? (e.tests as string[]) : [];
+      const hashes = (e.hashes ?? {}) as Record<string, string>;
+      return { ref: a.id, exercise: a.exercise, title: b.concepts.get(a.exercise)?.title ?? null, tests, answer: a.answer, at: a.at,
+        notes_changed_since: tests.filter((t) => b.concepts.has(t) && hashes[t] !== contentHash(b.concepts.get(t)!.body)) };
+    }));
+  });
+
+  tool("exercise_record", `Record the developer's answer to an Exercise note given in this conversation
+(their words or working, unedited), so it can be marked with exercise_mark.
+Returns its ref. For a choice or value exercise, mark it straight after.`, { id: z.string(), answer: z.string() }, ({ id, answer }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle(), cid = b.resolveId(id);
+    if (cid === null) return `No concept ${pyRepr(id)}.`;
+    if (b.concepts.get(cid)!.type !== "Exercise") return `${cid} is not an Exercise note (type: Exercise).`;
+    if (!answer.trim()) return "An answer is needed.";
+    const ex = exercisesOf(b).find((e) => e.id === cid)!;
+    const e = learner.append(cfg, { event: "attempt", exercise: cid, tests: ex.tests,
+      hashes: Object.fromEntries(ex.tests.map((t) => [t, contentHash(b.concepts.get(t)!.body)])), answer: answer.trim(), kind: "ai", via: "harness" });
+    return fmt({ ref: e.id, exercise: cid, tests: ex.tests });
+  });
+
+  tool("exercise_mark", `Mark an answer to an Exercise note (ref from exercise_pending or
+exercise_record) against its Solution section and the notes it tests: result
+"got" (right in substance), "partly" (right but missing or wrong in something
+that matters) or "missed". feedback: two to four sentences to the developer,
+naming what was right and what was missing or wrong, and why it matters,
+without writing the solution out for them again. gaps: the missing or
+mistaken points, briefly. A "got" counts as evidence for every note it tests.`, {
+    ref: z.string(), result: z.enum(RESULTS), feedback: z.string(), gaps: opt(z.array(z.string())), actor: opt(z.string()),
+  }, ({ ref, result, feedback, gaps, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const events = learner.events(cfg);
+    const answer = events.find((e) => e.id === ref && e.event === "attempt");
+    if (!answer) return `No exercise answer ${pyRepr(ref)}.`;
+    const settled = [...attempts(events).values()].flat().find((a) => a.id === ref);
+    if (settled?.result) return `${ref} is already marked (${settled.result}, ${settled.by}).`;
+    if (!feedback.trim()) return "Feedback is needed: what was right, and what was missing.";
+    const e = learner.append(cfg, { event: "attempt_marked", ref, exercise: answer.exercise, result, feedback: feedback.trim(),
+      ...(gaps?.length ? { gaps } : {}), kind: "ai", by: actor || cfg.agent });
+    return fmt({ marked: ref, result, event: e.id });
+  });
+
+  tool("teacher_skills", `The teaching skills: how to assess, map, source, set exercises, plan and
+review for the developer's learning. Lists each with its description,
+whether the developer customised it, and the teacher's profile (topic,
+codebase or project). Read "teach" with teacher_skill first.`, {}, () => {
+    const p = teacher.profile(cfg);
+    return fmt({ profile: p.profile, profile_set: p.set, record: learner.enabled(cfg) ? "on" : "off",
+      skills: teacher.skills(cfg).map((s) => ({ name: s.name, description: s.description, status: s.status })) });
+  });
+
+  tool("teacher_skill", `Read one teaching skill, as the developer has it (customised or rdstudio's
+default), with the profile. Follow it.`, { name: z.string() }, ({ name }) => {
+    try {
+      return teacher.skillForAgent(cfg, name);
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
+  });
+
+  tool("teacher_read", `Read one of the teacher's private files about the developer: "profile.md"
+(what they find easy and hard, how they learn, what to retest; each claim
+citing evidence as [e:<event id>]) or "sources.md" (the research log: what was
+searched, found, chosen or rejected and why). Gives its recent history; with
+developer_edit=true, the developer's own latest edit as a diff, to answer
+(they may dispute a claim). Never quote these to anyone else.`, { name: z.string(), developer_edit: z.boolean().default(false) }, ({ name, developer_edit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    try {
+      const f = teacher.readFile(cfg, name);
+      const edited = f.history.find((h) => h.message === `${f.name}: ${teacher.BY_DEVELOPER}`);
+      const head = `${f.name}: ${f.text === null ? "not written yet" : `${f.text.length} characters`}. ` +
+        `History: ${f.history.length ? f.history.slice(0, 5).map((h) => `${h.at.slice(0, 16)} ${h.message}`).join("; ") : "none"}.` +
+        (edited && !developer_edit ? ` The developer edited it on ${edited.at.slice(0, 10)}: read that with developer_edit=true.` : "");
+      if (developer_edit) {
+        const d = teacher.developerEdit(cfg, f.name);
+        return `${head}\n\n${d ? `The developer's edit of ${d.at}:\n${d.diff}` : "The developer has not edited it."}`;
+      }
+      return f.text === null ? head : `${head}\n\n${f.text}`;
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
+  });
+
+  tool("teacher_write", `Write one of the teacher's private files ("profile.md" or "sources.md"),
+replacing it whole: read it first, and keep what still holds. In the profile,
+every claim cites the events behind it as [e:<event id>] (from learner_events);
+a claim without evidence is not written. Each write is kept in the teacher's
+history, with \`message\` saying what changed.`, { name: z.string(), text: z.string(), message: opt(z.string()), actor: opt(z.string()) }, ({ name, text, message, actor }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    if (!text.trim()) return "Text is needed.";
+    try {
+      const f = teacher.writeFile(cfg, name, text, (message?.trim() || "updated") + ` (${actor || cfg.agent})`);
+      return fmt({ written: f.name, characters: f.text?.length ?? 0 });
+    } catch (err) {
+      if (err instanceof LearnerError) return err.message;
+      throw err;
+    }
+  });
+
+  tool("learner_events", `The developer's learner record as evidence, newest first, each with its id
+(cite one as [e:<id>] in the profile): what they opened, marked, practised,
+explained and answered, with results and feedback. Filter by note or
+exercise id (\`about\`), event names (\`events\`, such as attempt, attempt_marked,
+exercise, explain_marked, mark) and \`since\` (an ISO date).`, {
+    about: opt(z.string()), events: opt(z.array(z.string())), since: opt(z.string()), limit: z.number().int().default(40),
+  }, ({ about, events: names, since, limit }) => {
+    if (!learner.enabled(cfg)) return LEARNER_OFF;
+    const b = bundle();
+    const id = about ? b.resolveId(about) ?? about : null;
+    const all = learner.events(cfg);
+    const attemptsById = new Map(all.filter((e) => e.event === "attempt").map((e) => [e.id, e]));
+    const touches = (e: Record<string, unknown>): boolean => {
+      if (id === null) return true;
+      if (e.concept === id || e.exercise === id) return true;
+      const a = e.event === "attempt" ? e : e.event === "attempt_marked" ? attemptsById.get(e.ref as string) : undefined;
+      return Array.isArray(a?.tests) && (a!.tests as string[]).includes(id);
+    };
+    const out = all.filter((e) => touches(e) && (!names?.length || names.includes(String(e.event))) && (!since || String(e.at) >= since))
+      .slice(-Math.max(1, Math.min(limit, 200))).reverse()
+      .map(({ device: _d, hash: _h, hashes: _hs, ...rest }) => {
+        const c = typeof rest.concept === "string" ? b.concepts.get(rest.concept) : typeof rest.exercise === "string" ? b.concepts.get(rest.exercise) : undefined;
+        return c ? { ...rest, title: c.title } : rest;
+      });
+    return out.length ? fmt(out) : "No events match.";
   });
 
   tool("promote", `Move a project concept into the developer's global knowledge base (for
