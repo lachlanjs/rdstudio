@@ -45,13 +45,28 @@ Choose the kind for what is being checked:
   sparingly ("Variance of a sum of Gaussian-weighted inputs").
 - Wrong choices are the mistakes people actually make, not fillers.
 - A value exercise states the units and the precision wanted.
-- A text exercise says what a full answer covers; its solution is what you
-  will mark against, so make it complete.
+- A text exercise may say how much is wanted ("in a few sentences", "cover
+  both parts"), never what the answer contains. What a full answer covers
+  goes in the Solution section, as a list headed "A full answer covers",
+  which is what you and the developer mark against. Make the solution
+  complete.
+- Define notation on first use, in words: "$J_j \sim \mathcal{N}(0, g^2/N)$,
+  that is, mean $0$ and variance $g^2/N$". A convention the developer has to
+  guess at tests the convention, not the idea.
 - For code, the exercise names the file to write or change and how to run
   it; the solution says what a passing run shows.
 - Each exercise tests a few notes at most (`tests`), and serves the goals it
   checks (`goals`). `record` warns when the answer settings are wrong or the
   Solution section is missing.
+
+Before setting an exercise, read its problem as the developer will, with
+the solution hidden, and check:
+- it does not state, list or strongly hint at the answer: the answer could
+  not be made by rephrasing the question;
+- a choice exercise's right answer is not the longest, most qualified or
+  only technical-sounding choice;
+- it can be answered from the notes it tests and their prerequisites,
+  without guessing at notation.
 
 Write exercises at three depths for a goal: recognising (choice), doing
 (value, short derivations), and transferring (a new situation, explained).

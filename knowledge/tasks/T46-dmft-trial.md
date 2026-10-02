@@ -123,3 +123,20 @@ written to the task, as they are met.
   skills:** `teach` gains "Write maths as maths" (LaTeX between dollar
   signs; plain words in titles and descriptions), and `exercise` gives
   examples.
+
+## 2026-10-02: a question that gave its answer away
+
+- **Finding:** a text exercise ended its problem with "A full answer
+  covers: …", listing the points to be made (the central limit theorem, the
+  variance $g^2 q$, the scalings). The answer was in the question. The
+  `exercise` skill had said "a text exercise says what a full answer
+  covers", and the agent read that as part of the problem.
+  **Fixed in the skill:**
+  - the problem may say how much is wanted, never what the answer contains;
+  - the points go in the Solution as "A full answer covers";
+  - a check before setting: no answer in the question, no telltale right
+    choice, answerable without guessing at notation.
+- **Finding:** the developer was unsure whether
+  $\mathcal{N}(0, g^2/N)$ gives the variance or the standard deviation (it
+  is the variance, as is conventional). **Fixed in the skill:** notation is
+  defined in words on first use in each exercise.
