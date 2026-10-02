@@ -32,3 +32,6 @@ npm-dist/
 app/.svelte-kit/
 src/rdstudio/web/
 # openapi.json and src/lib/api/ are generated (npm run generate) but committed, so builds need no server.
+
+# End-to-end screenshots (mise run e2e)
+.e2e/

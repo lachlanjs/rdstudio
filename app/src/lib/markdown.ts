@@ -79,13 +79,15 @@ md.core.ruler.push("task_lists", (state) => {
 });
 
 // ```mermaid fences become diagram placeholders, drawn by diagrams.ts; until
-// then (or if drawing fails) the source stays readable.
+// then (or if drawing fails) the source stays readable. The source is read
+// from that text, not an attribute: the sanitiser drops attributes holding
+// "-->", which nearly every flowchart has.
 const defaultFence = md.renderer.rules.fence!;
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx]!;
   if (token.info.trim().split(/\s+/)[0]!.toLowerCase() === "mermaid") {
     const src = md.utils.escapeHtml(token.content);
-    return `<div class="mermaid-block" data-src="${src}"><pre class="mermaid-source"><code>${src}</code></pre></div>\n`;
+    return `<div class="mermaid-block"><pre class="mermaid-source"><code>${src}</code></pre></div>\n`;
   }
   return defaultFence(tokens, idx, options, env, self);
 };

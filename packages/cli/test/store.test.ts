@@ -47,3 +47,28 @@ test("sections are replaced up to the next heading of the same level, or appende
   expect(replaceSection(body, "C", "four")).toBe("# A\n\none\n\n## A.1\n\ntwo\n\n# B\n\nthree\n\n# C\n\nfour\n");
   mkdirSync(join(fresh(), "x"));
 });
+
+test("an agent's write changes only the lines of what it changed", () => {
+  const root = fresh();
+  const head = "---\ntype: Concept\ntitle: \"Stokes\"   # trailing comment\ndescription: >-\n  Folded\n  text.\ntags:\n  - a\n  - b\ngenerated: { by: human:x, at: 2026-01-01T00:00:00Z }\n---\n\n";
+  writeFileSync(join(root, "s.md"), head + "# One\n\nBody.\n");
+  // A minor body edit leaves the frontmatter byte for byte.
+  record(root, "s", { actor: "agent/x", body: "# One\n\nBody, edited.", significant: false });
+  expect(readFileSync(join(root, "s.md"), "utf8")).toBe(head + "# One\n\nBody, edited.\n");
+  // A significant one rewrites `generated` alone.
+  record(root, "s", { actor: "agent/x", section: "One", body: "New.", significant: true });
+  const text = readFileSync(join(root, "s.md"), "utf8");
+  expect(text.split("generated:")[0]).toBe(head.split("generated:")[0]);
+  expect(text).toMatch(/generated: \{ ?by: agent\/x, at: [^}]+\}\n---\n\n# One\n\nNew.\n$/);
+  // Nothing to change, nothing written.
+  const same = readFileSync(join(root, "s.md"), "utf8");
+  record(root, "s", { actor: "agent/x", meta: { title: "Stokes" }, significant: false });
+  expect(readFileSync(join(root, "s.md"), "utf8")).toBe(same);
+});
+
+test("CRLF notes stay CRLF", () => {
+  const root = fresh();
+  writeFileSync(join(root, "w.md"), "---\r\ntype: Concept\r\ntitle: W\r\n---\r\n\r\nBody.\r\n");
+  record(root, "w", { actor: "agent/x", meta: { tags: ["t"] }, body: "Body two.", significant: false });
+  expect(readFileSync(join(root, "w.md"), "utf8")).toBe("---\r\ntype: Concept\r\ntitle: W\r\ntags: [t]\r\n---\r\n\r\nBody two.\r\n");
+});

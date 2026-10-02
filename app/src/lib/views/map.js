@@ -12,6 +12,8 @@ import { prerequisites } from "../learn.ts";
 import { conceptHref, trustState, TRUST_LABEL, titleCase } from "../format.ts";
 import { measure, timed } from "../perf.ts";
 import { h } from "./dom.js";
+import { actions } from "../actions.svelte.ts";
+import { editing } from "../edit.svelte.ts";
 import { start, plainModel, layoutKey, cached, remember, applyPositions, computeLayout } from "./layout.js";
 
 
@@ -519,13 +521,21 @@ export function mapView(focusRef = "", { path = "" } = {}) {
   const tip = h("div", { class: "graph-tip", hidden: true });
   const crumbs = h("nav", { class: "map-crumbs", "aria-label": "Current folder" });
   const readout = h("p", { class: "map-readout" });
+  // Creating where you are looking: a note in the folder in focus, or a new
+  // folder (a new region) inside it, which the map then shows.
+  const newNote = h("button", { class: "toggle", type: "button" }, "New note");
+  const newFolder = h("button", { class: "toggle", type: "button" }, "New folder");
+  newNote.addEventListener("click", () => actions.open({ kind: "new-note", folder: focus.data.ref }));
+  newFolder.addEventListener("click", () => actions.open({ kind: "new-folder", folder: focus.data.ref, from: "map" }));
+  const create = h("div", { class: "map-create", role: "group", "aria-label": "Create here", hidden: true }, newNote, newFolder);
+  void editing.known.then(() => { create.hidden = !editing.enabled; });
   const panel = controls({
     view: () => { o = effective(); cache = null; schedule(); },
     tune: () => { o = effective(); cache = null; arrange(); schedule(); },
     readout,
   });
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
-  wrap.append(panel, crumbs, tip, status, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
+  wrap.append(panel, crumbs, create, tip, status, h("div", { class: "graph-hint" }, "Click a note to open it, a region to zoom in, empty space to step out."));
   if (trail) wrap.append(trailCard());
 
   const defs = svg.append("defs");
@@ -1076,6 +1086,9 @@ export function mapView(focusRef = "", { path = "" } = {}) {
 
   function drawCrumbs() {
     const path = focus.ancestors().reverse();
+    const where = focus.data.ref ? ` in ${focus.data.label}` : "";
+    newNote.title = `Write a new note${where}`;
+    newFolder.title = `Start a new folder${where}, a new region on the map`;
     crumbs.replaceChildren(...path.flatMap((n, i) => {
       const b = h("button", { type: "button", "aria-current": n === focus ? "location" : null }, n.data.label);
       b.addEventListener("click", () => zoomTo(n));

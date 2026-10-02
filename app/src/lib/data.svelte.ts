@@ -16,9 +16,14 @@ async function getJSON<T>(name: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** The build's version; "signin" when the server redirects to a sign-in page
+ *  (a dev tunnel or proxy whose sign-in has expired); null when unreachable. */
 async function currentVersion(): Promise<string | null> {
   try {
-    return (await getJSON<{ version: string }>("version")).version;
+    const res = await fetch("data/version.json", { cache: "no-store", redirect: "manual" });
+    if (res.type === "opaqueredirect" || res.status === 401) return "signin"; // 401: from sw.js
+    if (!res.ok) return null;
+    return ((await res.json()) as { version: string }).version;
   } catch {
     return null;
   }
@@ -34,7 +39,7 @@ class Store {
   reports = $state.raw<ReportRecord[]>([]);
   skills = $state.raw<Skills>({ skills: [], agents: [] });
   loaded = $state(false);
-  live = $state<"live" | "offline" | "static">("live");
+  live = $state<"live" | "offline" | "signin" | "static">("live");
   private bodies = new Map<string, string>();
 
   async load(): Promise<void> {
@@ -44,7 +49,7 @@ class Store {
       getJSON<Changes>("changes"), getJSON<ReportRecord[]>("reports"), getJSON<Skills>("skills"),
     ]);
     this.bodies.clear();
-    this.version = version;
+    this.version = version === "signin" ? null : version;
     this.site = site;
     this.concepts = new Map(concepts.map((c) => [c.id, c]));
     this.tree = tree;
@@ -53,6 +58,15 @@ class Store {
     this.skills = skills;
     this.loaded = true;
     measure("data", start);
+  }
+
+  /** Load now if the build has a new version (after a save, say), instead of
+   *  waiting for the next look. */
+  async refresh(): Promise<void> {
+    const v = await currentVersion();
+    if (v !== null && v !== "signin" && v !== this.version) {
+      try { await this.load(); } catch { /* the watcher tries again */ }
+    }
   }
 
   /** A note's Markdown body, fetched once per data version. */
@@ -76,7 +90,9 @@ class Store {
     let failures = 0, timer: ReturnType<typeof setTimeout> | null | -1 = null, stopped = false;
     const tick = async () => {
       const v = await currentVersion();
-      if (v === null) {
+      if (v === "signin") {
+        this.live = "signin";
+      } else if (v === null) {
         failures += 1;
         this.live = failures < 3 ? "live" : "offline";
       } else {

@@ -44,8 +44,9 @@ PROFILES = {
     "tunnel": {"viewport": (1280, 800), "scale": 1, "mobile": False, "cpu": 1,
                "net": {"latency": 150, "down": 500_000, "up": 250_000}},
 }
-THEMES = {"studio": ("studio", "light"), "space": ("space", "dark"), "notebook": ("notebook", "light"),
-          "map": ("map", "light"), "cyber": ("cyber", "dark")}
+THEMES = {"studio": ("studio", "light"), "space": ("space", "dark"), "minimalist": ("minimalist", "light"),
+          "terminal": ("terminal", "dark"),
+          "blueprint": ("blueprint", "dark"), "brutalist": ("brutalist", "light")}
 
 INIT = """
 window.__long = [];

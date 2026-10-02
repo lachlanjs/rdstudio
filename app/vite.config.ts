@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 
@@ -7,6 +8,8 @@ const serve = process.env.RDSTUDIO_SERVE ?? "http://127.0.0.1:8000";
 
 export default defineConfig({
   plugins: [sveltekit()],
+  // The editor does without HTML highlighting (see src/lib/editor/no-html.ts).
+  resolve: { alias: { "@codemirror/lang-html": fileURLToPath(new URL("./src/lib/editor/no-html.ts", import.meta.url)) } },
   // The map's layout worker imports modules (and d3).
   worker: { format: "es" },
   server: {

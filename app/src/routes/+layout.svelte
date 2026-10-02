@@ -8,6 +8,8 @@
   import { page } from "$app/state";
   import { afterNavigate } from "$app/navigation";
   import { store } from "$lib/data.svelte.ts";
+  import { editing } from "$lib/edit.svelte.ts";
+  import ActionDialogs from "$lib/components/ActionDialogs.svelte";
   import { procedures, reviewCount } from "$lib/review.ts";
   import { settings } from "$lib/settings.svelte.ts";
 
@@ -72,7 +74,11 @@
     {#if showProcedures}{@render link("procedures", "#/procedures", "Procedures")}{/if}
     {@render link("skills", "#/skills", "Skills & agents")}
   </nav>
-  {#if store.live !== "static"}
+  {#if store.live === "signin"}
+    <!-- The server (a dev tunnel, a proxy) wants you to sign in again: a page
+         load with ?signin goes past the offline copy to the sign-in page. -->
+    <a class="live offline signin" href="./?signin" data-sveltekit-reload title="The server asks you to sign in again; until then this page cannot update or save">Sign in</a>
+  {:else if store.live !== "static"}
     <span class={["live", store.live === "offline" && "offline"]} title="The page refreshes when files change">{store.live === "offline" ? "Offline" : "Live"}</span>
   {/if}
   {#if canFullscreen}
@@ -90,3 +96,4 @@
 <main id="view" tabindex="-1">
   {@render children()}
 </main>
+{#if editing.enabled}<ActionDialogs />{/if}

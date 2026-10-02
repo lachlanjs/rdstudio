@@ -33,7 +33,7 @@
 * [T27 — Coverage and review](T27-coverage-review.md) - Show on the map what you have shown you understand; a capped spaced-review queue; a quiet load indicator.
 * [T28 — Explain-back and AI marking](T28-explain-back.md) - AI-driven tasks: a skill and MCP tools to set and mark explain-back questions, answered in the harness or queued from the dashboard.
 * [T29 — Catching up on change](T29-catch-up.md) - What changed in each note since you last looked, from git history and the hashes in your record; notes going stale when their sources change.
-* [T30 — Editing from the dashboard](T30-dashboard-editing.md) - Let the dashboard edit notes through the same path as the MCP tools, with conflict checks, for a map you can reshape.
+* [T30 — Editing in the app](T30-dashboard-editing.md) - Create, edit, move and delete notes from the dashboard, through the same write path as the MCP tools, ergonomic on desktop and phone.
 * [T31 — Benchmarks and learner event ids](T31-benchmarks-and-event-ids.md) - Measure map frame times and load times on real and generated bundles; give learner events unique ids before any sync exists.
 * [T32 — Offline app shell](T32-offline-shell.md) - A service worker that caches the app and data, so reloads are instant and reading works offline.
 * [T33 — Map layout and routing in a Web Worker](T33-map-worker.md) - Move layout and routing off the main thread and cache the results by bundle and settings.

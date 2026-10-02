@@ -3,7 +3,7 @@
 :root {
   --font-text: "Literata", "Iowan Old Style", Georgia, serif;
   --font-ui: "Atkinson", "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+  --font-mono: "Ioskeley Mono", ui-monospace, Menlo, monospace;
   --text-size: 18px;
   --radius: 6px;
   --paper: #f4f6f2;

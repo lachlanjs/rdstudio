@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -34,3 +34,59 @@ export const postApiLearner = <ThrowOnError extends boolean = false>(options: Op
         ...options.headers
     }
 });
+
+/**
+ * Whether notes can be edited here, and the token to do it with
+ */
+export const getApiEdit = <ThrowOnError extends boolean = false>(options?: Options<GetApiEditData, ThrowOnError>): RequestResult<GetApiEditResponses, GetApiEditErrors, ThrowOnError> => (options?.client ?? client).get<GetApiEditResponses, GetApiEditErrors, ThrowOnError>({ url: '/api/edit', ...options });
+
+/**
+ * Delete a note
+ */
+export const deleteApiNotesById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiNotesByIdData, ThrowOnError>): RequestResult<DeleteApiNotesByIdResponses, DeleteApiNotesByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiNotesByIdResponses, DeleteApiNotesByIdErrors, ThrowOnError>({ url: '/api/notes/{id}', ...options });
+
+/**
+ * A note's source, to edit
+ */
+export const getApiNotesById = <ThrowOnError extends boolean = false>(options: Options<GetApiNotesByIdData, ThrowOnError>): RequestResult<GetApiNotesByIdResponses, GetApiNotesByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiNotesByIdResponses, GetApiNotesByIdErrors, ThrowOnError>({ url: '/api/notes/{id}', ...options });
+
+/**
+ * Save an edit to a note, or create it
+ */
+export const putApiNotesById = <ThrowOnError extends boolean = false>(options: Options<PutApiNotesByIdData, ThrowOnError>): RequestResult<PutApiNotesByIdResponses, PutApiNotesByIdErrors, ThrowOnError> => (options.client ?? client).put<PutApiNotesByIdResponses, PutApiNotesByIdErrors, ThrowOnError>({
+    url: '/api/notes/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Move or rename a note, updating the links to it
+ */
+export const postApiNotesByIdMove = <ThrowOnError extends boolean = false>(options: Options<PostApiNotesByIdMoveData, ThrowOnError>): RequestResult<PostApiNotesByIdMoveResponses, PostApiNotesByIdMoveErrors, ThrowOnError> => (options.client ?? client).post<PostApiNotesByIdMoveResponses, PostApiNotesByIdMoveErrors, ThrowOnError>({
+    url: '/api/notes/{id}/move',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Move or rename a folder with everything in it, updating links
+ */
+export const postApiFoldersMove = <ThrowOnError extends boolean = false>(options: Options<PostApiFoldersMoveData, ThrowOnError>): RequestResult<PostApiFoldersMoveResponses, PostApiFoldersMoveErrors, ThrowOnError> => (options.client ?? client).post<PostApiFoldersMoveResponses, PostApiFoldersMoveErrors, ThrowOnError>({
+    url: '/api/folders/move',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a folder (with the notes in it, given withNotes)
+ */
+export const deleteApiFoldersByPath = <ThrowOnError extends boolean = false>(options: Options<DeleteApiFoldersByPathData, ThrowOnError>): RequestResult<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError>({ url: '/api/folders/{path}', ...options });

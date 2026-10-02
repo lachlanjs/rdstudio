@@ -24,6 +24,10 @@ itself**. The developer did none of the coding and is not a web developer, so
 it tests the core scenario of the [motivation](/ideas/manifesto/motivation.md)
 directly: understanding a codebase an agent wrote.
 
+A later trial, with two people: [building an agentic game design
+engine](/ideas/learning/game-design-trial.md) with a friend, which tests
+team use, procedures written for agents, and design knowledge.
+
 Immunology was also suggested (nomenclature-heavy, clearly nested scales) and
 remains an option.
 

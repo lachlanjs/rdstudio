@@ -35,14 +35,34 @@ export function mermaidConfig() {
       edgeLabelBackground: paper, noteBkgColor: accentSoft, noteTextColor: ink, noteBorderColor: accent,
       actorBkg: raised, actorBorder: faint, actorTextColor: ink, signalColor: soft, signalTextColor: ink,
       // xychart: bars muted, the first line in the accent, so both read.
+      // Every colour is given: one left out is worked out from Mermaid's own
+      // light defaults, not from these, so it is dark on a dark page.
       xyChart: {
-        backgroundColor: paper, titleColor: ink,
+        backgroundColor: paper, titleColor: ink, legendTextColor: ink, dataLabelColor: ink,
         xAxisLabelColor: soft, xAxisTitleColor: soft, xAxisTickColor: faint, xAxisLineColor: faint,
         yAxisLabelColor: soft, yAxisTitleColor: soft, yAxisTickColor: faint, yAxisLineColor: faint,
         plotColorPalette: [faint, accent, soft, ink].join(", "),
       },
     },
   };
+}
+
+/** Widen a drawing's frame to what it holds. Mermaid sizes some diagrams (a
+ *  chart's legend) by measuring text in a scratch element without the
+ *  theme's font, so wider type runs past the edge and is cut off. */
+function fit(svg: SVGSVGElement | null): void {
+  if (!svg || !svg.viewBox.baseVal || !svg.viewBox.baseVal.width) return;
+  let box: DOMRect;
+  try { box = svg.getBBox(); } catch { return; } // not laid out
+  const vb = svg.viewBox.baseVal, pad = 4;
+  const x0 = Math.min(vb.x, box.x - pad), y0 = Math.min(vb.y, box.y - pad);
+  const x1 = Math.max(vb.x + vb.width, box.x + box.width + pad), y1 = Math.max(vb.y + vb.height, box.y + box.height + pad);
+  if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+  const scale = (x1 - x0) / vb.width;
+  svg.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  // Mermaid caps the width at the frame's; keep the type the same size.
+  const max = parseFloat(svg.style.maxWidth);
+  if (max) svg.style.maxWidth = `${Math.round(max * scale)}px`;
 }
 
 let counter = 0;
@@ -69,12 +89,13 @@ async function renderNow(root: HTMLElement): Promise<void> {
   mermaid.initialize(mermaidConfig());
   for (const el of blocks) {
     if (!el.isConnected) continue;
-    const source = el.dataset.src ?? "";
+    const source = el.querySelector(".mermaid-source code")?.textContent ?? "";
     el.dataset.rendered = "pending";
     const id = `rdstudio-mermaid-${++counter}`;
     try {
       const { svg } = await mermaid.render(id, source);
       el.innerHTML = svg;
+      fit(el.querySelector("svg"));
       el.dataset.rendered = "done";
     } catch (err) {
       // Mermaid can leave its scratch container behind when parsing fails.

@@ -340,15 +340,16 @@ const COMMANDS: Record<string, Command> = {
 
   serve: {
     help: "serve the dashboard, rebuilding on change",
-    usage: "[--host HOST] [--port PORT] [--no-watch] [--allow-host NAME]",
+    usage: "[--host HOST] [--port PORT] [--no-watch] [--allow-host NAME] [--read-only]",
     options: {
       host: { type: "string", default: "127.0.0.1" },
       port: { type: "string", default: "8000" },
       "no-watch": { type: "boolean" },
       "allow-host": { type: "string", multiple: true, default: [] },
+      "read-only": { type: "boolean" },
     },
     run(cfg, v) {
-      serve(cfg, { host: v.host as string, port: Number(v.port), watch: !v["no-watch"], allowHosts: v["allow-host"] as string[] });
+      serve(cfg, { host: v.host as string, port: Number(v.port), watch: !v["no-watch"], allowHosts: v["allow-host"] as string[], readOnly: Boolean(v["read-only"]) });
       return 0;
     },
   },
