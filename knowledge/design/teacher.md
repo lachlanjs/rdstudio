@@ -235,6 +235,12 @@ from Settings, not from the main navigation. It has four sections:
 - **Skills:** the list, viewing, customising, reset and the difference from
   the default.
 
+# Where it runs
+
+Today the teacher runs in a desktop harness through MCP. Running it from any
+device (a home server, OpenRouter or a key in the app, the Claude or ChatGPT
+apps as connectors) is in [where the teacher runs](/design/ai-providers.md).
+
 # Order of work (milestone M10)
 
 1. [T43 Teacher foundation](/tasks/T43-teacher-foundation.md): the folder as a

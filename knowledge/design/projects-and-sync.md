@@ -140,7 +140,8 @@ How the app finds a server, in the order to build:
 
 # Agents and the phone
 
-Agents do not run on the phone. Answers left for an agent wait in the record,
+Without a model connected (see [where the teacher runs](/design/ai-providers.md)),
+agents do not run on the phone. Answers left for an agent wait in the record,
 sync to the desktop, are marked there by an agent, and the markings sync back:
 the queue that exists today, across devices.
 
