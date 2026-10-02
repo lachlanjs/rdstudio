@@ -3,6 +3,10 @@
 /* Colours, fonts and sizes come from themes/<name>.css, linked before this file. */
 
 :root { --safe-top: env(safe-area-inset-top, 0px); --bar-h: calc(52px + var(--safe-top)); --vh: 100vh; }
+/* The reading measure: about 72 characters of the text face. One length for
+   everything in the note column (title, text, editor), so their edges line
+   up when the column centres them. Themes may set their own on :root. */
+html { --measure: calc(var(--text-size, 18px) * 39); }
 @supports (height: 100dvh) { :root { --vh: 100dvh; } } /* excludes mobile browser bars */
 
 * { box-sizing: border-box; }
@@ -88,6 +92,7 @@ button { font: inherit; color: inherit; }
   font-size: 15px;
 }
 .doc { padding: 36px clamp(20px, 5vw, 64px) 96px; min-width: 0; }
+.doc > * { margin-left: auto; margin-right: auto; } /* centred in the column on wide screens */
 .meta {
   border-left: 1px solid var(--rule);
   padding: 36px 20px 64px;
@@ -131,12 +136,12 @@ button { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------ prose */
 
-.doc-head { max-width: 72ch; margin-bottom: 28px; }
+.doc-head { max-width: var(--measure); margin-bottom: 28px; }
 .doc-kind { color: var(--ink-faint); font-size: 14px; margin: 0 0 6px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .doc-head h1 { font: 600 34px/1.18 var(--font-heading, var(--font-text)); font-size: var(--h1-doc-size, 34px); margin: 0; font-variation-settings: "opsz" 60; letter-spacing: -0.01em; }
 .doc-head .description { font: 19px/1.5 var(--font-text); color: var(--ink-soft); margin: 10px 0 0; font-style: italic; }
 
-.prose { font: var(--text-size)/1.68 var(--font-text); max-width: 72ch; font-variation-settings: "opsz" 18; }
+.prose { font: var(--text-size)/1.68 var(--font-text); max-width: var(--measure); font-variation-settings: "opsz" 18; }
 .prose h1, .prose h2, .prose h3, .prose h4 { font-family: var(--font-text); line-height: 1.25; margin: 1.8em 0 .5em; font-variation-settings: "opsz" 36; }
 .prose h1 { font-size: 26px; font-weight: 600; }
 .prose h2 { font-size: 22px; font-weight: 600; }
@@ -615,10 +620,10 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .toggle.primary:disabled { background: var(--paper-raised); border-color: var(--rule); color: var(--ink-faint); }
 
 .doc.editing { padding-top: 0; }
-.edit-top { position: sticky; top: var(--bar-h); z-index: 5; max-width: 72ch; background: var(--paper); }
+.edit-top { position: sticky; top: var(--bar-h); z-index: 5; max-width: var(--measure); background: var(--paper); }
 .edit-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  max-width: 72ch; padding: 12px 0; margin-bottom: 4px;
+  padding: 12px 0; margin-bottom: 4px;
   background: var(--paper); border-bottom: 1px solid var(--rule);
 }
 .edit-actions { display: flex; gap: 8px; }
@@ -626,12 +631,12 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .edit-status { font-size: 14px; color: var(--ink-faint); }
 .edit-status.saved { color: var(--reviewed); }
 .edit-status.error, .edit-status.conflict { color: var(--stale); font-weight: 600; }
-.edit-message { max-width: 72ch; font-size: 14.5px; color: var(--ink-soft); margin: 10px 0; }
+.edit-message { max-width: var(--measure); font-size: 14.5px; color: var(--ink-soft); margin: 10px auto; }
 .edit-message.bad { color: var(--stale); }
-.editor { max-width: 72ch; min-height: 60vh; }
+.editor { max-width: var(--measure); min-height: 60vh; }
 
 .edit-conflict {
-  max-width: 72ch; margin: 14px 0; padding: 14px 16px;
+  max-width: var(--measure); margin: 14px auto; padding: 14px 16px;
   border: 1px solid var(--stale); border-radius: var(--radius); background: var(--paper-raised);
 }
 .edit-conflict h2 { font: 700 16px/1.3 var(--font-ui); margin: 0 0 6px; }
@@ -656,7 +661,7 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 
 /* Formatting: under the editing bar on a desktop, above the keyboard on a phone. */
 .format-bar {
-  display: flex; gap: 2px; max-width: 72ch; padding: 4px 0; margin-bottom: 6px;
+  display: flex; gap: 2px; padding: 4px 0; margin-bottom: 6px;
   background: var(--paper); border-bottom: 1px solid var(--rule);
 }
 .format-bar[hidden] { display: none; }

@@ -10,6 +10,7 @@
   --h2-size: 18px;
   --brand-size: 15px;
   --text-size: 15.5px;
+  --measure: calc(var(--text-size) * 47);
   --radius: 0px;
   --map-image: var(--cells);
   --map-size: 24px 24px;
@@ -178,7 +179,7 @@ html .page > h1::after, html .doc-head h1::after {
 @media (prefers-reduced-motion: reduce) { html .page > h1::after, html .doc-head h1::after { animation: none; } }
 html .doc-head .description { font-style: normal; font-size: 16px; color: var(--ink-soft); }
 html .doc-head .description::before { content: "// "; color: var(--ink-faint); }
-html .prose { line-height: 1.7; max-width: 78ch; }
+html .prose { line-height: 1.7; }
 html .prose h1, html .prose h2, html .prose h3, html .prose h4 { font-weight: 700; }
 html .prose h1 { font-size: 20px; } html .prose h2 { font-size: 17.5px; } html .prose h3, html .prose h4 { font-size: 15.5px; }
 html .prose h1::before { content: "# "; }
