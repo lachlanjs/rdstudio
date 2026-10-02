@@ -82,6 +82,17 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
 - [ ] [T41 Local-first sync](/tasks/T41-local-first-sync.md)
 - [ ] [T42 Mobile apps](/tasks/T42-mobile-apps.md)
 
+# M10 — Teacher
+
+See the [teacher design](/design/teacher.md). The trial comes before mounts,
+as it runs in a repository of its own.
+
+- [ ] [T43 Teacher foundation](/tasks/T43-teacher-foundation.md)
+- [ ] [T44 Goals and exercises](/tasks/T44-goals-and-exercises.md)
+- [ ] [T45 Profile, sources and the default skills](/tasks/T45-profile-and-skills.md)
+- [ ] [T46 Trial: dynamical mean-field theory](/tasks/T46-dmft-trial.md)
+- [ ] [T47 Mounting a shared knowledge base](/tasks/T47-mounts.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
