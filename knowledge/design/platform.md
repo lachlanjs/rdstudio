@@ -168,7 +168,7 @@ not for every screen.
 | C1 | **Desktop shell** | Tauri 2 with the web UI bundled, no server. Tauri's file system and dialog plugins for opening a project, reading and writing files and watching for changes; git through isomorphic-git. |
 | C2 | **Core in the webview** | The UI imports the TypeScript core directly; nothing is linked natively. |
 | C3 | **Mobile** | Android first (the developer's phone), then iOS. Projects arrive by git clone or from the home sync endpoint. iOS distribution needs an Apple developer account. |
-| C4 | **Agents** | The MCP server from `packages/cli`, as a single binary or through npx; harnesses launch it as now. |
+| C4 | **Agents** | The MCP server from `packages/cli`, as a single binary or through npx; harnesses launch it as now. Models on every device (subscriptions as connectors, OpenRouter, keys, self-hosted, the home server as gateway): see [where the teacher runs](/design/ai-providers.md). |
 | C5 | **Distribution** | GitHub Releases built in CI; the Tauri updater with signed updates; AppImage, deb and Flatpak for Linux; macOS notarisation; an APK, then Play Store or F-Droid. |
 | C6 | **The web stays** | The same UI served by `rdstudio serve`, a static export or a hosted service. |
 
