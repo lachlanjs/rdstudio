@@ -12,6 +12,7 @@
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
   import { tourHref } from "$lib/tours.ts";
+  import { understanding } from "$lib/understanding.svelte.ts";
 
   let { id }: { id: string } = $props();
 
@@ -70,7 +71,7 @@
       {/await}
     {:else}
       <article class="doc">
-        <header class="doc-head">
+        <header class={["doc-head", understanding.cls(c.id)]}>
           <p class="doc-kind">
             <span>{c.type || "Concept"}</span>
             {#if c.status !== "stable"}<span class="chip">{c.status}</span>{/if}

@@ -14,6 +14,7 @@ import { measure, timed } from "../perf.ts";
 import { h } from "./dom.js";
 import { actions } from "../actions.svelte.ts";
 import { editing } from "../edit.svelte.ts";
+import { understanding } from "../understanding.svelte.ts";
 import { start, plainModel, layoutKey, cached, remember, applyPositions, computeLayout } from "./layout.js";
 
 
@@ -180,8 +181,13 @@ function buildModel() {
   }
   // Larger folders first packs more tidily; notes follow in link order.
   const size = (d) => d.notes.length + d.subdirs.reduce((s, x) => s + size(x), 0);
+  // A folder holding only tours (and nothing else below it) is left off too.
+  const onlyTours = (id) => {
+    const d = store.tree[id];
+    return !!d && d.concepts.length > 0 && d.concepts.every((c) => store.concepts.get(c)?.type === "Tour") && d.children.every(onlyTours);
+  };
   for (const node of dirs.values()) {
-    node.children = [...node.subdirs.sort((a, b) => size(b) - size(a)), ...node.notes];
+    node.children = [...node.subdirs.filter((x) => !onlyTours(x.ref)).sort((a, b) => size(b) - size(a)), ...node.notes];
   }
   const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
   return { root: dirs.get(""), edges, implied: impliedLinks(ids, edges), hasRatings, maxDepth };
@@ -627,7 +633,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   let drawnAt = null, drawnWhen = 0; // the transform and time of the last full redraw
   let moving = false;
-  const zoom = d3.zoom().scaleExtent([0.2, 80])
+  // The extent from the measured size: d3 would otherwise read the svg's
+  // width ("100%"), which fails once the map has left the page.
+  const zoom = d3.zoom().scaleExtent([0.2, 80]).extent(() => [[0, 0], [w || 800, hgt || 600]])
     .on("start", (event) => { if (event.sourceEvent) userMoved = true; moving = true; svg.classed("moving", true); })
     .on("zoom", (event) => {
       const t = event.transform;
@@ -669,11 +677,21 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     return enter;
   };
 
+  // What you have not reached, hidden when you choose (understanding.svelte.ts):
+  // a note, unless it is reached or on the frontier; a folder holding none.
+  function shownOnMap(n) {
+    if (!understanding.hiding || step.has(n.data.ref)) return true;
+    return n.data.kind === "concept" ? understanding.visible(n.data.ref) : understanding.folderVisible(n.data.ref);
+  }
+  const hiddenCount = () => { let k = 0; for (const c of store.concepts.values()) if (!understanding.visible(c.id)) k++; return k; };
+  // Classes for where a note stands for you: its title's weight and the place's ink.
+  const reach = (n) => (n.data.kind === "concept" ? understanding.cls(n.data.ref) + (understanding.frontier(n.data.ref) ? " frontier" : "") : "");
+
   // Routes for every link between shown items; recomputed only when the set of
   // open folders (or a setting) changes, so zooming stays cheap.
   function routesFor(open) {
     const filters = ["showLinks", "distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",");
-    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "") + (trail ? "|" + (tour ? tour.key : path) : "");
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + filters + (o.focusOnly ? "|" + focus.data.id : "") + (trail ? "|" + (tour ? tour.key : path) : "") + (understanding.hiding ? "|hiding:" + understanding.states.size + ":" + hiddenCount() : "");
     if (cache?.signature === signature) return cache;
     const start = performance.now();
     const shownRep = (leaf) => {
@@ -707,7 +725,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         if (s < o.rateMin || s > o.rateMax) continue;
         if (o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b)) { hidden++; continue; }
         const na = L.byId.get("c:" + a), nb = L.byId.get("c:" + b);
-        if (!na || !nb) continue;
+        if (!na || !nb || !shownOnMap(na) || !shownOnMap(nb)) continue;
         const d = wallsBetween(na, nb, o.distMeasure);
         if (d < o.distMin || d > o.distMax) continue;
         if (o.focusOnly && focus !== L.root && !inFocus(na) && !inFocus(nb)) continue;
@@ -776,7 +794,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       if (!n.parent || (open.has(n.parent) && sr(n) >= o.detail)) open.add(n);
     });
     const visible = [];
-    L.root.each((n) => { if (n.parent && open.has(n.parent) && onScreen(n)) visible.push(n); });
+    L.root.each((n) => { if (n.parent && open.has(n.parent) && onScreen(n) && shownOnMap(n)) visible.push(n); });
 
     // Focus: the deepest open folder under the centre of the view.
     focus = L.root;
@@ -873,7 +891,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       g.append("path").attr("class", "mark");
       return fadeIn(g);
     })
-      .attr("class", (n) => `m-place ${n.data.marker}${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}${step.has(n.data.ref) ? " on-trail" : ""}`)
+      .attr("class", (n) => `m-place ${n.data.marker}${n.data.landmark ? " landmark" : ""} ${trustState(n.data.c)}${step.has(n.data.ref) ? " on-trail" : ""} ${reach(n)}`)
       .attr("aria-label", (n) => n.data.label)
       .attr("transform", (n) => `translate(${sx(n)},${sy(n)})`)
       .style("--c", (n) => (n.group >= 0 ? PALETTE[n.group % PALETTE.length] : "var(--ink-soft)"))
@@ -949,7 +967,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       const spot = spots.find((s) => fits(s.box, own));
       if (!spot) continue;
       placed.push(spot.box);
-      texts.push({ n, x: spot.tx, y: spot.box[1] + 11, lines, anchor: spot.anchor, cls: (n.data.landmark ? "place landmark" : "place") + (step.has(n.data.ref) ? " on-trail" : "") });
+      texts.push({ n, x: spot.tx, y: spot.box[1] + 11, lines, anchor: spot.anchor, cls: (n.data.landmark ? "place landmark" : "place") + (step.has(n.data.ref) ? " on-trail" : "") + " " + reach(n) });
     }
 
     defs.selectAll("path").data(arcs, (a) => a.n.data.id).join("path")
@@ -1205,7 +1223,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   });
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
-  wrap.leave = () => { left = true; window.removeEventListener("resize", onResize); persist(); };
+  wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
   wrap.refresh = () => { model = timed("map-model", buildModel); o = effective(); rebuild(); };
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
@@ -1356,6 +1374,12 @@ function controls({ view, tune, readout }) {
   return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
+      understanding.on ? h("label", { class: "hide-undiscovered" }, (() => {
+        const box = h("input", { type: "checkbox" });
+        box.checked = understanding.hiding;
+        box.addEventListener("change", () => { understanding.setHiding(box.checked); view(); });
+        return box;
+      })(), "Hide what I have not reached") : "",
       h("div", { class: "row" },
         toggle("showLinks", "Links", "Show links at all."),
         rated ? toggle("hideImplied", "Hide implied", "Hide a link when a chain of links at least as strong already connects its ends.") : "",

@@ -7,8 +7,12 @@ Tours (T25): a shared Tour note kept off the map, followed stop by stop; a
 tour of your own written, followed and published.
 Exercises (T26): recall with a self-grade, fill the gap, placement and the
 landmarks, each answer an event in the record.
+Coverage and review (T27): discovery states on the note, in the tree and on
+the map, marking, hiding what is not reached, coverage per folder, the review
+queue and the load note.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 
@@ -79,7 +83,7 @@ with sync_playwright() as pw:
         ctx = browser.new_context(**kw)
         p = ctx.new_page()
         p.on("pageerror", lambda e: errors.append(str(e)))
-        p.on("console", lambda m: m.type == "error" and errors.append(m.text))
+        p.on("console", lambda m: m.type == "error" and errors.append(f"{m.text} at {p.url}"))
         p.on("dialog", lambda d: d.accept())
         return ctx, p
 
@@ -175,6 +179,7 @@ with sync_playwright() as pw:
           and card.locator("h2").inner_text() != first, rec)
 
     p.goto(URL + "?nosw#/practice/gap/manifolds")
+    expect(p.locator(".practice h1")).to_have_text("Fill the gap")
     card = p.locator(".practice-card")
     check("fill the gap gives the folder and the links as clues", "is hidden" in card.inner_text() and ("links to" in card.inner_text() or "linked from" in card.inner_text()))
     options = card.locator(".practice-options button")
@@ -189,6 +194,7 @@ with sync_playwright() as pw:
     expect(p.locator(".practice-progress")).to_have_text("2 of up to 10")
 
     p.goto(URL + "?nosw#/practice/placement")
+    expect(p.locator(".practice h1")).to_have_text("Placement")  # not the last page's card
     card = p.locator(".practice-card")
     card.locator(".practice-options button").first.click()
     expect(card.locator(".practice-verdict")).to_be_visible()
@@ -209,6 +215,89 @@ with sync_playwright() as pw:
     check("each landmark is recorded, named or not", sorted(lm) == marked and lm["manifolds/smooth-manifold"] == "got"
           and lm["manifolds/bundles/vector-bundle"] == "got" and list(lm.values()).count("missed") == len(marked) - 2, lm)
     p.screenshot(path=str(OUT / "learn-practice.png"))
+
+    # ------------------------------------------------ coverage and review (T27)
+    p.goto(URL + "?nosw#/k/forms/stokes-theorem")
+    head = p.locator(".doc-head")
+    expect(head).to_have_class("doc-head st-discovered")
+    check("an opened note is outlined as opened (dashed)", head.evaluate("e => getComputedStyle(e).outlineStyle") == "dashed")
+    meta = p.locator("aside.meta")
+    check("the details say where it stands for you", meta.locator(".you-state").inner_text().startswith("Opened"))
+    meta.get_by_role("button", name="Worked through").click()
+    expect(head).to_have_class("doc-head st-processed")
+    meta.get_by_role("button", name="Understood").click()
+    expect(head).to_have_class("doc-head st-understood")
+    settle("mark", 2)
+    marks = events("mark")
+    check("marking is recorded as autodidactic, and the outline follows", [m["state"] for m in marks] == ["processed", "understood"]
+          and all(m["kind"] == "autodidactic" and m["concept"] == "forms/stokes-theorem" for m in marks)
+          and head.evaluate("e => getComputedStyle(e).outlineStyle") == "solid")
+    tree_link = p.locator(".tree .item a", has_text="Stokes' theorem")
+    check("the tree sets an understood note's title in bold", "st-understood" in tree_link.get_attribute("class"))
+    check("…and the details say it is in review", "In review: due tomorrow" in meta.inner_text(), meta.inner_text())
+    meta.get_by_role("button", name="Not yet").click()
+    expect(head).to_have_class("doc-head st-discovered")
+    check("Not yet takes it back down", True)
+
+    # A past the reader has had: earlier days of study, a note marked two days
+    # ago (so due for review), and one understood on an older version.
+    now = datetime.now(timezone.utc)
+    ago = lambda d: (now - timedelta(days=d)).isoformat().replace("+00:00", "Z")
+    past = [{"event": "seen", "concept": f"manifolds/n{d}-{i}", "at": ago(d)} for d in range(1, 7) for i in range(3)]
+    past += [{"event": "seen", "concept": c.relative_to(ROOT / "knowledge").with_suffix("").as_posix(), "at": ago(0)}
+             for c in sorted((ROOT / "knowledge/riemannian").rglob("*.md"))[:12] if c.name != "index.md"]
+    past += [{"event": "mark", "concept": "forms/differential-forms", "state": "processed", "kind": "autodidactic", "at": ago(2)},
+             {"event": "mark", "concept": "forms/exterior-derivative", "state": "understood", "kind": "autodidactic", "hash": "an-older-version", "at": ago(1)}]
+    with (record_dir() / "record.jsonl").open("a") as f:
+        for i, e in enumerate(past):
+            f.write(json.dumps({"id": f"01J{i:023d}", "device": "test", **e}) + "\n")
+
+    p.goto(URL + "?nosw#/k/forms/exterior-derivative")
+    p.wait_for_selector(".doc-head h1")
+    p.reload()  # the record is read when the page loads
+    head = p.locator(".doc-head")
+    expect(head).to_have_class("doc-head st-understood changed")
+    check("understood on an older version shows as changed since", "changed since" in head.evaluate("e => getComputedStyle(e, '::after').content"))
+
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Where you stand").wait_for()
+    forms = p.locator(".coverage tr", has_text="Forms")
+    check("coverage per folder, in words as well as a bar", "understood" in forms.inner_text() and forms.locator(".cov-bar span").count() >= 1, forms.inner_text())
+    check("no single score anywhere", "%" not in p.locator(".coverage").inner_text())
+    due = p.locator(".rows.due li")
+    check("a note marked two days ago is due for review", due.count() >= 1 and "Differential forms" in p.locator(".rows.due").inner_text(), p.locator(".rows.due").inner_text() if due.count() else "none")
+    check("a heavy day is noted once, quietly", "consolidation tends to work better after a break" in p.locator(".load-note").inner_text())
+    p.get_by_role("link", name="Review them").click()
+    check("Review them starts recall with what is due", p.locator(".practice-card h2").inner_text() in p.evaluate("() => 'Differential forms|Exterior derivative'"), p.locator(".practice-card h2").inner_text())
+
+    # Hiding what is not reached.
+    p.goto(URL + "?nosw#/k/forms/stokes-theorem")
+    total = p.locator(".tree .item").count()
+    p.locator(".tree .item").first.wait_for()
+    total, folders = p.locator(".tree .item").count(), p.locator(".tree summary.dir").count()
+    p.get_by_label("Hide what I have not reached").check()
+    p.wait_for_timeout(300)
+    shown, shown_folders = p.locator(".tree .item").count(), p.locator(".tree summary.dir").count()
+    check("hiding leaves the reached notes and their frontier in the tree", (shown < total or shown_folders < folders)
+          and p.locator(".tree .item a", has_text="Stokes' theorem").count() == 1, (shown, total, shown_folders, folders))
+    check("…the frontier drawn faintly", p.locator(".tree .item a.frontier").count() >= 1)
+    p.locator(".filter").fill("geodesic")
+    p.wait_for_timeout(200)
+    check("filtering still finds everything", p.locator(".tree .item").count() >= 1, p.locator(".tree .item").count())
+    p.locator(".filter").fill("")
+    p.goto(URL + "?nosw#/map")
+    p.wait_for_selector(".m-dir", timeout=20000)
+    p.wait_for_timeout(800)
+    drawn = lambda: p.locator(".m-place").count() + p.locator(".m-dir").count()
+    hidden_places = drawn()
+    check("the switch is shared with the map", p.get_by_label("Hide what I have not reached").is_checked())
+    p.get_by_label("Hide what I have not reached").uncheck()
+    p.wait_for_timeout(800)
+    check("…which hides what is not reached too", drawn() > hidden_places, (hidden_places, drawn()))
+    p.screenshot(path=str(OUT / "learn-coverage-map.png"))
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Where you stand").wait_for()
+    p.screenshot(path=str(OUT / "learn-tab.png"), full_page=True)
 
     # ----------------------------------------------------------------- phone
     ctx.close()

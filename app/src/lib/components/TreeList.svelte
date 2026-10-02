@@ -4,6 +4,7 @@
   import { store } from "$lib/data.svelte.ts";
   import { editing } from "$lib/edit.svelte.ts";
   import { dirLabel, tree } from "$lib/tree.svelte.ts";
+  import { understanding } from "$lib/understanding.svelte.ts";
   import RowMenu from "./RowMenu.svelte";
   import TreeList from "./TreeList.svelte";
 
@@ -11,9 +12,10 @@
   let { id, current }: { id: string; current: string | null } = $props();
 
   const folder = $derived(store.tree[id]);
-  const children = $derived(folder ? folder.children.filter((child) => !tree.filter || tree.hasMatch(child)) : []);
+  // While filtering, everything that matches is shown, reached or not.
+  const children = $derived(folder ? folder.children.filter((child) => tree.filter ? tree.hasMatch(child) : understanding.folderVisible(child)) : []);
   const notes = $derived(folder
-    ? folder.concepts.map((cid) => store.concepts.get(cid)).filter((c) => c && tree.matches(c) && (tree.filter || c.id !== folder.overview))
+    ? folder.concepts.map((cid) => store.concepts.get(cid)).filter((c) => c && tree.matches(c) && (tree.filter || (c.id !== folder.overview && understanding.visible(c.id))))
     : []);
   // The path to the current page is open, as are folders the reader opened.
   const here = $derived(current === null ? null : current.replace(/^k:/, ""));
@@ -42,7 +44,8 @@
   {/each}
   {#each notes as c (c!.id)}
     <li class="item">
-      <a href={conceptHref(c!.id)} aria-current={current === "k:" + c!.id ? "page" : undefined} title={c!.description || c!.title}>
+      <a href={conceptHref(c!.id)} aria-current={current === "k:" + c!.id ? "page" : undefined} title={c!.description || c!.title}
+        class={[understanding.cls(c!.id), understanding.frontier(c!.id) && "frontier"]}>
         <span class="dot {trustState(c!)}"></span><span>{c!.title}</span>
       </a>
       {#if editing.enabled}

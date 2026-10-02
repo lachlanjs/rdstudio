@@ -1,12 +1,19 @@
 <script lang="ts">
   // Reading order from requires links, and the private learner record.
   import { learner, store } from "$lib/data.svelte.ts";
-  import { conceptHref, titleCase } from "$lib/format.ts";
+  import { conceptHref, dirHref, titleCase } from "$lib/format.ts";
   import { hasRequires } from "$lib/learn.ts";
   import { sharedTours, tourHref } from "$lib/tours.ts";
+  import { understanding } from "$lib/understanding.svelte.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
+  const folders = $derived(Object.keys(store.tree).filter((d) => d && !d.includes("/")).sort());
+  const due = $derived(understanding.due());
+  const next = $derived(due.due.length ? null : understanding.nextDue());
+  const load = $derived(understanding.loadNote());
+  const SEGMENTS = [["understood", "understood"], ["processed", "worked through"], ["discovered", "opened"]] as const;
+  const inDays = (ms: number) => { const d = Math.max(1, Math.round((ms - Date.now()) / 86_400_000)); return d === 1 ? "tomorrow" : `in ${d} days`; };
   const notes = $derived([...store.concepts.values()].filter((c) => c.type !== "Tour").sort((a, b) => a.order - b.order));
 </script>
 
@@ -14,22 +21,42 @@
 
 <div class="page">
   <h1>Learn</h1>
-  <p class="lede">A reading order for this knowledge base, from the links rated requires: each note comes after everything it needs.</p>
-  <h2 class="section-h">Reading order</h2>
-  {#if hasRequires()}
-    <p class="section-note">Notes stay with their folder where they can. The level is the longest chain of prerequisites below a note; path shows that chain on the map.</p>
-    <ol class="reading">
-      {#each notes as c, i (c.id)}
-        {#if i === 0 || c.directory !== notes[i - 1]!.directory}<li class="folder" aria-hidden="true">{folderLabel(c.directory)}</li>{/if}
-        <li class="step" value={c.order + 1}>
-          <a href={conceptHref(c.id)} title={c.description || c.title}>{c.title}</a>
-          <span class="depth" title="The longest chain of prerequisites below this note">{c.depth ? `level ${c.depth}` : "start"}</span>
-          {#if c.depth}<a class="path-link" href={"#/path/" + encodeURIComponent(c.id)} title="Study path to {c.title} on the map">path</a>{/if}
-        </li>
-      {/each}
-    </ol>
-  {:else}
-    <p class="empty">No links are rated requires yet, so there is no order to give. Rate a link by giving it the title "requires", as in [Topology](/topology.md "requires").</p>
+  <p class="lede">Ways into this knowledge base: where you stand, practice, tours, and a reading order from the links rated requires.</p>
+  {#if understanding.on}
+    <h2 class="section-h">Where you stand</h2>
+    <p class="section-note">From your record: notes you have opened, worked through or understood (by marking them, or by evidence from exercises and explain-back). No single score: each area on its own.</p>
+    {#if load}<p class="load-note">{load}</p>{/if}
+    <table class="coverage">
+      <tbody>
+        {#each folders as f (f)}
+          {@const cov = understanding.coverage(f)}
+          {#if cov.total}
+            <tr>
+              <th scope="row"><a href={dirHref(f)}>{folderLabel(f)}</a></th>
+              <td>
+                <span class="cov-bar" role="img" aria-label={`${cov.understood} understood, ${cov.processed} worked through, ${cov.discovered} opened, ${cov.undiscovered} not yet, of ${cov.total}`}>
+                  {#each SEGMENTS as [k] (k)}{#if cov[k]}<span class={"cov-" + k} style:width={`${(100 * cov[k]) / cov.total}%`}></span>{/if}{/each}
+                </span>
+              </td>
+              <td class="cov-text">{SEGMENTS.filter(([k]) => cov[k]).map(([k, label]) => `${cov[k]} ${label}`).join(", ") || "not started"} <span>of {cov.total}</span></td>
+            </tr>
+          {/if}
+        {/each}
+      </tbody>
+    </table>
+    <h3 class="sub-h">Due for review</h3>
+    {#if due.due.length}
+      <ul class="rows due">
+        {#each due.due as r (r.id)}
+          {@const c = store.concepts.get(r.id)}
+          {#if c}<li><a class="title" href={conceptHref(c.id)}>{c.title}</a><div class="sub"><span>{folderLabel(c.directory)}</span>{#if r.last}<span>last recalled {new Date(r.last).toLocaleDateString()}</span>{:else}<span>not recalled yet</span>{/if}</div></li>{/if}
+        {/each}
+      </ul>
+      <p><a class="toggle primary" href="#/practice/recall">Review them</a>
+        {#if due.more}<span class="section-note"> {due.more} more {due.more === 1 ? "is" : "are"} waiting; they come a few at a time so the pile never grows.</span>{/if}</p>
+    {:else}
+      <p class="empty">Nothing is due.{#if next} The next review is {inDays(next)}.{:else} Mark a note worked through or understood, or practise recall, and it comes back for review.{/if}</p>
+    {/if}
   {/if}
   <h2 class="section-h">Practice</h2>
   <p class="section-note">Short rounds of exercises, checked here: recall with a self-grade, fill the gap, placement, and naming the landmarks.</p>
@@ -59,6 +86,22 @@
     <p><a class="toggle" href="#/tours/new">Write a tour</a></p>
   {:else if !shared.length}
     <p class="empty">No tours yet. Shared tours are notes of type Tour; with the learner record on you can write your own.</p>
+  {/if}
+  <h2 class="section-h">Reading order</h2>
+  {#if hasRequires()}
+    <p class="section-note">Notes stay with their folder where they can. The level is the longest chain of prerequisites below a note; path shows that chain on the map.</p>
+    <ol class="reading">
+      {#each notes as c, i (c.id)}
+        {#if i === 0 || c.directory !== notes[i - 1]!.directory}<li class="folder" aria-hidden="true">{folderLabel(c.directory)}</li>{/if}
+        <li class="step" value={c.order + 1}>
+          <a href={conceptHref(c.id)} title={c.description || c.title}>{c.title}</a>
+          <span class="depth" title="The longest chain of prerequisites below this note">{c.depth ? `level ${c.depth}` : "start"}</span>
+          {#if c.depth}<a class="path-link" href={"#/path/" + encodeURIComponent(c.id)} title="Study path to {c.title} on the map">path</a>{/if}
+        </li>
+      {/each}
+    </ol>
+  {:else}
+    <p class="empty">No links are rated requires yet, so there is no order to give. Rate a link by giving it the title "requires", as in [Topology](/topology.md "requires").</p>
   {/if}
   <h2 class="section-h">Your learner record</h2>
   {#if store.site.static}
