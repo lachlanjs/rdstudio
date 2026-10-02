@@ -45,6 +45,8 @@ graph LR
 ```
 
 Plain words here.
+
+See [**bold** link](/forms/stokes-theorem.md) and on.
 """)
 CHART = ROOT / "knowledge/forms/chart.md"
 CHART.write_text("""---
@@ -112,6 +114,10 @@ with sync_playwright() as pw:
     check("a table drawn as a table", p.locator(".cm-lp-table table th", has_text="Degree").count() == 1)
     expect(p.locator(".cm-lp-diagram svg").first).to_be_visible(timeout=15000)
     check("a Mermaid diagram drawn", p.locator(".cm-lp-diagram svg").count() == 1)
+    nested = p.locator(".cm-line", has_text="See ")
+    check("emphasis inside link text is styled, its marks hidden",
+          nested.inner_text() == "See bold link and on." and nested.locator(".cm-lp-link .cm-lp-strong, .cm-lp-strong .cm-lp-link").count() >= 1,
+          nested.inner_text())
     p.screenshot(path=str(OUT / "compose-blocks.png"))
 
     p.locator(".cm-lp-maths").first.click()

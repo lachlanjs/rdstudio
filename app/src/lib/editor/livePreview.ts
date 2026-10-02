@@ -131,7 +131,7 @@ function build(view: EditorView): DecorationSet {
               decos.push(hide.range(open.from, open.to));
               decos.push(hide.range(close.from, node.to));
             }
-            return false;
+            break; // on into the text, for emphasis or code inside it
           }
           case "ListMark": {
             const text = state.sliceDoc(node.from, node.to);
