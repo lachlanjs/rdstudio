@@ -7,6 +7,7 @@
 // only transforms them to the screen and decides what is open and labelled.
 
 import * as d3 from "d3";
+import { OFF_MAP, isStudyNote } from "@rdstudio/core/learning";
 import { store } from "../data.svelte.ts";
 import { prerequisites } from "../learn.ts";
 import { conceptHref, trustState, TRUST_LABEL, titleCase } from "../format.ts";
@@ -139,7 +140,7 @@ function chainOrder(leaves, adjacent) {
 
 function buildModel() {
   // Tours are walks through the map, not places on it (understanding-layer.md).
-  const concepts = [...store.concepts.values()].filter((c) => c.type !== "Tour");
+  const concepts = [...store.concepts.values()].filter(isStudyNote);
   const ids = concepts.map((c) => c.id);
   const known = new Set(ids);
   // Directed links, each with its strongest rating: [from, to, strength].
@@ -181,10 +182,10 @@ function buildModel() {
   }
   // Larger folders first packs more tidily; notes follow in link order.
   const size = (d) => d.notes.length + d.subdirs.reduce((s, x) => s + size(x), 0);
-  // A folder holding only tours (and nothing else below it) is left off too.
+  // A folder holding only tours, goals and exercises (and nothing else below it) is left off too.
   const onlyTours = (id) => {
     const d = store.tree[id];
-    return !!d && d.concepts.length > 0 && d.concepts.every((c) => store.concepts.get(c)?.type === "Tour") && d.children.every(onlyTours);
+    return !!d && d.concepts.length > 0 && d.concepts.every((c) => OFF_MAP.has(store.concepts.get(c)?.type)) && d.children.every(onlyTours);
   };
   for (const node of dirs.values()) {
     node.children = [...node.subdirs.filter((x) => !onlyTours(x.ref)).sort((a, b) => size(b) - size(a)), ...node.notes];
@@ -525,7 +526,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // onFinish, back}) is shown the same way, numbered by stop, with a route
   // from each stop to the next and the stop you are at marked.
   const goal = !tour && path && store.concepts.get(path);
-  const onMap = (id) => id && store.concepts.has(id) && store.concepts.get(id).type !== "Tour";
+  const onMap = (id) => id && store.concepts.has(id) && isStudyNote(store.concepts.get(id));
   const trail = tour ? [...new Set(tour.stops.map((s) => s.id).filter(onMap))] : goal ? [...prerequisites(goal.id), goal].map((c) => c.id) : null;
   const step = new Map();
   if (tour) tour.stops.forEach((s, i) => { if (onMap(s.id) && !step.has(s.id)) step.set(s.id, i + 1); });
@@ -1363,7 +1364,7 @@ function controls({ view, tune, readout }) {
 
   const legend = h("div", { class: "legend map-legend" });
   const types = new Map();
-  for (const c of store.concepts.values()) if (c.type && c.type !== "Tour" && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+  for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
   for (const [type, shape] of [...types].sort()) {
     const icon = d3.select(h("svg:svg", { width: 14, height: 14, viewBox: "-7 -7 14 14", class: `m-key ${shape}` }));
     icon.append("path").attr("d", d3.symbol(SYMBOLS[shape], 36)());

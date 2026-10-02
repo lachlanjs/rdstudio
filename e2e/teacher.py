@@ -7,6 +7,10 @@ Foundation (T43): the Teacher page reached from the Learn tab and Settings,
 the guessed profile, the skills with their defaults, customising one (kept
 privately, with its own history, read by the agent through MCP), comparing it
 with the default, a changed default, and a reset.
+Goals and exercises (T44): Goal and Exercise notes kept off the map; a value
+exercise checked here, wrong then right; a choice exercise after giving up;
+a text exercise marked by yourself, then left for an agent who marks it
+through MCP; the evidence on the tested notes; a goal met.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from pathlib import Path
@@ -21,6 +25,61 @@ ROOT = TMP / "project"
 shutil.copytree(DG, ROOT, ignore=shutil.ignore_patterns(".rdstudio"))
 (TMP / "config/rdstudio").mkdir(parents=True)
 (TMP / "config/rdstudio/config.toml").write_text('[learner]\nenabled = true\n\n[actors]\nhuman = "human:tester"\n')
+(ROOT / "knowledge/goals").mkdir()
+(ROOT / "knowledge/goals/charts.md").write_text("""---
+type: Goal
+title: Work in coordinates
+description: Use charts to compute on a manifold.
+---
+
+Be able to cover a manifold with charts and say what its dimension is. Needs
+[Charts and atlases](/manifolds/charts-and-atlases.md "requires").
+""")
+(ROOT / "knowledge/exercises").mkdir()
+(ROOT / "knowledge/exercises/sphere-dimension.md").write_text("""---
+type: Exercise
+title: The dimension of the sphere
+tests: [/manifolds/smooth-manifold.md]
+goals: [/goals/charts.md]
+answer: { kind: value, value: 2 }
+---
+
+What is the dimension of the sphere $S^2 \\subset \\mathbb{R}^3$?
+
+# Solution
+
+Two: near each point it looks like a piece of the plane.
+""")
+(ROOT / "knowledge/exercises/two-charts.md").write_text("""---
+type: Exercise
+title: Charts for the sphere
+tests: [/manifolds/charts-and-atlases.md]
+goals: [/goals/charts.md]
+answer:
+  kind: choice
+  choices: ["One chart", "Two charts", "None: it cannot be covered"]
+  correct: 2
+---
+
+What is the fewest charts that cover $S^2$?
+
+## Solution
+
+Two, by stereographic projection from each pole; one is impossible, as $S^2$ is compact.
+""")
+(ROOT / "knowledge/exercises/why-atlases.md").write_text("""---
+type: Exercise
+title: Why an atlas
+tests: [/manifolds/charts-and-atlases.md, /manifolds/smooth-manifold.md]
+goals: [/goals/charts.md]
+---
+
+Why does a manifold need an atlas rather than one chart?
+
+# Solution
+
+Because a single chart need not cover it, and smoothness is defined by the transition maps between charts.
+""")
 ENV = {**os.environ, "XDG_CONFIG_HOME": str(TMP / "config"), "XDG_DATA_HOME": str(TMP / "data")}
 CLI = ["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT)]
 
@@ -141,6 +200,115 @@ with sync_playwright() as pw:
     check("the profile set from the command line is in rdstudio.toml and shown",
           'profile = "codebase"' in (ROOT / "rdstudio.toml").read_text() and p.get_by_text("Learning a codebase.").count() == 1, out)
 
+    # ------------------------------------------------------------ goals and exercises (T44)
+    def attempts(kind="attempt"):
+        rec = list((TMP / "data/rdstudio/learners").glob("*/record.jsonl"))
+        lines = rec[0].read_text().splitlines() if rec else []
+        return [e for e in (json.loads(l) for l in lines if l.strip()) if e["event"] == kind]
+
+    def settle(count, kind="attempt", timeout=3.0):
+        end = time.time() + timeout
+        while time.time() < end and len(attempts(kind)) < count:
+            time.sleep(0.05)
+
+    p.goto(URL + "?nosw#/map")
+    p.wait_for_selector(".m-place", timeout=20000)
+    p.wait_for_timeout(600)
+    labels = p.locator(".m-text").evaluate_all("els => els.map(e => e.textContent)")
+    check("goals and exercises are kept off the map, folders and all",
+          not any(t.strip() in ("Exercises", "Goals", "Why an atlas", "Work in coordinates") for t in labels), labels[:30])
+
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Goals", exact=True).wait_for()
+    goal_row = p.locator(".rows.goals li", has_text="Work in coordinates")
+    check("the Learn tab lists the goal with its exercises", goal_row.count() == 1 and "0 of 3 exercises passed" in goal_row.inner_text(), goal_row.inner_text() if goal_row.count() else "")
+    p.goto(URL + "?nosw#/practice")
+    p.get_by_role("heading", name="Exercises", exact=True).wait_for()
+    check("the Practice page lists the exercises, not tried", p.locator(".written-exercises li .chip.ex-untried").count() == 3)
+
+    # A value, checked here: wrong, then right.
+    p.locator(".written-exercises a.title", has_text="The dimension of the sphere").click()
+    box = p.locator(".exercise-value input")
+    box.wait_for()
+    check("the solution is kept back until you answer", p.get_by_role("heading", name="Solution").count() == 0 and p.locator(".katex").count() >= 1)
+    box.fill("two")
+    p.get_by_role("button", name="Check").click()
+    check("an unreadable number is said, and nothing recorded", "not a number" in p.locator(".exercise .edit-status").inner_text() and not attempts())
+    box.fill("3")
+    p.get_by_role("button", name="Check").click()
+    expect(p.locator(".exercise-verdict")).to_contain_text("Not right. The answer is 2.")
+    settle(1)
+    check("a wrong value is recorded as missed, checked here, and the solution shown",
+          attempts()[-1]["result"] == "missed" and attempts()[-1]["by"] == "dashboard" and p.get_by_role("heading", name="Solution").count() == 1)
+    p.get_by_role("button", name="Try again").click()
+    p.locator(".exercise-value input").fill("2.0")
+    p.locator(".exercise-value input").press("Enter")
+    expect(p.locator(".exercise-verdict")).to_contain_text("Right.")
+    settle(2)
+    a = attempts()[-1]
+    check("a right value is evidence for the note it tests, at its version",
+          a["result"] == "got" and a["tests"] == ["manifolds/smooth-manifold"] and set(a["hashes"]) == {"manifolds/smooth-manifold"})
+    expect(p.locator(".exercise-attempts li")).to_have_count(2)
+    check("both attempts are listed, newest first", "Passed" in p.locator(".exercise-attempts li").first.inner_text() and "checked here" in p.locator(".exercise-attempts li").first.inner_text())
+
+    # A choice, after giving up.
+    p.goto(URL + "?nosw#/k/exercises/two-charts")
+    p.locator(".exercise-choice").first.wait_for()
+    p.get_by_role("button", name="Show the solution").click()
+    expect(p.locator(".exercise-verdict")).to_contain_text("Here is the solution.")
+    settle(3)
+    check("giving up is recorded as missed, by you", attempts()[-1].get("gave_up") is True and attempts()[-1]["result"] == "missed")
+    p.get_by_role("button", name="Try again").click()
+    p.locator(".exercise-choice", has_text="Two charts").click()
+    p.get_by_role("button", name="Check").click()
+    expect(p.locator(".exercise-verdict")).to_contain_text("Right.")
+    settle(4)
+    check("the right choice is checked here", attempts()[-1]["answer"] == "Two charts" and attempts()[-1]["result"] == "got")
+
+    # Text: marked by yourself, then left for an agent.
+    p.goto(URL + "?nosw#/k/exercises/why-atlases")
+    area = p.locator(".exercise-answer textarea")
+    area.wait_for()
+    area.fill("One chart may not cover it; $S^2$ needs two.")
+    p.get_by_role("button", name="Preview").click()
+    check("a written answer can be previewed with its maths", p.locator(".exercise-preview .katex").count() == 1)
+    p.get_by_role("button", name="Back to writing").click()
+    p.get_by_role("button", name="Mark it yourself").click()
+    check("marking it yourself shows the solution first", p.get_by_role("heading", name="Solution").count() == 1)
+    p.get_by_role("button", name="Partly").click()
+    settle(5)
+    check("your own marking is recorded as yours", attempts()[-1]["result"] == "partly" and attempts()[-1]["by"] == "self")
+    p.get_by_role("button", name="Try again").click()
+    p.locator(".exercise-answer textarea").fill("A single chart need not cover the manifold, and smoothness comes from the transition maps.")
+    p.get_by_role("button", name="Ask an agent to mark it").click()
+    expect(p.get_by_role("heading", name="Saved for marking")).to_be_visible()
+    settle(6)
+    check("an answer for an agent waits, unmarked", "result" not in attempts()[-1] and attempts()[-1]["kind"] == "ai")
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Answers waiting for marking").wait_for()
+    check("the Learn tab lists it as waiting", p.locator(".attempts-waiting li", has_text="Why an atlas").count() == 1)
+
+    pending = json.loads(mcp(("exercise_pending", {}))[0])
+    ref = pending[0]["ref"] if pending else None
+    check("an agent finds it through MCP", len(pending) == 1 and pending[0]["exercise"] == "exercises/why-atlases", pending)
+    marked = mcp(("exercise_mark", {"ref": ref, "result": "got", "feedback": "Right on both counts: coverage and the transition maps.", "gaps": []}))[0]
+    p.goto(URL + "?nosw&back#/k/exercises/why-atlases")
+    p.locator(".exercise-attempts li").first.wait_for()
+    first = p.locator(".exercise-attempts li").first.inner_text()
+    check("the agent's marking shows on the exercise, with its feedback", "Passed" in first and "transition maps." in first and "marked by" in first, first + marked)
+    check("and the tested notes are understood", p.locator(".chip.ex-passed").count() >= 1)
+
+    p.goto(URL + "?nosw#/k/goals/charts")
+    p.locator(".goal-panel").wait_for()
+    panel = p.locator(".goal-panel").inner_text()
+    check("the goal is met once every exercise is passed", panel.startswith("Met") and "3 of 3 exercises passed" in panel, panel[:200])
+    check("the goal lists what it needs in reading order, with your states",
+          p.locator(".goal-notes li", has_text="Charts and atlases").count() == 1 and "Understood" in p.locator(".goal-notes li", has_text="Charts and atlases").inner_text())
+    p.screenshot(path=str(OUT / "teacher-goal.png"), full_page=True)
+    p.goto(URL + "?nosw#/k/manifolds/smooth-manifold")
+    p.locator(".doc-head").wait_for()
+    check("a note tested by a passed exercise is understood", "st-understood" in (p.locator(".doc-head").get_attribute("class") or ""))
+
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     pp.goto(URL + "?nosw#/teacher/skills/teach")
@@ -148,6 +316,11 @@ with sync_playwright() as pw:
     box = pp.locator("textarea.teacher-editor").bounding_box()
     check("on a phone the skill editor fits the width", box is not None and box["x"] >= 0 and box["x"] + box["width"] <= 390, box)
     pp.screenshot(path=str(OUT / "teacher-phone.png"))
+    pp.goto(URL + "?nosw#/k/exercises/two-charts")
+    pp.locator(".exercise-choice").first.wait_for()
+    wide = pp.evaluate("document.documentElement.scrollWidth")
+    check("on a phone an exercise fits without sideways scrolling", wide <= 390, wide)
+    pp.screenshot(path=str(OUT / "teacher-exercise-phone.png"), full_page=True)
     pctx.close()
 
     check("no console errors", not errors, errors[:5])

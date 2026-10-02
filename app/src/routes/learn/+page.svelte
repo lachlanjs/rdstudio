@@ -1,5 +1,6 @@
 <script lang="ts">
   // Reading order from requires links, and the private learner record.
+  import { isStudyNote } from "@rdstudio/core/learning";
   import { learner, store } from "$lib/data.svelte.ts";
   import { conceptHref, dirHref, titleCase } from "$lib/format.ts";
   import { hasRequires } from "$lib/learn.ts";
@@ -7,6 +8,7 @@
   import { understanding } from "$lib/understanding.svelte.ts";
   import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
   import { allPrerequisitesChanged, changedSince } from "$lib/catchup.ts";
+  import { STATUS_LABEL, exerciseNotes, exercisesFor, goalNotes, progressOf, waiting as waitingAttempts } from "$lib/exercises.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
@@ -22,14 +24,34 @@
   const load = $derived(understanding.loadNote());
   const SEGMENTS = [["understood", "understood"], ["processed", "worked through"], ["discovered", "opened"]] as const;
   const inDays = (ms: number) => { const d = Math.max(1, Math.round((ms - Date.now()) / 86_400_000)); return d === 1 ? "tomorrow" : `in ${d} days`; };
-  const notes = $derived([...store.concepts.values()].filter((c) => c.type !== "Tour").sort((a, b) => a.order - b.order));
+  const notes = $derived([...store.concepts.values()].filter(isStudyNote).sort((a, b) => a.order - b.order));
+  const goals = $derived(goalNotes());
+  const exerciseCount = $derived(exerciseNotes().length);
+  const attemptsWaiting = $derived(understanding.on ? waitingAttempts() : []);
 </script>
 
 <svelte:head><title>Learn · {store.site.title}</title></svelte:head>
 
 <div class="page">
   <h1>Learn</h1>
-  <p class="lede">Ways into this knowledge base: where you stand, practice, tours, and a reading order from the links rated requires.</p>
+  <p class="lede">Ways into this knowledge base: your goals, where you stand, practice, tours, and a reading order from the links rated requires.</p>
+  {#if goals.length}
+    <h2 class="section-h">Goals</h2>
+    <p class="section-note">What you are working towards. A goal is met when every exercise written for it is passed.</p>
+    <ul class="rows goals">
+      {#each goals as g (g.id)}
+        {@const ex = exercisesFor(g.id)}
+        <li><a class="title" href={conceptHref(g.id)}>{g.title}</a>
+          {#if understanding.on}
+            {@const p = progressOf(g)}
+            {#if p.met}<span class="chip ex-passed">Met</span>{/if}
+            <div class="sub"><span>{ex.length ? `${p.exercises.filter((e) => e.status === "passed").length} of ${ex.length} ${ex.length === 1 ? "exercise" : "exercises"} passed` : "no exercises yet"}</span>
+              {#if p.coverage.total}<span>{p.coverage.understood} of {p.coverage.total} notes understood</span>{/if}</div>
+          {/if}
+          {#if g.description}<div class="desc">{g.description}</div>{/if}</li>
+      {/each}
+    </ul>
+  {/if}
   {#if understanding.on}
     <h2 class="section-h">Where you stand</h2>
     <p class="section-note">From your record: notes you have opened, worked through or understood (by marking them, or by evidence from exercises and explain-back). No single score: each area on its own.</p>
@@ -107,8 +129,17 @@
       <p class="empty">None yet.</p>
     {/if}
   {/if}
+  {#if attemptsWaiting.length}
+    <h3 class="sub-h">Answers waiting for marking</h3>
+    <ul class="rows attempts-waiting">
+      {#each attemptsWaiting.slice(0, 8) as a (a.id)}{@const c = store.concepts.get(a.exercise)}
+        <li><a class="title" href={conceptHref(a.exercise)}>{c?.title ?? a.exercise}</a><div class="sub"><span>{STATUS_LABEL.waiting}</span><span>{sinceDay(a.at)}</span></div></li>
+      {/each}
+    </ul>
+    <p class="section-note">An agent marks them next time you ask to be taught or tested (the teach skill), or you can mark one yourself on its page.</p>
+  {/if}
   <h2 class="section-h">Practice</h2>
-  <p class="section-note">Short rounds of exercises, checked here: recall with a self-grade, fill the gap, placement, and naming the landmarks.</p>
+  <p class="section-note">{exerciseCount ? `${exerciseCount} ${exerciseCount === 1 ? "exercise" : "exercises"} written for this knowledge base, and short` : "Short"} rounds of drills checked here: recall with a self-grade, fill the gap, placement, and naming the landmarks.</p>
   <p><a class="toggle" href="#/practice">Practise</a></p>
   <h2 class="section-h">Tours</h2>
   <p class="section-note">Walks through the notes in a chosen order, with a sentence at each stop. Following one shows its route on the map. Tours are kept off the map and graph.</p>

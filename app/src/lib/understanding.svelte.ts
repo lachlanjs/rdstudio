@@ -4,7 +4,7 @@
 // note simply shown) while the record is off or in an exported snapshot.
 
 import type { ConceptRecord } from "@rdstudio/core";
-import { coverage, discoveryStates, dueReviews, loadNote, reviewSchedule, studyLoad, type Discovery, type NoteState } from "@rdstudio/core/learning";
+import { coverage, discoveryStates, isStudyNote, dueReviews, loadNote, reviewSchedule, studyLoad, type Discovery, type NoteState } from "@rdstudio/core/learning";
 import { learner, store } from "./data.svelte.ts";
 
 const HIDE_KEY = "rdstudio.hideUndiscovered";
@@ -16,7 +16,7 @@ export const STATE_LABEL: Record<Discovery, string> = {
   understood: "Understood",
 };
 
-const notes = (): ConceptRecord[] => [...store.concepts.values()].filter((c) => c.type !== "Tour");
+const notes = (): ConceptRecord[] => [...store.concepts.values()].filter(isStudyNote);
 const localDay = (ms: number): string => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -79,7 +79,7 @@ class Understanding {
     const walk = (d: string) => {
       const f = store.tree[d];
       if (!f) return;
-      for (const id of f.concepts) if (store.concepts.get(id)?.type !== "Tour") ids.push(id);
+      for (const id of f.concepts) { const c = store.concepts.get(id); if (c && isStudyNote(c)) ids.push(id); }
       f.children.forEach(walk);
     };
     walk(dir);

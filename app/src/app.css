@@ -927,3 +927,42 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .teacher-history li { padding: 4px 0; border-bottom: 1px solid var(--rule); }
 .teacher-history time { color: var(--ink-faint); margin-right: 8px; }
 .teacher-link { margin-top: 28px; }
+
+/* ------------------------------------------------------------ goals and exercises */
+
+.exercise { margin-top: 4px; }
+.exercise-status { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 14px; font: 14px/1.5 var(--font-ui); color: var(--ink-soft); }
+.exercise-status .chip { margin: 0; }
+.chip.ex-passed { background: color-mix(in srgb, var(--reviewed) 18%, transparent); color: var(--ink); }
+.chip.ex-waiting { background: var(--accent-soft); color: var(--ink); }
+.chip.ex-missed, .chip.ex-partly { background: color-mix(in srgb, var(--stale) 14%, transparent); color: var(--ink); }
+.exercise-answer { margin: 22px 0 8px; padding: 14px 16px 6px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); font-family: var(--font-ui); }
+.exercise-answer h2 { font: 700 16px/1.3 var(--font-ui); margin: 0 0 10px; }
+.exercise-answer textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; font: 15px/1.55 var(--font-ui); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); resize: vertical; }
+.exercise-preview { padding: 4px 12px; border: 1px dashed var(--rule); border-radius: var(--radius); background: var(--paper); min-height: 120px; }
+.exercise-choices { display: grid; gap: 6px; }
+.exercise-choice { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); cursor: pointer; }
+.exercise-choice.on { border-color: var(--accent); }
+.exercise-choice input { margin-top: 5px; accent-color: var(--accent); }
+.exercise-choice .choice-text > :first-child { margin-top: 0; }
+.exercise-choice .choice-text > :last-child { margin-bottom: 0; }
+.exercise-value { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.exercise-value .section-note { flex-basis: 100%; margin: 0; }
+.exercise-value input { font: 16px var(--font-mono); padding: 6px 10px; width: min(220px, 100%); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); }
+.exercise-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 14px 0 4px; }
+.exercise-verdict { font-weight: 700; margin: 0 0 6px; }
+.exercise-verdict.got { color: var(--reviewed); }
+.exercise-verdict.missed, .exercise-verdict.partly { color: var(--stale); }
+.exercise-answer blockquote { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--rule); }
+.exercise-attempts blockquote .prose { font-size: 15px; }
+.goal-panel { margin-top: 28px; }
+.goal-panel h3 { font: 700 15px/1.3 var(--font-ui); margin: 20px 0 8px; }
+.goal-bar { max-width: 420px; margin: 6px 0 4px; }
+.goal-exercises .chip { margin: 0 0 0 8px; }
+.goal-notes { padding-left: 1.6em; font: 15px/1.6 var(--font-ui); }
+.goal-notes .goal-state { color: var(--ink-faint); margin-left: 8px; font-size: 13.5px; }
+.goal-notes .st-understood > a { font-weight: 700; }
+.goal-notes .st-undiscovered > a { color: var(--ink-soft); }
+.rows.goals .chip, .written-exercises .chip { margin: 0 0 0 8px; vertical-align: 2px; }
+.exercise-answer blockquote .prose > :last-child, .exercise-attempts blockquote .prose > :last-child { margin-bottom: 0; }
+.exercise-answer blockquote .prose > :first-child, .exercise-attempts blockquote .prose > :first-child { margin-top: 0; }

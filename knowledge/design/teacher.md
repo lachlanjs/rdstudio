@@ -149,7 +149,7 @@ solution until you answer or give up.
 
 | Kind | Answered with | Marked by |
 |---|---|---|
-| `choice` | one of `choices` (`answer` is its index) | the dashboard |
+| `choice` | one of `choices` (`correct` is its number, from 1; a list when several are right) | the dashboard |
 | `value` | a number, within `tolerance` (relative when `relative: true`) | the dashboard |
 | `text` | Markdown and maths, or a pointer to files in the repository (a script, a scan of working) | you, against the solution, or an agent |
 
@@ -170,9 +170,13 @@ An answer is an `attempt` event:
 - `result` and `by` are filled in when it is marked there and then.
 
 An agent's marking comes later, as an `attempt_marked` event with the same
-fields as `explain_marked`. A `got` is evidence for every note in `tests`.
-Explain-back becomes a `text` exercise generated on the spot; the existing
-`explain` events stay readable.
+fields as `explain_marked`. Marking a waiting answer yourself is an
+`attempt_marked` event too, with `by: self`. A `got` is evidence for every
+note in `tests`.
+
+Explain-back keeps its own events and tools for now. It is quicker than an
+exercise (no note to write first), and folding it in can wait until the trial
+shows whether it is worth doing.
 
 # The profile
 

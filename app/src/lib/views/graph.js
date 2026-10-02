@@ -2,6 +2,7 @@
 // Positions and options survive navigation (module state) and visits (localStorage).
 
 import * as d3 from "d3";
+import { OFF_MAP } from "@rdstudio/core/learning";
 import { store } from "../data.svelte.ts";
 import { conceptHref, dirHref, trustState, TRUST_LABEL, titleCase } from "../format.ts";
 import { h } from "./dom.js";
@@ -76,7 +77,7 @@ function buildGraph() {
     add({ id: "d:" + d.id, kind: "dir", ref: d.id, label: d.id ? titleCase(d.name) : store.site.title || "Knowledge", group: d.id.split("/")[0] });
   }
   for (const c of store.concepts.values()) {
-    if (c.type === "Tour") continue; // walks through the graph, not places on it
+    if (OFF_MAP.has(c.type)) continue; // tours, goals and exercises: walks through the graph and work on it, not places on it
     add({ id: "c:" + c.id, kind: "concept", ref: c.id, label: c.title, type: c.type, trust: trustState(c), group: topDir(c.id), c });
   }
   if (G.opts.reports) {

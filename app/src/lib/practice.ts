@@ -5,6 +5,7 @@
 // (@rdstudio/core/learning, EVIDENCE).
 
 import type { ConceptRecord } from "@rdstudio/core";
+import { isStudyNote } from "@rdstudio/core/learning";
 import { learner, store } from "./data.svelte.ts";
 import { titleCase } from "./format.ts";
 
@@ -20,7 +21,7 @@ export const EXERCISES: { kind: Exercise; name: string; what: string }[] = [
 
 /** Notes to practise on: those in `folder` (and below), tours left out. */
 export function notesIn(folder: string): ConceptRecord[] {
-  return [...store.concepts.values()].filter((c) => c.type !== "Tour" && (!folder || c.directory === folder || c.directory.startsWith(folder + "/")));
+  return [...store.concepts.values()].filter((c) => isStudyNote(c) && (!folder || c.directory === folder || c.directory.startsWith(folder + "/")));
 }
 
 export const folderLabel = (dir: string): string =>

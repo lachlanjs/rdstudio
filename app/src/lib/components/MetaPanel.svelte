@@ -1,6 +1,7 @@
 <script lang="ts">
   // Beside a note: trust, frontmatter, outline, study path and links.
   import type { ConceptRecord } from "@rdstudio/core";
+  import { isStudyNote } from "@rdstudio/core/learning";
   import { store } from "$lib/data.svelte.ts";
   import { conceptHref } from "$lib/format.ts";
   import { hasRequires, prerequisites } from "$lib/learn.ts";
@@ -38,7 +39,7 @@
 
 <aside class="meta" aria-label="Details">
   <div class="meta-inner">
-    {#if understanding.on}<YourUnderstanding {c} />{/if}
+    {#if understanding.on && isStudyNote(c)}<YourUnderstanding {c} />{/if}
     <h2>Trust</h2>
     <TrustBadge {c} />
     {#if c.verification_stale}<p class="section-note">Meaningfully edited after the last human review.</p>{/if}
