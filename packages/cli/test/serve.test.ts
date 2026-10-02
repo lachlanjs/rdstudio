@@ -1,6 +1,6 @@
 // The server against the Python server's tests (tests/test_learner.py).
 
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { request, type IncomingHttpHeaders } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -90,7 +90,22 @@ test("text is compressed and vendored files are cached", async () => {
 
 test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/learner", "/api/notes/{id}", "/api/notes/{id}/move"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
   expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["delete", "get", "put"]);
+});
+
+test("private tours are kept beside the record, written only from the dashboard", async () => {
+  const good = { Origin: base, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const body = JSON.stringify({ title: "First steps", description: "Where to begin.", body: "1. [A](/a.md): start here.\n" });
+  expect((await call("PUT", "/api/learner/tours/first", { ...good, Origin: "http://evil.example" }, body)).status).toBe(403);
+  expect((await call("PUT", "/api/learner/tours/Bad%20Name", good, body)).status).toBe(400);
+  expect((await call("PUT", "/api/learner/tours/first", good, JSON.stringify({ body: "x" }))).status).toBe(400);
+  expect((await call("PUT", "/api/learner/tours/first", good, body)).status).toBe(200);
+  const file = readFileSync(join(learner.recordDir(cfg), "tours", "first.md"), "utf8");
+  expect(file).toBe("---\ntype: Tour\ntitle: First steps\ndescription: Where to begin.\n---\n\n1. [A](/a.md): start here.\n");
+  const list = JSON.parse((await call("GET", "/api/learner/tours")).body.toString());
+  expect(list).toEqual([{ name: "first", title: "First steps", description: "Where to begin.", body: "1. [A](/a.md): start here.\n" }]);
+  expect((await call("DELETE", "/api/learner/tours/first", { Origin: base, "X-Rdstudio-Token": "tok" })).status).toBe(200);
+  expect(JSON.parse((await call("GET", "/api/learner/tours")).body.toString())).toEqual([]);
 });

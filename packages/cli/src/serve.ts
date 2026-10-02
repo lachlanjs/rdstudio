@@ -87,6 +87,38 @@ const postLearner = createRoute({
   },
 });
 
+const Tour = z.object({
+  name: z.string().openapi({ description: "Lowercase letters, digits and dashes." }),
+  title: z.string(),
+  description: z.string(),
+  body: z.string().openapi({ description: "Markdown: a list whose items each start with a link to a stop, then its narration." }),
+}).openapi("PrivateTour");
+const TourName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" } }) });
+const TourSave = z.object({ title: z.string(), description: z.string().optional(), body: z.string() }).openapi("PrivateTourSave");
+const tourErrors = {
+  400: { description: "Not a valid tour", content: { "application/json": { schema: ErrorBody } } },
+  403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  409: { description: "The learner record is off", content: { "application/json": { schema: ErrorBody } } },
+  415: { description: "Not JSON", content: { "application/json": { schema: ErrorBody } } },
+};
+const getTours = createRoute({
+  method: "get", path: "/api/learner/tours", summary: "Your private tours (none while the learner record is off)",
+  responses: {
+    200: { description: "The tours", content: { "application/json": { schema: z.array(Tour) } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
+const putTour = createRoute({
+  method: "put", path: "/api/learner/tours/{name}", summary: "Write one of your private tours",
+  request: { params: TourName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: TourSave } }, required: true } },
+  responses: { 200: { description: "The tour as saved", content: { "application/json": { schema: Tour } } }, ...tourErrors },
+});
+const deleteTourRoute = createRoute({
+  method: "delete", path: "/api/learner/tours/{name}", summary: "Delete one of your private tours",
+  request: { params: TourName, headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Deleted", content: { "application/json": { schema: z.object({ name: z.string() }) } } }, ...tourErrors },
+});
+
 // ------------------------------------------------------------------ notes API
 
 const Meta = z.record(z.string(), z.unknown()).openapi("NoteMeta", { description: "Frontmatter fields." });
@@ -271,6 +303,29 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
       return refuse(c, 400, (err as Error).message);
     }
   }) as never);
+
+  app.openapi(getTours, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    return json(c, 200, learner.enabled(cfg) ? learner.tours(cfg) : []);
+  }) as never);
+  /** A write to your private tours: the same checks as the record's. */
+  const tourChange = async (c: Context, act: (body: Record<string, unknown>) => unknown, withBody = true) => {
+    const refused = writeRefused(c, withBody);
+    if (refused) return refused;
+    if (!learner.enabled(cfg)) return refuse(c, 409, "the learner record is off ([learner] enabled in the user config)");
+    let body: Record<string, unknown> = {};
+    if (withBody) {
+      try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+      if (typeof body !== "object" || body === null || Array.isArray(body)) return refuse(c, 400, "expected a JSON object");
+    }
+    try {
+      return json(c, 200, act(body), true);
+    } catch (err) {
+      return refuse(c, 400, (err as Error).message);
+    }
+  };
+  app.openapi(putTour, ((c: Context) => tourChange(c, (b) => learner.saveTour(cfg, c.req.param("name") ?? "", b))) as never);
+  app.openapi(deleteTourRoute, ((c: Context) => tourChange(c, () => learner.deleteTour(cfg, c.req.param("name") ?? ""), false)) as never);
 
   const actor = cfg.human || "human:unknown";
   app.openapi(getEdit, ((c: Context) => {

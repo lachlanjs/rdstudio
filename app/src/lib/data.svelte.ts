@@ -4,8 +4,8 @@
 
 import type { Changes, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, Skills } from "@rdstudio/core";
 import { client } from "./api/client.gen.ts";
-import { getApiLearner, postApiLearner } from "./api/sdk.gen.ts";
-import type { LearnerEvent } from "./api/types.gen.ts";
+import { deleteApiLearnerToursByName, getApiLearner, getApiLearnerTours, postApiLearner, putApiLearnerToursByName } from "./api/sdk.gen.ts";
+import type { LearnerEvent, PrivateTour } from "./api/types.gen.ts";
 import { measure } from "./perf.ts";
 
 const POLL_MS = 2500;
@@ -127,6 +127,8 @@ class Learner {
   enabled = $state(false);
   dir = $state<string | null>(null);
   events = $state.raw<LearnerEvent[]>([]);
+  /** Your own tours, kept beside the record. */
+  tours = $state.raw<PrivateTour[]>([]);
   private token: string | null = null;
 
   async load(): Promise<void> {
@@ -140,7 +142,21 @@ class Learner {
       this.dir = data.dir;
       this.token = data.token;
       this.events = data.events;
+      if (data.enabled) this.tours = (await getApiLearnerTours()).data ?? [];
     } catch { /* an older server, or none: the record is off */ }
+  }
+
+  async saveTour(name: string, tour: { title: string; description: string; body: string }): Promise<PrivateTour> {
+    const { data, error } = await putApiLearnerToursByName({ path: { name }, body: tour, headers: { "x-rdstudio-token": this.token ?? "" } });
+    if (!data) throw new Error((error as { error?: string } | undefined)?.error ?? "The tour was not saved");
+    this.tours = [...this.tours.filter((t) => t.name !== name), data].sort((a, b) => (a.name < b.name ? -1 : 1));
+    return data;
+  }
+
+  async deleteTour(name: string): Promise<void> {
+    const { error } = await deleteApiLearnerToursByName({ path: { name }, headers: { "x-rdstudio-token": this.token ?? "" } });
+    if (error) throw new Error((error as { error?: string }).error ?? "The tour was not deleted");
+    this.tours = this.tours.filter((t) => t.name !== name);
   }
 
   /** Append one event ({event, concept, kind, ...}); the stored event, or null. */

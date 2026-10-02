@@ -4,11 +4,12 @@
 
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { DEVICE_RE, cleanEvent, readRecord, sha256, type LearnerEvent } from "@rdstudio/core";
+import { dirname, join, resolve } from "node:path";
+import { DEVICE_RE, LearnerError, cleanEvent, readRecord, sha256, type LearnerEvent } from "@rdstudio/core";
 import { expandUser, readToml, userConfigPath, type Config, type Table } from "./config.ts";
+import { editFrontmatter, parsed } from "./store.ts";
 
 export function settings(): Table {
   const s = readToml(userConfigPath()).learner;
@@ -65,4 +66,49 @@ export function append(cfg: Config, event: unknown): LearnerEvent {
   mkdirSync(dir, { recursive: true });
   appendFileSync(join(dir, "record.jsonl"), JSON.stringify(out) + "\n", "utf8");
   return out;
+}
+
+// ------------------------------------------------------------------ private tours
+// Your own tours, beside the record: Markdown notes of type Tour in tours/,
+// in the same form as a shared Tour note, so publishing one is a move.
+
+const TOUR_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+export interface PrivateTour {
+  name: string;
+  title: string;
+  description: string;
+  body: string;
+}
+
+function tourPath(cfg: Config, name: string): string {
+  if (!TOUR_NAME.test(name)) throw new LearnerError("a tour's name is lowercase letters, digits and dashes");
+  return join(recordDir(cfg), "tours", `${name}.md`);
+}
+
+export function tours(cfg: Config): PrivateTour[] {
+  const dir = join(recordDir(cfg), "tours");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => f.endsWith(".md") && TOUR_NAME.test(f.slice(0, -3))).sort().map((f) => {
+    const [meta, body] = parsed(readFileSync(join(dir, f), "utf8"));
+    return { name: f.slice(0, -3), title: String(meta.title ?? f.slice(0, -3)), description: String(meta.description ?? ""), body };
+  });
+}
+
+export function saveTour(cfg: Config, name: string, tour: { title?: unknown; description?: unknown; body?: unknown }): PrivateTour {
+  const path = tourPath(cfg, name);
+  const title = typeof tour.title === "string" && tour.title.trim() ? tour.title.trim() : null;
+  if (!title) throw new LearnerError("a tour needs a title");
+  const description = typeof tour.description === "string" ? tour.description.trim() : "";
+  const body = typeof tour.body === "string" ? tour.body.replace(/\r\n?/g, "\n") : "";
+  const front = editFrontmatter("", { type: "Tour", title, ...(description ? { description } : {}) });
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `---\n${front}---\n\n${body.trim()}\n`, "utf8");
+  return { name, title, description, body: `${body.trim()}\n` };
+}
+
+export function deleteTour(cfg: Config, name: string): { name: string } {
+  const path = tourPath(cfg, name);
+  if (existsSync(path)) unlinkSync(path);
+  return { name };
 }

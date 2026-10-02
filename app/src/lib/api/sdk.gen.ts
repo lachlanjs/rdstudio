@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -28,6 +28,28 @@ export const getApiLearner = <ThrowOnError extends boolean = false>(options?: Op
  */
 export const postApiLearner = <ThrowOnError extends boolean = false>(options: Options<PostApiLearnerData, ThrowOnError>): RequestResult<PostApiLearnerResponses, PostApiLearnerErrors, ThrowOnError> => (options.client ?? client).post<PostApiLearnerResponses, PostApiLearnerErrors, ThrowOnError>({
     url: '/api/learner',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Your private tours (none while the learner record is off)
+ */
+export const getApiLearnerTours = <ThrowOnError extends boolean = false>(options?: Options<GetApiLearnerToursData, ThrowOnError>): RequestResult<GetApiLearnerToursResponses, GetApiLearnerToursErrors, ThrowOnError> => (options?.client ?? client).get<GetApiLearnerToursResponses, GetApiLearnerToursErrors, ThrowOnError>({ url: '/api/learner/tours', ...options });
+
+/**
+ * Delete one of your private tours
+ */
+export const deleteApiLearnerToursByName = <ThrowOnError extends boolean = false>(options: Options<DeleteApiLearnerToursByNameData, ThrowOnError>): RequestResult<DeleteApiLearnerToursByNameResponses, DeleteApiLearnerToursByNameErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiLearnerToursByNameResponses, DeleteApiLearnerToursByNameErrors, ThrowOnError>({ url: '/api/learner/tours/{name}', ...options });
+
+/**
+ * Write one of your private tours
+ */
+export const putApiLearnerToursByName = <ThrowOnError extends boolean = false>(options: Options<PutApiLearnerToursByNameData, ThrowOnError>): RequestResult<PutApiLearnerToursByNameResponses, PutApiLearnerToursByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiLearnerToursByNameResponses, PutApiLearnerToursByNameErrors, ThrowOnError>({
+    url: '/api/learner/tours/{name}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

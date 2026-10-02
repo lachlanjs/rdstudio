@@ -11,6 +11,7 @@
   import Missing from "./Missing.svelte";
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
+  import { tourHref } from "$lib/tours.ts";
 
   let { id }: { id: string } = $props();
 
@@ -83,6 +84,7 @@
           </p>
           <h1>{c.title}</h1>
           {#if c.description}<p class="description">{c.description}</p>{/if}
+          {#if c.type === "Tour"}<p class="tour-follow"><a class="toggle primary" href={tourHref(c.id)}>Follow this tour</a></p>{/if}
         </header>
         {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
       </article>

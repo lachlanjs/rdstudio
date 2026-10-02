@@ -76,6 +76,7 @@ function buildGraph() {
     add({ id: "d:" + d.id, kind: "dir", ref: d.id, label: d.id ? titleCase(d.name) : store.site.title || "Knowledge", group: d.id.split("/")[0] });
   }
   for (const c of store.concepts.values()) {
+    if (c.type === "Tour") continue; // walks through the graph, not places on it
     add({ id: "c:" + c.id, kind: "concept", ref: c.id, label: c.title, type: c.type, trust: trustState(c), group: topDir(c.id), c });
   }
   if (G.opts.reports) {
@@ -84,10 +85,11 @@ function buildGraph() {
   if (G.opts.hierarchy) {
     for (const d of Object.values(store.tree)) {
       for (const child of d.children) links.push({ source: "d:" + d.id, target: "d:" + child, kind: "tree" });
-      for (const cid of d.concepts) links.push({ source: "d:" + d.id, target: "c:" + cid, kind: "tree" });
+      for (const cid of d.concepts) if (byId.has("c:" + cid)) links.push({ source: "d:" + d.id, target: "c:" + cid, kind: "tree" });
     }
   }
   for (const c of store.concepts.values()) {
+    if (!byId.has("c:" + c.id)) continue;
     const seen = new Set();
     for (const l of c.links) {
       if (l.broken) continue;

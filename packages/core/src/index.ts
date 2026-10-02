@@ -19,3 +19,5 @@ export type { Classifier, Decision } from "./classify.ts";
 export { ATTRIBUTES, EDIT_OPS, Graph, ProcedureError, RELATIONS, applyEdits, describe, graphOf, isProcedure, lintProcedures, validateEdits } from "./procedures.ts";
 export type { Edge as ProcedureEdge } from "./procedures.ts";
 export type { ChangedFile, Changes, Commit, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, SkillRecord, Skills, Version } from "./site.ts";
+export { INTERVALS, RESULTS, REVIEW_CAP, STATES, coverage, discoveryStates, dueReviews, loadNote, reviewSchedule, studyLoad, tourBody, tourStops } from "./learning.ts";
+export type { Discovery, NoteRef, NoteState, Result, Review, TourStop } from "./learning.ts";
