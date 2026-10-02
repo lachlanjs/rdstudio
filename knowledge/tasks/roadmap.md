@@ -76,7 +76,7 @@ See [platform, performance and deployment](/design/platform.md). M8 resumes afte
 - [x] [T36 TypeScript core: graph, search and learner record](/tasks/T36-core-graph-search-record.md)
 - [x] [T37 Node command line, MCP server and rdstudio serve](/tasks/T37-node-cli-mcp-serve.md)
 - [x] [T38 Svelte UI with a build step](/tasks/T38-svelte-ui.md)
-- [ ] [T30 Editing in the app: create, edit, move and delete notes](/tasks/T30-dashboard-editing.md) (next)
+- [x] [T30 Editing in the app: create, edit, move and delete notes](/tasks/T30-dashboard-editing.md)
 - [ ] [T39 GPU map renderer](/tasks/T39-gpu-map.md)
 - [ ] [T40 Tauri desktop app](/tasks/T40-tauri-desktop.md)
 - [ ] [T41 Local-first sync](/tasks/T41-local-first-sync.md)

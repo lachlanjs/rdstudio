@@ -2,7 +2,7 @@
 type: Task
 title: "T30 — Editing in the app"
 description: "Create, edit, move and delete notes from the dashboard, through the same write path as the MCP tools, ergonomic on desktop and phone."
-tags: [task, m9, todo]
+tags: [task, m9, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-09-26T09:20:35Z }
 ---
 
@@ -243,3 +243,23 @@ desktop and on the phone, and see it appear on the map without leaving the app.
     mode (colours left to Mermaid's light defaults).
   - `e2e/compose.py` (37 checks) adds a long note with a chart in the space
     theme, dark, with a shorter window standing in for the keyboard.
+- Litmus test passed by the user (2026-10-01): a Philosophy folder and notes
+  made and edited from the dashboard, on the desktop and on an Android phone,
+  shown on the map without leaving the app.
+- Closing (2026-10-02):
+  - The agents' write path now splices too. `record` and `verify`
+    (`packages/cli/src/store.ts`, used by the MCP tools and the command line)
+    and procedure proposals (`procedures.ts`) change only the lines of the
+    fields they change, with the same `spliceText` the app's saves use: other
+    fields keep their quoting, comments and folding, a byte order mark and
+    `\r\n` line ends are kept, and a write that changes nothing writes
+    nothing. A note's `type` is no longer moved to the top when an agent
+    updates it (new notes still start with it). The Python store still
+    re-renders the block; `mise run agree` checks both read the same.
+  - Emphasis, strikethrough and code inside link text are styled in the live
+    preview, with their marks hidden off the cursor's line.
+  - Left out on purpose: HTML highlighting in the editor (for size; inline
+    HTML is plain text there).
+  - Checked: unit tests (core 188, cli 73 with two new splicing tests, app
+    20, Python 58), `mise run agree`, and the walkthroughs (edit 26, compose
+    38, reshape 28, sign-in 4).
