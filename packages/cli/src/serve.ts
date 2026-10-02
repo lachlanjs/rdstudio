@@ -10,7 +10,7 @@
 
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { extname, join, resolve, sep } from "node:path";
+import { extname, join, relative, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 import { serve as nodeServe } from "@hono/node-server";
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
@@ -20,8 +20,9 @@ import { build, WEB_DIR } from "./build.ts";
 import type { Config } from "./config.ts";
 import { ConflictError, noteSource, saveNote } from "./edit.ts";
 import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
-import { StoreError } from "./store.ts";
+import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
+import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -145,6 +146,23 @@ const SaveReply = z.object({
 }).openapi("NoteSaved");
 const Conflict = z.object({ error: z.string(), current: NoteSourceSchema.nullable() }).openapi("NoteConflict");
 const NoteId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The note's id, such as design/model (slashes encoded)." }) });
+
+const History = z.object({
+  available: z.boolean().openapi({ description: "Whether the project is a git repository." }),
+  commits: z.array(z.object({ hash: z.string(), short: z.string(), author: z.string(), date: z.string(), subject: z.string() })),
+  diff: z.string().nullable().openapi({ description: "The note then against now, as a unified diff, uncommitted changes included." }),
+  base: z.string().nullable(),
+  existed: z.boolean(),
+}).openapi("NoteHistory");
+const getHistory = createRoute({
+  method: "get", path: "/api/history/{id}", summary: "What changed in a note since a time: commits and a diff (catching up)",
+  request: { params: NoteId, query: z.object({ since: z.string().openapi({ description: "An ISO time, such as when you last looked." }) }) },
+  responses: {
+    200: { description: "The history", content: { "application/json": { schema: History } } },
+    400: { description: "Not a valid note or time", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
+  },
+});
 
 const getEdit = createRoute({
   method: "get", path: "/api/edit", summary: "Whether notes can be edited here, and the token to do it with",
@@ -331,6 +349,18 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   app.openapi(getEdit, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     return json(c, 200, { enabled: !readOnly, token: readOnly ? null : token, actor });
+  }) as never);
+
+  app.openapi(getHistory, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    const since = c.req.query("since") ?? "";
+    if (Number.isNaN(Date.parse(since))) return json(c, 400, { error: "'since' is an ISO time" });
+    try {
+      const path = existingNotePath(cfg.knowledgeDir, c.req.param("id") ?? "");
+      return json(c, 200, historySince(cfg.root, relative(cfg.root, path).split("\\").join("/"), new Date(since).toISOString()));
+    } catch (err) {
+      return json(c, 400, { error: (err as Error).message });
+    }
   }) as never);
 
   app.openapi(getNote, ((c: Context) => {

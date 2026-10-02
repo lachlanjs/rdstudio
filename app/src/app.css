@@ -893,3 +893,19 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .result-got { color: var(--reviewed); font-weight: 600; }
 .result-partly { color: var(--unverified); font-weight: 600; }
 .result-missed { color: var(--stale); font-weight: 600; }
+
+/* ------------------------------------------------------------ catching up */
+
+.catch-up { margin: 14px 0 0; padding: 8px 12px; border-left: 3px solid var(--stale); background: var(--paper-raised); font: 14.5px/1.5 var(--font-ui); color: var(--ink-soft); }
+.catch-up p { margin: 0; }
+.catch-up button.link { margin-left: 6px; }
+.catch-commits { list-style: none; padding: 0; margin: 8px 0; font-size: 13.5px; }
+.catch-commits code { font: 12.5px var(--font-mono); color: var(--ink-faint); margin-right: 6px; }
+.catch-commits span { color: var(--ink-faint); margin-left: 6px; }
+.catch-diff { margin: 8px 0 4px; max-height: 420px; overflow: auto; font: 13px/1.5 var(--font-mono); border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); }
+.catch-diff > div { padding: 0 10px; white-space: pre-wrap; word-break: break-word; }
+.catch-diff .d-add { background: color-mix(in srgb, var(--reviewed) 14%, transparent); color: var(--ink); }
+.catch-diff .d-del { background: color-mix(in srgb, var(--stale) 12%, transparent); color: var(--ink-soft); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--stale) 50%, transparent); }
+.catch-diff .d-hunk { color: var(--ink-faint); background: var(--paper-sunk); }
+.catch-diff .d-same { color: var(--ink-faint); }
+.stale-note { color: var(--stale); }

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -61,6 +61,11 @@ export const putApiLearnerToursByName = <ThrowOnError extends boolean = false>(o
  * Whether notes can be edited here, and the token to do it with
  */
 export const getApiEdit = <ThrowOnError extends boolean = false>(options?: Options<GetApiEditData, ThrowOnError>): RequestResult<GetApiEditResponses, GetApiEditErrors, ThrowOnError> => (options?.client ?? client).get<GetApiEditResponses, GetApiEditErrors, ThrowOnError>({ url: '/api/edit', ...options });
+
+/**
+ * What changed in a note since a time: commits and a diff (catching up)
+ */
+export const getApiHistoryById = <ThrowOnError extends boolean = false>(options: Options<GetApiHistoryByIdData, ThrowOnError>): RequestResult<GetApiHistoryByIdResponses, GetApiHistoryByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiHistoryByIdResponses, GetApiHistoryByIdErrors, ThrowOnError>({ url: '/api/history/{id}', ...options });
 
 /**
  * Delete a note

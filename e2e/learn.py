@@ -13,6 +13,8 @@ queue and the load note.
 Explain-back (T28): an answer written under a note, waiting; an agent's
 marking and question (appended as the MCP tools write them) shown on the note
 and the Learn tab.
+Catching up (T29): a note changed since you last looked, with the commits and
+the diff from git; a note you understood whose prerequisite changed since.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from datetime import datetime, timedelta, timezone
@@ -334,6 +336,47 @@ with sync_playwright() as pw:
     p.get_by_role("heading", name="Explain-back").wait_for()
     learn = p.locator(".page").inner_text()
     check("the Learn tab lists questions for you and marked answers", "Why does the boundary appear" in learn and "Right about consistency" in learn and "Nothing waiting for marking" in learn)
+
+    # ------------------------------------------------------ catching up (T29)
+    derham = ROOT / "knowledge/forms/de-rham-cohomology.md"
+    derham.write_text(derham.read_text().rstrip("\n") + "\n\nA line added after you last looked.\n")
+    with (record_dir() / "record.jsonl").open("a") as f:
+        f.write(json.dumps({"id": "01J" + "L" * 23, "at": ago(3), "device": "test", "event": "seen", "concept": "forms/de-rham-cohomology", "hash": "the-version-you-saw"}) + "\n")
+    time.sleep(1.5)  # the server rebuilds after the edit
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Changed since you looked").wait_for()
+    check("the Learn tab lists a note changed since you looked", p.locator(".rows.changed-since", has_text="De Rham cohomology").count() == 1)
+    p.locator(".rows.changed-since a", has_text="De Rham cohomology").click()
+    banner = p.locator(".catch-up").first
+    expect(banner).to_contain_text("Changed since you last looked (3 days ago)")
+    banner.get_by_role("button", name="Show what changed").click()
+    expect(banner.locator(".catch-diff")).to_be_visible(timeout=10000)
+    check("…and what changed, from git: the added line, not yet committed",
+          "A line added after you last looked." in banner.locator(".catch-diff .d-add").all_inner_texts()[-1]
+          and "not committed yet" in banner.inner_text(), banner.inner_text()[:400])
+    p.screenshot(path=str(OUT / "learn-catch-up.png"))
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Changed since you looked").wait_for()
+    p.wait_for_timeout(300)
+    check("opening it counts as looking", p.locator(".rows.changed-since", has_text="De Rham cohomology").count() == 0)
+
+    # A prerequisite rewritten after you understood a note.
+    p.goto(URL + "?nosw#/k/forms/stokes-theorem")
+    p.locator("aside.meta").get_by_role("button", name="Understood").click()
+    settle("mark", 4)
+    time.sleep(1.1)
+    ext = ROOT / "knowledge/forms/exterior-derivative.md"
+    stamp = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    import re as _re
+    ext.write_text(_re.sub(r"(generated:\s*\n\s*by: [^\n]*\n\s*at: )[^\n]*", lambda m: m.group(1) + stamp, ext.read_text(), count=1))
+    time.sleep(1.5)
+    p.reload()
+    shaken = p.locator(".catch-up", has_text="which it requires")
+    expect(shaken).to_be_visible(timeout=10000)
+    check("a note you understood says when a note it requires has changed since", "Exterior derivative" in shaken.inner_text(), shaken.inner_text())
+    p.goto(URL + "?nosw#/learn")
+    p.get_by_role("heading", name="Changed since you looked").wait_for()
+    check("…and the Learn tab lists it", p.locator(".rows.changed-since li", has_text="Stokes").count() >= 1)
 
     # ----------------------------------------------------------------- phone
     ctx.close()

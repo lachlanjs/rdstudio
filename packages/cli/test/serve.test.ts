@@ -90,7 +90,7 @@ test("text is compressed and vendored files are cached", async () => {
 
 test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
   expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["delete", "get", "put"]);
 });

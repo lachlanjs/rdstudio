@@ -81,5 +81,33 @@ moving the file.
 8. **Editing from the dashboard** ([T30](/tasks/T30-dashboard-editing.md)),
    which may move earlier for the himode trial.
 
+# As built (2026-10-02)
+
+Milestone M8 is built (T25 to T29). The rules live in one place,
+`packages/core/src/learning.ts` (pure functions over the record, shared by
+the dashboard and the MCP tools), so every reader agrees.
+
+| Event | Written by | Kind | Means |
+|---|---|---|---|
+| `seen` | the note page | | a note was opened (its version in `hash`) |
+| `mark` | Your understanding (state: discovered, processed, understood) | autodidactic | your own judgement; may go down |
+| `exercise` | Practice (exercise, result: got, partly, missed) | interactive | recall and gap are evidence; placement and landmarks practice |
+| `tour_step` | following a tour (tour, stop) | interactive | a stop reached |
+| `tour_written` | writing a tour | autodidactic | a tour of your own |
+| `explain` | Explain it back, or `explain_record` | ai | an answer waiting for marking |
+| `question` | `explain_question` (by) | ai | a question set by an agent |
+| `explain_marked` | `explain_mark` (ref, result, feedback, gaps, by) | ai | a marking; got is evidence |
+
+- **States:** undiscovered, discovered (opened), processed (worked through),
+  understood; changed when reached on an older version.
+- **Review:** boxes of 1, 3, 7, 16, 35 and 80 days; at most eight offered at
+  once.
+- **Load:** said once, when today is at least twice the usual day and eight
+  notes or more.
+- **Private tours** live beside the record in `tours/`; shared tours are
+  Tour notes, off the map and graph.
+- **Catching up:** the version you last looked at against now; the diff
+  from git through `GET /api/history/{id}`.
+
 The [alpha trials](/ideas/learning/alpha-trials.md) exercise these in turn:
 differential geometry needs 1 to 6, papis 7, himode 8.

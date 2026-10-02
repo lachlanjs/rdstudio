@@ -56,6 +56,26 @@ export type EditState = {
     actor: string;
 };
 
+export type NoteHistory = {
+    /**
+     * Whether the project is a git repository.
+     */
+    available: boolean;
+    commits: Array<{
+        hash: string;
+        short: string;
+        author: string;
+        date: string;
+        subject: string;
+    }>;
+    /**
+     * The note then against now, as a unified diff, uncommitted changes included.
+     */
+    diff: string | null;
+    base: string | null;
+    existed: boolean;
+};
+
 export type NoteSource = {
     id: string;
     /**
@@ -363,6 +383,45 @@ export type GetApiEditResponses = {
 };
 
 export type GetApiEditResponse = GetApiEditResponses[keyof GetApiEditResponses];
+
+export type GetApiHistoryByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query: {
+        /**
+         * An ISO time, such as when you last looked.
+         */
+        since: string;
+    };
+    url: '/api/history/{id}';
+};
+
+export type GetApiHistoryByIdErrors = {
+    /**
+     * Not a valid note or time
+     */
+    400: Error;
+    /**
+     * Host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiHistoryByIdError = GetApiHistoryByIdErrors[keyof GetApiHistoryByIdErrors];
+
+export type GetApiHistoryByIdResponses = {
+    /**
+     * The history
+     */
+    200: NoteHistory;
+};
+
+export type GetApiHistoryByIdResponse = GetApiHistoryByIdResponses[keyof GetApiHistoryByIdResponses];
 
 export type DeleteApiNotesByIdData = {
     body?: never;

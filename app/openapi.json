@@ -122,6 +122,68 @@
           "actor"
         ]
       },
+      "NoteHistory": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether the project is a git repository."
+          },
+          "commits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "hash": {
+                  "type": "string"
+                },
+                "short": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "hash",
+                "short",
+                "author",
+                "date",
+                "subject"
+              ]
+            }
+          },
+          "diff": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The note then against now, as a unified diff, uncommitted changes included."
+          },
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "existed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "commits",
+          "diff",
+          "base",
+          "existed"
+        ]
+      },
       "NoteSource": {
         "type": "object",
         "properties": {
@@ -675,6 +737,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EditState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history/{id}": {
+      "get": {
+        "summary": "What changed in a note since a time: commits and a diff (catching up)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The note's id, such as design/model (slashes encoded)."
+            },
+            "required": true,
+            "description": "The note's id, such as design/model (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO time, such as when you last looked."
+            },
+            "required": true,
+            "description": "An ISO time, such as when you last looked.",
+            "name": "since",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid note or time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

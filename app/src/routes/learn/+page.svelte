@@ -6,12 +6,16 @@
   import { sharedTours, tourHref } from "$lib/tours.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
   import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
+  import { allPrerequisitesChanged, changedSince } from "$lib/catchup.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
   const explained = $derived(understanding.on ? answers() : []);
   const waiting = $derived(explained.filter((a) => !a.marked));
   const asked = $derived(understanding.on ? openQuestions() : []);
+  const changed = $derived(changedSince());
+  const shaken = $derived(allPrerequisitesChanged());
+  const sinceDay = (iso: string) => new Date(iso).toLocaleDateString();
   const folders = $derived(Object.keys(store.tree).filter((d) => d && !d.includes("/")).sort());
   const due = $derived(understanding.due());
   const next = $derived(due.due.length ? null : understanding.nextDue());
@@ -63,6 +67,23 @@
     {/if}
   {/if}
   {#if understanding.on}
+    <h3 class="sub-h">Changed since you looked</h3>
+    {#if changed.length || shaken.length}
+      <ul class="rows changed-since">
+        {#each changed.slice(0, 10) as { c, look } (c.id)}
+          {@const s = understanding.state(c.id)}
+          <li><a class="title" href={conceptHref(c.id)}>{c.title}</a>
+            <div class="sub"><span>last looked {sinceDay(look.at)}</span>{#if s && (s.state === "understood" || s.state === "processed")}<span class="stale-note">you {s.state === "understood" ? "understood" : "worked through"} an older version</span>{/if}</div></li>
+        {/each}
+        {#each shaken.slice(0, 10) as { c, changed: moved } (c.id)}
+          <li><a class="title" href={conceptHref(c.id)}>{c.title}</a>
+            <div class="sub"><span class="stale-note">requires {moved.map((p) => p.title).join(", ")}, changed since you understood it</span></div></li>
+        {/each}
+      </ul>
+      {#if changed.length > 10}<p class="section-note">And {changed.length - 10} more; opening a note counts as looking.</p>{/if}
+    {:else}
+      <p class="empty">Nothing you have looked at has changed since.</p>
+    {/if}
     <h3 class="sub-h">Explain-back</h3>
     <p class="section-note">Explain a note in your own words (under each note); an agent marks it against the note the next time you use the explain-back skill in your harness. The dashboard never calls a model.</p>
     {#if asked.length}

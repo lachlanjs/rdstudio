@@ -61,7 +61,7 @@ See the [understanding layer design](/design/understanding-layer.md).
 - [x] [T26 Interactive exercises](/tasks/T26-exercises.md)
 - [x] [T27 Coverage and review](/tasks/T27-coverage-review.md)
 - [x] [T28 Explain-back and AI marking](/tasks/T28-explain-back.md)
-- [ ] [T29 Catching up on change](/tasks/T29-catch-up.md)
+- [x] [T29 Catching up on change](/tasks/T29-catch-up.md)
 - T30 Editing in the app: moved to M9
 
 # M9 — Performance and platform (current priority)

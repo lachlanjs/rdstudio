@@ -14,6 +14,8 @@
   import { tourHref } from "$lib/tours.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
   import ExplainBack from "./ExplainBack.svelte";
+  import CatchUp from "./CatchUp.svelte";
+  import { lastLooks } from "$lib/catchup.ts";
 
   let { id }: { id: string } = $props();
 
@@ -35,6 +37,8 @@
   });
 
   const c = $derived(store.concepts.get(id));
+  // The last look before this visit (which is recorded below), for catching up.
+  const look = untrack(() => lastLooks().get(id) ?? null);
   // The body is refetched when the note or the data version changes.
   const body = $derived(c && store.version !== undefined ? store.body(id) : Promise.resolve(""));
 
@@ -86,6 +90,7 @@
           </p>
           <h1>{c.title}</h1>
           {#if c.description}<p class="description">{c.description}</p>{/if}
+          {#if understanding.on}<CatchUp {c} {look} />{/if}
           {#if c.type === "Tour"}<p class="tour-follow"><a class="toggle primary" href={tourHref(c.id)}>Follow this tour</a></p>{/if}
         </header>
         {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
