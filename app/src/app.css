@@ -982,3 +982,6 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .set-exercises li.done .title { color: var(--ink-soft); }
 .set-exercises .chip { margin: 0 0 0 8px; vertical-align: 2px; }
 .exercise-next { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Exercises and goal panels sit in the reading column, like the prose. */
+.exercise, .goal-panel { max-width: var(--measure); }
+.exercise-value .section-note { max-width: none; }

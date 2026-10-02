@@ -110,3 +110,16 @@ written to the task, as they are met.
   - **Checked:** core, MCP and `e2e/teacher.py` (4 more checks, 53 in all).
 - **Noticed:** `e2e/learn.py` failed once on a map-filter step and passed on
   the rerun. That step is flaky.
+
+## 2026-10-02: an exercise out of line, and maths as plain text
+
+- **Finding:** on a wide screen, an exercise's problem and answer box ran
+  from the left edge of the page while its heading was centred on the
+  reading width. Exercises and goal panels were not held to the measure as
+  the prose is. **Fixed:** both are now held to the measure, and the number
+  field sits under its label.
+- **Finding:** the agent wrote the exercises' maths as plain text
+  (`sum_j J_j y_j`, `g^2/N`), so nothing was typeset. **Fixed in the
+  skills:** `teach` gains "Write maths as maths" (LaTeX between dollar
+  signs; plain words in titles and descriptions), and `exercise` gives
+  examples.

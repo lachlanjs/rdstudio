@@ -38,6 +38,11 @@ Choose the kind for what is being checked:
 | a calculation with one answer | `value` | `value`, `tolerance` (absolute, or relative with `relative: true`), `unit` |
 | a derivation, an explanation, a design, code | `text` | none: marked against the solution |
 
+- Maths is LaTeX between dollar signs, in the body, the choices and the
+  solution: `$h = \sum_j J_j y_j$`, `$$\mathrm{Var}(h) = \frac{g^2}{N}\sum_j y_j^2$$`.
+  The dashboard typesets it. Never write `sum_j J_j` or `g^2/N` as plain text.
+  The title and description are plain text: say it in words, or use Unicode
+  sparingly ("Variance of a sum of Gaussian-weighted inputs").
 - Wrong choices are the mistakes people actually make, not fillers.
 - A value exercise states the units and the precision wanted.
 - A text exercise says what a full answer covers; its solution is what you
