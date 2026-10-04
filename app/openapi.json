@@ -289,6 +289,125 @@
           "text"
         ]
       },
+      "AiState": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "environment",
+              "file",
+              null
+            ],
+            "description": "Where the key comes from."
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The model for each job ([teacher.models] in the user config)."
+          },
+          "spending": {
+            "type": "object",
+            "properties": {
+              "budget": {
+                "type": "number"
+              },
+              "spent": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              },
+              "warn": {
+                "type": "boolean"
+              },
+              "stopped": {
+                "type": "boolean"
+              },
+              "weekStart": {
+                "type": "string"
+              },
+              "byFeature": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "byModel": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "byExercise": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "calls": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "budget",
+              "spent",
+              "left",
+              "warn",
+              "stopped",
+              "weekStart",
+              "byFeature",
+              "byModel",
+              "byExercise",
+              "calls"
+            ]
+          }
+        },
+        "required": [
+          "connected",
+          "from",
+          "models",
+          "spending"
+        ]
+      },
+      "AiConnect": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "AiCheck": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "text",
+          "model",
+          "cost"
+        ]
+      },
       "Draft": {
         "type": "object",
         "properties": {
@@ -1365,6 +1484,202 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TeacherFile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai": {
+      "get": {
+        "summary": "Whether a model account is connected, the models by job, and this week's spending",
+        "responses": {
+          "200": {
+            "description": "The state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Forget the OpenRouter key kept here",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forgotten",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai/connect": {
+      "post": {
+        "summary": "Start connecting an OpenRouter account: the address to send the browser to",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where to go",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnect"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai/check": {
+      "post": {
+        "summary": "Check the connection with a tiny request (its cost is logged as \"check\")",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCheck"
                 }
               }
             }

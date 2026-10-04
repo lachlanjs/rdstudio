@@ -4,10 +4,11 @@
 // customising how the agent teaches is possible, not encouraged.
 
 import {
+  deleteApiTeacherAi, getApiTeacherAi, postApiTeacherAiCheck, postApiTeacherAiConnect,
   deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
   postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherSkillsByName,
 } from "./api/sdk.gen.ts";
-import type { Draft, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
+import type { AiState, Draft, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
 import { learner, store } from "./data.svelte.ts";
 import { RESULT_LABEL } from "./explain.ts";
 
@@ -163,3 +164,34 @@ export const drafts = {
     try { await postApiTeacherDraftsByIdSubmitted({ path: { id: exercise }, body: { attempt }, headers: learner.writeHeaders() }); } catch { /* the draft stays */ }
   },
 };
+
+// ------------------------------------------------------------------ models (OpenRouter)
+// The key lives with rdstudio serve, never here: this only starts connecting,
+// forgets, checks, and shows the week's spending.
+
+const said = (error: unknown, fallback: string) => (error as { error?: string } | undefined)?.error ?? fallback;
+
+export const ai = {
+  async state(): Promise<AiState | null> {
+    if (store.site.static) return null;
+    try { return (await getApiTeacherAi()).data ?? null; } catch { return null; }
+  },
+  /** Send the browser to OpenRouter to sign in; it comes back to the Teacher page. */
+  async connect(): Promise<void> {
+    const { data, error } = await postApiTeacherAiConnect({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "Could not start connecting"));
+    location.href = data.url;
+  },
+  async disconnect(): Promise<AiState | null> {
+    const { data, error } = await deleteApiTeacherAi({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "Not forgotten"));
+    return data;
+  },
+  async check(): Promise<{ text: string; model: string; cost: number }> {
+    const { data, error } = await postApiTeacherAiCheck({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "The check failed"));
+    return data;
+  },
+};
+
+export const money = (n: number): string => (n === 0 ? "$0" : n < 0.01 ? `${(n * 100).toFixed(2)}¢` : `$${n.toFixed(2)}`);

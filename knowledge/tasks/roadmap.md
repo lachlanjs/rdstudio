@@ -99,7 +99,7 @@ See [work together](/design/tutor.md) and [streaks](/design/streaks.md).
 
 - [x] [T48 Streaks](/tasks/T48-streaks.md)
 - [x] [T49 Drafts and history](/tasks/T49-drafts-and-history.md)
-- [ ] [T50 The server-side teacher](/tasks/T50-teacher-service.md)
+- [x] [T50 The server-side teacher](/tasks/T50-teacher-service.md)
 - [ ] [T51 Work together](/tasks/T51-work-together.md)
 
 # Future

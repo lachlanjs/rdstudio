@@ -17,6 +17,7 @@
   import Time from "$lib/components/Time.svelte";
   import TeacherFile from "$lib/components/TeacherFile.svelte";
   import EvidenceView from "$lib/components/EvidenceView.svelte";
+  import AiPanel from "$lib/components/AiPanel.svelte";
 
   const rest = $derived((page.params.rest ?? "").split("/").filter(Boolean));
   const skillName = $derived(rest[0] === "skills" && rest[1] ? rest[1] : null);
@@ -99,6 +100,9 @@
       <h2 class="section-h">Sources</h2>
       <details class="teacher-sources"><summary>The research log</summary><TeacherFile name="sources.md" /></details>
     {/if}
+
+    <h2 class="section-h">Models and spending</h2>
+    <AiPanel />
 
     {#if !teacher.loaded}
       <p class="section-note">Loading…</p>

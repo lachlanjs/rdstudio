@@ -1039,3 +1039,10 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .draft-versions .link { margin-left: 8px; }
 .draft-v { font: 12.5px var(--font-mono); color: var(--ink-faint); }
 .draft-shown { margin: 10px 0; padding: 6px 14px; border: 1px dashed var(--rule); border-radius: var(--radius); background: var(--paper); }
+.budget { height: 10px; max-width: 420px; background: var(--paper-sunk); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; margin: 4px 0 6px; }
+.budget-used { display: block; height: 100%; background: var(--accent); }
+.budget-used.warn { background: var(--unverified); }
+.budget-used.stopped { background: var(--stale); }
+.fm.spend { max-width: 520px; margin: 4px 0 8px; }
+.fm.spend th { width: 60%; }
+.spend-more > summary { cursor: pointer; color: var(--ink-soft); font-size: 14px; }

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherAiData, DeleteApiTeacherAiErrors, DeleteApiTeacherAiResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherAiData, GetApiTeacherAiErrors, GetApiTeacherAiResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherAiCheckData, PostApiTeacherAiCheckErrors, PostApiTeacherAiCheckResponses, PostApiTeacherAiConnectData, PostApiTeacherAiConnectErrors, PostApiTeacherAiConnectResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -100,6 +100,26 @@ export const putApiTeacherFilesByName = <ThrowOnError extends boolean = false>(o
         ...options.headers
     }
 });
+
+/**
+ * Forget the OpenRouter key kept here
+ */
+export const deleteApiTeacherAi = <ThrowOnError extends boolean = false>(options: Options<DeleteApiTeacherAiData, ThrowOnError>): RequestResult<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
+
+/**
+ * Whether a model account is connected, the models by job, and this week's spending
+ */
+export const getApiTeacherAi = <ThrowOnError extends boolean = false>(options?: Options<GetApiTeacherAiData, ThrowOnError>): RequestResult<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError> => (options?.client ?? client).get<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
+
+/**
+ * Start connecting an OpenRouter account: the address to send the browser to
+ */
+export const postApiTeacherAiConnect = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiConnectData, ThrowOnError>): RequestResult<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError>({ url: '/api/teacher/ai/connect', ...options });
+
+/**
+ * Check the connection with a tiny request (its cost is logged as "check")
+ */
+export const postApiTeacherAiCheck = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiCheckData, ThrowOnError>): RequestResult<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError>({ url: '/api/teacher/ai/check', ...options });
 
 /**
  * Your draft answer to an exercise, with its kept versions

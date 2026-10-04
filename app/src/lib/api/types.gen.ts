@@ -115,6 +115,48 @@ export type TeacherFileSave = {
     text: string;
 };
 
+export type AiState = {
+    connected: boolean;
+    /**
+     * Where the key comes from.
+     */
+    from: 'environment' | 'file' | null;
+    /**
+     * The model for each job ([teacher.models] in the user config).
+     */
+    models: {
+        [key: string]: string;
+    };
+    spending: {
+        budget: number;
+        spent: number;
+        left: number;
+        warn: boolean;
+        stopped: boolean;
+        weekStart: string;
+        byFeature: {
+            [key: string]: number;
+        };
+        byModel: {
+            [key: string]: number;
+        };
+        byExercise: {
+            [key: string]: number;
+        };
+        calls: number;
+    };
+};
+
+export type AiConnect = {
+    url: string;
+};
+
+export type AiCheck = {
+    text: string;
+    model: string;
+    cost: number;
+};
+
 export type Draft = {
     exercise: string;
     text: string;
@@ -685,6 +727,139 @@ export type PutApiTeacherFilesByNameResponses = {
 };
 
 export type PutApiTeacherFilesByNameResponse = PutApiTeacherFilesByNameResponses[keyof PutApiTeacherFilesByNameResponses];
+
+export type DeleteApiTeacherAiData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type DeleteApiTeacherAiErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type DeleteApiTeacherAiError = DeleteApiTeacherAiErrors[keyof DeleteApiTeacherAiErrors];
+
+export type DeleteApiTeacherAiResponses = {
+    /**
+     * Forgotten
+     */
+    200: AiState;
+};
+
+export type DeleteApiTeacherAiResponse = DeleteApiTeacherAiResponses[keyof DeleteApiTeacherAiResponses];
+
+export type GetApiTeacherAiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type GetApiTeacherAiErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiTeacherAiError = GetApiTeacherAiErrors[keyof GetApiTeacherAiErrors];
+
+export type GetApiTeacherAiResponses = {
+    /**
+     * The state
+     */
+    200: AiState;
+};
+
+export type GetApiTeacherAiResponse = GetApiTeacherAiResponses[keyof GetApiTeacherAiResponses];
+
+export type PostApiTeacherAiConnectData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/connect';
+};
+
+export type PostApiTeacherAiConnectErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiConnectError = PostApiTeacherAiConnectErrors[keyof PostApiTeacherAiConnectErrors];
+
+export type PostApiTeacherAiConnectResponses = {
+    /**
+     * Where to go
+     */
+    200: AiConnect;
+};
+
+export type PostApiTeacherAiConnectResponse = PostApiTeacherAiConnectResponses[keyof PostApiTeacherAiConnectResponses];
+
+export type PostApiTeacherAiCheckData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/check';
+};
+
+export type PostApiTeacherAiCheckErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiCheckError = PostApiTeacherAiCheckErrors[keyof PostApiTeacherAiCheckErrors];
+
+export type PostApiTeacherAiCheckResponses = {
+    /**
+     * The reply
+     */
+    200: AiCheck;
+};
+
+export type PostApiTeacherAiCheckResponse = PostApiTeacherAiCheckResponses[keyof PostApiTeacherAiCheckResponses];
 
 export type GetApiTeacherDraftsByIdData = {
     body?: never;

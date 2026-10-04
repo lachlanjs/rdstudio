@@ -21,6 +21,9 @@ the agent sees the set's progress.
 Drafts (T49): an answer saved as typed and back after a reload; a version
 kept, shown and restored, with what was there kept first; the draft filed
 with the attempt on submitting.
+Models (T50): the Teacher page offers to connect OpenRouter (the sign-in
+address checked, the site itself not visited), shows the week's budget, and
+the model for each job.
 Working (T46): working shown with a checked answer and sent for review,
 marked by an agent who lowers a right answer; a wrong answer's working sent
 afterwards, and reviewed by the developer against the solution.
@@ -462,6 +465,25 @@ with sync_playwright() as pw:
     settle(marks + 1, "attempt_marked")
     m = attempts("attempt_marked")[-1]
     check("your review is recorded as yours", m["ref"] == rr["ref"] and m["by"] == "self" and m["result"] == "missed", m)
+
+    # ------------------------------------------------------------ models (T50)
+    p.goto(URL + "?nosw&ai#/teacher")
+    p.get_by_role("heading", name="Models and spending").wait_for()
+    p.get_by_role("button", name="Connect OpenRouter").wait_for()
+    check("the Teacher page offers to connect OpenRouter, and shows the week's budget and the models",
+          "$0 of $10.00 this week" in p.locator(".page").inner_text() and p.locator(".fm.spend code", has_text="google/gemini-3.8-flash").count() == 1)
+    went = []
+    p.route("https://openrouter.ai/**", lambda route: (went.append(route.request.url), route.fulfill(status=200, body="<p>OpenRouter</p>", content_type="text/html")))
+    p.get_by_role("button", name="Connect OpenRouter").click()
+    p.wait_for_url("https://openrouter.ai/**", timeout=5000)
+    from urllib.parse import urlparse, parse_qs
+    q = parse_qs(urlparse(went[0]).query) if went else {}
+    check("connecting goes to OpenRouter's sign-in, with PKCE and a way back here",
+          q.get("code_challenge_method") == ["S256"] and q.get("callback_url", [""])[0].startswith(URL.rstrip("/") + "/api/teacher/ai/callback?state="), went[:1])
+    p.unroute("https://openrouter.ai/**")
+    p.goto(URL + "?nosw&ai=expired#/teacher")
+    expect(p.locator(".edit-status", has_text="took too long")).to_be_visible(timeout=5000)
+    check("coming back without a key says why", True)
 
     # ------------------------------------------------------------ drafts (T49)
     p.goto(URL + "?nosw&d1#/k/exercises/why-atlases")

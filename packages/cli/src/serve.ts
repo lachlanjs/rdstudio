@@ -8,7 +8,7 @@
 // localhost names, Tailscale names (*.ts.net, which `tailscale serve` passes
 // through) and --allow-host names, against DNS rebinding.
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -23,6 +23,7 @@ import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
 import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
 import * as teacher from "./teacher.ts";
+import * as models from "./models.ts";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
@@ -213,6 +214,35 @@ const fileDraftRoute = createRoute({
   method: "post", path: "/api/teacher/drafts/{id}/submitted", summary: "The answer was submitted: file the draft under the attempt",
   request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: z.object({ attempt: z.string() }).openapi("DraftSubmitted") } }, required: true } },
   responses: { 200: { description: "Filed", content: { "application/json": { schema: z.object({ filed: z.string().nullable() }).openapi("DraftFiled") } } }, ...teacherErrors },
+});
+const Money = z.record(z.string(), z.number());
+const AiState = z.object({
+  connected: z.boolean(),
+  from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
+  models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
+  spending: z.object({
+    budget: z.number(), spent: z.number(), left: z.number(), warn: z.boolean(), stopped: z.boolean(), weekStart: z.string(),
+    byFeature: Money, byModel: Money, byExercise: Money, calls: z.number(),
+  }),
+}).openapi("AiState");
+const getAi = createRoute({
+  method: "get", path: "/api/teacher/ai", summary: "Whether a model account is connected, the models by job, and this week's spending",
+  responses: { 200: { description: "The state", content: { "application/json": { schema: AiState } } }, 403: teacherErrors[403] },
+});
+const connectAi = createRoute({
+  method: "post", path: "/api/teacher/ai/connect", summary: "Start connecting an OpenRouter account: the address to send the browser to",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Where to go", content: { "application/json": { schema: z.object({ url: z.string() }).openapi("AiConnect") } } }, ...teacherErrors },
+});
+const disconnectAi = createRoute({
+  method: "delete", path: "/api/teacher/ai", summary: "Forget the OpenRouter key kept here",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Forgotten", content: { "application/json": { schema: AiState } } }, ...teacherErrors },
+});
+const checkAi = createRoute({
+  method: "post", path: "/api/teacher/ai/check", summary: "Check the connection with a tiny request (its cost is logged as \"check\")",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "The reply", content: { "application/json": { schema: z.object({ text: z.string(), model: z.string(), cost: z.number() }).openapi("AiCheck") } } }, ...teacherErrors },
 });
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
@@ -461,6 +491,54 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { return json(c, 200, teacher.readFile(cfg, c.req.param("name") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
   }) as never);
   app.openapi(putTeacherFile, ((c: Context) => tourChange(c, (b) => teacher.writeFile(cfg, c.req.param("name") ?? "", b.text, teacher.BY_DEVELOPER))) as never);
+  // ---------------------------------------------------------------- models (OpenRouter)
+  const aiState = () => {
+    const k = models.apiKey();
+    return { connected: !!k, from: k?.from ?? null, models: models.models(), spending: models.spending(cfg) };
+  };
+  app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
+  // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
+  const pending = new Map<string, { verifier: string; until: number }>();
+  const b64url = (b: Buffer) => b.toString("base64url");
+  app.openapi(connectAi, ((c: Context) => tourChange(c, () => {
+    for (const [k, v] of pending) if (v.until < Date.now()) pending.delete(k);
+    const verifier = b64url(randomBytes(32)), state = b64url(randomBytes(16));
+    pending.set(state, { verifier, until: Date.now() + 10 * 60_000 });
+    const callback = `${new URL(c.req.url).protocol}//${c.req.header("host")}/api/teacher/ai/callback?state=${state}`;
+    const q = new URLSearchParams({ callback_url: callback, code_challenge: b64url(createHash("sha256").update(verifier).digest()), code_challenge_method: "S256", key_label: "rdstudio" });
+    return { url: `https://openrouter.ai/auth?${q}` };
+  }, false)) as never);
+  app.get("/api/teacher/ai/callback", async (c) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    const state = c.req.query("state") ?? "", code = c.req.query("code") ?? "";
+    const wait = pending.get(state);
+    pending.delete(state);
+    const back = (result: string) => c.redirect(`/?ai=${result}#/teacher`);
+    if (!wait || wait.until < Date.now() || !code) return back("expired");
+    try {
+      const res = await fetch(`${models.OPENROUTER}/auth/keys`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, code_verifier: wait.verifier, code_challenge_method: "S256" }) });
+      const key = res.ok ? ((await res.json()) as { key?: string }).key : undefined;
+      if (!key) return back("refused");
+      models.saveKey(key);
+      return back("connected");
+    } catch {
+      return back("failed");
+    }
+  });
+  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(checkAi, (async (c: Context) => {
+    const refused = writeRefused(c, false);
+    if (refused) return refused;
+    try {
+      const r = await models.complete({ cfg, job: "check", maxTokens: 10, messages: [{ role: "user", content: "Reply with the one word: ready" }] });
+      return json(c, 200, { text: r.text.trim(), model: r.usage.model, cost: r.usage.cost }, true);
+    } catch (err) {
+      if (err instanceof models.ModelError) return refuse(c, err.status, err.message);
+      throw err;
+    }
+  }) as never);
+
   app.openapi(getDraft, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     if (!learner.enabled(cfg)) return json(c, 409, { error: "the learner record is off ([learner] enabled in the user config)" });
