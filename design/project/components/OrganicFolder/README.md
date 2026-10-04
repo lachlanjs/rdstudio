@@ -1,0 +1,1 @@
+Exploration, state 3. Inside Manifolds the same solver gathers routes into a few shared lines that branch near their ends, like streams, in place of one curve per pair.

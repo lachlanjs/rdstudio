@@ -1,0 +1,1 @@
+Exploration, state 4. The selected note's links leave it downhill across the understanding contours and the folder outlines.

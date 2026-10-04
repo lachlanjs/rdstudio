@@ -1,0 +1,1 @@
+Exploration, state 1. Folder outlines are contours of where their contents sit, in place of circles. Positions are unchanged from the circle map; understanding contours nest inside the outlines. Folder names sit above the outline, since there is no arc to follow.

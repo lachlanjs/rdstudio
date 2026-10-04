@@ -1,0 +1,1 @@
+State 4 of 4, a note selected: what does this one need, and what needs it? Only Vector fields' own links are drawn, in the blue dotted pen: large dots for what it requires or uses, small dots for what builds on it. The Links lens is off, so the terrain is shown in full.

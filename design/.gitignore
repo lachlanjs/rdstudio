@@ -1,0 +1,5 @@
+# built by tools/build.mjs for local checking only
+harness/
+shots/
+project/tokens.css
+tools/node_modules/

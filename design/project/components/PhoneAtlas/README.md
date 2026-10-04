@@ -1,0 +1,1 @@
+The Atlas on a phone: the same terrain, panned and pinched. The lenses collapse to one bar naming the active ones; Change opens a sheet with the lens buttons and the legend. Labels fall below or to the left of a marker where the screen edge would cut them. Folders, notes and links are placeholders.

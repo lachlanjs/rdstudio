@@ -1,0 +1,1 @@
+Exploration, state 2. Trunks are solved to run straight down each folder's slope, so they cross its outline at a right angle, then travel on the flat ground between folders. The legend panel reports the measured deviation from a right angle.

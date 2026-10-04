@@ -1,0 +1,1 @@
+The Atlas as a vector display: contour folders and downhill routes, drawn in pale phosphor lines on a grid of registration marks, with a note selected. The only change from the exploration sketch is the theme.

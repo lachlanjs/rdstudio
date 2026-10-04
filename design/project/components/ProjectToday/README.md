@@ -1,0 +1,1 @@
+Today in project mode: counters for the week in place of streaks, then what needs you (changes in review, failing checks), then where you left off. The margin holds what changed, agents, and Get up to speed, the learning layer on a project. The teacher's pin attaches to the failing change. Placeholder content.

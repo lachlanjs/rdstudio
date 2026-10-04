@@ -1,0 +1,1 @@
+State 3 of 4, a folder in focus: how does this part fit together? Zoomed into Manifolds with Links on: the links inside it are drawn at the shown scale, its trunks to other folders keep their counts, and trunks between other folders fade.

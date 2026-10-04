@@ -1,0 +1,1 @@
+Today as a rack of panels: Departure Mono numerals for the streaks, lamps for done and not done, a four-segment week readout. The draft you left half written sits on the warm reading surface (`instrument-paper`); the teacher's next step is still a pin level with the row it is about. Direction tokens: `instrument-*`.

@@ -1,0 +1,3 @@
+Project mode, the Atlas with the Activity lens, now drawn by the same engine as the learning Atlas (contour outlines, downhill routes, links on by default). Modules are regions, files are places, dependencies are routes. Height is recent work: changed this week, this month, this quarter; fog is 90 days untouched. The dotted blue line is the change in review, numbered in dependency order; the red ring is the file whose checks fail.
+
+No north arrow: direction means nothing on a project map. The files, activity and review are placeholders for ramplib.

@@ -1,0 +1,32 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=960">
+<style>
+html,body{margin:0;background:var(--surface)}
+.cv{position:relative;width:960px;height:288px;overflow:hidden;background:var(--surface)}
+svg{position:absolute;left:0;top:0}
+.red{fill:var(--pen-red)}.green{fill:var(--pen-green)}.blue{fill:var(--pen-blue)}.tint{fill:var(--surface-3)}
+.cut{stroke:var(--surface);fill:none}
+.name{position:absolute;left:48px;bottom:56px;margin:0;font-family:var(--font-reading);font-weight:700;font-size:96px;line-height:.95;color:var(--text);white-space:nowrap}
+.tag{position:absolute;left:48px;bottom:28px;margin:0;font-family:var(--font-ui);font-size:13px;line-height:16px;color:var(--text-soft);width:440px;white-space:nowrap}
+</style></head><body>
+<div class="cv">
+<!-- derivation
+ blocks: pen-red 200x168 at (480,0); pen-green 152x240 at (680,48) bleeding off the bottom; pen-blue 128x120 at (832,0) bleeding off top and right; surface-3 200x120 at (480,168) as the relief tint.
+ arrangement: a staggered stack of unequal slabs, as the margin and the page stack on the workbench.
+ pattern: editorial, "structure is information" -> three hairline rules, one per pen, cut out of the blocks in the ground colour and drawn in that pen's line style (solid, double, dotted). The sentence: the line styles ARE the pens' meaning, so they are the pattern.
+ steps and radii: sides are multiples of space-4 (8, 16, 24); corners square (radius 0); cuts are 2px.
+-->
+<svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+  <rect class="red" x="480" y="0" width="200" height="168"/>
+  <rect class="tint" x="480" y="168" width="200" height="120"/>
+  <rect class="green" x="680" y="48" width="152" height="240"/>
+  <rect class="blue" x="832" y="0" width="128" height="120"/>
+  <path class="cut" stroke-width="2" d="M480 96H680"/>
+  <path class="cut" stroke-width="2" d="M680 120H832M680 126H832"/>
+  <path class="cut" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="0.1 6" d="M832 72H960"/>
+</svg>
+<h1 class="name">rdstudio</h1>
+<p class="tag">Notes, exercises, a teacher’s pen in the margin.</p>
+</div>
+</body></html>

@@ -1,0 +1,3 @@
+A Library note with its companion panel: the folder tree on the left, the note in a 660px measure, the companion on the right (your understanding in three steps, explain it back, trust, prerequisites in reading order, ask the teacher).
+
+Code blocks are Ioskeley Mono on `surface-1` with a language label, highlighted with `syntax-keyword` and `syntax-literal`. The note text here was written for the sketch around the real exercise.

@@ -1,0 +1,3 @@
+Code blocks in eight common languages: Python, C++, TypeScript, shell, Rust, JSON, YAML and SQL. Five roles only: keyword (`syntax-keyword`, bold), literal (`syntax-literal`), comment (italic, `text-soft`), the name being defined (bold) and everything else (`text`).
+
+The sketch is highlighted with highlight.js at build time; the consumer may use any highlighter and map its classes onto the five roles. The snippets are placeholders.
