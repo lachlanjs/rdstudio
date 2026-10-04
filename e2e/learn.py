@@ -309,6 +309,21 @@ with sync_playwright() as pw:
     check("…links as trunks between top-level folders, each with its count", len(counts) >= 1 and all(c.isdigit() for c in counts), counts)
     check("…a sentence on what is drawn", "trunk" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
     check("…and north is later in the study order", p.locator(".atlas-north").is_visible())
+    # Contour folders and downhill routes (T60), the defaults; circles and gates the options.
+    p.wait_for_function("() => document.querySelector('.map-summary')?.textContent.includes('right angle')", timeout=10000)
+    check("folders are contours of their contents, named above the outline",
+          p.locator("text.m-head").count() >= 1 and p.locator("text.m-arc").count() == 0
+          and "a" not in (p.locator(".m-dir.open").first.get_attribute("d") or "a").lower())
+    check("…and routes cross outlines downhill, measured", "off a right angle" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    p.locator(".map-more > summary").click()
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Circles").click()
+    p.get_by_role("group", name="Routes").get_by_role("button", name="Gates").click()
+    p.wait_for_timeout(500)
+    check("circles and gates instead: names on the arc, no right-angle measure",
+          p.locator("text.m-arc").count() >= 1 and "right angle" not in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Contours").click()
+    p.get_by_role("group", name="Routes").get_by_role("button", name="Downhill").click()
+    p.locator(".map-more > summary").click()
     place = p.locator(".m-place[data-ref]").first
     ref = place.get_attribute("data-ref")
     place.click()

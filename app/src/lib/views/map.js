@@ -26,8 +26,9 @@ import { editing } from "../edit.svelte.ts";
 import { understanding, STATE_LABEL } from "../understanding.svelte.ts";
 import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { projectMode } from "../shell.svelte.ts";
-import { start, plainModel, layoutKey, cached, remember, previous, relative, applyPositions, computeLayout, computeTerrain } from "./layout.js";
+import { start, plainModel, layoutKey, cached, remember, previous, relative, applyPositions, computeLayout, computeTerrain, computeOutlines, computeRoutes } from "./layout.js";
 import { widthOf } from "./terrain.js";
+import { folderSpecs } from "./contours.js";
 
 
 const KEY = "rdstudio.map";
@@ -38,6 +39,11 @@ export const VIEW_DEFAULTS = {
   showLinks: true, // the Links lens: trunks between top-level folders, and the links inside the folder in focus
   allLinks: false, // every link at the shown scale instead, filtered as below
   terrain: true, // the Understanding lens
+  // Folder shape: "contour" (the outline follows the contents) or "circle"
+  // (the packing's own circles); routing: "downhill" (crossing contours at
+  // right angles, gathering in the flats) or "gates" (gates, corridors and
+  // bundling). Positions, lenses and terrain are the same under both (T60).
+  folders: "contour", routing: "downhill",
   // How far apart a link's ends are in the folder tree, counted in bubble walls:
   // "out" is the larger of the two ends' distances out to the lowest shared
   // folder, "path" is the total crossed going out and back in.
@@ -846,15 +852,34 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Heavier bundles first, so lighter ones follow their corridors.
     const router = makeRouter(o);
     const routes = [...merged.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
-    const byPair = new Map(); // lanes (and the two pens) of the same pair share one route
-    for (const m of routes) {
-      if (!byPair.has(m.pair)) byPair.set(m.pair, router.route(m.p, m.q));
-      m.pts = byPair.get(m.pair);
+    if (o.routing === "downhill" && placedKey) {
+      // Solved in the worker and kept per pair; a route not back yet is not drawn.
+      const key = downhillKey();
+      if (downhill.key !== key) downhill = { key, routes: new Map(), pending: new Set(), angles: [] };
+      const asks = [];
+      const dirOf = (e) => (e.data.kind === "dir" ? e.data.id : null);
+      for (const m of routes) {
+        const got = downhill.routes.get(m.pair);
+        m.org = true;
+        m.pts = got ? got.pts : null;
+        m.mid = got ? got.mid : null;
+        if (got || downhill.pending.has(m.pair)) continue;
+        downhill.pending.add(m.pair);
+        asks.push({ key: m.pair, a: [m.p.x, m.p.y], b: [m.q.x, m.q.y], ends: [dirOf(m.p), dirOf(m.q)],
+          allowed: [...new Set([...m.p.ancestors(), ...m.q.ancestors()].filter((a) => a.data.kind === "dir" && a.parent).map((a) => a.data.id))] });
+      }
+      if (asks.length) requestRoutes(key, asks);
+    } else {
+      const byPair = new Map(); // lanes (and the two pens) of the same pair share one route
+      for (const m of routes) {
+        if (!byPair.has(m.pair)) byPair.set(m.pair, router.route(m.p, m.q));
+        m.pts = byPair.get(m.pair);
+      }
     }
     const shown = [];
     L.root.each((n) => { if (n.parent && open.has(n.parent)) shown.push(n); });
     // Measure each physical route once, however many lanes share it.
-    const physical = [...new Map(routes.map((m) => [m.pair, m])).values()];
+    const physical = [...new Map(routes.filter((m) => m.pts).map((m) => [m.pair, m])).values()];
     const count = crossings(physical, shown, router.itemRadius);
     // Stretch: how much longer routes are than straight lines, on average.
     const len = (pts) => pts.slice(1).reduce((s, p, i) => s + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
@@ -868,9 +893,50 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       : mode === "all" ? `${counted} links drawn${hidden ? ` (${hidden} implied ones hidden)` : ""}, merged into ${routes.length} routes.`
       : mode === "selected" ? `${selected.data.label} selected. Its links show whether or not the Links lens is on.`
       : mode === "none" ? "Links are off: the terrain and the folders alone." : "";
+    if (o.routing === "downhill" && downhill.angles.length && mode !== "none") {
+      const a = downhill.angles.slice().sort((x, y) => x - y);
+      summary.textContent += ` Routes meet folder outlines a median ${Math.round(a[a.length >> 1])}° off a right angle (${a.length} crossing${a.length === 1 ? "" : "s"}; 9 in 10 within ${Math.round(a[Math.floor(a.length * 0.9)])}°).`;
+    }
     cache = { signature, routes, shownRep };
     measure("map-routes", start);
     return cache;
+  }
+
+  // ------------------------------------------------------------ folder shapes
+
+  // Each folder's field (contours.js), for this layout.
+  let specs = null, specsFor = null;
+  function specOf(n) {
+    if (specsFor !== L || specs?.at !== placedKey) { specs = new Map(folderSpecs(L.root).map((sp) => [sp.id, sp])); specs.at = placedKey; specsFor = L; }
+    return specs.get(n.data.id);
+  }
+  // Contour outlines, worked out once per settled layout; circles until then.
+  let outlines = null, outlinesAt = null;
+  function outlineOf(n) {
+    if (o.folders !== "contour" || !placedKey) return null;
+    if (outlinesAt !== placedKey) {
+      outlinesAt = placedKey;
+      outlines = null;
+      const at = placedKey, t0 = performance.now();
+      specOf(L.root);
+      computeOutlines([...specs.values()]).then((res) => {
+        if (left || at !== placedKey) return;
+        measure("map-outlines", t0);
+        outlines = new Map(res.map((r) => [r.id, r]));
+        cache = null;
+        schedule();
+      });
+    }
+    return outlines?.get(n.data.id) || null;
+  }
+  // A folder's shape on screen: its outline, or its circle.
+  function shapePath(n, t) {
+    const out = outlineOf(n);
+    if (!out) {
+      const x = t.applyX(n.x), y = t.applyY(n.y), r = n.r * t.k;
+      return `M${(x - r).toFixed(1)} ${y.toFixed(1)}a${r.toFixed(1)} ${r.toFixed(1)} 0 1 0 ${(2 * r).toFixed(1)} 0a${r.toFixed(1)} ${r.toFixed(1)} 0 1 0 ${(-2 * r).toFixed(1)} 0Z`;
+    }
+    return out.shape.map((poly) => poly.map((ring) => "M" + ring.map(([x, y]) => t.applyX(x).toFixed(1) + " " + t.applyY(y).toFixed(1)).join("L") + "Z").join("")).join("");
   }
 
   // ------------------------------------------------------------ terrain
@@ -883,13 +949,14 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   function terrainOf(top) {
     const pts = [];
     for (const n of top.leaves()) if (n.data.kind === "concept") pts.push(n.x, n.y, levelOf(n), widthOf(n));
-    const key = top.data.id + ":" + top.r.toFixed(2) + ":" + pts.map((v) => v.toFixed(2)).join(",");
+    const mask = o.folders === "contour" ? specOf(top) : null;
+    const key = top.data.id + ":" + top.r.toFixed(2) + (mask ? ":contour" : "") + ":" + pts.map((v) => v.toFixed(2)).join(",");
     const hit = baked.get(top.data.id);
     if (hit?.key === key) return hit;
     if (!asked.has(key)) {
       asked.add(key);
       const t0 = performance.now();
-      computeTerrain([{ key, cx: top.x, cy: top.y, r: top.r, pts }]).then(([res]) => {
+      computeTerrain([{ key, cx: top.x, cy: top.y, r: top.r, pts, mask }]).then(([res]) => {
         asked.delete(key);
         if (left) return;
         measure("map-terrain", t0);
@@ -1017,6 +1084,26 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     gLeader.selectAll("circle").data([0]).join("circle").attr("class", "leader-dot " + card.className.replace("atlas-card", "").trim()).attr("cx", x1).attr("cy", y1).attr("r", 3);
   }
 
+  // ------------------------------------------------------------ downhill routes
+
+  let downhill = { key: null, routes: new Map(), pending: new Set(), angles: [] };
+  // Routes depend on the layout and, through the slope, on where you stand.
+  const downhillKey = () => placedKey + ":" + (understanding.on ? L.root.leaves().map(levelOf).join("") : "");
+  function requestRoutes(key, asks) {
+    const t0 = performance.now();
+    const notes = [];
+    L.root.each((n) => { if (n.data.kind === "concept") notes.push(n.x, n.y, understanding.on ? levelOf(n) : 0, widthOf(n)); });
+    specOf(L.root);
+    computeRoutes(key, { specs: [...specs.values()], notes }, asks).then((res) => {
+      if (left || downhill.key !== key) return;
+      measure("map-downhill", t0);
+      for (const r of res.routes) { downhill.routes.set(r.key, r); downhill.pending.delete(r.key); }
+      downhill.angles.push(...res.angles);
+      cache = null;
+      schedule();
+    });
+  }
+
   function render() {
     const t = M.transform || d3.zoomIdentity;
     drawnAt = t; drawnWhen = performance.now();
@@ -1053,17 +1140,17 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
     // The land: open top-level folders, which the terrain is clipped to.
     const tops = visible.filter((n) => n.depth === 1 && n.data.kind === "dir" && open.has(n));
-    const disc = (sel) => sel.attr("cx", sx).attr("cy", sy).attr("r", sr);
-    gLand.selectAll("circle").data(tops, (n) => n.data.id).join("circle").attr("class", "m-landfill").call(disc);
-    landClip.selectAll("circle").data(tops, (n) => n.data.id).join("circle").call(disc);
+    const shape = (sel) => sel.attr("d", (n) => shapePath(n, t));
+    gLand.selectAll("path").data(tops, (n) => n.data.id).join("path").attr("class", "m-landfill").call(shape);
+    landClip.selectAll("path").data(tops, (n) => n.data.id).join("path").call(shape);
     const quiet = o.showLinks && !o.allLinks && !selected && !trail;
     drawTerrain(tops, t, focus !== L.root ? (quiet ? "overview" : "full") : quiet ? "reduced" : "overview");
 
     // Territories (folders), outermost first so inner ones sit on top.
     const regions = visible.filter((n) => n.data.kind === "dir").sort((a, b) => a.depth - b.depth);
-    gRegions.selectAll("circle").data(regions, (n) => n.data.id).join((enter) => fadeIn(enter.append("circle")))
+    gRegions.selectAll("path").data(regions, (n) => n.data.id).join((enter) => fadeIn(enter.append("path")))
       .attr("class", (n) => `m-dir ${open.has(n) ? "open" : "closed"} depth-${Math.min(n.depth, 3)}`)
-      .call(disc)
+      .call(shape)
       .on("click", (event, n) => { event.stopPropagation(); zoomTo(n === focus && n.parent ? n.parent : n); })
       .on("pointerenter", (event, n) => showTip(event, n))
       .on("pointerleave", () => { tip.hidden = true; });
@@ -1096,6 +1183,17 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       return [s[0], ...s.slice(1, -1).filter((pt) => !near(pt, m.p) && !near(pt, m.q)), s[s.length - 1]];
     };
     const pathFor = (m) => {
+      if (m.org) {
+        // A dense, already smooth line: drop what lies under a note's marker,
+        // then draw it as it is. A folder end already stops on the outline.
+        const s = toScreen(m.pts);
+        for (const [e, end] of [[m.p, 0], [m.q, 1]]) {
+          if (e.data.kind !== "concept") continue;
+          const r = radius(e) + 3;
+          while (s.length > 2 && Math.hypot(s[end ? s.length - 1 : 0][0] - sx(e), s[end ? s.length - 1 : 0][1] - sy(e)) < r) end ? s.pop() : s.shift();
+        }
+        return "M" + s.map((q) => q[0].toFixed(1) + " " + q[1].toFixed(1)).join("L");
+      }
       const s = screenPts(m);
       const offset = (m.lane || 0) * o.laneGap;
       if (s.length === 2) {
@@ -1114,7 +1212,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const focused = focus !== L.root && o.showLinks && o.allLinks && !selected && !trail;
     const inFocus = (n) => n.ancestors().includes(focus);
     const own = (m) => m.cls === "req" || m.cls === "dep";
-    const drawRoutes = (group, list) => group.selectAll("path").data(list, (m) => m.key).join((enter) => fadeIn(enter.append("path")))
+    const drawRoutes = (group, list) => group.selectAll("path").data(list.filter((m) => m.pts), (m) => m.key).join((enter) => fadeIn(enter.append("path")))
       .attr("class", (m) => `m-link s${m.strength} ${m.cls}`)
       .attr("stroke-width", (m) => (own(m) ? null : o.width * (1 + 0.9 * Math.log2(m.count))))
       .attr("d", pathFor)
@@ -1126,7 +1224,15 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     drawRoutes(gFocus, focused ? routes.filter((m) => inFocus(m.p) || inFocus(m.q)) : []);
     // A trunk's count: half way along the part of it outside both folders.
     const taken = [];
-    const counts = routes.filter((m) => m.cls.startsWith("trunk") && m.p.depth === 1 && m.q.depth === 1).map((m) => {
+    const counts = routes.filter((m) => m.pts && m.cls.startsWith("trunk") && m.p.depth === 1 && m.q.depth === 1).map((m) => {
+      if (m.org) {
+        // Half way along the part outside both folders (found in the worker), or near it.
+        const P = toScreen(m.pts), mid = m.mid ?? P.length >> 1;
+        const tries = [0, -6, 6, -12, 12, -18, 18].map((d) => P[Math.max(0, Math.min(P.length - 1, mid + d))]);
+        const at = tries.find((c) => taken.every(([x, y]) => Math.hypot(c[0] - x, c[1] - y) > 20)) || tries[0];
+        taken.push(at);
+        return { key: m.key, x: at[0], y: at[1], text: String(m.count), quiet: m.cls.includes("quiet") };
+      }
       const P = screenPts(m), out = [];
       for (let i = 0; i < P.length - 1; i++) for (let f = 0; f < 1; f += 0.05) {
         const x = P[i][0] + (P[i + 1][0] - P[i][0]) * f, y = P[i][1] + (P[i + 1][1] - P[i][1]) * f;
@@ -1195,11 +1301,24 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const clash = (box, list) => list.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
     const fits = (box, own) => box[0] > -40 && box[2] < w + 40 && box[1] > -20 && box[3] < hgt + 20 &&
       !clash(box, placed) && !clash(box, dots.filter((d) => d !== own));
-    const arcs = [], texts = [];
+    const arcs = [], texts = [], heads = [];
+    const t = drawnAt || d3.zoomIdentity;
+    const noteCount = (n) => n.leaves().filter((l) => l.data.kind === "concept").length;
 
     // Open territories: name along the top of the region, outermost first.
     for (const n of [...open].filter((n) => n.parent).sort((a, b) => a.depth - b.depth)) {
-      if (arcs.length + texts.length >= budget) break;
+      if (arcs.length + texts.length + heads.length >= budget) break;
+      const out = outlineOf(n);
+      if (out) {
+        // A contour has no arc to follow: the name sits above the outline.
+        const x = t.applyX((out.box[0] + out.box[2]) / 2), y = t.applyY(out.box[1]) - 7;
+        const width = (n.data.label.length + 3) * 7.8;
+        const box = [x - width / 2, y - 12, x + width / 2, y + 3];
+        if (!fits(box)) continue;
+        placed.push(box);
+        heads.push({ n, x, y, count: noteCount(n) });
+        continue;
+      }
       const R = sr(n) + 6; // just outside the wall
       const width = (n.data.label.length + 3) * 7.6;
       if (R < 30 || width > R * 2.2) continue;
@@ -1211,20 +1330,22 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Closed territories: name and size in the middle.
     const closed = visible.filter((n) => n.data.kind === "dir" && !open.has(n)).sort((a, b) => sr(b) - sr(a));
     for (const n of closed) {
-      if (arcs.length + texts.length >= budget) break;
-      const count = n.leaves().filter((l) => l.data.kind === "concept").length;
+      if (arcs.length + texts.length + heads.length >= budget) break;
+      const count = noteCount(n);
       const lines = [n.data.label, `${count} note${count === 1 ? "" : "s"}`];
       const width = n.data.label.length * 7.8;
       if (sr(n) < 14) continue;
-      const box = [sx(n) - width / 2, sy(n) - 12, sx(n) + width / 2, sy(n) + 18];
+      const out = outlineOf(n); // in the middle of its outline, or of its circle
+      const cx = out ? t.applyX((out.box[0] + out.box[2]) / 2) : sx(n), cy = out ? t.applyY((out.box[1] + out.box[3]) / 2) : sy(n);
+      const box = [cx - width / 2, cy - 12, cx + width / 2, cy + 18];
       if (!fits(box)) continue;
       placed.push(box);
-      texts.push({ n, x: sx(n), y: sy(n) - 1, lines, anchor: "middle", cls: "territory" });
+      texts.push({ n, x: cx, y: cy - 1, lines, anchor: "middle", cls: "territory" });
     }
     // Places: beside the marker, trying right, left, above and below.
     const ranked = [...notes].sort((a, b) => step.has(b.data.ref) - step.has(a.data.ref) || b.data.weight - a.data.weight || sr(b) - sr(a));
     for (const n of ranked) {
-      if (arcs.length + texts.length >= budget) break;
+      if (arcs.length + texts.length + heads.length >= budget) break;
       const r = dot(n) + (n.data.landmark ? 4 : 0), x = sx(n), y = sy(n);
       const charW = n.data.landmark || /st-understood|changed/.test(reach(n)) ? 7.4 : 7;
       const lines = wrapWords(n.data.label, 150, charW);
@@ -1244,7 +1365,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       texts.push({ n, x: spot.tx, y: spot.box[1] + 11, lines, anchor: spot.anchor, cls: (n.data.landmark ? "place landmark" : "place") + (step.has(n.data.ref) ? " on-trail" : "") + " " + reach(n) });
     }
 
-    defs.selectAll("path").data(arcs, (a) => a.n.data.id).join("path")
+    defs.selectAll("path.m-arc-path").data(arcs, (a) => a.n.data.id).join("path").attr("class", "m-arc-path")
       .attr("id", (a) => "arc-" + a.n.data.id.replace(/[^\w-]/g, "_"))
       .attr("d", (a) => {
         const cx = sx(a.n), cy = sy(a.n), R = a.R;
@@ -1265,7 +1386,19 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         tp.select(".name").text((a) => a.n.data.label);
         tp.select(".count").text((a) => " " + a.n.leaves().filter((l) => l.data.kind === "concept").length);
       });
-    gLabels.selectAll("text.m-text").data(texts, (d) => d.n.data.id).join("text")
+    gLabels.selectAll("text.m-head").data(heads, (d) => d.n.data.id).join((enter) => {
+      const text = enter.append("text").attr("text-anchor", "middle");
+      text.append("tspan").attr("class", "name");
+      text.append("tspan").attr("class", "count");
+      return text;
+    })
+      .attr("class", (d) => `m-text m-head territory${d.n.depth > 1 ? " sub" : ""}`)
+      .attr("x", (d) => d.x).attr("y", (d) => d.y)
+      .call((text) => {
+        text.select(".name").text((d) => d.n.data.label);
+        text.select(".count").text((d) => " " + d.count);
+      });
+    gLabels.selectAll("text.m-text:not(.m-head)").data(texts, (d) => d.n.data.id).join("text")
       .attr("class", (d) => `m-text ${d.cls}`)
       .attr("data-id", (d) => d.n.data.id)
       .attr("y", (d) => d.y)
@@ -1623,12 +1756,26 @@ function controls({ view, tune, readout, summary }) {
   };
   drawDistance();
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
+  // One of a few values, as pressed buttons.
+  const choice = (key, text, options) => {
+    const buttons = options.map(([value, label, help]) => {
+      const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(effective()[key] === value), title: help }, label);
+      b.addEventListener("click", () => {
+        M.user[key] = value;
+        buttons.forEach((x, i) => x.setAttribute("aria-pressed", String(options[i][0] === value)));
+        persist(); view();
+      });
+      return b;
+    });
+    return h("div", { class: "row seg", role: "group", "aria-label": text }, h("span", {}, text), ...buttons);
+  };
 
   // Tuning: every layout and routing parameter, with a way to keep the result.
   const snippet = h("pre", { class: "map-snippet", hidden: true });
   const showSnippet = () => {
     const e = effective();
-    const lines = ["[map]", ...Object.keys(VIEW_DEFAULTS).map((k) => `${k} = ${e[k]}`), ...TUNING.map(([k]) => `${k} = ${e[k]}`)];
+    const toml = (v) => (typeof v === "string" ? JSON.stringify(v) : String(v));
+    const lines = ["[map]", ...Object.keys(VIEW_DEFAULTS).map((k) => `${k} = ${toml(e[k])}`), ...TUNING.map(([k]) => `${k} = ${toml(e[k])}`)];
     snippet.textContent = lines.join("\n");
     snippet.hidden = !snippet.hidden;
   };
@@ -1692,6 +1839,10 @@ function controls({ view, tune, readout, summary }) {
       summary,
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
+        choice("folders", "Folders", [["contour", "Contours", "Each folder's outline follows where its contents sit."],
+          ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."]]),
+        choice("routing", "Routes", [["downhill", "Downhill", "Routes cross folder outlines at right angles and gather in the flats between folders."],
+          ["gates", "Gates", "Routes leave each folder by a gate on its wall and follow corridors between its contents."]]),
         h("div", { class: "row" },
           toggle("allLinks", "Every link", "Draw every link at the shown scale instead of trunks, filtered by the settings below."),
           rated ? toggle("hideImplied", "Hide implied", "Hide a link when a chain of links at least as strong already connects its ends.") : "",

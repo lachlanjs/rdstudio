@@ -5,6 +5,7 @@
 
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
+import { outlines, routingGrid, routeAll } from "./contours.js";
 
 export const SIZE = 1000; // layout units
 // Bump when the algorithm changes, so cached layouts are not reused.
@@ -245,7 +246,7 @@ function getWorker() {
       waiting.delete(data.id);
       if (!w) return;
       if (data.error) w.reject(new Error(data.error));
-      else w.resolve(data.xyr ?? data.terrain);
+      else w.resolve(data.xyr ?? data.result);
     };
     worker.onerror = (event) => {
       event.preventDefault?.();
@@ -269,6 +270,21 @@ export function computeLayout(plain, o, prev = null) {
 // The terrain of some top-level folders (terrain.js), off the main thread.
 export function computeTerrain(folders) {
   return ask({ terrain: folders }, () => folders.map(bake));
+}
+
+// Contour folders' outlines (contours.js), off the main thread.
+export function computeOutlines(specs) {
+  return ask({ outlines: specs }, () => outlines(specs));
+}
+
+// Downhill routes (contours.js), off the main thread. The grid is built once
+// per key and kept (by the worker, or here).
+let localGrid = null;
+export function computeRoutes(key, input, asks) {
+  return ask({ routes: { key, input, asks } }, () => {
+    if (localGrid?.key !== key) localGrid = { key, grid: routingGrid(input) };
+    return routeAll(localGrid.grid, asks);
+  });
 }
 
 function ask(message, here) {

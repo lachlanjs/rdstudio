@@ -9,6 +9,7 @@
 // Runs in the layout worker (layout-worker.js), or here when there is none.
 
 import { contours } from "d3";
+import { stamp, THR } from "./contours.js";
 
 // Contours: the frontier (where reached ground meets the fog), then steps of understanding.
 export const LEVELS = [0.4, 0.9, 1.6, 2.3];
@@ -16,14 +17,17 @@ const CELLS = 112; // across a folder; cost follows the grid, not the notes
 
 /**
  * One top-level folder's terrain.
- * @param {{ key: string, cx: number, cy: number, r: number, pts: number[] }} f
- *   pts holds [x, y, value, width] per note, in layout units.
+ * @param {{ key: string, cx: number, cy: number, r: number, pts: number[], mask?: any }} f
+ *   pts holds [x, y, value, width] per note, in layout units. mask: with
+ *   contour folders, the folder's field (contours.js), so the terrain falls
+ *   to nothing on its outline and the two families of contours never cross.
  * @returns {{ key: string, levels: number[][][][][], front: number[][] }}
  *   levels: a MultiPolygon's coordinates per contour, in layout units;
  *   front: the frontier's rings as [x, y, nx, ny, ...], (nx, ny) pointing downhill, towards the fog.
  */
 export function bake(f) {
-  const n = CELLS, cell = (2 * f.r) / n, x0 = f.cx - f.r, y0 = f.cy - f.r;
+  const half = f.mask ? f.r * 1.4 : f.r; // an outline can reach a little beyond the circle
+  const n = CELLS, cell = (2 * half) / n, x0 = f.cx - half, y0 = f.cy - half;
   const num = new Float64Array(n * n), den = new Float64Array(n * n);
   // Stamp each note: a Gaussian as wide as its own spacing, cut off at three widths.
   for (let p = 0; p < f.pts.length; p += 4) {
@@ -41,6 +45,15 @@ export function bake(f) {
   }
   const vals = new Float64Array(n * n);
   for (let i = 0; i < vals.length; i++) vals[i] = num[i] / Math.pow(1 + den[i] ** 4, 0.25);
+  if (f.mask) {
+    // 0 on and outside the outline, rising to 1 a little way inside.
+    const inside = new Float64Array(n * n);
+    stamp(f.mask, inside, x0 + cell / 2, y0 + cell / 2, cell, n, n);
+    for (let i = 0; i < vals.length; i++) {
+      const t = Math.max(0, Math.min(1, (inside[i] - THR) / 0.45));
+      vals[i] *= t * t * (3 - 2 * t);
+    }
+  }
   const gen = contours().size([n, n]);
   const toLayout = (rings) => rings.map((poly) => poly.map((ring) => ring.map(([x, y]) => [round(x0 + x * cell), round(y0 + y * cell)])));
   const shapes = LEVELS.map((t) => gen.contour(vals, t));

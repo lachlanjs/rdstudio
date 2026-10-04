@@ -383,6 +383,7 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .m-text.territory .count, .m-arc .count { font-weight: 400; fill: var(--text-faint); }
 .m-arc { font-size: 12px; font-weight: 600; font-variation-settings: "wdth" 90; fill: var(--text-soft); stroke-width: 5px; }
 .m-arc.sub { font-size: 11px; font-weight: 500; }
+.m-text.m-head.sub { font-size: 11px; font-weight: 500; }
 .m-count { font-weight: 700; font-size: 12px; text-anchor: middle; }
 .m-count.quiet { opacity: .45; }
 .m-leader .leader { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }

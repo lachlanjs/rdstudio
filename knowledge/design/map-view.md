@@ -112,7 +112,35 @@ Each is checkable by looking at a screenshot or reading the code.
   (offset along the route's normal, by direction) and two-way links take the
   middle, so opposite directions separate. They spread lines apart but do not
   change where routes cross.
-- **Routing:** each folder has a corridor network: a waypoint in the middle of
+- **Contour folders (T60, the default):** each folder's outline is the
+  contour at 0.5 of a field with one bump per child (a note, or a soft disc
+  of 0.7 its radius for a subfolder), 0.6 of the median spacing between its
+  children wide. A parent's field contains its children's, so outlines nest.
+  Positions are the circle layout's; outlines are worked out once per layout
+  in the worker (`views/contours.js`), with circles drawn until they arrive.
+  Names sit above the outline. The terrain is multiplied by a mask that is 0
+  on the top-level outline and rises to 1 a little way inside, so the
+  understanding contours stay inside it and the two families of lines never
+  cross. `folders = "circle"` keeps the packing's circles, names on the arc.
+- **Downhill routes (T60, the default):** a line that meets every contour at
+  a right angle runs straight up or down the slope, so routes are shortest
+  paths (A*) on a 5-unit grid where a step along the slope is cheap and a step
+  across it costs up to 7 times more. High ground costs a little more than
+  low, and another folder's interior 6 times more. The slope is that of the
+  folder fields plus half the understanding field. Cells a route uses get 25%
+  cheaper, so routes gather like streams. Each search is held to a window
+  around its two ends. The staircase is straightened and rounded, and a
+  folder end stops exactly on the outline. Routes are solved in the worker,
+  heaviest first, and kept per pair until the layout or your understanding
+  changes. A route is drawn when it arrives. The summary reports how far
+  routes are from a right angle where they cross outlines. That is exact only
+  where the outline and the understanding contours are parallel, since one
+  line cannot be perpendicular to two families of curves that are not.
+  `routing = "gates"` keeps the corridor router below.
+
+  Timed on the 1,186-note bundle (desktop): outlines 148 ms and routes 314 ms,
+  both in the worker after the map has settled; panning stays at 60 fps.
+- **Gates routing:** each folder has a corridor network: a waypoint in the middle of
   each gap between neighbouring items (Delaunay triangulation of their
   centres), one in the open space of each triangle, and a *gate* on the
   folder's edge directly outward from each item, with gates joined by a ring
@@ -165,6 +193,8 @@ current values in the right form to copy into a project.
 | `detail` | 60 | A folder opens when its radius on screen passes this many pixels |
 | `showLinks` | true | The Links lens: trunks between top-level folders, and the links inside the folder in focus |
 | `terrain` | true | The Understanding lens: the terrain of where you stand (needs the learner record) |
+| `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above) or `circle` (the packing's circles, names on the arc) |
+| `routing` | `"downhill"` | `downhill` (crosses contours at right angles, gathers in the flats) or `gates` (gates, corridors and bundling) |
 | `allLinks` | false | Draw every link at the shown scale instead of trunks, filtered by the settings below |
 | `distMeasure` | `"out"` | How distance is counted: `out` (larger of the two ends' walls out to the shared folder) or `path` (all walls crossed) |
 | `distMin`, `distMax` | 0, 9 | Range of distances to show, in bubble walls |
