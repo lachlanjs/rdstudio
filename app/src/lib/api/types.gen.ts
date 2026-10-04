@@ -12,6 +12,10 @@ export type LearnerState = {
     token: string | null;
     dir: string | null;
     events: Array<LearnerEvent>;
+    /**
+     * Days a week must count for a weekly streak ([learner] week_days, default 4).
+     */
+    weekDays: number;
 };
 
 /**
@@ -109,6 +113,100 @@ export type TeacherFile = {
 
 export type TeacherFileSave = {
     text: string;
+};
+
+export type AiState = {
+    connected: boolean;
+    /**
+     * Where the key comes from.
+     */
+    from: 'environment' | 'file' | null;
+    /**
+     * The model for each job ([teacher.models] in the user config).
+     */
+    models: {
+        [key: string]: string;
+    };
+    spending: {
+        budget: number;
+        spent: number;
+        left: number;
+        warn: boolean;
+        stopped: boolean;
+        weekStart: string;
+        byFeature: {
+            [key: string]: number;
+        };
+        byModel: {
+            [key: string]: number;
+        };
+        byExercise: {
+            [key: string]: number;
+        };
+        calls: number;
+    };
+};
+
+export type AiConnect = {
+    url: string;
+};
+
+export type AiCheck = {
+    text: string;
+    model: string;
+    cost: number;
+};
+
+export type TutorAsk = {
+    mode: 'hint' | 'feedback' | 'discuss';
+    text: string;
+    working?: string;
+    prompt?: string;
+    selection?: string;
+    confidence?: string;
+};
+
+export type Draft = {
+    exercise: string;
+    text: string;
+    working: string;
+    updated: string | null;
+    versions: Array<DraftVersion>;
+    /**
+     * The teacher's replies while working together, oldest first.
+     */
+    turns: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type DraftVersion = {
+    id: string;
+    at: string;
+    reason: string;
+    text: string;
+    working: string;
+};
+
+export type DraftSave = {
+    text: string;
+    working?: string;
+};
+
+export type DraftKeep = {
+    reason?: string;
+};
+
+export type DraftRestore = {
+    version: string;
+};
+
+export type DraftFiled = {
+    filed: string | null;
+};
+
+export type DraftSubmitted = {
+    attempt: string;
 };
 
 export type SkillSave = {
@@ -644,6 +742,382 @@ export type PutApiTeacherFilesByNameResponses = {
 };
 
 export type PutApiTeacherFilesByNameResponse = PutApiTeacherFilesByNameResponses[keyof PutApiTeacherFilesByNameResponses];
+
+export type DeleteApiTeacherAiData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type DeleteApiTeacherAiErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type DeleteApiTeacherAiError = DeleteApiTeacherAiErrors[keyof DeleteApiTeacherAiErrors];
+
+export type DeleteApiTeacherAiResponses = {
+    /**
+     * Forgotten
+     */
+    200: AiState;
+};
+
+export type DeleteApiTeacherAiResponse = DeleteApiTeacherAiResponses[keyof DeleteApiTeacherAiResponses];
+
+export type GetApiTeacherAiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type GetApiTeacherAiErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiTeacherAiError = GetApiTeacherAiErrors[keyof GetApiTeacherAiErrors];
+
+export type GetApiTeacherAiResponses = {
+    /**
+     * The state
+     */
+    200: AiState;
+};
+
+export type GetApiTeacherAiResponse = GetApiTeacherAiResponses[keyof GetApiTeacherAiResponses];
+
+export type PostApiTeacherAiConnectData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/connect';
+};
+
+export type PostApiTeacherAiConnectErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiConnectError = PostApiTeacherAiConnectErrors[keyof PostApiTeacherAiConnectErrors];
+
+export type PostApiTeacherAiConnectResponses = {
+    /**
+     * Where to go
+     */
+    200: AiConnect;
+};
+
+export type PostApiTeacherAiConnectResponse = PostApiTeacherAiConnectResponses[keyof PostApiTeacherAiConnectResponses];
+
+export type PostApiTeacherAiCheckData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/check';
+};
+
+export type PostApiTeacherAiCheckErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiCheckError = PostApiTeacherAiCheckErrors[keyof PostApiTeacherAiCheckErrors];
+
+export type PostApiTeacherAiCheckResponses = {
+    /**
+     * The reply
+     */
+    200: AiCheck;
+};
+
+export type PostApiTeacherAiCheckResponse = PostApiTeacherAiCheckResponses[keyof PostApiTeacherAiCheckResponses];
+
+export type PostApiTeacherTutorByIdData = {
+    body: TutorAsk;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/tutor/{id}';
+};
+
+export type PostApiTeacherTutorByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherTutorByIdError = PostApiTeacherTutorByIdErrors[keyof PostApiTeacherTutorByIdErrors];
+
+export type PostApiTeacherTutorByIdResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiTeacherTutorByIdResponse = PostApiTeacherTutorByIdResponses[keyof PostApiTeacherTutorByIdResponses];
+
+export type GetApiTeacherDraftsByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}';
+};
+
+export type GetApiTeacherDraftsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type GetApiTeacherDraftsByIdError = GetApiTeacherDraftsByIdErrors[keyof GetApiTeacherDraftsByIdErrors];
+
+export type GetApiTeacherDraftsByIdResponses = {
+    /**
+     * The draft (empty if none)
+     */
+    200: Draft;
+};
+
+export type GetApiTeacherDraftsByIdResponse = GetApiTeacherDraftsByIdResponses[keyof GetApiTeacherDraftsByIdResponses];
+
+export type PutApiTeacherDraftsByIdData = {
+    body: DraftSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}';
+};
+
+export type PutApiTeacherDraftsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PutApiTeacherDraftsByIdError = PutApiTeacherDraftsByIdErrors[keyof PutApiTeacherDraftsByIdErrors];
+
+export type PutApiTeacherDraftsByIdResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PutApiTeacherDraftsByIdResponse = PutApiTeacherDraftsByIdResponses[keyof PutApiTeacherDraftsByIdResponses];
+
+export type PostApiTeacherDraftsByIdVersionsData = {
+    body: DraftKeep;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/versions';
+};
+
+export type PostApiTeacherDraftsByIdVersionsErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdVersionsError = PostApiTeacherDraftsByIdVersionsErrors[keyof PostApiTeacherDraftsByIdVersionsErrors];
+
+export type PostApiTeacherDraftsByIdVersionsResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PostApiTeacherDraftsByIdVersionsResponse = PostApiTeacherDraftsByIdVersionsResponses[keyof PostApiTeacherDraftsByIdVersionsResponses];
+
+export type PostApiTeacherDraftsByIdRestoreData = {
+    body: DraftRestore;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/restore';
+};
+
+export type PostApiTeacherDraftsByIdRestoreErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdRestoreError = PostApiTeacherDraftsByIdRestoreErrors[keyof PostApiTeacherDraftsByIdRestoreErrors];
+
+export type PostApiTeacherDraftsByIdRestoreResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PostApiTeacherDraftsByIdRestoreResponse = PostApiTeacherDraftsByIdRestoreResponses[keyof PostApiTeacherDraftsByIdRestoreResponses];
+
+export type PostApiTeacherDraftsByIdSubmittedData = {
+    body: DraftSubmitted;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/submitted';
+};
+
+export type PostApiTeacherDraftsByIdSubmittedErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdSubmittedError = PostApiTeacherDraftsByIdSubmittedErrors[keyof PostApiTeacherDraftsByIdSubmittedErrors];
+
+export type PostApiTeacherDraftsByIdSubmittedResponses = {
+    /**
+     * Filed
+     */
+    200: DraftFiled;
+};
+
+export type PostApiTeacherDraftsByIdSubmittedResponse = PostApiTeacherDraftsByIdSubmittedResponses[keyof PostApiTeacherDraftsByIdSubmittedResponses];
 
 export type GetApiEditData = {
     body?: never;

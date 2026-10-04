@@ -30,13 +30,18 @@
             "items": {
               "$ref": "#/components/schemas/LearnerEvent"
             }
+          },
+          "weekDays": {
+            "type": "integer",
+            "description": "Days a week must count for a weekly streak ([learner] week_days, default 4)."
           }
         },
         "required": [
           "enabled",
           "token",
           "dir",
-          "events"
+          "events",
+          "weekDays"
         ]
       },
       "LearnerEvent": {
@@ -282,6 +287,284 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "AiState": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "environment",
+              "file",
+              null
+            ],
+            "description": "Where the key comes from."
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The model for each job ([teacher.models] in the user config)."
+          },
+          "spending": {
+            "type": "object",
+            "properties": {
+              "budget": {
+                "type": "number"
+              },
+              "spent": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              },
+              "warn": {
+                "type": "boolean"
+              },
+              "stopped": {
+                "type": "boolean"
+              },
+              "weekStart": {
+                "type": "string"
+              },
+              "byFeature": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "byModel": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "byExercise": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "calls": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "budget",
+              "spent",
+              "left",
+              "warn",
+              "stopped",
+              "weekStart",
+              "byFeature",
+              "byModel",
+              "byExercise",
+              "calls"
+            ]
+          }
+        },
+        "required": [
+          "connected",
+          "from",
+          "models",
+          "spending"
+        ]
+      },
+      "AiConnect": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "AiCheck": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "text",
+          "model",
+          "cost"
+        ]
+      },
+      "TutorAsk": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "hint",
+              "feedback",
+              "discuss"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "working": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "selection": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "text"
+        ]
+      },
+      "Draft": {
+        "type": "object",
+        "properties": {
+          "exercise": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "working": {
+            "type": "string"
+          },
+          "updated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftVersion"
+            }
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "The teacher's replies while working together, oldest first."
+          }
+        },
+        "required": [
+          "exercise",
+          "text",
+          "working",
+          "updated",
+          "versions",
+          "turns"
+        ]
+      },
+      "DraftVersion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "working": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "reason",
+          "text",
+          "working"
+        ]
+      },
+      "DraftSave": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "working": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "DraftKeep": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DraftRestore": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "DraftFiled": {
+        "type": "object",
+        "properties": {
+          "filed": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "filed"
+        ]
+      },
+      "DraftSubmitted": {
+        "type": "object",
+        "properties": {
+          "attempt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt"
         ]
       },
       "SkillSave": {
@@ -1242,6 +1525,644 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TeacherFile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai": {
+      "get": {
+        "summary": "Whether a model account is connected, the models by job, and this week's spending",
+        "responses": {
+          "200": {
+            "description": "The state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Forget the OpenRouter key kept here",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forgotten",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai/connect": {
+      "post": {
+        "summary": "Start connecting an OpenRouter account: the address to send the browser to",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where to go",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConnect"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/ai/check": {
+      "post": {
+        "summary": "Check the connection with a tiny request (its cost is logged as \"check\")",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCheck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/tutor/{id}": {
+      "post": {
+        "summary": "Ask the teacher about your draft (hint, feedback or discuss); the reply streams as server-sent events: text, then done with the turn, or error",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorAsk"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-sent events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/drafts/{id}": {
+      "get": {
+        "summary": "Your draft answer to an exercise, with its kept versions",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The draft (empty if none)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Save the draft as it is now (as you type)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/drafts/{id}/versions": {
+      "post": {
+        "summary": "Keep the draft as it is now as a version",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftKeep"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/drafts/{id}/restore": {
+      "post": {
+        "summary": "Restore a kept version (the draft as it is now is kept first)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRestore"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/drafts/{id}/submitted": {
+      "post": {
+        "summary": "The answer was submitted: file the draft under the attempt",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftSubmitted"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Filed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftFiled"
                 }
               }
             }

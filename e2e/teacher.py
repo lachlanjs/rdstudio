@@ -18,6 +18,16 @@ the sources log.
 Set for you (T46 finding): an agent sets exercises through MCP; they show at
 the top of the Learn tab with a count on the tab, lead one to the next, and
 the agent sees the set's progress.
+Drafts (T49): an answer saved as typed and back after a reload; a version
+kept, shown and restored, with what was there kept first; the draft filed
+with the attempt on submitting.
+Models (T50): the Teacher page offers to connect OpenRouter (the sign-in
+address checked, the site itself not visited), shows the week's budget, and
+the model for each job.
+Work together (T51), against a fake OpenRouter: hints climbing the ladder,
+feedback pinned red and green in the draft and following edits, a discussion,
+the draft as it was, replies back after a reload, the help kept with the
+attempt, and spending by feature.
 Working (T46): working shown with a checked answer and sent for review,
 marked by an agent who lowers a right answer; a wrong answer's working sent
 afterwards, and reviewed by the developer against the solution.
@@ -90,7 +100,36 @@ Why does a manifold need an atlas rather than one chart?
 
 Because a single chart need not cover it, and smoothness is defined by the transition maps between charts.
 """)
-ENV = {**os.environ, "XDG_CONFIG_HOME": str(TMP / "config"), "XDG_DATA_HOME": str(TMP / "data")}
+# A fake OpenRouter: streams a reply chosen by what is asked, and keeps the requests.
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+FAKE_REQUESTS = []
+class FakeOpenRouter(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        FAKE_REQUESTS.append(body)
+        said = "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
+        if "Give a hint" in said:
+            reply = "Independence." if "rung 1 of 3" in said else 'Think about why the cross terms vanish.\n[hint] "terms are independent"'
+        elif "Give feedback" in said:
+            reply = 'Close.\n[green] "terms are independent"\nRight: that is why the variances add.\n[red] "So Var(h) = N g^2"\nThe $1/N$ in each weight\'s variance is missing.'
+        elif "Answer the developer" in said:
+            reply = 'What does each weight\'s variance carry?\n[blue] "So Var(h) = N g^2"\nThis is the line your question is about.'
+        else:
+            reply = "ready"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.end_headers()
+        for i in range(0, len(reply), 7):
+            self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'content': reply[i:i + 7]}}]})}\n\n".encode())
+            self.wfile.flush()
+        self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {}}], 'usage': {'prompt_tokens': 1200, 'completion_tokens': 40, 'cost': 0.0021}})}\n\n".encode())
+        self.wfile.write(b"data: [DONE]\n\n")
+fake = ThreadingHTTPServer(("127.0.0.1", 0), FakeOpenRouter)
+threading.Thread(target=fake.serve_forever, daemon=True).start()
+
+ENV = {**os.environ, "RDSTUDIO_OPENROUTER_URL": f"http://127.0.0.1:{fake.server_address[1]}", "XDG_CONFIG_HOME": str(TMP / "config"), "XDG_DATA_HOME": str(TMP / "data")}
 CLI = ["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT)]
 
 with socket.socket() as s:
@@ -396,6 +435,19 @@ with sync_playwright() as pw:
     state = json.loads(mcp(("learner_state", {}))[0])
     check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 
+    # ------------------------------------------------------------ streaks (T48)
+    p.goto(URL + "?nosw&streaks#/learn")
+    tiles = p.locator(".streak")
+    tiles.first.wait_for()
+    texts = tiles.all_inner_texts()
+    check("streaks show at the top of the Learn tab: all three, recall, new learning, problem solving",
+          len(texts) == 4 and texts[0].startswith("All three") and texts[3].startswith("Problem solving"), texts)
+    check("today's exercises, new notes and an empty review queue keep all three going",
+          all("1 day" in t and ("Done today" in t or "Nothing due today" in t) for t in texts), texts)
+    p.locator(".streak-more-info summary").click()
+    check("the calendar marks today", p.locator(".cal-day.cal-today.cal-done").count() == 1)
+    p.screenshot(path=str(OUT / "teacher-streaks.png"))
+
     # ------------------------------------------------------------ working sent for review
     def events_named(kind):
         return attempts(kind)
@@ -447,6 +499,121 @@ with sync_playwright() as pw:
     m = attempts("attempt_marked")[-1]
     check("your review is recorded as yours", m["ref"] == rr["ref"] and m["by"] == "self" and m["result"] == "missed", m)
 
+    # ------------------------------------------------------------ models (T50)
+    p.goto(URL + "?nosw&ai#/teacher")
+    p.get_by_role("heading", name="Models and spending").wait_for()
+    p.get_by_role("button", name="Connect OpenRouter").wait_for()
+    check("the Teacher page offers to connect OpenRouter, and shows the week's budget and the models",
+          "$0 of $10.00 this week" in p.locator(".page").inner_text() and p.locator(".fm.spend code", has_text="google/gemini-3.8-flash").count() == 1)
+    went = []
+    p.route("https://openrouter.ai/**", lambda route: (went.append(route.request.url), route.fulfill(status=200, body="<p>OpenRouter</p>", content_type="text/html")))
+    p.get_by_role("button", name="Connect OpenRouter").click()
+    p.wait_for_url("https://openrouter.ai/**", timeout=5000)
+    from urllib.parse import urlparse, parse_qs
+    q = parse_qs(urlparse(went[0]).query) if went else {}
+    check("connecting goes to OpenRouter's sign-in, with PKCE and a way back here",
+          q.get("code_challenge_method") == ["S256"] and q.get("callback_url", [""])[0].startswith(URL.rstrip("/") + "/api/teacher/ai/callback?state="), went[:1])
+    p.unroute("https://openrouter.ai/**")
+    p.goto(URL + "?nosw&ai=expired#/teacher")
+    expect(p.locator(".edit-status", has_text="took too long")).to_be_visible(timeout=5000)
+    check("coming back without a key says why", True)
+
+    # ------------------------------------------------------------ drafts (T49)
+    p.goto(URL + "?nosw&d1#/k/exercises/why-atlases")
+    ed = p.locator(".exercise-answer .answer-editor .cm-content")
+    ed.wait_for()
+    ed.fill("First thoughts: charts overlap.")
+    expect(p.locator(".draft-bar")).to_contain_text("Draft saved", timeout=5000)
+    p.goto(URL + "?nosw&d2#/k/exercises/why-atlases")
+    ed.wait_for()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("is back", timeout=5000)
+    check("a draft answer is saved as typed, and back after leaving", "First thoughts: charts overlap." in ed.inner_text())
+    p.get_by_role("button", name="Keep this version").click()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("Kept as v1")
+    ed.fill("Rewritten entirely, and worse.")
+    p.wait_for_timeout(900)
+    p.locator(".draft-versions summary").click()
+    p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Show").click()
+    check("a kept version can be shown beside the draft", "First thoughts" in p.locator(".draft-shown").inner_text() and "Rewritten" in ed.inner_text())
+    p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Restore").click()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("Restored v1")
+    check("restoring brings it back, and keeps what was there as a version",
+          "First thoughts: charts overlap." in ed.inner_text() and p.locator(".draft-versions li", has_text="before restoring").count() == 1)
+    p.get_by_role("button", name="Mark it yourself").click()
+    n = len(attempts())
+    p.get_by_role("button", name="Partly").click()
+    settle(n + 1)
+    att = attempts()[-1]
+    filed = teacher_dir() / "drafts" / "submitted" / f"{att['id']}.json"
+    deadline = time.time() + 3
+    while time.time() < deadline and not filed.exists():
+        time.sleep(0.05)
+    check("submitting files the draft, with its versions, under the attempt",
+          filed.exists() and [v["id"] for v in json.loads(filed.read_text())["versions"]] == ["v1", "v2"]
+          and not (teacher_dir() / "drafts" / "exercises~why-atlases.json").exists())
+
+    # ------------------------------------------------------------ work together (T51)
+    (TMP / "config/rdstudio/openrouter.key").write_text("sk-or-v1-e2e-fake-key-000\n")
+    p.goto(URL + "?nosw&t1#/k/exercises/why-atlases")
+    ed = p.locator(".exercise-answer .answer-editor .cm-content")
+    ed.wait_for()
+    p.locator(".tutor-bar").wait_for()
+    draft = "The variance adds because the terms are independent. So Var(h) = N g^2."
+    ed.fill(draft)
+    p.locator(".tutor-bar").get_by_role("button", name="Hint").click()
+    card = p.locator("article.turn").first
+    expect(card).to_contain_text("Independence.", timeout=8000)
+    check("a hint comes back, the smallest push first", "1 of 3" in card.locator("header").inner_text() and "rung 1 of 3" in json.dumps(FAKE_REQUESTS[-1]))
+    asked = json.dumps(FAKE_REQUESTS[-1])
+    check("the teacher is given the tutor skill, the exercise, its solution and the notes it tests, and the draft",
+          "How to teach" in asked and "Why does a manifold need an atlas" in asked and "transition maps" in asked and "The variance adds" in asked)
+    p.locator(".tutor-bar").get_by_role("button", name="Hint (2 of 3)").click()
+    expect(p.locator("article.turn").first).to_contain_text("cross terms", timeout=8000)
+    check("the next hint climbs a rung", "rung 2 of 3" in json.dumps(FAKE_REQUESTS[-1]))
+    p.locator(".tutor-bar").get_by_role("button", name="Feedback").click()
+    p.get_by_role("button", name="Fairly sure").click()
+    expect(p.locator("article.turn-feedback")).to_be_visible(timeout=8000)
+    check("feedback is pinned in the draft, red and green, as you were asked how sure you were",
+          p.locator(".answer-editor .cm-pin-green").inner_text() == "terms are independent" and p.locator(".answer-editor .cm-pin-red").inner_text() == "So Var(h) = N g^2"
+          and "fairly sure" in json.dumps(FAKE_REQUESTS[-1]))
+    p.locator("article.turn-feedback .pin-red .pin-quote").click()
+    sel = p.evaluate("() => window.getSelection().toString()")
+    check("a pin's quote shows its passage in the draft", sel == "So Var(h) = N g^2", sel)
+    ed.press("Control+Home")
+    p.keyboard.type("First: ")
+    check("pins stay on their words as the draft changes", p.locator(".answer-editor .cm-pin-green").inner_text() == "terms are independent")
+    p.locator(".tutor-bar").get_by_role("button", name="Discuss").click()
+    p.get_by_label("Your question").fill("Is the last line right?")
+    p.locator(".tutor-ask").get_by_role("button", name="Ask").click()
+    expect(p.locator("article.turn-discuss")).to_be_visible(timeout=8000)
+    p.wait_for_timeout(300)
+    check("a discussion answers, pinned in blue", p.locator(".answer-editor .cm-pin-blue").count() >= 1 and "Is the last line right?" in json.dumps(FAKE_REQUESTS[-1]),
+          (p.locator(".answer-editor .cm-pin-blue").count(), p.locator(".answer-editor .cm-content").inner_html()[:600], p.locator("article.turn-discuss").inner_text()))
+    p.locator("article.turn-hint").last.get_by_role("button", name="Show the draft as it was").click()
+    check("a reply shows the draft as it was when asked", draft in p.locator(".draft-shown").inner_text() and "First:" not in p.locator(".draft-shown").inner_text())
+    p.locator("article.turn-discuss .turn-seen > summary").click()
+    check("what the teacher saw is shown, section by section", p.locator(".turn-seen li").count() >= 5)
+    p.screenshot(path=str(OUT / "teacher-tutor.png"), full_page=True)
+    p.goto(URL + "?nosw&t2#/k/exercises/why-atlases")
+    p.locator("article.turn").first.wait_for()
+    check("the replies are back after a reload, pinned again", p.locator("article.turn").count() == 4 and p.locator(".answer-editor .cm-pin-red").count() == 1)
+    p.get_by_role("button", name="Mark it yourself").click()
+    n = len(attempts())
+    p.get_by_role("button", name="Got it").click()
+    settle(n + 1)
+    att = attempts()[-1]
+    check("the help is part of the answer", att.get("help") == {"hint": 2, "feedback": 1, "discuss": 1}, att.get("help"))
+    filed = teacher_dir() / "drafts" / "submitted" / f"{att['id']}.json"
+    deadline = time.time() + 3
+    while time.time() < deadline and not filed.exists():
+        time.sleep(0.05)
+    check("and the session is filed with it, for the marker", filed.exists() and len(json.loads(filed.read_text())["turns"]) == 4)
+    expect(p.locator(".exercise-attempts li").first).to_contain_text("written with 2 hints, feedback, discussion")
+    p.goto(URL + "?nosw&t3#/teacher")
+    p.get_by_role("heading", name="Models and spending").wait_for()
+    spend = p.locator(".fm.spend").first.inner_text()
+    check("spending is tracked by feature", "Hints" in spend and "Feedback" in spend and "Discussion" in spend, spend)
+
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     pp.goto(URL + "?nosw#/teacher/skills/teach")
@@ -465,6 +632,7 @@ with sync_playwright() as pw:
     browser.close()
 
 server.terminate()
+fake.shutdown()
 failed = [n for n, ok in results if not ok]
 print(f"\n{len(results) - len(failed)} of {len(results)} passed")
 shutil.rmtree(TMP, ignore_errors=True)

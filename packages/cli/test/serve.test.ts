@@ -90,7 +90,7 @@ test("text is compressed and vendored files are cached", async () => {
 
 test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move", "/api/teacher", "/api/teacher/files/{name}", "/api/teacher/skills/{name}"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/move", "/api/teacher", "/api/teacher/ai", "/api/teacher/ai/check", "/api/teacher/ai/connect", "/api/teacher/drafts/{id}", "/api/teacher/drafts/{id}/restore", "/api/teacher/drafts/{id}/submitted", "/api/teacher/drafts/{id}/versions", "/api/teacher/files/{name}", "/api/teacher/skills/{name}", "/api/teacher/tutor/{id}"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
   expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["delete", "get", "put"]);
 });
@@ -134,4 +134,39 @@ test("the teacher's skills are read by anyone here, customised only from the das
 
   const reset = JSON.parse((await call("DELETE", "/api/teacher/skills/teach", { Origin: base, "X-Rdstudio-Token": "tok" })).body.toString());
   expect(reset.skill).toMatchObject({ status: "default", text: teach.default });
+});
+
+test("drafts are written only from the dashboard, with slashes in the id encoded", async () => {
+  const good = { Origin: base, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const id = encodeURIComponent("exercises/one");
+  expect(JSON.parse((await call("GET", `/api/teacher/drafts/${id}`)).body.toString())).toMatchObject({ exercise: "exercises/one", text: "", versions: [] });
+  expect((await call("PUT", `/api/teacher/drafts/${id}`, { ...good, "X-Rdstudio-Token": "bad" }, '{"text": "x"}')).status).toBe(403);
+  expect(JSON.parse((await call("PUT", `/api/teacher/drafts/${id}`, good, '{"text": "So far.", "working": ""}')).body.toString()).text).toBe("So far.");
+  const kept = JSON.parse((await call("POST", `/api/teacher/drafts/${id}/versions`, good, '{"reason": "feedback"}')).body.toString());
+  expect(kept.versions).toMatchObject([{ id: "v1", reason: "feedback", text: "So far." }]);
+  await call("PUT", `/api/teacher/drafts/${id}`, good, '{"text": "Changed."}');
+  expect(JSON.parse((await call("POST", `/api/teacher/drafts/${id}/restore`, good, '{"version": "v1"}')).body.toString()).text).toBe("So far.");
+  expect((await call("POST", `/api/teacher/drafts/${id}/restore`, good, '{"version": "v7"}')).status).toBe(400);
+  expect((await call("GET", `/api/teacher/drafts/${encodeURIComponent("../etc")}`)).status).toBe(400);
+});
+
+test("connecting OpenRouter: a PKCE sign-in address, a callback that checks its state, and spending", async () => {
+  const good = { Origin: base, "X-Rdstudio-Token": "tok" };
+  const state = JSON.parse((await call("GET", "/api/teacher/ai")).body.toString());
+  expect(state).toMatchObject({ connected: false, from: null, spending: { budget: 10, spent: 0, calls: 0 } });
+  expect(state.models.hint).toBe("google/gemini-3.8-flash");
+  expect((await call("POST", "/api/teacher/ai/connect", { ...good, "X-Rdstudio-Token": "bad" })).status).toBe(403);
+  const { url } = JSON.parse((await call("POST", "/api/teacher/ai/connect", good)).body.toString());
+  const u = new URL(url);
+  expect(u.origin + u.pathname).toBe("https://openrouter.ai/auth");
+  expect(u.searchParams.get("code_challenge_method")).toBe("S256");
+  expect(u.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(u.searchParams.get("callback_url")).toMatch(new RegExp(`^http://${hostHeader.replace(/\./g, "\\.")}/api/teacher/ai/callback\\?state=[A-Za-z0-9_-]+$`));
+  // A callback with an unknown state goes back to the Teacher page, saying so; no key is kept.
+  const r = await call("GET", "/api/teacher/ai/callback?state=forged&code=abc");
+  expect([r.status, r.headers.location]).toEqual([302, "/?ai=expired#/teacher"]);
+  expect(JSON.parse((await call("GET", "/api/teacher/ai")).body.toString()).connected).toBe(false);
+  const check = await call("POST", "/api/teacher/ai/check", good);
+  expect(check.status).toBe(409);
+  expect(JSON.parse(check.body.toString()).error).toMatch(/No OpenRouter key/);
 });

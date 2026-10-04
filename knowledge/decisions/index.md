@@ -6,5 +6,6 @@
 * [OKF v0.2 is ground truth](okf-ground-truth.md) - The knowledge format conforms to the OKF spec; conventions only choose among what OKF allows.
 * [Optional structured classifier (Jev-style)](classifier-optional.md) - Small classification steps go through a pluggable interface, off by default, with deterministic fallback.
 * [Reports are HTML outside the bundle](reports-html.md) - Agent-to-developer reports are self-contained HTML in reports/, linking one-way into knowledge.
+* [Show streaks, counting real work only](streaks.md) - Daily and weekly streaks are shown, reversing the earlier rule of no scores or streaks, on condition that only work that teaches counts and reprieves soften a missed day.
 * [Support a global bundle alongside project bundles](multiple-bundles.md) - A private ~/knowledge bundle holds cross-project knowledge; no links between bundles; promote moves concepts up.
 * [Verification goes stale only on significant edits](verification-staleness.md) - Significant edits bump generated.at; human verification older than that is stale.

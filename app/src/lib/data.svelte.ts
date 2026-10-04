@@ -130,6 +130,8 @@ class Learner {
   enabled = $state(false);
   dir = $state<string | null>(null);
   events = $state.raw<LearnerEvent[]>([]);
+  /** Days a week must count for a weekly streak. */
+  weekDays = $state(4);
   /** Your own tours, kept beside the record. */
   tours = $state.raw<PrivateTour[]>([]);
   private token: string | null = null;
@@ -145,6 +147,7 @@ class Learner {
       this.dir = data.dir;
       this.token = data.token;
       this.events = data.events;
+      if (typeof data.weekDays === "number") this.weekDays = data.weekDays;
       if (data.enabled) this.tours = (await getApiLearnerTours()).data ?? [];
     } catch { /* an older server, or none: the record is off */ }
   }

@@ -47,13 +47,14 @@ export const waiting = (): Attempt[] => [...tried().values()].flat().filter(need
 /** Record an answer: settled here (`result` and `by`), or left for an agent;
  *  with the working behind it, sent for review or not. Its id, or null. */
 export async function submitAttempt(ex: ConceptRecord, answer: string, settled: { result: Result; by: "dashboard" | "self"; gaveUp?: boolean } | null,
-  shown: { working: string; review: boolean } = { working: "", review: false }): Promise<string | null> {
+  shown: { working: string; review: boolean } = { working: "", review: false }, help: { hint: number; feedback: number; discuss: number } | null = null): Promise<string | null> {
   const tests = testsOf(ex);
   const hashes = Object.fromEntries(tests.map((id) => [id, store.concepts.get(id)!.hash]));
   const event = {
     event: "attempt", exercise: ex.id, tests, hashes, answer,
     ...(settled ? { result: settled.result, by: settled.by, ...(settled.gaveUp ? { gave_up: true } : {}) } : {}),
     ...(shown.working.trim() ? { working: shown.working.trim(), ...(shown.review ? { review: true } : {}) } : {}),
+    ...(help && help.hint + help.feedback + help.discuss ? { help } : {}),
     kind: settled && !(shown.review && shown.working.trim()) ? "interactive" : "ai",
   };
   const stored = await learner.record(event);

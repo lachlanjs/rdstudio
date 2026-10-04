@@ -8,7 +8,7 @@
 // localhost names, Tailscale names (*.ts.net, which `tailscale serve` passes
 // through) and --allow-host names, against DNS rebinding.
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -23,6 +23,9 @@ import { deleteFolder, deleteNote, moveFolder, moveNote } from "./reshape.ts";
 import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
 import * as teacher from "./teacher.ts";
+import * as models from "./models.ts";
+import * as tutor from "./tutor.ts";
+import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
@@ -64,6 +67,7 @@ const State = z.object({
   token: z.string().nullable().openapi({ description: "Send as X-Rdstudio-Token when writing." }),
   dir: z.string().nullable(),
   events: z.array(Event),
+  weekDays: z.number().int().openapi({ description: "Days a week must count for a weekly streak ([learner] week_days, default 4)." }),
 }).openapi("LearnerState");
 
 const getLearner = createRoute({
@@ -185,6 +189,72 @@ const putTeacherFile = createRoute({
   method: "put", path: "/api/teacher/files/{name}", summary: "Edit one of the teacher's files (to dispute a claim, say); agents see the edit",
   request: { params: FileName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: FileSave } }, required: true } },
   responses: { 200: { description: "Saved", content: { "application/json": { schema: TeacherFileSchema } } }, ...teacherErrors },
+});
+const DraftVersionSchema = z.object({ id: z.string(), at: z.string(), reason: z.string(), text: z.string(), working: z.string() }).openapi("DraftVersion");
+const DraftSchema = z.object({
+  exercise: z.string(), text: z.string(), working: z.string(), updated: z.string().nullable(), versions: z.array(DraftVersionSchema),
+  turns: z.array(z.record(z.string(), z.unknown())).openapi({ description: "The teacher's replies while working together, oldest first." }),
+}).openapi("Draft");
+const DraftId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The exercise's note id (slashes encoded)." }) });
+const writeHeader = z.object({ "x-rdstudio-token": z.string() });
+const draftRoute = (method: "put" | "post", path: string, summary: string, body: z.ZodTypeAny) => createRoute({
+  method, path, summary,
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: body } }, required: true } },
+  responses: { 200: { description: "The draft", content: { "application/json": { schema: DraftSchema } } }, ...teacherErrors },
+});
+const getDraft = createRoute({
+  method: "get", path: "/api/teacher/drafts/{id}", summary: "Your draft answer to an exercise, with its kept versions",
+  request: { params: DraftId },
+  responses: { 200: { description: "The draft (empty if none)", content: { "application/json": { schema: DraftSchema } } }, ...teacherErrors },
+});
+const putDraft = draftRoute("put", "/api/teacher/drafts/{id}", "Save the draft as it is now (as you type)",
+  z.object({ text: z.string(), working: z.string().optional() }).openapi("DraftSave"));
+const keepDraftVersion = draftRoute("post", "/api/teacher/drafts/{id}/versions", "Keep the draft as it is now as a version",
+  z.object({ reason: z.string().optional() }).openapi("DraftKeep"));
+const restoreDraft = draftRoute("post", "/api/teacher/drafts/{id}/restore", "Restore a kept version (the draft as it is now is kept first)",
+  z.object({ version: z.string() }).openapi("DraftRestore"));
+const fileDraftRoute = createRoute({
+  method: "post", path: "/api/teacher/drafts/{id}/submitted", summary: "The answer was submitted: file the draft under the attempt",
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: z.object({ attempt: z.string() }).openapi("DraftSubmitted") } }, required: true } },
+  responses: { 200: { description: "Filed", content: { "application/json": { schema: z.object({ filed: z.string().nullable() }).openapi("DraftFiled") } } }, ...teacherErrors },
+});
+const Money = z.record(z.string(), z.number());
+const AiState = z.object({
+  connected: z.boolean(),
+  from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
+  models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
+  spending: z.object({
+    budget: z.number(), spent: z.number(), left: z.number(), warn: z.boolean(), stopped: z.boolean(), weekStart: z.string(),
+    byFeature: Money, byModel: Money, byExercise: Money, calls: z.number(),
+  }),
+}).openapi("AiState");
+const getAi = createRoute({
+  method: "get", path: "/api/teacher/ai", summary: "Whether a model account is connected, the models by job, and this week's spending",
+  responses: { 200: { description: "The state", content: { "application/json": { schema: AiState } } }, 403: teacherErrors[403] },
+});
+const connectAi = createRoute({
+  method: "post", path: "/api/teacher/ai/connect", summary: "Start connecting an OpenRouter account: the address to send the browser to",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Where to go", content: { "application/json": { schema: z.object({ url: z.string() }).openapi("AiConnect") } } }, ...teacherErrors },
+});
+const disconnectAi = createRoute({
+  method: "delete", path: "/api/teacher/ai", summary: "Forget the OpenRouter key kept here",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Forgotten", content: { "application/json": { schema: AiState } } }, ...teacherErrors },
+});
+const checkAi = createRoute({
+  method: "post", path: "/api/teacher/ai/check", summary: "Check the connection with a tiny request (its cost is logged as \"check\")",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "The reply", content: { "application/json": { schema: z.object({ text: z.string(), model: z.string(), cost: z.number() }).openapi("AiCheck") } } }, ...teacherErrors },
+});
+const askTutor = createRoute({
+  method: "post", path: "/api/teacher/tutor/{id}",
+  summary: "Ask the teacher about your draft (hint, feedback or discuss); the reply streams as server-sent events: text, then done with the turn, or error",
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: z.object({
+    mode: z.enum(["hint", "feedback", "discuss"]), text: z.string(), working: z.string().optional(),
+    prompt: z.string().optional(), selection: z.string().optional(), confidence: z.string().optional(),
+  }).openapi("TutorAsk") } }, required: true } },
+  responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } }, ...teacherErrors },
 });
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
@@ -335,7 +405,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   app.openapi(getLearner, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     const on = learner.enabled(cfg);
-    return json(c, 200, { enabled: on, token: on ? token : null, dir: on ? learner.recordDir(cfg) : null, events: on ? learner.events(cfg) : [] });
+    return json(c, 200, { enabled: on, token: on ? token : null, dir: on ? learner.recordDir(cfg) : null, events: on ? learner.events(cfg) : [], weekDays: learner.weekDays() });
   }) as never);
 
   // A refused body is never read, so that connection is not reused.
@@ -433,6 +503,86 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { return json(c, 200, teacher.readFile(cfg, c.req.param("name") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
   }) as never);
   app.openapi(putTeacherFile, ((c: Context) => tourChange(c, (b) => teacher.writeFile(cfg, c.req.param("name") ?? "", b.text, teacher.BY_DEVELOPER))) as never);
+  // ---------------------------------------------------------------- models (OpenRouter)
+  const aiState = () => {
+    const k = models.apiKey();
+    return { connected: !!k, from: k?.from ?? null, models: models.models(), spending: models.spending(cfg) };
+  };
+  app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
+  // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
+  const pending = new Map<string, { verifier: string; until: number }>();
+  const b64url = (b: Buffer) => b.toString("base64url");
+  app.openapi(connectAi, ((c: Context) => tourChange(c, () => {
+    for (const [k, v] of pending) if (v.until < Date.now()) pending.delete(k);
+    const verifier = b64url(randomBytes(32)), state = b64url(randomBytes(16));
+    pending.set(state, { verifier, until: Date.now() + 10 * 60_000 });
+    const callback = `${new URL(c.req.url).protocol}//${c.req.header("host")}/api/teacher/ai/callback?state=${state}`;
+    const q = new URLSearchParams({ callback_url: callback, code_challenge: b64url(createHash("sha256").update(verifier).digest()), code_challenge_method: "S256", key_label: "rdstudio" });
+    return { url: `https://openrouter.ai/auth?${q}` };
+  }, false)) as never);
+  app.get("/api/teacher/ai/callback", async (c) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    const state = c.req.query("state") ?? "", code = c.req.query("code") ?? "";
+    const wait = pending.get(state);
+    pending.delete(state);
+    const back = (result: string) => c.redirect(`/?ai=${result}#/teacher`);
+    if (!wait || wait.until < Date.now() || !code) return back("expired");
+    try {
+      const res = await fetch(`${models.OPENROUTER}/auth/keys`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, code_verifier: wait.verifier, code_challenge_method: "S256" }) });
+      const key = res.ok ? ((await res.json()) as { key?: string }).key : undefined;
+      if (!key) return back("refused");
+      models.saveKey(key);
+      return back("connected");
+    } catch {
+      return back("failed");
+    }
+  });
+  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(checkAi, (async (c: Context) => {
+    const refused = writeRefused(c, false);
+    if (refused) return refused;
+    try {
+      const r = await models.complete({ cfg, job: "check", maxTokens: 10, messages: [{ role: "user", content: "Reply with the one word: ready" }] });
+      return json(c, 200, { text: r.text.trim(), model: r.usage.model, cost: r.usage.cost }, true);
+    } catch (err) {
+      if (err instanceof models.ModelError) return refuse(c, err.status, err.message);
+      throw err;
+    }
+  }) as never);
+
+  app.openapi(askTutor, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (!learner.enabled(cfg)) return refuse(c, 409, "the learner record is off ([learner] enabled in the user config)");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+    const a: tutor.Ask = { exercise: c.req.param("id") ?? "", mode: body.mode as tutor.Mode, text: str(body.text) ?? "", working: str(body.working),
+      prompt: str(body.prompt), selection: str(body.selection), confidence: str(body.confidence) };
+    // Problems found before anything is sent are plain errors; after, they are events.
+    if (!(tutor.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${tutor.MODES.join(", ")}`);
+    if (!models.apiKey()) return refuse(c, 409, "No OpenRouter key: connect an account on the Teacher page.");
+    return streamSSE(c, async (stream) => {
+      try {
+        const { turn, seen } = await tutor.ask(cfg, a, (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); });
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ turn, seen }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
+      }
+    });
+  }) as never);
+
+  app.openapi(getDraft, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    if (!learner.enabled(cfg)) return json(c, 409, { error: "the learner record is off ([learner] enabled in the user config)" });
+    try { return json(c, 200, teacher.readDraft(cfg, c.req.param("id") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
+  }) as never);
+  const draftId = (c: Context) => c.req.param("id") ?? "";
+  app.openapi(putDraft, ((c: Context) => tourChange(c, (b) => teacher.saveDraft(cfg, draftId(c), b))) as never);
+  app.openapi(keepDraftVersion, ((c: Context) => tourChange(c, (b) => teacher.keepVersion(cfg, draftId(c), b.reason))) as never);
+  app.openapi(restoreDraft, ((c: Context) => tourChange(c, (b) => teacher.restoreVersion(cfg, draftId(c), b.version))) as never);
+  app.openapi(fileDraftRoute, ((c: Context) => tourChange(c, (b) => teacher.fileDraft(cfg, draftId(c), b.attempt))) as never);
   app.openapi(putSkill, ((c: Context) => tourChange(c, (b) => teacher.saveSkill(cfg, c.req.param("name") ?? "", b.text))) as never);
   app.openapi(deleteSkill, ((c: Context) => tourChange(c, () => ({ skill: teacher.resetSkill(cfg, c.req.param("name") ?? "") }), false)) as never);
 

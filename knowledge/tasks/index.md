@@ -51,3 +51,7 @@
 * [T45 — Profile, sources and the default skills](T45-profile-and-skills.md) - The evidence-linked learner profile and the sources log, shown on the Teacher page, and first versions of the assess, map, source, exercise, next and review-changes skills.
 * [T46 — Trial: dynamical mean-field theory](T46-dmft-trial.md) - Learn the DMFT of random neural networks from first principles to Clark and Abbott's theory of coupled neuronal-synaptic dynamics, in a separate repository, using the teacher throughout.
 * [T47 — Mounting a shared knowledge base](T47-mounts.md) - A personal repository that reads a team's knowledge base read-only underneath its own notes, links into it, follows its history, and promotes notes up to it as proposals.
+* [T48 — Streaks](T48-streaks.md) - Daily and weekly streaks for recall, new learning, problem solving and all three, with reprieves, derived from the learner record and shown on the Learn tab.
+* [T49 — Drafts and history](T49-drafts-and-history.md) - Exercise drafts saved as they are typed, snapshots at each request to the teacher, restoring a draft as it was, and pins that follow edits.
+* [T50 — The server-side teacher](T50-teacher-service.md) - rdstudio serve calls models through OpenRouter: connecting an account, models by job, the context builder, a usage log by feature, and a weekly budget.
+* [T51 — Work together](T51-work-together.md) - The hint ladder, feedback and discussion pinned to passages of the draft in red, green and blue, hints carried into the answer, confidence, and a replay of the draft.

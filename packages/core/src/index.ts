@@ -21,6 +21,6 @@ export type { Edge as ProcedureEdge } from "./procedures.ts";
 export type { ChangedFile, Changes, Commit, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, SkillRecord, Skills, Version } from "./site.ts";
 export {
   EVIDENCE, INTERVALS, OFF_MAP, RESULTS, REVIEW_CAP, STATES, answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, needsMarking,
-  loadNote, parseNumber, refId, refIds, requiresClosure, reviewSchedule, splitSolution, studyLoad, tourBody, tourStops,
+  loadNote, parseNumber, refId, refIds, requiresClosure, reviewSchedule, splitSolution, streaks, studyLoad, tourBody, tourStops, weekOf, STREAK_KINDS, REPRIEVE_BANK, REPRIEVE_EVERY,
 } from "./learning.ts";
-export type { AnswerSpec, Assignment, Attempt, Discovery, ExerciseStatus, GoalProgress, NoteRef, NoteState, Result, Review, TourStop } from "./learning.ts";
+export type { AnswerSpec, Assignment, Attempt, DayStatus, Streak, StreakKind, Discovery, ExerciseStatus, GoalProgress, NoteRef, NoteState, Result, Review, TourStop } from "./learning.ts";

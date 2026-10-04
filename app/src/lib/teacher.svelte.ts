@@ -3,8 +3,12 @@
 // record. Reached from the Learn tab and Settings, not the main navigation:
 // customising how the agent teaches is possible, not encouraged.
 
-import { deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherFilesByName, getApiTeacherSkillsByName, putApiTeacherFilesByName, putApiTeacherSkillsByName } from "./api/sdk.gen.ts";
-import type { Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
+import {
+  deleteApiTeacherAi, getApiTeacherAi, postApiTeacherAiCheck, postApiTeacherAiConnect,
+  deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
+  postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherSkillsByName,
+} from "./api/sdk.gen.ts";
+import type { AiState, Draft, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
 import { learner, store } from "./data.svelte.ts";
 import { RESULT_LABEL } from "./explain.ts";
 
@@ -136,3 +140,58 @@ export function linkEvidence(html: string): string {
     return `<a class="ev-ref${ev.result ? " r-" + ev.result : ""}" href="#/teacher/evidence/${id}" title="${esc(`${ev.label}, ${when}`)}">${esc(ev.label)}</a>`;
   });
 }
+
+// ------------------------------------------------------------------ drafts
+// An exercise answer in progress, kept privately as it is typed, with
+// versions kept at the moments that matter. Nothing happens while the record is off.
+
+export const drafts = {
+  async read(exercise: string): Promise<Draft | null> {
+    if (store.site.static || !learner.enabled) return null;
+    try { return (await getApiTeacherDraftsById({ path: { id: exercise } })).data ?? null; } catch { return null; }
+  },
+  async save(exercise: string, text: string, working: string): Promise<Draft | null> {
+    if (store.site.static || !learner.enabled) return null;
+    try { return (await putApiTeacherDraftsById({ path: { id: exercise }, body: { text, working }, headers: learner.writeHeaders() })).data ?? null; } catch { return null; }
+  },
+  async keep(exercise: string, reason = "kept"): Promise<Draft | null> {
+    try { return (await postApiTeacherDraftsByIdVersions({ path: { id: exercise }, body: { reason }, headers: learner.writeHeaders() })).data ?? null; } catch { return null; }
+  },
+  async restore(exercise: string, version: string): Promise<Draft | null> {
+    try { return (await postApiTeacherDraftsByIdRestore({ path: { id: exercise }, body: { version }, headers: learner.writeHeaders() })).data ?? null; } catch { return null; }
+  },
+  async submitted(exercise: string, attempt: string): Promise<void> {
+    try { await postApiTeacherDraftsByIdSubmitted({ path: { id: exercise }, body: { attempt }, headers: learner.writeHeaders() }); } catch { /* the draft stays */ }
+  },
+};
+
+// ------------------------------------------------------------------ models (OpenRouter)
+// The key lives with rdstudio serve, never here: this only starts connecting,
+// forgets, checks, and shows the week's spending.
+
+const said = (error: unknown, fallback: string) => (error as { error?: string } | undefined)?.error ?? fallback;
+
+export const ai = {
+  async state(): Promise<AiState | null> {
+    if (store.site.static) return null;
+    try { return (await getApiTeacherAi()).data ?? null; } catch { return null; }
+  },
+  /** Send the browser to OpenRouter to sign in; it comes back to the Teacher page. */
+  async connect(): Promise<void> {
+    const { data, error } = await postApiTeacherAiConnect({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "Could not start connecting"));
+    location.href = data.url;
+  },
+  async disconnect(): Promise<AiState | null> {
+    const { data, error } = await deleteApiTeacherAi({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "Not forgotten"));
+    return data;
+  },
+  async check(): Promise<{ text: string; model: string; cost: number }> {
+    const { data, error } = await postApiTeacherAiCheck({ headers: learner.writeHeaders() });
+    if (!data) throw new Error(said(error, "The check failed"));
+    return data;
+  },
+};
+
+export const money = (n: number): string => (n === 0 ? "$0" : n < 0.01 ? `${(n * 100).toFixed(2)}¢` : `$${n.toFixed(2)}`);

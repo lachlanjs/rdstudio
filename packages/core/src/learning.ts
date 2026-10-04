@@ -378,7 +378,16 @@ export interface Attempt {
   checked: Result | null;
   /** Marked after the fact, by an agent or by the developer. */
   marked: boolean;
+  /** Written with the teacher alongside: how many hints, feedback and discussions. */
+  help: { hint: number; feedback: number; discuss: number } | null;
 }
+
+const helpOf = (v: unknown): Attempt["help"] => {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>, n = (k: string) => (typeof o[k] === "number" && (o[k] as number) > 0 ? (o[k] as number) : 0);
+  const h = { hint: n("hint"), feedback: n("feedback"), discuss: n("discuss") };
+  return h.hint + h.feedback + h.discuss ? h : null;
+};
 
 /** Waiting for someone to mark it: a written answer not yet marked, or
  *  working sent for review and not yet reviewed. */
@@ -396,7 +405,8 @@ export function attempts(events: readonly LearnerEvent[]): Map<string, Attempt[]
       const working = typeof e.working === "string" ? e.working : "";
       const a: Attempt = { id: e.id, exercise: ex, at: String(e.at ?? ""), answer: typeof e.answer === "string" ? e.answer : "",
         result, by: result ? str(e.by) : null, feedback: null, gaps: [], gaveUp: e.gave_up === true,
-        working, review: e.review === true && !!working, checked: result && e.by === "dashboard" ? result : null, marked: false };
+        working, review: e.review === true && !!working, checked: result && e.by === "dashboard" ? result : null, marked: false,
+        help: helpOf(e.help) };
       byId.set(e.id, a);
       out.set(ex, [...(out.get(ex) ?? []), a]);
     } else if (e.event === "review_requested") {
@@ -483,4 +493,130 @@ export function assignments(events: readonly LearnerEvent[], tried: Map<string, 
     out.push({ id: e.id, at, by: str(e.by), note: typeof e.note === "string" ? e.note : "", exercises, done, closed: closed.has(e.id) || done.length === exercises.length });
   }
   return out.reverse();
+}
+
+// ------------------------------------------------------------------ streaks
+// Daily and weekly streaks (design/streaks.md), worked out from the record
+// alone. Days are numbered by the caller (local time, starting at 4 a.m.), so
+// the rules here are the same on every device.
+
+export const STREAK_KINDS = ["recall", "learning", "problems", "all"] as const;
+export type StreakKind = (typeof STREAK_KINDS)[number];
+/** done: it counted; rest: nothing was due (recall only); reprieve: missed but
+ *  saved by a banked reprieve; missed; open: today, not counted yet. */
+export type DayStatus = "done" | "rest" | "reprieve" | "missed" | "open";
+
+export interface Streak {
+  kind: StreakKind;
+  current: number;
+  best: number;
+  /** Reprieves banked: one per 7 days kept, at most REPRIEVE_BANK. */
+  reprieves: number;
+  today: DayStatus;
+  weeks: { current: number; best: number; thisWeek: number };
+  /** The last `history` days, oldest first. */
+  days: { day: number; status: DayStatus }[];
+}
+
+export const REPRIEVE_EVERY = 7;
+export const REPRIEVE_BANK = 2;
+const RECALL_DRILLS = new Set(["recall", "gap"]);
+
+/** Day numbers to weeks starting on Monday (day 0, 1970-01-01, was a Thursday). */
+export const weekOf = (day: number): number => Math.floor((day + 3) / 7);
+
+export function streaks(events: readonly LearnerEvent[], notes: Iterable<NoteRef>, now: number,
+  { dayOf, dayStart, weekDays = 4, history = 35 }: { dayOf: (ms: number) => number; dayStart: (day: number) => number; weekDays?: number; history?: number }): Record<StreakKind, Streak> {
+  const known = new Set([...notes].map((n) => n.id));
+  const timed = [...perNote(events)].map((e) => ({ e, ms: Date.parse(str(e.at) ?? "") })).filter((x) => !Number.isNaN(x.ms) && x.ms <= now)
+    .sort((a, b) => a.ms - b.ms);
+  const today = dayOf(now);
+  // From the first day anything was studied (an answer to an exercise naming no notes included).
+  const times = events.filter((e) => STUDY.has(String(e.event))).map((e) => Date.parse(str(e.at) ?? "")).filter((ms) => !Number.isNaN(ms) && ms <= now);
+  const first = times.length ? Math.min(dayOf(Math.min(...times)), today) : today;
+
+  // A day's work, kind by kind, replaying the review schedule as it was.
+  const schedule = new Map<string, number>(); // note -> due (ms)
+  const boxes = new Map<string, number>();
+  // Problem solving is any real answer, whether or not the exercise names notes.
+  const solvedDays = new Set(events.filter((e) => e.event === "attempt" && e.gave_up !== true && !(typeof e.answer === "string" && !e.answer.trim()))
+    .map((e) => Date.parse(str(e.at) ?? "")).filter((ms) => !Number.isNaN(ms) && ms <= now).map(dayOf));
+  const reached = new Set<string>(); // notes ever worked through or understood
+  const status: Record<Exclude<StreakKind, "all">, Map<number, DayStatus>> = { recall: new Map(), learning: new Map(), problems: new Map() };
+  let i = 0;
+  for (let d = first; d <= today; d++) {
+    const start = dayStart(d);
+    const required = Math.min(3, [...schedule.values()].filter((due) => due <= start).length);
+    const practised = new Set<string>();
+    let learnt = false;
+    const solved = solvedDays.has(d);
+    for (; i < timed.length && dayOf(timed[i]!.ms) === d; i++) {
+      const { e, ms } = timed[i]!;
+      const id = str(e.concept);
+      const inReview = id !== null && schedule.has(id);
+      // Practice of a note in review: a recall or gap drill, or an exercise testing it.
+      if (inReview && ((e.event === "exercise" && RECALL_DRILLS.has(String(e.exercise))) || e.event === "attempt")) practised.add(id!);
+      if (id !== null && known.has(id)) {
+        const up = (e.event === "mark" && (e.state === "processed" || e.state === "understood")) || (evidence(e) && e.result === "got");
+        if (up && !reached.has(id)) { reached.add(id); learnt = true; }
+        // The review schedule, as reviewSchedule keeps it.
+        if (e.event === "mark") {
+          if (e.state === "processed" || e.state === "understood") { if (!schedule.has(id)) schedule.set(id, ms + DAY); }
+          else schedule.delete(id);
+        } else if (evidence(e) && (RESULTS as readonly unknown[]).includes(e.result)) {
+          const box = boxes.get(id);
+          const next = e.result === "got" ? Math.min((box ?? -1) + 1, INTERVALS.length - 1) : e.result === "partly" ? Math.max(box ?? 0, 0) : 0;
+          boxes.set(id, next);
+          schedule.set(id, ms + INTERVALS[next]! * DAY);
+        }
+      }
+    }
+    const open = d === today;
+    status.recall.set(d, required === 0 ? "rest" : practised.size >= required ? "done" : open ? "open" : "missed");
+    status.learning.set(d, learnt ? "done" : open ? "open" : "missed");
+    status.problems.set(d, solved ? "done" : open ? "open" : "missed");
+  }
+
+  const kept = (s: DayStatus | undefined) => s === "done" || s === "rest";
+  const allDays = new Map<number, DayStatus>();
+  for (let d = first; d <= today; d++) {
+    const parts = [status.recall.get(d), status.learning.get(d), status.problems.get(d)];
+    allDays.set(d, parts.every(kept) ? "done" : d === today ? "open" : "missed");
+  }
+
+  const walk = (kind: StreakKind, byDay: Map<number, DayStatus>): Streak => {
+    let current = 0, best = 0, bank = 0, run = 0;
+    const out = new Map<number, DayStatus>();
+    for (let d = first; d <= today; d++) {
+      let s = byDay.get(d)!;
+      if (kept(s)) {
+        current++; run++;
+        if (run === REPRIEVE_EVERY) { bank = Math.min(REPRIEVE_BANK, bank + 1); run = 0; }
+      } else if (s === "missed") {
+        if (bank > 0 && current > 0) { bank--; s = "reprieve"; } else { current = 0; run = 0; bank = 0; }
+      }
+      best = Math.max(best, current);
+      out.set(d, s);
+    }
+    // Weeks: enough days kept; the week in progress never breaks the streak.
+    const thisWeek = weekOf(today);
+    let wCurrent = 0, wBest = 0, daysThisWeek = 0;
+    for (let w = weekOf(first); w <= thisWeek; w++) {
+      let n = 0;
+      for (let d = Math.max(first, w * 7 - 3); d <= Math.min(today, w * 7 + 3); d++) if (kept(byDay.get(d))) n++;
+      if (w === thisWeek) { daysThisWeek = n; if (n >= weekDays) wCurrent++; }
+      else if (n >= weekDays) wCurrent++;
+      else wCurrent = 0;
+      wBest = Math.max(wBest, wCurrent);
+    }
+    const days: { day: number; status: DayStatus }[] = [];
+    for (let d = today - history + 1; d <= today; d++) if (d >= first) days.push({ day: d, status: out.get(d)! });
+    return { kind, current, best, reprieves: bank, today: out.get(today)!, weeks: { current: wCurrent, best: wBest, thisWeek: daysThisWeek }, days };
+  };
+  return {
+    recall: walk("recall", status.recall),
+    learning: walk("learning", status.learning),
+    problems: walk("problems", status.problems),
+    all: walk("all", allDays),
+  };
 }

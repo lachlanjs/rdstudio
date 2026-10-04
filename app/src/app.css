@@ -1001,3 +1001,76 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .answer-editor .cm-editor { min-height: inherit; }
 .answer-editor.plain { padding: 10px 12px; font: 15px/1.55 var(--font-ui); color: var(--ink); resize: vertical; }
 .answer-editor .cm-editor .cm-content { padding: 12px 14px; }
+
+/* ------------------------------------------------------------ streaks */
+
+.streaks { margin: 0 0 26px; }
+.streak-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .streak-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.streak { padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-raised); font-family: var(--font-ui); }
+.streak p { margin: 0; }
+.streak-all { border-color: var(--accent); }
+.streak-name { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
+.streak-count { color: var(--ink-soft); font-size: 14px; }
+.streak-count span { font-size: 30px; font-weight: 700; line-height: 1.2; color: var(--ink); font-variant-numeric: tabular-nums; }
+.streak.kept .streak-count span { color: var(--accent); }
+.streak-today { font-size: 13px; color: var(--ink-faint); }
+.streak.kept .streak-today { color: var(--reviewed); }
+.streak-more { font-size: 12.5px; color: var(--ink-faint); margin-top: 4px !important; }
+.streak-more-info > summary { cursor: pointer; color: var(--ink-soft); font: 14px var(--font-ui); margin: 10px 0 8px; }
+.streak-calendar { display: grid; grid-template-columns: repeat(7, 22px); gap: 4px; }
+.cal-head { font: 11px var(--font-ui); color: var(--ink-faint); text-align: center; }
+.cal-day { display: inline-block; width: 22px; height: 22px; border-radius: 4px; background: var(--paper-sunk); border: 1px solid var(--rule); box-sizing: border-box; }
+.cal-done { background: var(--accent); border-color: var(--accent); }
+.cal-reprieve { background: color-mix(in srgb, var(--accent) 35%, transparent); border-style: dashed; }
+.cal-missed { background: transparent; }
+.cal-open { border-color: var(--accent); }
+.cal-future, .cal-none { opacity: .35; }
+.cal-today { outline: 2px solid var(--ink-soft); outline-offset: 1px; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 12.5px var(--font-ui); color: var(--ink-faint); margin: 8px 0; }
+.cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-legend .cal-day { width: 12px; height: 12px; }
+.streak-more + .streak-more { margin-top: 0 !important; }
+.draft-bar { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin: 10px 0 0; font-size: 14px; }
+.draft-bar .section-note { margin: 0; }
+.draft-versions > summary { cursor: pointer; color: var(--ink-soft); }
+.draft-versions ol { list-style: none; padding: 0; margin: 6px 0 0; }
+.draft-versions li { padding: 3px 0; color: var(--ink-soft); }
+.draft-versions .link { margin-left: 8px; }
+.draft-v { font: 12.5px var(--font-mono); color: var(--ink-faint); }
+.draft-shown { margin: 10px 0; padding: 6px 14px; border: 1px dashed var(--rule); border-radius: var(--radius); background: var(--paper); }
+.budget { height: 10px; max-width: 420px; background: var(--paper-sunk); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; margin: 4px 0 6px; }
+.budget-used { display: block; height: 100%; background: var(--accent); }
+.budget-used.warn { background: var(--unverified); }
+.budget-used.stopped { background: var(--stale); }
+.fm.spend { max-width: 520px; margin: 4px 0 8px; }
+.fm.spend th { width: 60%; }
+.spend-more > summary { cursor: pointer; color: var(--ink-soft); font-size: 14px; }
+
+/* ------------------------------------------------------------ work together */
+
+.tutor { margin: 14px 0 4px; }
+.tutor-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tutor-label { font: 600 14px var(--font-ui); color: var(--ink-soft); margin-right: 4px; }
+.tutor-ask { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+.tutor-ask.discuss { display: block; }
+.tutor-ask textarea { display: block; width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px 10px; font: 15px/1.5 var(--font-ui); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius); }
+.turn { margin: 12px 0; padding: 8px 14px 6px; border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--paper); font-family: var(--font-ui); }
+.turn-feedback { border-left-color: #d6453d; border-image: linear-gradient(#d6453d, #2f9e5b) 0 0 0 1; }
+.turn-discuss { border-left-color: #3a76d8; }
+.turn > header { font-size: 13px; color: var(--ink-faint); margin-bottom: 4px; }
+.turn-mode { font-weight: 700; color: var(--ink-soft); margin-right: 6px; }
+.turn.streaming { opacity: .9; }
+.turn-streaming { white-space: pre-wrap; margin: 4px 0; font-size: 15px; }
+.turn-asked { font-size: 14px; color: var(--ink-soft); font-style: italic; margin: 2px 0 6px; }
+.turn .prose { font-size: 16px; }
+.turn-pins { list-style: none; padding: 0; margin: 6px 0; }
+.pin { padding: 4px 0 4px 10px; margin: 6px 0; border-left: 3px solid; }
+.pin-red { border-color: #d6453d; } .pin-green { border-color: #2f9e5b; } .pin-blue { border-color: #3a76d8; } .pin-hint { border-color: var(--accent); border-left-style: dashed; }
+.pin-quote { all: unset; cursor: pointer; font: italic 14.5px var(--font-text); color: var(--ink-soft); }
+.pin-quote:hover, .pin-quote:focus-visible { color: var(--accent); text-decoration: underline; }
+.pin-gone { font-size: 13px; color: var(--ink-faint); margin-left: 8px; }
+.pin .prose > :first-child { margin-top: 2px; } .pin .prose > :last-child { margin-bottom: 0; }
+.turn > footer { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13.5px; margin: 6px 0 2px; }
+.turn-seen ul { list-style: none; padding: 0; margin: 4px 0; }
+.turn-seen pre { white-space: pre-wrap; font-size: 12.5px; max-height: 260px; overflow: auto; background: var(--paper-sunk); padding: 8px; border-radius: var(--radius); }

@@ -1,7 +1,7 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
   answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, needsMarking, parseNumber, refId, refIds, requiresClosure,
-  reviewSchedule, splitSolution, studyLoad, tourBody, tourStops, type AnswerSpec, type LearnerEvent,
+  reviewSchedule, splitSolution, streaks, studyLoad, weekOf, tourBody, tourStops, type AnswerSpec, type LearnerEvent,
 } from "../src/index.ts";
 
 const DAY = 86_400_000;
@@ -174,7 +174,7 @@ test("an attempt is evidence for every note it tests, settled there and then or 
 
   const tried = attempts(marked);
   expect(tried.get("ex/two")).toEqual([{ id: "2", exercise: "ex/two", at: t(2), answer: "Because…", result: "got", by: "agent/x", feedback: "Right.", gaps: [], gaveUp: false,
-    working: "", review: false, checked: null, marked: true }]);
+    working: "", review: false, checked: null, marked: true, help: null }]);
   expect(exerciseStatus(tried.get("ex/one"))).toBe("passed");
   expect(exerciseStatus(attempts(events).get("ex/two"))).toBe("waiting");
   expect(exerciseStatus(undefined)).toBe("untried");
@@ -252,4 +252,88 @@ test("working behind a checked answer: sent for review, it replaces the check, u
   // Working without asking for review is kept, but nothing waits.
   const kept = attempts([{ id: "7", event: "attempt", exercise: "ex", tests: [], answer: "4", result: "got", by: "dashboard", working: "4·100/100", at: t(7) }]).get("ex")![0]!;
   expect([kept.working, kept.review, needsMarking(kept)]).toEqual(["4·100/100", false, false]);
+});
+
+// ------------------------------------------------------------------ streaks (T48)
+
+describe("streaks", () => {
+  const H = 3_600_000;
+  // Day d runs from 04:00 UTC on day d to 04:00 on d + 1.
+  const opts = { dayOf: (ms: number) => Math.floor((ms - 4 * H) / DAY), dayStart: (d: number) => d * DAY + 4 * H };
+  const at = (d: number, h = 12) => new Date(d * DAY + h * H).toISOString();
+  const D0 = 20_000;
+  const notes = [{ id: "a", hash: "h" }, { id: "b", hash: "h" }, { id: "c", hash: "h" }];
+  let k = 0;
+  const e = (d: number, event: string, rest: Record<string, unknown> = {}, h = 12) => ({ id: String(k++), at: at(d, h), event, ...rest });
+  const solve = (d: number) => e(d, "attempt", { exercise: "x", tests: [], answer: "1", result: "got", by: "dashboard" });
+  const run = (events: Record<string, unknown>[], today: number, more = {}) => streaks(events, notes, Date.parse(at(today, 20)), { ...opts, ...more });
+
+  test("a day counts by its 4 a.m. boundary; today is open until it counts", () => {
+    const late = [e(D0, "attempt", { exercise: "x", tests: [], answer: "1" }, 27)]; // 03:00 the next morning still counts for D0
+    expect(run(late, D0 + 1).problems).toMatchObject({ current: 1, today: "open", days: [{ day: D0, status: "done" }, { day: D0 + 1, status: "open" }] });
+    expect(run([solve(D0), solve(D0 + 1)], D0 + 1).problems).toMatchObject({ current: 2, best: 2, today: "done" });
+    // A give-up, or an empty answer, is not problem solving.
+    expect(run([e(D0, "attempt", { exercise: "x", tests: [], answer: "", gave_up: true, result: "missed" })], D0).problems.today).toBe("open");
+  });
+
+  test("a missed day ends a streak, unless a reprieve was earned by seven days kept", () => {
+    const six = [0, 1, 2, 3, 4, 5].map((d) => solve(D0 + d));
+    expect(run([...six, solve(D0 + 7)], D0 + 7).problems).toMatchObject({ current: 1, best: 6, reprieves: 0 });
+    const seven = [...six, solve(D0 + 6)];
+    const saved = run([...seven, solve(D0 + 8), solve(D0 + 9)], D0 + 9).problems;
+    expect(saved).toMatchObject({ current: 9, best: 9, reprieves: 0 });
+    expect(saved.days.find((x) => x.day === D0 + 7)!.status).toBe("reprieve");
+    // With none left, the next miss ends it.
+    expect(run([...seven, solve(D0 + 8), solve(D0 + 10)], D0 + 10).problems).toMatchObject({ current: 1, best: 8 });
+    // Banked up to two.
+    const long = Array.from({ length: 21 }, (_, d) => solve(D0 + d));
+    expect(run(long, D0 + 20).problems.reprieves).toBe(2);
+  });
+
+  test("new learning is a note first worked through or understood", () => {
+    const events = [e(D0, "mark", { concept: "a", state: "processed" }), e(D0 + 1, "mark", { concept: "a", state: "understood" }),
+      e(D0 + 2, "exercise", { exercise: "gap", concept: "b", result: "got" }), e(D0 + 2, "mark", { concept: "zzz", state: "understood" })];
+    expect(run(events, D0 + 2).learning.days.map((x) => x.status)).toEqual(["done", "missed", "done"]);
+  });
+
+  test("recall: rest when nothing is due, else practise what is due (up to three)", () => {
+    const events = [
+      e(D0, "mark", { concept: "a", state: "understood" }, 12), // due at noon on D0 + 1: not due at that day's start
+      e(D0 + 2, "exercise", { exercise: "recall", concept: "a", result: "got" }),
+      e(D0 + 4, "exercise", { exercise: "placement", concept: "a", result: "got" }), // placement is not recall
+    ];
+    const r = run(events, D0 + 4).recall;
+    // D0 nothing due; D0 + 1 rest (due only at noon); D0 + 2 due and practised; D0 + 3 rest (due again at
+    // noon); D0 + 4 due, and a placement drill does not count, so still open.
+    expect(r.days.map((x) => x.status)).toEqual(["rest", "rest", "done", "rest", "open"]);
+    const missed = run([events[0]!], D0 + 3).recall;
+    expect(missed.days.map((x) => x.status)).toEqual(["rest", "rest", "missed", "open"]);
+    // An exercise testing a note in review counts as practising it.
+    const viaExercise = run([events[0]!, e(D0 + 2, "attempt", { exercise: "x", tests: ["a"], answer: "1", result: "missed", by: "dashboard" })], D0 + 2).recall;
+    expect(viaExercise.today).toBe("done");
+  });
+
+  test("all three: the same day; recall's rest days count", () => {
+    const events = [e(D0, "mark", { concept: "a", state: "processed" }), solve(D0), solve(D0 + 1)];
+    expect(run(events, D0 + 1).all.days.map((x) => x.status)).toEqual(["done", "open"]);
+  });
+
+  test("weeks count with enough days kept; the week in progress never breaks the streak", () => {
+    const mon = 20_000 - ((20_000 + 3) % 7); // a Monday: weekOf changes there
+    expect(weekOf(mon)).toBe(weekOf(mon - 1) + 1);
+    const days = [0, 1, 2, 3, 7, 8, 9, 14].map((d) => solve(mon + d));
+    const w = run(days, mon + 15).problems.weeks;
+    expect(w).toEqual({ current: 0, best: 1, thisWeek: 1 }); // week 2 had 3 days: broken; week 3 in progress
+    const w2 = run([...days, solve(mon + 10)], mon + 15, { weekDays: 4 }).problems.weeks;
+    expect(w2).toEqual({ current: 2, best: 2, thisWeek: 1 });
+    expect(run(days, mon + 15, { weekDays: 3 }).problems.weeks).toMatchObject({ current: 2, best: 2 });
+  });
+});
+
+test("an attempt carries the help it had while it was written", () => {
+  const a = (help: unknown) => attempts([{ id: "1", event: "attempt", exercise: "x", tests: [], answer: "a", help, at: "2026-10-04T10:00:00Z" }]).get("x")![0]!.help;
+  expect(a({ hint: 2, feedback: 1 })).toEqual({ hint: 2, feedback: 1, discuss: 0 });
+  expect(a({ hint: 0 })).toBeNull();
+  expect(a(undefined)).toBeNull();
+  expect(a({ hint: -3, discuss: "x" })).toBeNull();
 });

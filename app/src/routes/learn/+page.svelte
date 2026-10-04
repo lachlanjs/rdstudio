@@ -8,6 +8,7 @@
   import { understanding } from "$lib/understanding.svelte.ts";
   import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
   import { allPrerequisitesChanged, changedSince } from "$lib/catchup.ts";
+  import Streaks from "$lib/components/Streaks.svelte";
   import { STATUS_LABEL, exerciseNotes, exercisesFor, goalNotes, openSets, progressOf, putAside, statusOf, waiting as waitingAttempts } from "$lib/exercises.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
@@ -36,6 +37,7 @@
 <div class="page">
   <h1>Learn</h1>
   <p class="lede">Ways into this knowledge base: your goals, where you stand, practice, tours, and a reading order from the links rated requires.</p>
+  {#if understanding.on}<Streaks />{/if}
   {#if forYou.length}
     <h2 class="section-h">Set for you</h2>
     {#each forYou as set (set.id)}
