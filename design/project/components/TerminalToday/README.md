@@ -1,0 +1,3 @@
+Today with the terminal lean. Every block is a framed pane with its title set into the top border; the spaces are numbered and the current one is in reverse video; the status line names the space, the project and what is waiting. The teacher's next step is still a pin level with the row it is about.
+
+The key hints and the status line's contents are proposals, not existing shortcuts. Use reverse video only for the current space and the primary action.

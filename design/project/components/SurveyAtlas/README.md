@@ -1,0 +1,3 @@
+The Atlas as terrain, on the survey sheet: graticule with edge grid references, contours of understanding, frontier hachures, fog, a numbered study path and a north arrow (north is later in the study order). The lens switcher holds Links, Understanding, Study path, Tour and Goal; Understanding and Study path are on.
+
+Folders, notes and links are placeholders; the Atlas must stay smooth with 1,000 notes, so draw contours from a coarse height field and label only landmarks and the path.

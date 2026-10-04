@@ -1,0 +1,3 @@
+The workbench on a phone, at three scroll positions. The problem comes first, then the answer; the teacher's cards sit inline under the paragraph they pin, in the order of the words they quote, each with a stem and a quote in its pen's line style. The marking actions replace the tab bar while an exercise is open; the back arrow returns to Diagnostic 1.
+
+With no leader lines, the quote is what ties a card to its words, so never drop it on a phone.

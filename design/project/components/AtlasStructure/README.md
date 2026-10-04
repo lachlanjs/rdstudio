@@ -1,0 +1,3 @@
+The whole field at overview, positioned and routed by the previous app's own layout and router, with the terrain of understanding drawn on top. Top-level folders are open, subfolders closed; 98 links are drawn as 61 routes. North is later in the study order (one force added to the layout).
+
+Labelled names come from the previous app's screenshots. The links, the understanding levels, the unlabelled notes and Foundations' subfolders are invented for the sketch.

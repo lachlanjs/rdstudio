@@ -1,0 +1,1 @@
+The recommended combination: Marginalia chrome (Ioskeley Mono interface, pens as meaning) around Survey's terrain, with no graticule. Martian Mono appears only in map labels. Same lenses, legend and north arrow as the Survey Atlas; folders, notes and links are placeholders.

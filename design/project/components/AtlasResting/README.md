@@ -1,0 +1,1 @@
+State 1 of 4, the default: where have I got to? Links are off. Folders, walls, note markers and the terrain, reduced at overview to the frontier and one contour.

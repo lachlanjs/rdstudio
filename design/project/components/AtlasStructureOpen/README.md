@@ -1,0 +1,3 @@
+Zoomed into Manifolds: its subfolders open, routes split to the notes they reach, and Vector fields selected. Other routes go quiet and the selected note's own links are drawn in the blue dotted pen, out through the gates of Tangent and Manifolds. The teacher's card is pinned to the note by a red leader.
+
+Labels try the right then the left of their marker and are dropped when both collide; landmarks and the selected note always keep theirs.

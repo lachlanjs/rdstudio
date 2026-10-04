@@ -1,0 +1,1 @@
+Today in the retro-futurist option: an pale phosphor display with pixel headings, reversed title blocks, 2px panel frames, scan lines and a status line. Layout and content are the terminal lean's. The pens are unchanged, so passed, missed and links read exactly as in Marginalia.

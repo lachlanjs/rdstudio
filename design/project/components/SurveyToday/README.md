@@ -1,0 +1,1 @@
+Today on a survey sheet. Grid references sit beside the streak counters (their cell on the graticule whose ticks run along the page edges); rules are measured, with ticks. The pen meanings and the pinned next step are unchanged from Marginalia.

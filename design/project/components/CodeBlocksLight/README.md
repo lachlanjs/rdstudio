@@ -1,0 +1,1 @@
+The same code blocks in light. Both syntax tokens darken; both stay 4.5:1 or more on every surface.

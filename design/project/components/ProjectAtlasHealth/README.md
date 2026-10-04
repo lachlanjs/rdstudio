@@ -1,0 +1,1 @@
+The same map with the Health lens. Height is how settled a file is: one step each for tested, reviewed and documented. A double green ring is all three; fog is none. Compare it with the Activity lens: the busiest ground (plasticity) is the least settled. Placeholder data.

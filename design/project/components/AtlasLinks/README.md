@@ -1,0 +1,1 @@
+State 2 of 4, Links on: what depends on what? Every requires-link between two top-level folders merges into one trunk with its count (9 trunks here), leaving by gates. Links inside a folder are not drawn at this scale. Terrain steps back to fog and a thin frontier line so the trunks carry the detail.

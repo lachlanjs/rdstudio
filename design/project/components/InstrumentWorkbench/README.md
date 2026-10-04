@@ -1,0 +1,1 @@
+The workbench as three tight panels. Problem and answer sit on the warm reading surface, the teacher is a cool panel of readouts, and the hint budget is a three-segment readout on the Hint button. Leader lines cross the gap exactly as in Marginalia; the double green line is cut in `instrument-paper`.

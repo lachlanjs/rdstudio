@@ -1,0 +1,3 @@
+The workbench with the terminal lean: three titled panes, key hints in brackets on Hint, Feedback, Discuss and the two marking actions, a block caret, and a status line carrying the exercise, the draft state and the hint budget. Marked words, pins and leader lines are exactly Marginalia's.
+
+Reading text stays in Charter. Setting the prose in Ioskeley Mono as well is a further step this sketch does not take.

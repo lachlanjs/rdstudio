@@ -1,0 +1,1 @@
+The Project space, which is a main space in project mode: Changes from git grouped by day, with the review queue, agents and reports in the margin. Review queue, Reports, Procedures, Skills and Agents are the other pages. Status uses the pen line styles only where it means critical or right; everything else is plain. Placeholder content.
