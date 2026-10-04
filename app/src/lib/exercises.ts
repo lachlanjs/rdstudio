@@ -6,7 +6,7 @@
 // learner record by @rdstudio/core/learning.
 
 import type { ConceptRecord } from "@rdstudio/core";
-import { answerSpec, attempts, exerciseStatus, goalProgress, refIds, type Attempt, type ExerciseStatus, type GoalProgress, type Result } from "@rdstudio/core/learning";
+import { answerSpec, assignments, attempts, exerciseStatus, goalProgress, needsMarking, refIds, type Assignment, type Attempt, type ExerciseStatus, type GoalProgress, type Result } from "@rdstudio/core/learning";
 import { learner, store } from "./data.svelte.ts";
 import { understanding } from "./understanding.svelte.ts";
 
@@ -42,22 +42,42 @@ export function progressOf(goal: ConceptRecord): GoalProgress {
 }
 
 /** Answers waiting for an agent, newest first. */
-export const waiting = (): Attempt[] => [...tried().values()].flat().filter((a) => a.result === null).sort((a, b) => (a.at < b.at ? 1 : -1));
+export const waiting = (): Attempt[] => [...tried().values()].flat().filter(needsMarking).sort((a, b) => (a.at < b.at ? 1 : -1));
 
-/** Record an answer: settled here (`result` and `by`), or left for an agent. */
-export async function submitAttempt(ex: ConceptRecord, answer: string, settled: { result: Result; by: "dashboard" | "self"; gaveUp?: boolean } | null): Promise<boolean> {
+/** Record an answer: settled here (`result` and `by`), or left for an agent;
+ *  with the working behind it, sent for review or not. Its id, or null. */
+export async function submitAttempt(ex: ConceptRecord, answer: string, settled: { result: Result; by: "dashboard" | "self"; gaveUp?: boolean } | null,
+  shown: { working: string; review: boolean } = { working: "", review: false }): Promise<string | null> {
   const tests = testsOf(ex);
   const hashes = Object.fromEntries(tests.map((id) => [id, store.concepts.get(id)!.hash]));
   const event = {
     event: "attempt", exercise: ex.id, tests, hashes, answer,
     ...(settled ? { result: settled.result, by: settled.by, ...(settled.gaveUp ? { gave_up: true } : {}) } : {}),
-    kind: settled ? "interactive" : "ai",
+    ...(shown.working.trim() ? { working: shown.working.trim(), ...(shown.review ? { review: true } : {}) } : {}),
+    kind: settled && !(shown.review && shown.working.trim()) ? "interactive" : "ai",
   };
-  return (await learner.record(event)) !== null;
+  const stored = await learner.record(event);
+  return typeof stored?.id === "string" ? stored.id : null;
+}
+
+/** Send the working behind an answer already checked, for review. */
+export async function requestReview(ref: string, working: string): Promise<boolean> {
+  return (await learner.record({ event: "review_requested", ref, working: working.trim(), kind: "ai" })) !== null;
 }
 
 /** Settle a waiting answer yourself, against the solution. The answer's own
  *  event is kept; the marking is a second event, as an agent's would be. */
 export async function markYourself(ref: string, result: Result): Promise<boolean> {
   return (await learner.record({ event: "attempt_marked", ref, result, by: "self", kind: "interactive" })) !== null;
+}
+
+/** Sets of exercises an agent set for you, newest first; open ones have something left to do. */
+export const sets = (): Assignment[] => (learner.enabled ? assignments(learner.events, tried()) : []);
+export const openSets = (): Assignment[] => sets().filter((a) => !a.closed);
+/** How many exercises are set for you and not yet answered: the Learn tab's count. */
+export const setCount = (): number => openSets().reduce((n, a) => n + a.exercises.length - a.done.length, 0);
+
+/** Put a set aside without answering the rest. */
+export async function putAside(ref: string): Promise<boolean> {
+  return (await learner.record({ event: "assigned_closed", ref, kind: "ai" })) !== null;
 }

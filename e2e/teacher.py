@@ -15,6 +15,12 @@ Profile, sources and skills (T45): the default skills listed; an agent
 writing the profile through MCP, citing events; the citations shown as links
 to the evidence; the developer disputing a claim, and the agent told of it;
 the sources log.
+Set for you (T46 finding): an agent sets exercises through MCP; they show at
+the top of the Learn tab with a count on the tab, lead one to the next, and
+the agent sees the set's progress.
+Working (T46): working shown with a checked answer and sent for review,
+marked by an agent who lowers a right answer; a wrong answer's working sent
+afterwards, and reviewed by the developer against the solution.
 """
 import json, os, shutil, socket, subprocess, tempfile, time
 from pathlib import Path
@@ -272,19 +278,23 @@ with sync_playwright() as pw:
 
     # Text: marked by yourself, then left for an agent.
     p.goto(URL + "?nosw#/k/exercises/why-atlases")
-    area = p.locator(".exercise-answer textarea")
+    area = p.locator(".exercise-answer .answer-editor .cm-content")
     area.wait_for()
     area.fill("One chart may not cover it; $S^2$ needs two.")
-    p.get_by_role("button", name="Preview").click()
-    check("a written answer can be previewed with its maths", p.locator(".exercise-preview .katex").count() == 1)
-    p.get_by_role("button", name="Back to writing").click()
+    area.press("End")
+    area.press("Enter")
+    area.press("Enter")
+    p.keyboard.type("(Off the line being written, maths is typeset.)")
+    box = p.locator(".exercise-answer .answer-editor").bounding_box()
+    check("a written answer is the note editor's live preview, maths shown as typed, in a large box",
+          p.locator(".exercise-answer .answer-editor .katex").count() == 1 and box["height"] >= 300, box)
     p.get_by_role("button", name="Mark it yourself").click()
     check("marking it yourself shows the solution first", p.get_by_role("heading", name="Solution").count() == 1)
     p.get_by_role("button", name="Partly").click()
     settle(5)
     check("your own marking is recorded as yours", attempts()[-1]["result"] == "partly" and attempts()[-1]["by"] == "self")
     p.get_by_role("button", name="Try again").click()
-    p.locator(".exercise-answer textarea").fill("A single chart need not cover the manifold, and smoothness comes from the transition maps.")
+    p.locator(".exercise-answer .answer-editor .cm-content").fill("A single chart need not cover the manifold, and smoothness comes from the transition maps.")
     p.get_by_role("button", name="Ask an agent to mark it").click()
     expect(p.get_by_role("heading", name="Saved for marking")).to_be_visible()
     settle(6)
@@ -363,6 +373,79 @@ with sync_playwright() as pw:
     check("an agent reading the profile is told of the edit, and can read it as a diff",
           "The developer edited it on" in told[0] and "+- Gives up on counting charts. Disputed: I clicked by mistake." in told[1], told[1][:300])
     p.screenshot(path=str(OUT / "teacher-profile.png"), full_page=True)
+
+    # ------------------------------------------------------------ set for you
+    got = mcp(("exercise_assign", {"ids": ["exercises/two-charts", "exercises/sphere-dimension"], "note": "Diagnostic: charts"}))[0]
+    p.goto(URL + "?nosw&set#/learn")
+    p.get_by_role("heading", name="Set for you").wait_for()
+    check("exercises an agent sets are at the top of the Learn tab, with a count on the tab",
+          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=learn] .count").inner_text().strip() == "2", got)
+    p.locator(".set-for-you").get_by_role("link", name="Start").click()
+    p.locator(".exercise-choice").first.wait_for()
+    p.locator(".exercise-choice", has_text="Two charts").click()
+    p.get_by_role("button", name="Check").click()
+    nxt = p.get_by_role("link", name="Next in “Diagnostic: charts”: The dimension of the sphere")
+    nxt.wait_for()
+    check("answering one leads to the next in the set", nxt.count() == 1)
+    nxt.click()
+    p.locator(".exercise-value input").fill("2")
+    p.get_by_role("button", name="Check").click()
+    p.get_by_role("link", name="Set finished: back to Learn").click()
+    p.get_by_role("heading", name="Learn", exact=True).wait_for()
+    check("a finished set leaves the Learn tab, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=learn] .count").count() == 0)
+    state = json.loads(mcp(("learner_state", {}))[0])
+    check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
+
+    # ------------------------------------------------------------ working sent for review
+    def events_named(kind):
+        return attempts(kind)
+
+    p.goto(URL + "?nosw&w1#/k/exercises/sphere-dimension")
+    p.locator(".exercise-value input").wait_for()
+    p.locator(".exercise-working summary").click()
+    p.locator(".exercise-working .cm-content").fill("Spheres are surfaces, so $2$. (Guessed.)")
+    p.get_by_label("Have my working reviewed, whatever the answer").check()
+    p.locator(".exercise-value input").fill("2")
+    n = len(attempts())
+    p.get_by_role("button", name="Check").click()
+    expect(p.locator(".exercise-verdict")).to_contain_text("Right.")
+    settle(n + 1)
+    expect(p.get_by_text("Your working is waiting for review")).to_be_visible(timeout=5000)
+    a = attempts()[-1]
+    check("working shown with a checked answer is kept, and sent for review when asked",
+          a["result"] == "got" and a.get("review") is True and "Guessed" in a.get("working", "") and p.get_by_text("Your working is waiting for review").count() == 1, (a, p.locator(".exercise-answer").inner_text()))
+    pend = json.loads(mcp(("exercise_pending", {}))[0])
+    mine_ = [x for x in pend if x["ref"] == a["id"]]
+    check("an agent sees it, with the check's verdict", mine_ and mine_[0]["review"] == "working" and mine_[0]["checked"] == "got", pend)
+    mcp(("exercise_mark", {"ref": a["id"], "result": "partly", "feedback": "Right number, but the argument is a guess: say why each point has a chart to the plane."}))
+    p.goto(URL + "?nosw&w2#/k/exercises/sphere-dimension")
+    first = p.locator(".exercise-attempts li").first
+    first.wait_for()
+    expect(first).to_contain_text("Partly")
+    check("a review can lower a right answer, and says what the check found", "(checked here: passed)" in first.inner_text(), first.inner_text())
+
+    # A wrong answer: the review is offered, with the working.
+    p.locator(".exercise-value input").fill("3")
+    n = len(attempts())
+    p.get_by_role("button", name="Check").click()
+    expect(p.locator(".exercise-verdict")).to_contain_text("Not right.")
+    offer = p.locator(".exercise-offer")
+    expect(offer).to_be_visible(timeout=5000)
+    check("after a wrong answer, sending the working for review is offered", offer.count() == 1 and "slip" in offer.inner_text(), p.locator(".exercise-answer").inner_text())
+    offer.locator(".cm-content").fill("Counted the coordinates of $\\mathbb{R}^3$: 3. Should have counted the sphere's own directions.")
+    offer.get_by_role("button", name="Send my working for review").click()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("Sent for review")
+    settle(1, "review_requested")
+    rr = attempts("review_requested")[-1]
+    check("the working is sent after the fact, for that answer", rr["ref"] == attempts()[-1]["id"] and "own directions" in rr["working"])
+    marks = len(attempts("attempt_marked"))
+    p.get_by_role("button", name="Review your working yourself").first.click()
+    check("reviewing it yourself shows the working beside the solution",
+          p.locator(".exercise-answer blockquote", has_text="own directions").count() == 1 and p.get_by_role("heading", name="Solution").count() == 1)
+    p.get_by_role("button", name="Missed it").click()
+    settle(marks + 1, "attempt_marked")
+    m = attempts("attempt_marked")[-1]
+    check("your review is recorded as yours", m["ref"] == rr["ref"] and m["by"] == "self" and m["result"] == "missed", m)
 
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)

@@ -25,6 +25,10 @@ export interface EditorOptions {
   label: string;
   notes: () => LinkTarget[];
   source?: boolean; // plain Markdown instead of the live preview
+  placeholder?: string;
+  /** A box within a page (an answer), rather than the whole page: no room
+   *  left below the text for scrolling past the end. */
+  inline?: boolean;
 }
 
 const mode = new Compartment();
@@ -54,6 +58,13 @@ const theme = EditorView.theme({
   ".cm-tooltip-autocomplete > ul > li": { padding: "6px 10px !important", lineHeight: "1.3" },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": { background: "var(--accent-soft)", color: "var(--ink)" },
   ".cm-completionDetail": { color: "var(--ink-faint)", fontStyle: "normal", marginLeft: "10px" },
+});
+
+// An answer box: the editor fills its framed box (padded by .answer-editor in
+// app.css), and grows with the text.
+const inlineTheme = EditorView.theme({
+  ".cm-content": { paddingBottom: "12px" },
+  ".cm-scroller": { minHeight: "inherit" },
 });
 
 const highlight = HighlightStyle.define([
@@ -89,12 +100,13 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       markdown({ base: markdownLanguage, extensions: [mathsSyntax], completeHTMLTags: false }),
       syntaxHighlighting(highlight),
       theme,
+      ...(opts.inline ? [inlineTheme] : []),
       mode.of(modeExtensions(Boolean(opts.source))),
       closeBrackets(),
       // Only brackets: closing quotes would get in the way of apostrophes in prose.
       EditorState.languageData.of(() => [{ closeBrackets: { brackets: ["(", "["] } }]),
       linkCompletion(opts.notes),
-      placeholder("Write the note here. # for a heading, [[ to link to another note, $x$ for maths."),
+      placeholder(opts.placeholder ?? "Write the note here. # for a heading, [[ to link to another note, $x$ for maths."),
       EditorView.contentAttributes.of({ "aria-label": opts.label, spellcheck: "true", autocapitalize: "sentences", autocorrect: "on" }),
       keymap.of([
         { key: "Mod-s", preventDefault: true, run: () => { opts.onSave(); return true; } },

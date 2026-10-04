@@ -18,7 +18,12 @@
 //   attempt         an answer to an Exercise note: exercise, tests (the notes it
 //                   checks), hashes (their versions), answer; result and by
 //                   (dashboard or self) when marked there and then, else it waits
-//   attempt_marked  an agent marked an attempt: ref, result, feedback, gaps, by
+//   attempt_marked  an agent marked an attempt: ref, result, feedback, gaps, by;
+//                   for a checked answer whose working was reviewed, it replaces the check
+//   review_requested the working behind a checked answer, sent for review after the
+//                   fact: ref, working (an attempt can carry working and review: true itself)
+//   assigned        an agent set exercises for the developer: exercises, note, by
+//   assigned_closed the developer put a set aside: ref
 
 import MarkdownIt from "markdown-it";
 import { strip } from "./text.ts";
@@ -67,13 +72,19 @@ const hashIn = (e: LearnerEvent, id: string): string | null => {
 };
 
 /** The record with each exercise attempt (and its marking) as one event per
- *  note it tests, so the rules below read them like any other. */
+ *  note it tests, so the rules below read them like any other. A marking
+ *  replaces an attempt's own result (a review of the working behind a checked
+ *  answer can lower it as well as raise it), so a marked attempt counts once,
+ *  as marked. */
 function* perNote(events: readonly LearnerEvent[]): Generator<LearnerEvent> {
   const attempts = new Map<string, LearnerEvent>();
+  const marked = new Set(events.filter((e) => e.event === "attempt_marked").map((e) => String(e.ref)));
   for (const e of events) {
     if (e.event === "attempt") {
       if (typeof e.id === "string") attempts.set(e.id, e);
-      for (const t of testsOf(e)) yield { ...e, concept: t, hash: hashIn(e, t) };
+      const { result: _r, ...unsettled } = e;
+      const own = typeof e.id === "string" && marked.has(e.id) ? unsettled : e;
+      for (const t of testsOf(e)) yield { ...own, concept: t, hash: hashIn(e, t) };
     } else if (e.event === "attempt_marked") {
       const a = attempts.get(String(e.ref));
       if (a) for (const t of testsOf(a)) yield { ...e, concept: t, hash: hashIn(a, t) };
@@ -359,7 +370,19 @@ export interface Attempt {
   feedback: string | null;
   gaps: string[];
   gaveUp: boolean;
+  /** Working shown alongside the answer (Markdown), if any. */
+  working: string;
+  /** The working was sent for review. */
+  review: boolean;
+  /** What the dashboard's check said, before any review of the working. */
+  checked: Result | null;
+  /** Marked after the fact, by an agent or by the developer. */
+  marked: boolean;
 }
+
+/** Waiting for someone to mark it: a written answer not yet marked, or
+ *  working sent for review and not yet reviewed. */
+export const needsMarking = (a: Attempt): boolean => a.result === null || (a.review && !a.marked);
 
 /** Every attempt at each exercise, oldest first, with its marking if any. */
 export function attempts(events: readonly LearnerEvent[]): Map<string, Attempt[]> {
@@ -370,13 +393,22 @@ export function attempts(events: readonly LearnerEvent[]): Map<string, Attempt[]
       const ex = str(e.exercise);
       if (!ex) continue;
       const result = (RESULTS as readonly unknown[]).includes(e.result) ? (e.result as Result) : null;
+      const working = typeof e.working === "string" ? e.working : "";
       const a: Attempt = { id: e.id, exercise: ex, at: String(e.at ?? ""), answer: typeof e.answer === "string" ? e.answer : "",
-        result, by: result ? str(e.by) : null, feedback: null, gaps: [], gaveUp: e.gave_up === true };
+        result, by: result ? str(e.by) : null, feedback: null, gaps: [], gaveUp: e.gave_up === true,
+        working, review: e.review === true && !!working, checked: result && e.by === "dashboard" ? result : null, marked: false };
       byId.set(e.id, a);
       out.set(ex, [...(out.get(ex) ?? []), a]);
+    } else if (e.event === "review_requested") {
+      const a = byId.get(String(e.ref));
+      const working = typeof e.working === "string" ? e.working.trim() : "";
+      if (!a || a.marked || (!working && !a.working)) continue;
+      if (working) a.working = working;
+      a.review = true;
     } else if (e.event === "attempt_marked") {
       const a = byId.get(String(e.ref));
       if (!a || !(RESULTS as readonly unknown[]).includes(e.result)) continue;
+      a.marked = true;
       a.result = e.result as Result;
       a.by = str(e.by) ?? "agent";
       a.feedback = str(e.feedback);
@@ -421,4 +453,34 @@ export function goalProgress(needs: readonly string[], requires: (id: string) =>
   const notes = [...new Set([...needs, ...requiresClosure(needs, requires)])].filter((id) => states.has(id));
   const exercises = exerciseIds.map((id) => ({ id, status: exerciseStatus(tried.get(id)) }));
   return { notes, coverage: coverage(states, notes), exercises, met: exercises.length > 0 && exercises.every((e) => e.status === "passed") };
+}
+
+// ------------------------------------------------------------------ exercises set for you
+// An agent sets a batch of Exercise notes ("Diagnostic: prerequisites"), to be
+// answered in the dashboard rather than in the chat. A set is done when every
+// exercise in it has been attempted since it was set, or put aside.
+
+export interface Assignment {
+  id: string;
+  at: string;
+  by: string | null;
+  note: string;
+  exercises: string[];
+  /** Exercises attempted since it was set (an answer waiting for marking counts). */
+  done: string[];
+  closed: boolean;
+}
+
+export function assignments(events: readonly LearnerEvent[], tried: Map<string, Attempt[]> = attempts(events)): Assignment[] {
+  const closed = new Set(events.filter((e) => e.event === "assigned_closed").map((e) => String(e.ref)));
+  const out: Assignment[] = [];
+  for (const e of events) {
+    if (e.event !== "assigned" || typeof e.id !== "string") continue;
+    const exercises = Array.isArray(e.exercises) ? [...new Set(e.exercises.filter((x): x is string => typeof x === "string" && !!x))] : [];
+    if (!exercises.length) continue;
+    const at = String(e.at ?? "");
+    const done = exercises.filter((x) => (tried.get(x) ?? []).some((a) => a.at >= at));
+    out.push({ id: e.id, at, by: str(e.by), note: typeof e.note === "string" ? e.note : "", exercises, done, closed: closed.has(e.id) || done.length === exercises.length });
+  }
+  return out.reverse();
 }

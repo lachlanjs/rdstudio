@@ -38,25 +38,62 @@ Choose the kind for what is being checked:
 | a calculation with one answer | `value` | `value`, `tolerance` (absolute, or relative with `relative: true`), `unit` |
 | a derivation, an explanation, a design, code | `text` | none: marked against the solution |
 
+- Maths is LaTeX between dollar signs, in the body, the choices and the
+  solution: `$h = \sum_j J_j y_j$`, `$$\mathrm{Var}(h) = \frac{g^2}{N}\sum_j y_j^2$$`.
+  The dashboard typesets it. Never write `sum_j J_j` or `g^2/N` as plain text.
+  The title and description are plain text: say it in words, or use Unicode
+  sparingly ("Variance of a sum of Gaussian-weighted inputs").
 - Wrong choices are the mistakes people actually make, not fillers.
 - A value exercise states the units and the precision wanted.
-- A text exercise says what a full answer covers; its solution is what you
-  will mark against, so make it complete.
+- A text exercise may say how much is wanted ("in a few sentences", "cover
+  both parts"), never what the answer contains. What a full answer covers
+  goes in the Solution section, as a list headed "A full answer covers",
+  which is what you and the developer mark against. Make the solution
+  complete.
+- Settle what the exercise assumes. List, for yourself, the background and
+  notation it relies on, and check each against what the developer can be
+  expected to know: the notes it tests, what those require (`study_path`),
+  the knowledge base's conventions note, and where the developer stands
+  (`learner_state`).
+  - **Covered there, and reached:** use it without comment.
+  - **Covered there, but not reached yet:** link the note in the problem, or
+    set the exercise later.
+  - **Not in the knowledge base** (common in a diagnostic, before notes
+    exist): define it in the problem, in words, such as "$\mathcal{N}(0,
+    g^2/N)$, that is, mean $0$ and variance $g^2/N$". If it will recur, add
+    it to the conventions note (the `map` skill).
+  A convention the developer has to guess at tests the convention, not the
+  idea.
 - For code, the exercise names the file to write or change and how to run
   it; the solution says what a passing run shows.
 - Each exercise tests a few notes at most (`tests`), and serves the goals it
   checks (`goals`). `record` warns when the answer settings are wrong or the
   Solution section is missing.
 
+Before setting an exercise, read its problem as the developer will, with
+the solution hidden, and check:
+- it does not state, list or strongly hint at the answer: the answer could
+  not be made by rephrasing the question;
+- a choice exercise's right answer is not the longest, most qualified or
+  only technical-sounding choice;
+- every assumption it makes is settled, as above: nothing is left to
+  guess, and nothing the developer already knows is explained again.
+
 Write exercises at three depths for a goal: recognising (choice), doing
 (value, short derivations), and transferring (a new situation, explained).
 
 ## Setting them
 
-In the conversation, give one exercise at a time and let the developer
-answer there or in the dashboard (each Exercise note is answered on its
-page). Choose from `learner_state`: a goal's exercises not yet passed,
-starting with those testing notes only opened, then misses due another go.
+Set exercises through rdstudio: `exercise_assign` with the exercises and a
+note saying what the set is for. They appear under "Set for you" at the top
+of the Learn tab, one after another, and the dashboard checks choices and
+values at once. Keep a set short (three to eight) and say in the
+conversation that it is there.
+
+Choose from `learner_state`: a goal's exercises not yet passed, starting
+with those testing notes only opened, then misses due another go. Quiz in
+the conversation only when the developer asks for it; record each answer
+there with `exercise_record`, so it counts the same.
 
 ## Marking
 
@@ -76,6 +113,29 @@ in the conversation is recorded with `exercise_record` first.
 
 A different correct route is `got`. An answer that reaches the right result by
 a wrong argument is `partly` at best.
+
+## Reviewing working
+
+A choice or value answer can carry the developer's working, and they can send
+it for review: with the answer, or afterwards when the check said wrong.
+`exercise_pending` lists these with `review: "working"`, what the check found
+(`checked`) and the `working`. Your marking replaces the check.
+
+1. Follow the working step by step against the solution, and find the first
+   step that goes wrong, if any.
+2. Say which kind of error it is: a **slip** (arithmetic, a dropped sign, a
+   misread number, in a sound method) or a **misunderstanding** (a wrong
+   rule, a missing idea, a step that does not follow). The difference is the
+   point of reviewing working.
+3. Mark the whole:
+   - right answer, sound working: `got`;
+   - a slip in a sound method: `partly`, even though the check said wrong;
+   - right answer without a sound argument (a guess, a lucky cancellation):
+     `partly`, even though the check said right;
+   - a misunderstanding: `missed`, with feedback naming the step and the
+     idea it needed.
+4. In `gaps`, name the idea behind a misunderstanding, not the slip. The
+   profile tracks misunderstandings; slips matter only if they recur.
 
 ## By profile
 

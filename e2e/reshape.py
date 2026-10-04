@@ -50,7 +50,8 @@ with sync_playwright() as pw:
 
     # A new folder from the home page: a new bubble.
     p.goto(URL + "?nosw#/")
-    p.get_by_role("button", name="New folder").click()
+    p.get_by_role("button", name="Add to the knowledge base").click()
+    p.get_by_role("menuitem", name="New folder").click()
     p.get_by_label("Name").fill("Philosophy")
     p.get_by_label("Description").fill("Why this project exists and what it believes about learning.")
     p.screenshot(path=str(OUT / "reshape-new-folder.png"))
@@ -60,8 +61,9 @@ with sync_playwright() as pw:
     check("new folder: made, with its overview, and opened", (K / "philosophy/overview.md").is_file())
     check("new folder: the overview carries the description", "what it believes about learning" in (K / "philosophy/overview.md").read_text())
 
-    # A new note in it opens straight in the editor.
-    p.get_by_role("button", name="New note").click()
+    # A new note in it, from the folder's menu in the tree, opens straight in the editor.
+    p.get_by_role("button", name="Actions for the folder Philosophy").click()
+    p.get_by_role("menuitem", name="New note here").click()
     p.get_by_label("Title").fill("Motivation")
     p.get_by_label("Type").fill("Idea")
     check("new note: the file name follows the title", p.get_by_label("File name").input_value() == "motivation")
@@ -103,7 +105,8 @@ with sync_playwright() as pw:
     # Moving the whole folder: links to everything in it follow.
     p.goto(URL + "?nosw#/d/philosophy")
     p.wait_for_selector(".doc-head h1")
-    p.get_by_role("button", name="Move").click()
+    p.get_by_role("button", name="Actions for the folder Philosophy").click()
+    p.get_by_role("menuitem", name="Move or rename…").click()
     p.get_by_role("dialog").get_by_label("New place").fill("foundations/philosophy")
     p.get_by_role("dialog").get_by_role("button", name="Move").click()
     p.wait_for_url("**#/d/foundations/philosophy")
@@ -177,11 +180,6 @@ with sync_playwright() as pw:
     p.on("pageerror", lambda e: errors.append(str(e)))
     p.goto(URL + "?nosw#/d/foundations")
     p.wait_for_selector(".doc-head h1")
-    p.get_by_role("button", name="New note").tap()
-    box = p.locator("dialog.sheet").bounding_box()
-    p.screenshot(path=str(OUT / "reshape-phone-new-note.png"))
-    check("phone: the dialog sits at the bottom, full width", box and box["width"] >= 389 and abs(box["y"] + box["height"] - 844) < 2, str(box))
-    p.get_by_role("button", name="Cancel").tap()
     check("phone: no sideways scrolling", p.evaluate("document.documentElement.scrollWidth") <= 390)
     # The tree's menus: buttons always shown on touch, the menu at the bottom.
     p.locator(".menu").tap()  # open the drawer with the tree
@@ -193,6 +191,11 @@ with sync_playwright() as pw:
     mbox = p.locator(".row-menu-list").bounding_box()
     p.screenshot(path=str(OUT / "reshape-phone-tree-menu.png"))
     check("phone: the menu sits at the bottom, full width", mbox and mbox["width"] >= 389 and abs(mbox["y"] + mbox["height"] - 844) < 2, str(mbox))
+    p.get_by_role("menuitem", name="New note").tap()
+    box = p.locator("dialog.sheet").bounding_box()
+    p.screenshot(path=str(OUT / "reshape-phone-new-note.png"))
+    check("phone: the dialog sits at the bottom, full width", box and box["width"] >= 389 and abs(box["y"] + box["height"] - 844) < 2, str(box))
+    p.get_by_role("button", name="Cancel").tap()
     ctx.close()
     browser.close()
 

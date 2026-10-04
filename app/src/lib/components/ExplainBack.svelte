@@ -4,6 +4,7 @@
   import { untrack } from "svelte";
   import type { ConceptRecord } from "@rdstudio/core";
   import { RESULT_LABEL, answers, openQuestions, submit } from "$lib/explain.ts";
+  import AnswerEditor from "./AnswerEditor.svelte";
 
   let { c }: { c: ConceptRecord } = $props();
 
@@ -32,7 +33,7 @@
   <summary>Explain it back{#if questions.length}<span class="count">{questions.length}</span>{/if}</summary>
   <form onsubmit={save}>
     <p class="explain-q">{question ?? `In your own words: what is ${c.title}, and why does it matter here?`}</p>
-    <textarea bind:value={text} rows="5" aria-label="Your explanation" placeholder="Write it without looking back at the note."></textarea>
+    {#if open}<AnswerEditor bind:value={text} label="Your explanation" rows={9} placeholder="Write it without looking back at the note: maths between dollar signs." />{/if}
     <div class="explain-actions">
       <button class="toggle primary" type="submit" disabled={busy || !text.trim()}>Save for marking</button>
       <span class="edit-status" role="status">{status}</span>

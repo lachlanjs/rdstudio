@@ -23,10 +23,19 @@ are filled first rather than discovered halfway.
    A belief is not evidence; it decides where to probe first.
 3. Probe each prerequisite with one or two questions that need the idea, not
    its name: a short calculation, a "what happens if", a definition used.
-   Ask in the conversation, one at a time. Record each answer with
-   `explain_record` (on a note) or `exercise_record` (on an Exercise note) and
-   mark it (`explain_mark`, `exercise_mark`), so it becomes evidence.
-4. Stop probing an area at the first clear miss, or after two clear passes.
+   **Deliver them through rdstudio, not the chat:** write each as an Exercise
+   note in `exercises/diagnostic/` (the `exercise` skill; `tags:
+   [diagnostic]`), choice or value wherever the answer allows, so the
+   dashboard checks it at once, and text for explanations. Set them with
+   `exercise_assign` and a note saying what the set is for. Tell the
+   developer they are under "Set for you" in the Learn tab, and wait.
+   Ask in the conversation only when the developer prefers it; then record
+   each answer (`exercise_record`) and mark it, so it is evidence all the same.
+4. When they are done (`learner_state` shows the set's progress), mark the
+   text answers (`exercise_pending`, `exercise_mark`) and read the rest
+   (`learner_events`). Probe further where the results are unclear: a second,
+   smaller set. Stop probing an area at the first clear miss, or after two
+   clear passes.
 5. Report in a few lines: solid, shaky, missing. For each missing
    prerequisite, propose filling it (the `map` skill adds the note, saying
    which gap prompted it) before going on.

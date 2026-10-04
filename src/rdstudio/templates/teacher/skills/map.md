@@ -34,6 +34,14 @@ Propose goals to the developer before writing them. Each goal gets exercises
 5. Every note cites its sources (the `source` skill). A note you cannot
    source is marked `status: draft` and says what is unsourced.
 
+## Conventions
+
+Keep one note of the knowledge base's conventions (`conventions.md` at the
+top, `landmark: true`): notation, units, sign and normalisation choices, and
+where they differ from the main sources. Notes and exercises then use them
+without restating them. When a source uses another convention, say so in
+the note that cites it.
+
 ## Filling a gap found later
 
 When `assess` (or a marked answer) shows a missing prerequisite:
