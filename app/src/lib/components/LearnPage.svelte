@@ -8,8 +8,7 @@
   import { understanding } from "$lib/understanding.svelte.ts";
   import { RESULT_LABEL, answers, openQuestions } from "$lib/explain.ts";
   import { allPrerequisitesChanged, changedSince } from "$lib/catchup.ts";
-  import Streaks from "$lib/components/Streaks.svelte";
-  import { STATUS_LABEL, exerciseNotes, exercisesFor, goalNotes, openSets, progressOf, putAside, statusOf, waiting as waitingAttempts } from "$lib/exercises.ts";
+  import { STATUS_LABEL, exerciseNotes, waiting as waitingAttempts } from "$lib/exercises.ts";
 
   const folderLabel = (dir: string) => (dir ? dir.split("/").map((p) => titleCase(p.replace(/[-_]/g, " "))).join(" / ") : "Top level");
   const shared = $derived(sharedTours());
@@ -26,54 +25,15 @@
   const SEGMENTS = [["understood", "understood"], ["processed", "worked through"], ["discovered", "opened"]] as const;
   const inDays = (ms: number) => { const d = Math.max(1, Math.round((ms - Date.now()) / 86_400_000)); return d === 1 ? "tomorrow" : `in ${d} days`; };
   const notes = $derived([...store.concepts.values()].filter(isStudyNote).sort((a, b) => a.order - b.order));
-  const goals = $derived(goalNotes());
   const exerciseCount = $derived(exerciseNotes().length);
   const attemptsWaiting = $derived(understanding.on ? waitingAttempts() : []);
-  const forYou = $derived(understanding.on ? openSets() : []);
 </script>
 
 <svelte:head><title>Learn · {store.site.title}</title></svelte:head>
 
 <div class="page">
   <h1>Learn</h1>
-  <p class="lede">Ways into this knowledge base: your goals, where you stand, practice, tours, and a reading order from the links rated requires.</p>
-  {#if understanding.on}<Streaks />{/if}
-  {#if forYou.length}
-    <h2 class="section-h">Set for you</h2>
-    {#each forYou as set (set.id)}
-      {@const next = set.exercises.find((x) => !set.done.includes(x))}
-      <section class="set-for-you">
-        <p class="set-note">{set.note}</p>
-        <p class="section-note">{set.done.length} of {set.exercises.length} answered · set {sinceDay(set.at)}{set.by ? ` by ${set.by.replace(/^[^:]*:/, "")}` : ""}</p>
-        <ol class="rows set-exercises">
-          {#each set.exercises as x (x)}
-            {@const c = store.concepts.get(x)}
-            {@const st = statusOf(x)}
-            <li class={set.done.includes(x) ? "done" : ""}><a class="title" href={conceptHref(x)}>{c?.title ?? x}</a>{#if set.done.includes(x)}<span class={["chip", "ex-" + st]}>{STATUS_LABEL[st]}</span>{/if}</li>
-          {/each}
-        </ol>
-        <p>{#if next}<a class="toggle primary" href={conceptHref(next)}>{set.done.length ? "Next" : "Start"}</a>{/if}
-          <button class="link" type="button" onclick={() => { if (confirm("Put this set aside? The exercises stay under Practice.")) void putAside(set.id); }}>Put aside</button></p>
-      </section>
-    {/each}
-  {/if}
-  {#if goals.length}
-    <h2 class="section-h">Goals</h2>
-    <p class="section-note">What you are working towards. A goal is met when every exercise written for it is passed.</p>
-    <ul class="rows goals">
-      {#each goals as g (g.id)}
-        {@const ex = exercisesFor(g.id)}
-        <li><a class="title" href={conceptHref(g.id)}>{g.title}</a>
-          {#if understanding.on}
-            {@const p = progressOf(g)}
-            {#if p.met}<span class="chip ex-passed">Met</span>{/if}
-            <div class="sub"><span>{ex.length ? `${p.exercises.filter((e) => e.status === "passed").length} of ${ex.length} ${ex.length === 1 ? "exercise" : "exercises"} passed` : "no exercises yet"}</span>
-              {#if p.coverage.total}<span>{p.coverage.understood} of {p.coverage.total} notes understood</span>{/if}</div>
-          {/if}
-          {#if g.description}<div class="desc">{g.description}</div>{/if}</li>
-      {/each}
-    </ul>
-  {/if}
+  <p class="lede">Where you stand in this knowledge base, explanations, tours, and a reading order from the links rated requires. Your streaks, what is set for you and your goals are on <a href="#/">Today</a>.</p>
   {#if understanding.on}
     <h2 class="section-h">Where you stand</h2>
     <p class="section-note">From your record: notes you have opened, worked through or understood (by marking them, or by evidence from exercises and explain-back). No single score: each area on its own.</p>

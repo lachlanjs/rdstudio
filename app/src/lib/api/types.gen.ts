@@ -99,7 +99,7 @@ export type Skill = SkillInfo & {
 };
 
 export type TeacherFile = {
-    name: 'profile.md' | 'sources.md';
+    name: 'profile.md' | 'sources.md' | 'next.md';
     /**
      * Null until written.
      */
@@ -164,6 +164,15 @@ export type TutorAsk = {
     prompt?: string;
     selection?: string;
     confidence?: string;
+};
+
+export type DraftSummary = {
+    exercise: string;
+    updated: string | null;
+    excerpt: string;
+    hints: number;
+    turns: number;
+    versions: number;
 };
 
 export type Draft = {
@@ -668,7 +677,7 @@ export type GetApiTeacherFilesByNameData = {
     body?: never;
     path: {
         /**
-         * profile.md or sources.md
+         * profile.md, sources.md or next.md
          */
         name: string;
     };
@@ -709,7 +718,7 @@ export type PutApiTeacherFilesByNameData = {
     };
     path: {
         /**
-         * profile.md or sources.md
+         * profile.md, sources.md or next.md
          */
         name: string;
     };
@@ -916,6 +925,39 @@ export type PostApiTeacherTutorByIdResponses = {
 };
 
 export type PostApiTeacherTutorByIdResponse = PostApiTeacherTutorByIdResponses[keyof PostApiTeacherTutorByIdResponses];
+
+export type GetApiTeacherDraftsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/teacher/drafts';
+};
+
+export type GetApiTeacherDraftsErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type GetApiTeacherDraftsError = GetApiTeacherDraftsErrors[keyof GetApiTeacherDraftsErrors];
+
+export type GetApiTeacherDraftsResponses = {
+    /**
+     * The drafts
+     */
+    200: Array<DraftSummary>;
+};
+
+export type GetApiTeacherDraftsResponse = GetApiTeacherDraftsResponses[keyof GetApiTeacherDraftsResponses];
 
 export type GetApiTeacherDraftsByIdData = {
     body?: never;

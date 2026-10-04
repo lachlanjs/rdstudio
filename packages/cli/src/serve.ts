@@ -149,11 +149,11 @@ const TeacherState = z.object({
   history: z.array(z.object({ at: z.string(), message: z.string(), commit: z.string() })).openapi({ description: "The teacher folder's commits, newest first." }),
 }).openapi("TeacherState");
 const TeacherFileSchema = z.object({
-  name: z.enum(["profile.md", "sources.md"]),
+  name: z.enum(["profile.md", "sources.md", "next.md"]),
   text: z.string().nullable().openapi({ description: "Null until written." }),
   history: z.array(z.object({ at: z.string(), message: z.string(), commit: z.string() })),
 }).openapi("TeacherFile");
-const FileName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" }, description: "profile.md or sources.md" }) });
+const FileName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" }, description: "profile.md, sources.md or next.md" }) });
 const FileSave = z.object({ text: z.string() }).openapi("TeacherFileSave");
 const SkillName = z.object({ name: z.string().openapi({ param: { name: "name", in: "path" } }) });
 const SkillSave = z.object({ text: z.string() }).openapi("SkillSave");
@@ -201,6 +201,13 @@ const draftRoute = (method: "put" | "post", path: string, summary: string, body:
   method, path, summary,
   request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: body } }, required: true } },
   responses: { 200: { description: "The draft", content: { "application/json": { schema: DraftSchema } } }, ...teacherErrors },
+});
+const DraftSummarySchema = z.object({
+  exercise: z.string(), updated: z.string().nullable(), excerpt: z.string(), hints: z.number(), turns: z.number(), versions: z.number(),
+}).openapi("DraftSummary");
+const listDraftsRoute = createRoute({
+  method: "get", path: "/api/teacher/drafts", summary: "Your drafts in progress, most recently touched first",
+  responses: { 200: { description: "The drafts", content: { "application/json": { schema: z.array(DraftSummarySchema) } } }, ...teacherErrors },
 });
 const getDraft = createRoute({
   method: "get", path: "/api/teacher/drafts/{id}", summary: "Your draft answer to an exercise, with its kept versions",
@@ -573,6 +580,10 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     });
   }) as never);
 
+  app.openapi(listDraftsRoute, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    return json(c, 200, learner.enabled(cfg) ? teacher.listDrafts(cfg) : []);
+  }) as never);
   app.openapi(getDraft, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     if (!learner.enabled(cfg)) return json(c, 409, { error: "the learner record is off ([learner] enabled in the user config)" });

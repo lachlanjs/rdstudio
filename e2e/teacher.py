@@ -295,10 +295,10 @@ with sync_playwright() as pw:
     check("goals and exercises are kept off the map, folders and all",
           not any(t.strip() in ("Exercises", "Goals", "Why an atlas", "Work in coordinates") for t in labels), labels[:30])
 
-    p.goto(URL + "?nosw#/learn")
-    p.get_by_role("heading", name="Goals", exact=True).wait_for()
-    goal_row = p.locator(".rows.goals li", has_text="Work in coordinates")
-    check("the Learn tab lists the goal with its exercises", goal_row.count() == 1 and "0 of 3 exercises passed" in goal_row.inner_text(), goal_row.inner_text() if goal_row.count() else "")
+    p.goto(URL + "?nosw&goals#/")
+    goal_row = p.locator(".today-margin .goals li", has_text="Work in coordinates")
+    goal_row.wait_for()
+    check("Today lists the goal with its exercises", "0 of 3" in goal_row.inner_text(), goal_row.inner_text())
     p.goto(URL + "?nosw#/practice")
     p.get_by_role("heading", name="Exercises", exact=True).wait_for()
     check("the Practice page lists the exercises, not tried", p.locator(".written-exercises li .chip.ex-untried").count() == 3)
@@ -365,9 +365,9 @@ with sync_playwright() as pw:
     expect(p.get_by_role("heading", name="Saved for marking")).to_be_visible()
     settle(6)
     check("an answer for an agent waits, unmarked", "result" not in attempts()[-1] and attempts()[-1]["kind"] == "ai")
-    p.goto(URL + "?nosw#/learn")
-    p.get_by_role("heading", name="Answers waiting for marking").wait_for()
-    check("the Learn tab lists it as waiting", p.locator(".attempts-waiting li", has_text="Why an atlas").count() == 1)
+    p.goto(URL + "?nosw&wait#/")
+    p.locator(".waiting-marking").wait_for()
+    check("Today lists it as waiting for marking", p.locator(".waiting-marking li", has_text="Why an atlas").count() == 1)
 
     pending = json.loads(mcp(("exercise_pending", {}))[0])
     ref = pending[0]["ref"] if pending else None
@@ -442,11 +442,12 @@ with sync_playwright() as pw:
 
     # ------------------------------------------------------------ set for you
     got = mcp(("exercise_assign", {"ids": ["exercises/two-charts", "exercises/sphere-dimension"], "note": "Diagnostic: charts"}))[0]
-    p.goto(URL + "?nosw&set#/learn")
-    p.get_by_role("heading", name="Set for you").wait_for()
-    check("exercises an agent sets are at the top of the Learn tab, with a count on the tab",
-          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=today] .count").inner_text().strip() == "2", got)
-    p.locator(".set-for-you").get_by_role("link", name="Start").click()
+    p.goto(URL + "?nosw&set#/")
+    sec = p.locator(".sec", has=p.locator(".kind", has_text="Set for you"))
+    sec.wait_for()
+    check("exercises an agent sets are on Today, with a count on its tab",
+          sec.locator("h2").inner_text() == "Diagnostic" and sec.locator(".desc").inner_text() == "Charts" and p.locator("nav a[data-tab=today] .count").inner_text().strip() == "2", got)
+    sec.locator(".ex a.t").first.click()
     p.locator(".exercise-choice").first.wait_for()
     p.locator(".exercise-choice", has_text="Two charts").click()
     p.get_by_role("button", name="Check").click()
@@ -456,24 +457,34 @@ with sync_playwright() as pw:
     nxt.click()
     p.locator(".exercise-value input").fill("2")
     p.get_by_role("button", name="Check").click()
-    p.get_by_role("link", name="Set finished: back to Learn").click()
-    p.get_by_role("heading", name="Learn", exact=True).wait_for()
-    check("a finished set leaves Today, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=today] .count").count() == 0)
+    p.get_by_role("link", name="Set finished: back to Today").click()
+    p.get_by_role("heading", name="Today", exact=True).wait_for()
+    check("a finished set leaves Today, and its count goes", p.locator(".sec .kind", has_text="Set for you").count() == 0 and p.locator("nav a[data-tab=today] .count").count() == 0)
     state = json.loads(mcp(("learner_state", {}))[0])
     check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 
     # ------------------------------------------------------------ streaks (T48)
-    p.goto(URL + "?nosw&streaks#/learn")
-    tiles = p.locator(".streak")
+    p.goto(URL + "?nosw&streaks#/")
+    tiles = p.locator(".s-tile")
     tiles.first.wait_for()
     texts = tiles.all_inner_texts()
-    check("streaks show at the top of the Learn tab: all three, recall, new learning, problem solving",
+    check("streaks lead Today: all three, recall, new learning, problem solving",
           len(texts) == 4 and texts[0].startswith("All three") and texts[3].startswith("Problem solving"), texts)
+    import re as _re
     check("today's exercises, new notes and an empty review queue keep all three going",
-          all("1 day" in t and ("Done today" in t or "Nothing due today" in t) for t in texts), texts)
-    p.locator(".streak-more-info summary").click()
+          all(_re.search(r"\b1\s+day\b", t) and ("done today" in t or "nothing due today" in t) for t in texts), texts)
+    p.locator(".cal-toggle summary").click()
     check("the calendar marks today", p.locator(".cal-day.cal-today.cal-done").count() == 1)
     p.screenshot(path=str(OUT / "teacher-streaks.png"))
+
+    # ------------------------------------------------------------ the next step on Today (T54)
+    mcp(("teacher_write", {"name": "next.md", "text": "---\nabout: exercises/why-atlases\npen: green\n---\nTry [Why an atlas](/exercises/why-atlases.md) again, without hints.\n"}))
+    p.goto(URL + "?nosw&next#/")
+    pin = p.locator(".today-pin")
+    pin.wait_for()
+    check("the teacher's next step, written through MCP, is pinned on Today in its pen",
+          "without hints" in pin.inner_text() and "pin-green" in (pin.get_attribute("class") or ""), pin.inner_text())
+    p.screenshot(path=str(OUT / "teacher-today.png"))
 
     # ------------------------------------------------------------ working sent for review
     def events_named(kind):

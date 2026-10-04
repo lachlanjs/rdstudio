@@ -109,6 +109,7 @@
   $effect(() => {
     const t = text, w = working;
     if (!loaded || !recording || stage !== "answer") return;
+    if (!t.trim() && !w.trim() && !versions.length && !savedAt) return; // nothing written yet: no draft
     const timer = setTimeout(() => { void drafts.save(c.id, s.kind === "text" ? t : "", w).then((d) => { if (d) savedAt = d.updated; }); }, 700);
     return () => clearTimeout(timer);
   });
@@ -345,7 +346,7 @@
     {#if stage === "done" || stage === "queued"}
       <p class="exercise-next">
         {#if set && nextInSet}<a class="toggle primary" href={conceptHref(nextInSet)}>Next in “{set.note}”: {store.concepts.get(nextInSet)?.title ?? nextInSet}</a>
-        {:else if set}<a class="toggle primary" href="#/learn">Set finished: back to Learn</a>{/if}
+        {:else if set}<a class="toggle primary" href="#/">Set finished: back to Today</a>{/if}
         <button class="toggle" type="button" onclick={again}>Try again</button>
       </p>
     {/if}

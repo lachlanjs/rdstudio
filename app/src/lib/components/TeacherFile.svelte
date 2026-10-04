@@ -26,6 +26,7 @@
   const EMPTY: Record<TeacherFile["name"], string> = {
     "profile.md": "No profile yet. When you ask an agent to assess you (the teach skill), it writes what the evidence shows: what comes easily, what does not and why, how you learn, and what to retest. Every claim links to the answers behind it.",
     "sources.md": "No sources logged yet. When an agent researches for the knowledge base (the teach skill), it logs what it searched, what it chose and rejected, and why.",
+    "next.md": "No next step yet. The teacher writes one when it plans what you study next (the next skill), and Today shows it.",
   };
 
   /** A commit message as you would say it: your own edits are yours. */

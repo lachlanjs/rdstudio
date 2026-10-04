@@ -23,7 +23,22 @@ Read `teach` first.
    6. with the goal met, propose the next goal.
 3. Say it in two or three lines: what, why now, how long it might take, and
    what comes after. Link the note or exercise.
-4. If the developer studied a lot today (the dashboard's load note says
+4. Write it to `next.md` (`teacher_write`), which the developer's Today shows
+   as the teacher's next step. Give it frontmatter `about` (the exercise or
+   note id it concerns, so it is pinned beside that row) and `pen` (red for a
+   gap to fill, green for something earned, blue to discuss), then the step:
+
+   ```markdown
+   ---
+   about: exercises/diagnostic/gaussian-field-random-inputs
+   pen: red
+   ---
+   Fill the gap at [variance scaling](/dmft/variance-scaling.md) before the
+   cavity method: one note, then exercise 2 again.
+   ```
+
+   Replace it when the step changes; never leave a step that is done.
+5. If the developer studied a lot today (the dashboard's load note says
    so), suggest a break or a review instead of new material.
 
 Do not plan far ahead in detail: the next assessment will change the plan.

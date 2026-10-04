@@ -122,14 +122,14 @@ test("the profile is guessed from the repository, and set in rdstudio.toml", () 
 
 test("the profile and sources log: written by agents, edited by the developer, each a commit", async () => {
   const cfg = loadConfig(project());
-  expect(() => teacher.readFile(cfg, "secrets.md")).toThrow(/profile.md and sources.md/);
+  expect(() => teacher.readFile(cfg, "secrets.md")).toThrow(/profile.md, sources.md and next.md/);
   expect(teacher.readFile(cfg, "profile.md")).toEqual({ name: "profile.md", text: null, history: [] });
 
   const call = await connect(cfg.root);
   const a = learner.append(cfg, { event: "attempt", exercise: "ex/one", tests: ["n"], answer: "2", result: "missed", by: "dashboard" });
   expect(await call("teacher_read", { name: "profile.md" })).toBe("profile.md: not written yet. History: none.");
   expect(await call("teacher_write", { name: "profile.md", text: " " })).toBe("Text is needed.");
-  expect(await call("teacher_write", { name: "notes.md", text: "x" })).toMatch(/profile.md and sources.md/);
+  expect(await call("teacher_write", { name: "notes.md", text: "x" })).toMatch(/profile.md, sources.md and next.md/);
   const written = `# Struggling\n\n- Values off by one [e:${a.id}].\n`;
   expect(JSON.parse(await call("teacher_write", { name: "profile.md", text: written.replace("\n", "\r\n"), message: "First picture", actor: "agent/test" })))
     .toEqual({ written: "profile.md", characters: written.length });
@@ -266,4 +266,16 @@ test("asking: the draft is kept as a version, the context built, the reply kept 
   } finally {
     models.setFetch((...a) => fetch(...a));
   }
+});
+
+test("drafts in progress are listed, most recent first, with their excerpt and hints", async () => {
+  const cfg = loadConfig(project());
+  expect(teacher.listDrafts(cfg)).toEqual([]);
+  teacher.saveDraft(cfg, "ex/a", { text: "First answer." });
+  await new Promise((r) => setTimeout(r, 5));
+  teacher.saveDraft(cfg, "ex/b", { text: "", working: "Only working." });
+  teacher.saveDraft(cfg, "ex/empty", { text: "  " });
+  teacher.addTurn(cfg, "ex/a", { id: "t1", mode: "hint" });
+  const list = teacher.listDrafts(cfg);
+  expect(list.map((d) => [d.exercise, d.excerpt, d.hints])).toEqual([["ex/b", "Only working.", 0], ["ex/a", "First answer.", 1]]);
 });

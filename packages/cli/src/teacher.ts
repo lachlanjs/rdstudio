@@ -161,14 +161,14 @@ export function skillForAgent(cfg: Config, name: string): string {
 // sources.md (the research log). Written by agents through MCP, and by the
 // developer from the dashboard (to dispute a claim, say); each write a commit.
 
-export const FILES = ["profile.md", "sources.md"] as const;
+export const FILES = ["profile.md", "sources.md", "next.md"] as const;
 export type TeacherFile = (typeof FILES)[number];
 const MAX_FILE_BYTES = 500_000;
 /** The commit message of a write from the dashboard, so agents can find the developer's edits. */
 export const BY_DEVELOPER = "edited by the developer";
 
 function checkFile(name: string): TeacherFile {
-  if (!(FILES as readonly string[]).includes(name)) throw new LearnerError(`the teacher's files are ${FILES.join(" and ")}`);
+  if (!(FILES as readonly string[]).includes(name)) throw new LearnerError(`the teacher's files are ${FILES.slice(0, -1).join(", ")} and ${FILES.at(-1)}`);
   return name as TeacherFile;
 }
 
@@ -311,6 +311,27 @@ export function fileDraft(cfg: Config, exercise: string, attempt: unknown): { fi
   unlinkSync(path);
   commit(cfg, `Draft of ${exercise}: submitted (${attempt})`);
   return { filed: attempt };
+}
+
+export interface DraftSummary {
+  exercise: string;
+  updated: string | null;
+  /** The start of the answer (or of the working), for "Continue where you left off". */
+  excerpt: string;
+  hints: number;
+  turns: number;
+  versions: number;
+}
+
+/** Every draft in progress (not yet submitted), most recently touched first. */
+export function listDrafts(cfg: Config): DraftSummary[] {
+  const dir = join(teacherDir(cfg), "drafts");
+  if (!cfg.isProject || !existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readDraft(cfg, f.slice(0, -5).replaceAll("~", "/")))
+    .filter((d) => d.text.trim() || d.working.trim())
+    .map((d) => ({ exercise: d.exercise, updated: d.updated, excerpt: (d.text.trim() || d.working.trim()).slice(0, 400), versions: d.versions.length,
+      hints: d.turns.filter((t) => t.mode === "hint").length, turns: d.turns.length }))
+    .sort((a, b) => (b.updated ?? "").localeCompare(a.updated ?? ""));
 }
 
 /** The draft filed with a submitted attempt, if any (for marking in context). */

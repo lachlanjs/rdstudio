@@ -82,3 +82,14 @@ export const setCount = (): number => openSets().reduce((n, a) => n + a.exercise
 export async function putAside(ref: string): Promise<boolean> {
   return (await learner.record({ event: "assigned_closed", ref, kind: "ai" })) !== null;
 }
+
+/** The four states an exercise shows (design/project/README.md): passed,
+ *  missed, in progress (a draft, or an answer waiting for marking) and not tried. */
+export type Shown = "passed" | "missed" | "in progress" | "not tried";
+export function shownState(id: string, drafted: Set<string>, all = tried()): Shown {
+  const s = statusOf(id, all);
+  if (s === "passed") return "passed";
+  if (s === "waiting" || drafted.has(id)) return "in progress";
+  if (s === "missed" || s === "partly") return "missed";
+  return "not tried";
+}
