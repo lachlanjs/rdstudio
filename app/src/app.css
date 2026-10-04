@@ -92,7 +92,9 @@ button { font: inherit; color: inherit; }
   font-size: 15px;
 }
 .doc { padding: 36px clamp(20px, 5vw, 64px) 96px; min-width: 0; }
-.doc > * { margin-left: auto; margin-right: auto; } /* centred in the column on wide screens */
+/* Everything in the document column sits in the reading measure, centred on wide screens. */
+/* (article.doc, so it outranks a component's own one-class margin rule) */
+article.doc > * { max-width: var(--measure); margin-left: auto; margin-right: auto; }
 .meta {
   border-left: 1px solid var(--rule);
   padding: 36px 20px 64px;
