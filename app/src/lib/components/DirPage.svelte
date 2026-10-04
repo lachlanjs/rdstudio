@@ -1,7 +1,6 @@
 <script lang="ts">
   import { store } from "$lib/data.svelte.ts";
   import { editing } from "$lib/edit.svelte.ts";
-  import FolderActions from "./FolderActions.svelte";
   import { conceptHref } from "$lib/format.ts";
   import { render } from "$lib/markdown.ts";
   import { dirLabel } from "$lib/tree.svelte.ts";
@@ -38,7 +37,6 @@
       {:else}
         <header class="doc-head"><p class="doc-kind">Directory</p><h1>{dirLabel(id)}</h1></header>
       {/if}
-      {#if editing.enabled}<FolderActions {id} />{/if}
       <Prose class="prose index" html={render(index, { dir: id })} />
     </article>
   </KnowledgeLayout>
