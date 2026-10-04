@@ -6,16 +6,12 @@
   function applyTheme() {
     return new Promise((resolve) => {
       try {
-        const themes = ["studio", "minimalist", "blueprint", "space", "terminal", "brutalist"];
-        const former = { notebook: "studio", journal: "studio", modern: "minimalist", map: "studio", cyber: "terminal", terminal: "terminal" };
-        const look = localStorage.getItem("rdstudio.look");
-        const theme = themes.includes(look) ? look : former[look] || former[localStorage.getItem("rdstudio.theme")];
         const mode = localStorage.getItem("rdstudio.mode");
-        if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode;
-        if (SCRIPT_SRC && themes.includes(theme) && theme !== "studio") {
+        document.documentElement.dataset.mode = mode === "light" || mode === "system" ? mode : "dark";
+        if (SCRIPT_SRC) {
           const link = document.createElement("link");
           link.rel = "stylesheet";
-          link.href = new URL(`themes/${theme}.css`, SCRIPT_SRC).href;
+          link.href = new URL("themes/marginalia.css", SCRIPT_SRC).href;
           link.onload = link.onerror = () => resolve();
           document.head.append(link);
           return;

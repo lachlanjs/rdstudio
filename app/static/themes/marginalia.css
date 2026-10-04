@@ -1,0 +1,114 @@
+/* Marginalia: rdstudio's one theme (design/project/README.md, the brand book).
+   Dark first: deep blue-black, Charter for reading, Ioskeley Mono for the
+   interface. Colour is meaning, never decoration: three pens, red (critical,
+   a solid line), green (right, a double line) and blue (discussion and links,
+   a dotted line). Tokens from design/project/tokens.json. */
+
+:root {
+  color-scheme: dark;
+  --surface: #0d1219;
+  --surface-1: #131a24;
+  --surface-2: #1a2231;
+  --surface-3: #232d3f;
+  --rule: #2b3547;
+  --rule-strong: #6b7a95;
+  --text: #e6e9ef;
+  --text-soft: #aeb7c6;
+  --text-faint: #8d98ab;
+  --pen-red: #ff7f86;
+  --pen-red-soft: #ff7f862b;
+  --pen-green: #7fdba0;
+  --pen-green-soft: #7fdba029;
+  --pen-blue: #82aaff;
+  --pen-blue-soft: #82aaff29;
+  --focus-ring: var(--pen-blue);
+  --syntax-keyword: #c9b0f7;
+  --syntax-literal: #e6bd74;
+
+  /* Type */
+  --font-text: "Charter", "Bitstream Charter", Georgia, serif;
+  --font-ui: "Ioskeley Mono", ui-monospace, Menlo, monospace;
+  --font-mono: "Ioskeley Mono", ui-monospace, Menlo, monospace;
+  --font-map: "Martian Mono", ui-monospace, Menlo, monospace;
+  --font-pixel: "Departure Mono", ui-monospace, Menlo, monospace;
+  --text-size: 18px;
+
+  /* Space and shape: a 4px base; small corners, no shadows. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px;
+  --space-8: 32px; --space-10: 40px; --space-12: 48px; --space-16: 64px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius: var(--radius-md);
+
+  /* The names the rest of app.css uses, on the brand's tokens. Only the pens carry hue. */
+  --paper: var(--surface);
+  --paper-raised: var(--surface-1);
+  --paper-sunk: var(--surface-3);
+  --ink: var(--text);
+  --ink-soft: var(--text-soft);
+  --ink-faint: var(--text-faint);
+  --grid: var(--surface-1);
+  --accent: var(--pen-blue);
+  --accent-soft: var(--pen-blue-soft);
+  --reviewed: var(--pen-green);
+  --stale: var(--pen-red);
+  --unverified: var(--text-soft);
+  --machine: var(--text-soft);
+  --route-from: var(--rule-strong);
+  --route-to: var(--rule-strong);
+  --route-both: var(--rule-strong);
+  --cat-knowledge: var(--text);
+  --cat-code: var(--text-soft);
+  --cat-reports: var(--text-soft);
+  --cat-agent: var(--text-faint);
+  --cat-other: var(--text-faint);
+  --g0: var(--rule-strong); --g1: var(--rule-strong); --g2: var(--rule-strong); --g3: var(--rule-strong);
+  --g4: var(--rule-strong); --g5: var(--rule-strong); --g6: var(--rule-strong); --g7: var(--rule-strong);
+}
+
+/* Light: chosen, or matching a light system when set to follow it. */
+:root[data-mode="light"] {
+  color-scheme: light;
+  --surface: #f3f4f7;
+  --surface-1: #fafbfc;
+  --surface-2: #ffffff;
+  --surface-3: #e7eaf0;
+  --rule: #d6dae2;
+  --rule-strong: #7a8599;
+  --text: #141a25;
+  --text-soft: #454f61;
+  --text-faint: #5b6678;
+  --pen-red: #b42327;
+  --pen-red-soft: #b423271f;
+  --pen-green: #1b6e3d;
+  --pen-green-soft: #1b6e3d1f;
+  --pen-blue: #2548b8;
+  --pen-blue-soft: #2548b81a;
+  --focus-ring: var(--pen-blue);
+  --syntax-keyword: #6a3fb5;
+  --syntax-literal: #845600;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-mode="system"] {
+    color-scheme: light;
+    --surface: #f3f4f7;
+    --surface-1: #fafbfc;
+    --surface-2: #ffffff;
+    --surface-3: #e7eaf0;
+    --rule: #d6dae2;
+    --rule-strong: #7a8599;
+    --text: #141a25;
+    --text-soft: #454f61;
+    --text-faint: #5b6678;
+    --pen-red: #b42327;
+    --pen-red-soft: #b423271f;
+    --pen-green: #1b6e3d;
+    --pen-green-soft: #1b6e3d1f;
+    --pen-blue: #2548b8;
+    --pen-blue-soft: #2548b81a;
+    --focus-ring: var(--pen-blue);
+    --syntax-keyword: #6a3fb5;
+    --syntax-literal: #845600;
+  }
+}

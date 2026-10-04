@@ -107,7 +107,7 @@ See [work together](/design/tutor.md) and [streaks](/design/streaks.md).
 See the [redesign](/design/redesign.md) and the brand book in
 `design/project/README.md`.
 
-- [ ] [T52 One theme: tokens and fonts](/tasks/T52-theme-tokens.md)
+- [x] [T52 One theme: tokens and fonts](/tasks/T52-theme-tokens.md)
 - [ ] [T53 The shell: spaces, palette and You](/tasks/T53-shell.md)
 - [ ] [T54 Today](/tasks/T54-today.md)
 - [ ] [T55 The workbench](/tasks/T55-workbench.md)

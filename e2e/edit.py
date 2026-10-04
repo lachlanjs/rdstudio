@@ -125,7 +125,7 @@ with sync_playwright() as pw:
     p.locator(".cm-line", has_text="Examples").first.click()
     p.keyboard.press("Home"); p.keyboard.press("Shift+ArrowDown"); p.keyboard.press("Shift+End")
     weak = []
-    for look in ["studio", "minimalist", "blueprint", "space", "terminal", "brutalist"]:
+    for look in ["marginalia"]:
         for mode in ["light", "dark"]:
             p.evaluate(f"""() => {{ document.getElementById('theme-css').href = 'themes/{look}.css'; document.documentElement.dataset.mode = '{mode}'; }}""")
             p.wait_for_timeout(150)
@@ -144,8 +144,8 @@ with sync_playwright() as pw:
               return (a + 0.05) / (b + 0.05);
             }""")
             if ratio < 1.5: weak.append(f"{look} {mode}: {ratio:.2f}")
-    p.evaluate("() => { document.getElementById('theme-css').href = 'themes/studio.css'; delete document.documentElement.dataset.mode; }")
-    check("a selection stands out from the page in every theme and mode", not weak, ", ".join(weak))
+    p.evaluate("() => { document.documentElement.dataset.mode = 'dark'; }")
+    check("a selection stands out from the page in both modes", not weak, ", ".join(weak))
     p.keyboard.press("ArrowRight")
 
     # Details: the title.
