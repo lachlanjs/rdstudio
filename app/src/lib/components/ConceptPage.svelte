@@ -12,8 +12,9 @@
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
   import { tourHref } from "$lib/tours.ts";
+  import { dirHref } from "$lib/format.ts";
+  import { folderLabel } from "$lib/practice.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
-  import ExplainBack from "./ExplainBack.svelte";
   import ExerciseView from "./ExerciseView.svelte";
   import GoalPanel from "./GoalPanel.svelte";
   import { isStudyNote } from "@rdstudio/core/learning";
@@ -84,9 +85,9 @@
       <article class="doc">
         <header class={["doc-head", understanding.cls(c.id)]}>
           <p class="doc-kind">
-            <span>{c.type || "Concept"}</span>
+            <span class="doc-path">{#if c.directory}<a href={dirHref(c.directory)}>{folderLabel(c.directory)}</a><span class="sep"> / </span>{/if}<span>{c.title}</span>{#if c.generated_at}<span class="sep"> · edited </span><Time iso={c.generated_at} rel={false} />{/if}</span>
+            {#if c.type && c.type !== "Concept"}<span class="chip">{c.type}</span>{/if}
             {#if c.status !== "stable"}<span class="chip">{c.status}</span>{/if}
-            {#if c.generated_at}<span>Updated <Time iso={c.generated_at} /></span>{/if}
             {#if editing.enabled}
               <span class="note-actions">
                 <button class="toggle edit-button" type="button" onclick={startEditing}>Edit</button>
@@ -101,7 +102,6 @@
         </header>
         {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
         {#if c.type === "Goal"}<GoalPanel {c} />{/if}
-        {#if understanding.on && isStudyNote(c)}<ExplainBack {c} />{/if}
       </article>
     {/if}
     {#snippet meta()}{#if session}<EditDetails {session} />{:else}<MetaPanel {c} />{/if}{/snippet}

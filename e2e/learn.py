@@ -225,24 +225,24 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/k/forms/stokes-theorem")
     head = p.locator(".doc-head")
     expect(head).to_have_class("doc-head st-discovered")
-    check("an opened note is outlined as opened (dashed)", head.evaluate("e => getComputedStyle(e).outlineStyle") == "dashed")
     meta = p.locator("aside.meta")
-    check("the details say where it stands for you", meta.locator(".you-state").inner_text().startswith("Opened"))
+    check("the companion says where it stands for you: opened, one step of three",
+          "1 of 3" in meta.locator(".you-blk .kind-row").inner_text() and meta.locator(".step[aria-pressed=true]").inner_text().strip() == "Opened")
     meta.get_by_role("button", name="Worked through").click()
     expect(head).to_have_class("doc-head st-processed")
     meta.get_by_role("button", name="Understood").click()
     expect(head).to_have_class("doc-head st-understood")
     settle("mark", 2)
     marks = events("mark")
-    check("marking is recorded as autodidactic, and the outline follows", [m["state"] for m in marks] == ["processed", "understood"]
+    check("marking is recorded as autodidactic, and the steps follow", [m["state"] for m in marks] == ["processed", "understood"]
           and all(m["kind"] == "autodidactic" and m["concept"] == "forms/stokes-theorem" for m in marks)
-          and head.evaluate("e => getComputedStyle(e).outlineStyle") == "solid")
+          and "3 of 3" in meta.locator(".you-blk .kind-row").inner_text())
     tree_link = p.locator(".tree .item a", has_text="Stokes' theorem")
     check("the tree sets an understood note's title in bold", "st-understood" in tree_link.get_attribute("class"))
     check("…and the details say it is in review", "In review: due tomorrow" in meta.inner_text(), meta.inner_text())
-    meta.get_by_role("button", name="Not yet").click()
+    meta.get_by_role("button", name="Opened").click()
     expect(head).to_have_class("doc-head st-discovered")
-    check("Not yet takes it back down", True)
+    check("choosing Opened takes it back down", True)
 
     # A past the reader has had: earlier days of study, a note marked two days
     # ago (so due for review), and one understood on an older version.
@@ -262,7 +262,7 @@ with sync_playwright() as pw:
     p.reload()  # the record is read when the page loads
     head = p.locator(".doc-head")
     expect(head).to_have_class("doc-head st-understood changed")
-    check("understood on an older version shows as changed since", "changed since" in head.evaluate("e => getComputedStyle(e, '::after').content"))
+    check("understood on an older version says it has changed since", "has changed meaningfully since you understood it" in p.locator("aside.meta .you-blk").inner_text())
 
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("heading", name="Where you stand").wait_for()
