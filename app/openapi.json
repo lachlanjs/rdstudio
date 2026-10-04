@@ -239,7 +239,8 @@
             "type": "string",
             "enum": [
               "profile.md",
-              "sources.md"
+              "sources.md",
+              "next.md"
             ]
           },
           "text": {
@@ -438,6 +439,40 @@
         "required": [
           "mode",
           "text"
+        ]
+      },
+      "DraftSummary": {
+        "type": "object",
+        "properties": {
+          "exercise": {
+            "type": "string"
+          },
+          "updated": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "hints": {
+            "type": "number"
+          },
+          "turns": {
+            "type": "number"
+          },
+          "versions": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "exercise",
+          "updated",
+          "excerpt",
+          "hints",
+          "turns",
+          "versions"
         ]
       },
       "Draft": {
@@ -1435,10 +1470,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "profile.md or sources.md"
+              "description": "profile.md, sources.md or next.md"
             },
             "required": true,
-            "description": "profile.md or sources.md",
+            "description": "profile.md, sources.md or next.md",
             "name": "name",
             "in": "path"
           }
@@ -1492,10 +1527,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "profile.md or sources.md"
+              "description": "profile.md, sources.md or next.md"
             },
             "required": true,
-            "description": "profile.md or sources.md",
+            "description": "profile.md, sources.md or next.md",
             "name": "name",
             "in": "path"
           },
@@ -1798,6 +1833,56 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/drafts": {
+      "get": {
+        "summary": "Your drafts in progress, most recently touched first",
+        "responses": {
+          "200": {
+            "description": "The drafts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DraftSummary"
+                  }
                 }
               }
             }

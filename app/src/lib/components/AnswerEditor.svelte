@@ -45,17 +45,20 @@
     return () => { gone = true; view?.destroy(); view = null; };
   });
 
-  // The pins to show: replaced whenever the list changes (a new reply, a restore).
+  // The text first (cleared or replaced from outside: Try again, a restored
+  // draft), then the pins on it: placed in the other order, pins beyond the
+  // end of a not-yet-filled editor would be dropped.
+  // Pins are placed when they change or the whole text was replaced; typing
+  // only maps them along (pins.ts), so they stay on their words.
+  let placedPins: PinMark[] | null = null;
   $effect(() => {
-    const p = pins;
-    if (!ready || !view || !pinsMod) return;
-    untrack(() => view!.dispatch({ effects: pinsMod!.setPins.of(p) }));
-  });
-
-  // Cleared or replaced from outside (Try again): the editor follows.
-  $effect(() => {
-    const v = value;
-    untrack(() => { if (view && setText && view.state.doc.toString() !== v) setText(view, v); });
+    const v = value, p = pins;
+    if (!ready || !view) return;
+    untrack(() => {
+      let replaced = false;
+      if (setText && view!.state.doc.toString() !== v) { setText(view!, v); replaced = true; }
+      if (pinsMod && (replaced || p !== placedPins)) { view!.dispatch({ effects: pinsMod.setPins.of(p) }); placedPins = p; }
+    });
   });
 </script>
 

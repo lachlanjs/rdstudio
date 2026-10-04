@@ -184,8 +184,8 @@ with sync_playwright() as pw:
     p.get_by_role("link", name="How the agent teaches you here").click()
     p.get_by_role("heading", name="Teacher", exact=True).wait_for()
     p.locator(".teacher-skills li").first.wait_for()
-    check("the Teacher page is reached from the Learn tab, which stays the current tab",
-          p.locator("nav a[aria-current=page]", has_text="Learn").count() == 1)
+    check("the Teacher page is reached from the Learn tab, and belongs to You",
+          p.locator(".you-button[aria-current=page]").count() == 1)
     check("the profile is guessed from the repository", p.get_by_text("Learning a topic, guessed from what is in the repository").count() == 1)
     rows = p.locator(".teacher-skills li")
     check("the skills are listed, teach first, all rdstudio's defaults",
@@ -250,6 +250,46 @@ with sync_playwright() as pw:
     check("the profile set from the command line is in rdstudio.toml and shown",
           'profile = "codebase"' in (ROOT / "rdstudio.toml").read_text() and p.get_by_text("Learning a codebase.").count() == 1, out)
 
+    # ------------------------------------------------------------ the shell (T53)
+    p.goto(URL + "?nosw&shell#/")
+    p.locator("nav a[data-tab=today][aria-current=page]").wait_for()
+    # The profile is codebase now, so this is a Project (T59): Project is a main
+    # space and Practice the quiet link, and Today is the project's.
+    p.locator(".project-today").wait_for()
+    check("the shell in project mode: Today is home, beside Library, Atlas and Project, with Practice the quiet link",
+          [t.split()[0] for t in p.locator("nav.tabs a").all_inner_texts()] == ["Today", "Library", "Atlas", "Project"]
+          and p.locator(".quiet-link").inner_text().startswith("Practice") and p.locator(".mode-tag").inner_text() == "Project")
+    check("…and Today counts the week's work and lists what needs you",
+          p.locator(".project-today .s-tile").count() == 4 and p.get_by_text("Needs you").count() == 1)
+    p.keyboard.press("Control+k")
+    p.get_by_label("Jump to a note or action").first.wait_for()
+    p.keyboard.type("smooth man")
+    first = p.locator(".palette li").first.inner_text()
+    p.keyboard.press("Enter")
+    p.wait_for_url("**#/k/manifolds/smooth-manifold")
+    check("the palette jumps to a note by a few letters of its name", "Smooth manifold" in first, first)
+    p.locator(".palette-box").click()
+    p.keyboard.type("chang")
+    p.keyboard.press("Enter")
+    p.wait_for_url("**#/changes")
+    check("and to anything the app does", p.locator("nav.tabs a[data-tab=project][aria-current=page]").count() == 1)
+    p.goto(URL + "?nosw#/map")
+    p.locator(".m-place").first.wait_for(timeout=20000)
+    p.wait_for_timeout(800)
+    check("in project mode the Atlas shows the Activity lens, with no north arrow",
+          p.locator(".map-panel .lenses button[aria-pressed=true]", has_text="Activity").count() == 1 and not p.locator(".atlas-north").is_visible())
+    # Back to learning a topic, for the learning layer's own checks below.
+    cli("teacher", "profile", "topic")
+    p.goto(URL + "?nosw&shell2#/project")
+    p.locator(".project-places").wait_for()
+    check("Project gathers changes, review, reports, procedures and skills", p.locator(".project-places li").count() == 5)
+    p.locator(".you-button").click()
+    check("the You menu holds the teacher, settings and light or dark", p.locator(".you-menu a", has_text="Teacher").count() == 1 and p.locator(".you-row button").count() == 3)
+    p.locator(".you-row button", has_text="Light").click()
+    check("light or dark from the You menu", p.evaluate("document.documentElement.dataset.mode") == "light")
+    p.locator(".you-row button", has_text="Dark").click()
+    p.keyboard.press("Escape")
+
     # ------------------------------------------------------------ goals and exercises (T44)
     def attempts(kind="attempt"):
         rec = list((TMP / "data/rdstudio/learners").glob("*/record.jsonl"))
@@ -268,10 +308,10 @@ with sync_playwright() as pw:
     check("goals and exercises are kept off the map, folders and all",
           not any(t.strip() in ("Exercises", "Goals", "Why an atlas", "Work in coordinates") for t in labels), labels[:30])
 
-    p.goto(URL + "?nosw#/learn")
-    p.get_by_role("heading", name="Goals", exact=True).wait_for()
-    goal_row = p.locator(".rows.goals li", has_text="Work in coordinates")
-    check("the Learn tab lists the goal with its exercises", goal_row.count() == 1 and "0 of 3 exercises passed" in goal_row.inner_text(), goal_row.inner_text() if goal_row.count() else "")
+    p.goto(URL + "?nosw&goals#/")
+    goal_row = p.locator(".today-margin .goals li", has_text="Work in coordinates")
+    goal_row.wait_for()
+    check("Today lists the goal with its exercises", "0 of 3" in goal_row.inner_text(), goal_row.inner_text())
     p.goto(URL + "?nosw#/practice")
     p.get_by_role("heading", name="Exercises", exact=True).wait_for()
     check("the Practice page lists the exercises, not tried", p.locator(".written-exercises li .chip.ex-untried").count() == 3)
@@ -283,7 +323,7 @@ with sync_playwright() as pw:
     check("the solution is kept back until you answer", p.get_by_role("heading", name="Solution").count() == 0 and p.locator(".katex").count() >= 1)
     box.fill("two")
     p.get_by_role("button", name="Check").click()
-    check("an unreadable number is said, and nothing recorded", "not a number" in p.locator(".exercise .edit-status").inner_text() and not attempts())
+    check("an unreadable number is said, and nothing recorded", "not a number" in p.locator(".bench .edit-status").inner_text() and not attempts())
     box.fill("3")
     p.get_by_role("button", name="Check").click()
     expect(p.locator(".exercise-verdict")).to_contain_text("Not right. The answer is 2.")
@@ -338,9 +378,9 @@ with sync_playwright() as pw:
     expect(p.get_by_role("heading", name="Saved for marking")).to_be_visible()
     settle(6)
     check("an answer for an agent waits, unmarked", "result" not in attempts()[-1] and attempts()[-1]["kind"] == "ai")
-    p.goto(URL + "?nosw#/learn")
-    p.get_by_role("heading", name="Answers waiting for marking").wait_for()
-    check("the Learn tab lists it as waiting", p.locator(".attempts-waiting li", has_text="Why an atlas").count() == 1)
+    p.goto(URL + "?nosw&wait#/")
+    p.locator(".waiting-marking").wait_for()
+    check("Today lists it as waiting for marking", p.locator(".waiting-marking li", has_text="Why an atlas").count() == 1)
 
     pending = json.loads(mcp(("exercise_pending", {}))[0])
     ref = pending[0]["ref"] if pending else None
@@ -415,11 +455,12 @@ with sync_playwright() as pw:
 
     # ------------------------------------------------------------ set for you
     got = mcp(("exercise_assign", {"ids": ["exercises/two-charts", "exercises/sphere-dimension"], "note": "Diagnostic: charts"}))[0]
-    p.goto(URL + "?nosw&set#/learn")
-    p.get_by_role("heading", name="Set for you").wait_for()
-    check("exercises an agent sets are at the top of the Learn tab, with a count on the tab",
-          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=learn] .count").inner_text().strip() == "2", got)
-    p.locator(".set-for-you").get_by_role("link", name="Start").click()
+    p.goto(URL + "?nosw&set#/")
+    sec = p.locator(".sec", has=p.locator(".kind", has_text="Set for you"))
+    sec.wait_for()
+    check("exercises an agent sets are on Today, with a count on its tab",
+          sec.locator("h2").inner_text() == "Diagnostic" and sec.locator(".desc").inner_text() == "Charts" and p.locator("nav a[data-tab=today] .count").inner_text().strip() == "2", got)
+    sec.locator(".ex a.t").first.click()
     p.locator(".exercise-choice").first.wait_for()
     p.locator(".exercise-choice", has_text="Two charts").click()
     p.get_by_role("button", name="Check").click()
@@ -429,24 +470,34 @@ with sync_playwright() as pw:
     nxt.click()
     p.locator(".exercise-value input").fill("2")
     p.get_by_role("button", name="Check").click()
-    p.get_by_role("link", name="Set finished: back to Learn").click()
-    p.get_by_role("heading", name="Learn", exact=True).wait_for()
-    check("a finished set leaves the Learn tab, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=learn] .count").count() == 0)
+    p.get_by_role("link", name="Set finished: back to Today").click()
+    p.get_by_role("heading", name="Today", exact=True).wait_for()
+    check("a finished set leaves Today, and its count goes", p.locator(".sec .kind", has_text="Set for you").count() == 0 and p.locator("nav a[data-tab=today] .count").count() == 0)
     state = json.loads(mcp(("learner_state", {}))[0])
     check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 
     # ------------------------------------------------------------ streaks (T48)
-    p.goto(URL + "?nosw&streaks#/learn")
-    tiles = p.locator(".streak")
+    p.goto(URL + "?nosw&streaks#/")
+    tiles = p.locator(".s-tile")
     tiles.first.wait_for()
     texts = tiles.all_inner_texts()
-    check("streaks show at the top of the Learn tab: all three, recall, new learning, problem solving",
+    check("streaks lead Today: all three, recall, new learning, problem solving",
           len(texts) == 4 and texts[0].startswith("All three") and texts[3].startswith("Problem solving"), texts)
+    import re as _re
     check("today's exercises, new notes and an empty review queue keep all three going",
-          all("1 day" in t and ("Done today" in t or "Nothing due today" in t) for t in texts), texts)
-    p.locator(".streak-more-info summary").click()
+          all(_re.search(r"\b1\s+day\b", t) and ("done today" in t or "nothing due today" in t) for t in texts), texts)
+    p.locator(".cal-toggle summary").click()
     check("the calendar marks today", p.locator(".cal-day.cal-today.cal-done").count() == 1)
     p.screenshot(path=str(OUT / "teacher-streaks.png"))
+
+    # ------------------------------------------------------------ the next step on Today (T54)
+    mcp(("teacher_write", {"name": "next.md", "text": "---\nabout: exercises/why-atlases\npen: green\n---\nTry [Why an atlas](/exercises/why-atlases.md) again, without hints.\n"}))
+    p.goto(URL + "?nosw&next#/")
+    pin = p.locator(".today-pin")
+    pin.wait_for()
+    check("the teacher's next step, written through MCP, is pinned on Today in its pen",
+          "without hints" in pin.inner_text() and "pin-green" in (pin.get_attribute("class") or ""), pin.inner_text())
+    p.screenshot(path=str(OUT / "teacher-today.png"))
 
     # ------------------------------------------------------------ working sent for review
     def events_named(kind):
@@ -486,7 +537,7 @@ with sync_playwright() as pw:
     check("after a wrong answer, sending the working for review is offered", offer.count() == 1 and "slip" in offer.inner_text(), p.locator(".exercise-answer").inner_text())
     offer.locator(".cm-content").fill("Counted the coordinates of $\\mathbb{R}^3$: 3. Should have counted the sphere's own directions.")
     offer.get_by_role("button", name="Send my working for review").click()
-    expect(p.locator(".exercise .edit-status")).to_contain_text("Sent for review")
+    expect(p.locator(".bench .edit-status")).to_contain_text("Sent for review")
     settle(1, "review_requested")
     rr = attempts("review_requested")[-1]
     check("the working is sent after the fact, for that answer", rr["ref"] == attempts()[-1]["id"] and "own directions" in rr["working"])
@@ -523,20 +574,20 @@ with sync_playwright() as pw:
     ed = p.locator(".exercise-answer .answer-editor .cm-content")
     ed.wait_for()
     ed.fill("First thoughts: charts overlap.")
-    expect(p.locator(".draft-bar")).to_contain_text("Draft saved", timeout=5000)
+    expect(p.locator(".a-foot")).to_contain_text("Draft saved", timeout=5000)
     p.goto(URL + "?nosw&d2#/k/exercises/why-atlases")
     ed.wait_for()
-    expect(p.locator(".exercise .edit-status")).to_contain_text("is back", timeout=5000)
+    expect(p.locator(".bench .edit-status")).to_contain_text("is back", timeout=5000)
     check("a draft answer is saved as typed, and back after leaving", "First thoughts: charts overlap." in ed.inner_text())
+    p.locator(".draft-versions summary").click()
     p.get_by_role("button", name="Keep this version").click()
-    expect(p.locator(".exercise .edit-status")).to_contain_text("Kept as v1")
+    expect(p.locator(".bench .edit-status")).to_contain_text("Kept as v1")
     ed.fill("Rewritten entirely, and worse.")
     p.wait_for_timeout(900)
-    p.locator(".draft-versions summary").click()
     p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Show").click()
     check("a kept version can be shown beside the draft", "First thoughts" in p.locator(".draft-shown").inner_text() and "Rewritten" in ed.inner_text())
     p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Restore").click()
-    expect(p.locator(".exercise .edit-status")).to_contain_text("Restored v1")
+    expect(p.locator(".bench .edit-status")).to_contain_text("Restored v1")
     check("restoring brings it back, and keeps what was there as a version",
           "First thoughts: charts overlap." in ed.inner_text() and p.locator(".draft-versions li", has_text="before restoring").count() == 1)
     p.get_by_role("button", name="Mark it yourself").click()
@@ -557,46 +608,49 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw&t1#/k/exercises/why-atlases")
     ed = p.locator(".exercise-answer .answer-editor .cm-content")
     ed.wait_for()
-    p.locator(".tutor-bar").wait_for()
+    p.locator(".a-tools").wait_for()
     draft = "The variance adds because the terms are independent. So Var(h) = N g^2."
     ed.fill(draft)
-    p.locator(".tutor-bar").get_by_role("button", name="Hint").click()
-    card = p.locator("article.turn").first
+    p.locator(".a-tools").get_by_role("button", name="Hint").click()
+    card = p.locator(".m-cards .pin").first
     expect(card).to_contain_text("Independence.", timeout=8000)
-    check("a hint comes back, the smallest push first", "1 of 3" in card.locator("header").inner_text() and "rung 1 of 3" in json.dumps(FAKE_REQUESTS[-1]))
+    check("a hint comes back, the smallest push first", "Hint 1 of 3" in card.locator(".pin-head").inner_text() and "rung 1 of 3" in json.dumps(FAKE_REQUESTS[-1]))
     asked = json.dumps(FAKE_REQUESTS[-1])
     check("the teacher is given the tutor skill, the exercise, its solution and the notes it tests, and the draft",
           "How to teach" in asked and "Why does a manifold need an atlas" in asked and "transition maps" in asked and "The variance adds" in asked)
-    p.locator(".tutor-bar").get_by_role("button", name="Hint (2 of 3)").click()
-    expect(p.locator("article.turn").first).to_contain_text("cross terms", timeout=8000)
+    p.locator(".a-tools").get_by_role("button", name="Hint (2 of 3)").click()
+    expect(p.locator(".m-cards .pin", has_text="cross terms")).to_have_count(1, timeout=8000)
     check("the next hint climbs a rung", "rung 2 of 3" in json.dumps(FAKE_REQUESTS[-1]))
-    p.locator(".tutor-bar").get_by_role("button", name="Feedback").click()
+    p.locator(".a-tools").get_by_role("button", name="Feedback").click()
     p.get_by_role("button", name="Fairly sure").click()
-    expect(p.locator("article.turn-feedback")).to_be_visible(timeout=8000)
+    expect(p.locator(".m-cards .pin-red")).to_be_visible(timeout=8000)
     check("feedback is pinned in the draft, red and green, as you were asked how sure you were",
           p.locator(".answer-editor .cm-pin-green").inner_text() == "terms are independent" and p.locator(".answer-editor .cm-pin-red").inner_text() == "So Var(h) = N g^2"
           and "fairly sure" in json.dumps(FAKE_REQUESTS[-1]))
-    p.locator("article.turn-feedback .pin-red .pin-quote").click()
+    p.locator(".m-cards .pin-red .pin-quote").click()
     sel = p.evaluate("() => window.getSelection().toString()")
     check("a pin's quote shows its passage in the draft", sel == "So Var(h) = N g^2", sel)
     ed.press("Control+Home")
     p.keyboard.type("First: ")
     check("pins stay on their words as the draft changes", p.locator(".answer-editor .cm-pin-green").inner_text() == "terms are independent")
-    p.locator(".tutor-bar").get_by_role("button", name="Discuss").click()
+    p.locator(".a-tools").get_by_role("button", name="Discuss").click()
     p.get_by_label("Your question").fill("Is the last line right?")
     p.locator(".tutor-ask").get_by_role("button", name="Ask").click()
-    expect(p.locator("article.turn-discuss")).to_be_visible(timeout=8000)
+    expect(p.locator(".m-cards .pin-blue")).to_be_visible(timeout=8000)
     p.wait_for_timeout(300)
     check("a discussion answers, pinned in blue", p.locator(".answer-editor .cm-pin-blue").count() >= 1 and "Is the last line right?" in json.dumps(FAKE_REQUESTS[-1]),
-          (p.locator(".answer-editor .cm-pin-blue").count(), p.locator(".answer-editor .cm-content").inner_html()[:600], p.locator("article.turn-discuss").inner_text()))
-    p.locator("article.turn-hint").last.get_by_role("button", name="Show the draft as it was").click()
+          (p.locator(".answer-editor .cm-pin-blue").count(), p.locator(".answer-editor .cm-content").inner_html()[:600], p.locator(".m-cards .pin-blue").inner_text()))
+    p.locator(".m-cards .pin", has_text="Independence.").locator(".pin-foot button").first.click()
     check("a reply shows the draft as it was when asked", draft in p.locator(".draft-shown").inner_text() and "First:" not in p.locator(".draft-shown").inner_text())
-    p.locator("article.turn-discuss .turn-seen > summary").click()
-    check("what the teacher saw is shown, section by section", p.locator(".turn-seen li").count() >= 5)
+    p.locator(".m-seen > summary").click()
+    check("what the teacher saw is shown, section by section", p.locator(".m-seen li").count() >= 5)
+    # The margin: cards level with their words, joined by leader lines in each pen's style.
+    led = p.evaluate("""() => [...document.querySelectorAll('svg.leaders path')].map(e => e.getAttribute('class'))""")
+    check("the margin joins its cards to their words, in each pen's line", {"ld-red", "ld-green", "ld-blue", "ld-hint"} <= set(led), led)
     p.screenshot(path=str(OUT / "teacher-tutor.png"), full_page=True)
     p.goto(URL + "?nosw&t2#/k/exercises/why-atlases")
-    p.locator("article.turn").first.wait_for()
-    check("the replies are back after a reload, pinned again", p.locator("article.turn").count() == 4 and p.locator(".answer-editor .cm-pin-red").count() == 1)
+    p.locator(".m-cards .pin").first.wait_for()
+    check("the replies are back after a reload, pinned again", p.locator(".m-cards .pin").count() == 5 and p.locator(".answer-editor .cm-pin-red").count() == 1)
     p.get_by_role("button", name="Mark it yourself").click()
     n = len(attempts())
     p.get_by_role("button", name="Got it").click()
@@ -626,6 +680,22 @@ with sync_playwright() as pw:
     wide = pp.evaluate("document.documentElement.scrollWidth")
     check("on a phone an exercise fits without sideways scrolling", wide <= 390, wide)
     pp.screenshot(path=str(OUT / "teacher-exercise-phone.png"), full_page=True)
+    # Phone layouts (T58): the spaces in a bar at the bottom; an exercise's
+    # marking actions in its place, with a way back.
+    foot = pp.locator(".bench .a-foot").bounding_box()
+    check("on a phone an exercise's marking actions take the tab bar's place, with a way back",
+          not pp.locator(".tabbar").is_visible() and pp.get_by_role("button", name="Back").is_visible()
+          and foot is not None and abs(foot["y"] + foot["height"] - 844) < 2, foot)
+    pp.goto(URL + "?nosw#/")
+    pp.locator(".s-tile").first.wait_for()
+    check("…and elsewhere the spaces are a bar at the bottom", pp.locator(".tabbar").is_visible()
+          and pp.locator(".tabbar a, .tabbar button").count() == 5 and not pp.locator(".bar .tabs").is_visible())
+    pp.locator(".tabbar").get_by_role("button", name="More").tap()
+    check("…More holds the You menu", pp.get_by_role("menuitem", name="Teacher").is_visible())
+    pp.keyboard.press("Escape")
+    if pp.locator(".today-pin.has-inline").count():
+        check("…and the teacher's next step hangs under its row", pp.locator(".ex li.next-inline .pin").is_visible())
+    pp.screenshot(path=str(OUT / "teacher-today-phone.png"))
     pctx.close()
 
     check("no console errors", not errors, errors[:5])

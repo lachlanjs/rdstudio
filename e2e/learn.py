@@ -225,24 +225,24 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/k/forms/stokes-theorem")
     head = p.locator(".doc-head")
     expect(head).to_have_class("doc-head st-discovered")
-    check("an opened note is outlined as opened (dashed)", head.evaluate("e => getComputedStyle(e).outlineStyle") == "dashed")
     meta = p.locator("aside.meta")
-    check("the details say where it stands for you", meta.locator(".you-state").inner_text().startswith("Opened"))
+    check("the companion says where it stands for you: opened, one step of three",
+          "1 of 3" in meta.locator(".you-blk .kind-row").inner_text() and meta.locator(".step[aria-pressed=true]").inner_text().strip() == "Opened")
     meta.get_by_role("button", name="Worked through").click()
     expect(head).to_have_class("doc-head st-processed")
     meta.get_by_role("button", name="Understood").click()
     expect(head).to_have_class("doc-head st-understood")
     settle("mark", 2)
     marks = events("mark")
-    check("marking is recorded as autodidactic, and the outline follows", [m["state"] for m in marks] == ["processed", "understood"]
+    check("marking is recorded as autodidactic, and the steps follow", [m["state"] for m in marks] == ["processed", "understood"]
           and all(m["kind"] == "autodidactic" and m["concept"] == "forms/stokes-theorem" for m in marks)
-          and head.evaluate("e => getComputedStyle(e).outlineStyle") == "solid")
+          and "3 of 3" in meta.locator(".you-blk .kind-row").inner_text())
     tree_link = p.locator(".tree .item a", has_text="Stokes' theorem")
     check("the tree sets an understood note's title in bold", "st-understood" in tree_link.get_attribute("class"))
     check("…and the details say it is in review", "In review: due tomorrow" in meta.inner_text(), meta.inner_text())
-    meta.get_by_role("button", name="Not yet").click()
+    meta.get_by_role("button", name="Opened").click()
     expect(head).to_have_class("doc-head st-discovered")
-    check("Not yet takes it back down", True)
+    check("choosing Opened takes it back down", True)
 
     # A past the reader has had: earlier days of study, a note marked two days
     # ago (so due for review), and one understood on an older version.
@@ -262,7 +262,7 @@ with sync_playwright() as pw:
     p.reload()  # the record is read when the page loads
     head = p.locator(".doc-head")
     expect(head).to_have_class("doc-head st-understood changed")
-    check("understood on an older version shows as changed since", "changed since" in head.evaluate("e => getComputedStyle(e, '::after').content"))
+    check("understood on an older version says it has changed since", "has changed meaningfully since you understood it" in p.locator("aside.meta .you-blk").inner_text())
 
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("heading", name="Where you stand").wait_for()
@@ -300,6 +300,53 @@ with sync_playwright() as pw:
     p.wait_for_timeout(800)
     check("…which hides what is not reached too", drawn() > hidden_places, (hidden_places, drawn()))
     p.screenshot(path=str(OUT / "learn-coverage-map.png"))
+
+    # ------------------------------------------------------------ the Atlas (T57)
+    p.wait_for_function("() => (document.querySelector('.m-terrain .a-front')?.getAttribute('d') || '').length > 20", timeout=10000)
+    check("the Atlas: the terrain of your understanding, with the fog beyond the frontier",
+          p.locator(".m-terrain .a-fog").count() == 1 and p.locator(".m-landfill").count() >= 1)
+    counts = p.locator(".m-count").evaluate_all("els => els.map(e => e.textContent)")
+    check("…links as trunks between top-level folders, each with its count", len(counts) >= 1 and all(c.isdigit() for c in counts), counts)
+    check("…a sentence on what is drawn", "trunk" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    check("…and north is later in the study order", p.locator(".atlas-north").is_visible())
+    # Contour folders and downhill routes (T60), the defaults; circles and gates the options.
+    p.wait_for_function("() => document.querySelector('.map-summary')?.textContent.includes('right angle')", timeout=10000)
+    check("folders are contours of their contents, named above the outline",
+          p.locator("text.m-head").count() >= 1 and p.locator("text.m-arc").count() == 0
+          and "a" not in (p.locator(".m-dir.open").first.get_attribute("d") or "a").lower())
+    check("…and routes cross outlines downhill, measured", "off a right angle" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    p.locator(".map-more > summary").click()
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Circles").click()
+    p.get_by_role("group", name="Routes").get_by_role("button", name="Gates").click()
+    p.wait_for_timeout(500)
+    check("circles and gates instead: names on the arc, no right-angle measure",
+          p.locator("text.m-arc").count() >= 1 and "right angle" not in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Contours").click()
+    p.get_by_role("group", name="Routes").get_by_role("button", name="Downhill").click()
+    p.locator(".map-more > summary").click()
+    place = p.locator(".m-place[data-ref]").first
+    ref = place.get_attribute("data-ref")
+    place.click()
+    card = p.locator(".atlas-card")
+    expect(card).to_be_visible()
+    expect(p.locator(f'.m-place.selected[data-ref="{ref}"]')).to_have_count(1)
+    check("clicking a note selects it: its card, and only its own links, in the blue pen",
+          p.locator(".m-routes .m-link.trunk").count() == 0 and p.locator(".m-count").count() == 0
+          and "build" in card.inner_text() and p.locator(f'.m-place.selected[data-ref="{ref}"]').count() == 1,
+          (p.locator(".m-routes .m-link.trunk").count(), p.locator(".m-count").count(), card.inner_text().replace("\n", " / ")))
+    p.screenshot(path=str(OUT / "learn-atlas-selected.png"))
+    p.keyboard.press("Escape")
+    expect(card).to_be_hidden()
+    p.get_by_role("button", name="Links", exact=True).click()
+    p.wait_for_timeout(300)
+    check("the Links lens off: the terrain and the folders alone", p.locator(".m-routes .m-link").count() == 0
+          and "Links are off" in p.locator(".map-summary").inner_text())
+    p.get_by_role("button", name="Links", exact=True).click()
+    place = p.locator(f'.m-place[data-ref="{ref}"]')
+    place.click()
+    card.get_by_role("link", name="Open the note").click()
+    p.wait_for_url(f"**#/k/{ref}")
+    check("…and Open the note opens it", True)
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("heading", name="Where you stand").wait_for()
     p.screenshot(path=str(OUT / "learn-tab.png"), full_page=True)

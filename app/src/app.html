@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>rdstudio</title>
 <link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" crossorigin="use-credentials">
-<meta name="theme-color" content="#141a20">
+<meta name="theme-color" content="#0d1219">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -46,19 +46,15 @@
     }, true);
   })();
 </script>
-<link id="theme-css" rel="stylesheet" href="%sveltekit.assets%/themes/studio.css">
+<link id="theme-css" rel="stylesheet" href="%sveltekit.assets%/themes/marginalia.css">
 <link rel="stylesheet" href="%sveltekit.assets%/fonts.css">
 <script>
   // Apply the saved theme and mode before first paint (see lib/settings.svelte.ts).
   (function () {
     try {
-      var themes = ["studio", "minimalist", "blueprint", "space", "terminal", "brutalist"];
-      var former = { notebook: "studio", journal: "studio", modern: "minimalist", map: "studio", cyber: "terminal", terminal: "terminal" };
-      var look = localStorage.getItem("rdstudio.look");
-      var theme = themes.indexOf(look) >= 0 ? look : former[look] || former[localStorage.getItem("rdstudio.theme")];
+      // One theme (Marginalia), dark first; light, or following the system, when chosen.
       var mode = localStorage.getItem("rdstudio.mode");
-      if (themes.indexOf(theme) > 0) document.getElementById("theme-css").href = "themes/" + theme + ".css";
-      if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode;
+      document.documentElement.dataset.mode = mode === "light" || mode === "system" ? mode : "dark";
     } catch (e) { /* storage unavailable: defaults apply */ }
   })();
 </script>

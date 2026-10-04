@@ -17,13 +17,15 @@
   import Time from "./Time.svelte";
   import AnswerEditor from "./AnswerEditor.svelte";
   import { onMount, untrack } from "svelte";
-  import TutorPanel from "./TutorPanel.svelte";
+  import TutorTools from "./TutorTools.svelte";
+  import TeacherMargin from "./TeacherMargin.svelte";
+  import { TutorSession } from "$lib/tutorSession.svelte.ts";
   import type { Turn } from "$lib/tutor.ts";
   import { locate, type PinMark } from "$lib/editor/pins.ts";
   import type { DraftVersion } from "$lib/api/types.gen.ts";
   import { drafts } from "$lib/teacher.svelte.ts";
 
-  let { c, body }: { c: ConceptRecord; body: string } = $props();
+  let { c, body, onedit }: { c: ConceptRecord; body: string; onedit?: () => void } = $props();
 
   const parts = $derived(splitSolution(body));
   const parsed = $derived(spec(c));
@@ -66,8 +68,10 @@
   // with versions kept at the moments that matter, any of which can be shown
   // beside the draft or restored.
   let versions = $state<DraftVersion[]>([]);
-  // Working together: the teacher's replies, the editor (to reveal a pin) and what is selected in it.
-  let turns = $state<Turn[]>([]);
+  // Working together: the teacher's replies (shared by the tools and the
+  // margin), the editor (to reveal a pin) and what is selected in it.
+  const tutor = new TutorSession(untrack(() => c.id)); // one page per note (ConceptPage is keyed by it)
+  let bench = $state<HTMLElement>();
   let editor = $state<{ reveal: (id: string) => boolean } | null>(null);
   let selection = $state("");
   let pinEpoch = $state(0); // place the pins again (after a restore)
@@ -76,7 +80,7 @@
     const now = untrack(() => text);
     const marks: PinMark[] = [];
     const gone = new Set<string>();
-    for (const t of turns) t.pins.forEach((p, i) => {
+    for (const t of tutor.turns) t.pins.forEach((p, i) => {
       const at = locate(now, p.quote);
       if (at) marks.push({ id: `${t.id}.${i}`, from: at.from, to: at.to, colour: p.colour });
       else gone.add(`${t.id}.${i}`);
@@ -85,11 +89,14 @@
   });
   // A reply keeps a version on the server: fetch the list again.
   $effect(() => {
+    const turns = tutor.turns;
     if (!turns.length) return;
     void turns.length;
     untrack(() => { void drafts.read(c.id).then((d) => { if (d) versions = d.versions; }); });
   });
-  const helpCounts = () => turns.length ? { hint: turns.filter((t) => t.mode === "hint").length, feedback: turns.filter((t) => t.mode === "feedback").length, discuss: turns.filter((t) => t.mode === "discuss").length } : null;
+  const helpCounts = () => { const turns = tutor.turns; return turns.length ? { hint: turns.filter((t) => t.mode === "hint").length, feedback: turns.filter((t) => t.mode === "feedback").length, discuss: turns.filter((t) => t.mode === "discuss").length } : null; };
+  const confidence = $derived(tutor.turns.findLast((t) => t.mode === "feedback")?.confidence ?? null);
+  const position = $derived(set ? set.exercises.indexOf(c.id) + 1 : 0);
   let showing = $state<DraftVersion | null>(null);
   let loaded = $state(false);
   let savedAt = $state<string | null>(null);
@@ -102,13 +109,14 @@
         message = `Your draft from ${new Date(d.updated ?? Date.now()).toLocaleString()} is back.`;
       }
       versions = d?.versions ?? [];
-      turns = (d?.turns ?? []) as unknown as Turn[];
+      tutor.turns = (d?.turns ?? []) as unknown as Turn[];
       loaded = true;
     });
   });
   $effect(() => {
     const t = text, w = working;
     if (!loaded || !recording || stage !== "answer") return;
+    if (!t.trim() && !w.trim() && !versions.length && !savedAt) return; // nothing written yet: no draft
     const timer = setTimeout(() => { void drafts.save(c.id, s.kind === "text" ? t : "", w).then((d) => { if (d) savedAt = d.updated; }); }, 700);
     return () => clearTimeout(timer);
   });
@@ -146,7 +154,7 @@
       withWorking ? { working, review } : undefined, helpCounts());
     sentForReview = withWorking && review;
     busy = false;
-    if (lastId) { void drafts.submitted(c.id, lastId); versions = []; showing = null; turns = []; }
+    if (lastId) { void drafts.submitted(c.id, lastId); versions = []; showing = null; tutor.turns = []; }
     if (!lastId && recording) message = "Not saved: the learner record did not accept it.";
     return !!lastId;
   }
@@ -206,26 +214,35 @@
   };
 </script>
 
-<section class="exercise" aria-label="Exercise">
-  <div class="exercise-status">
-    <span class={["chip", "ex-" + status]}>{STATUS_LABEL[status]}</span>
-    {#if tests.length}<span class="exercise-tests">Tests {#each tests as t, i (t)}{i ? ", " : ""}<a href={conceptHref(t)}>{store.concepts.get(t)?.title}</a>{/each}</span>{/if}
-    {#if goals.length}<span class="exercise-tests">For {#each goals as g, i (g)}{i ? ", " : ""}<a href={conceptHref(g)}>{store.concepts.get(g)?.title}</a>{/each}</span>{/if}
-  </div>
-  {#if "error" in parsed}<p class="edit-message bad">This exercise's answer settings are not right ({parsed.error}), so it is answered as text.</p>{/if}
+<div class="bench" bind:this={bench}>
+  <nav class="crumb" aria-label="Where this exercise is">
+    <a href="#/practice">Practice</a><span>/</span>
+    {#if set}<span>{set.note.split(":")[0]}</span><span>/</span>{/if}
+    <b>{position ? `${position} ` : ""}{c.title}</b>
+    {#if onedit}<button class="link crumb-edit" type="button" onclick={onedit}>Edit the exercise</button>{/if}
+  </nav>
 
-  <Prose html={html(parts.problem)} />
+  <section class="problem" aria-label="Problem">
+    <h1>{c.title}</h1>
+    {#if goals.length || tests.length}
+      <p class="for">{#if goals.length}For: {#each goals as g, i (g)}{i ? ", " : ""}<a href={conceptHref(g)}>{store.concepts.get(g)?.title}</a>{/each}.{/if}
+        {#if tests.length} Tests: {#each tests as t, i (t)}{i ? ", " : ""}<a href={conceptHref(t)}>{store.concepts.get(t)?.title}</a>{/each}.{/if}</p>
+    {/if}
+    {#if mine.length}<p class="problem-status"><span class={["chip", "ex-" + status]}>{STATUS_LABEL[status]}</span></p>{/if}
+    {#if "error" in parsed}<p class="edit-message bad">This exercise's answer settings are not right ({parsed.error}), so it is answered as text.</p>{/if}
+    <div class="prob"><Prose html={html(parts.problem)} /></div>
+  </section>
 
-  <div class="exercise-answer">
+  <section class="answer exercise-answer" aria-label="Your answer">
     {#if marking}
       <h2>Mark your answer</h2>
       <blockquote><Prose html={html(marking.answer)} /></blockquote>
     {:else if stage === "answer"}
-      <h2>Your answer</h2>
-      {#if !recording}<p class="section-note">{store.site.static ? "This is an exported snapshot, so" : "The learner record is off, so"} answers are not kept.</p>{/if}
+      {#if !recording}<p class="caption">{store.site.static ? "This is an exported snapshot, so" : "The learner record is off, so"} answers are not kept.</p>{/if}
       {#if s.kind === "choice"}
+        <h2>Your answer</h2>
         <div class="exercise-choices" role={s.multiple ? "group" : "radiogroup"} aria-label={s.multiple ? "Choose every right answer" : "Choose one"}>
-          {#if s.multiple}<p class="section-note">Choose every one that is right.</p>{/if}
+          {#if s.multiple}<p class="caption">Choose every one that is right.</p>{/if}
           {#each s.choices as ch, i (i)}
             <label class={["exercise-choice", picked.includes(i) && "on"]}>
               <input type={s.multiple ? "checkbox" : "radio"} name={"ex-" + c.id} checked={picked.includes(i)} onchange={() => toggle(i)} />
@@ -234,14 +251,16 @@
           {/each}
         </div>
       {:else if s.kind === "value"}
+        <h2>Your answer</h2>
         <label class="exercise-value">
-          <span class="section-note">A number (0.25, 1/4 and 2.5e-3 all work){s.unit ? `, in ${s.unit}` : ""}:</span>
+          <span class="caption">A number (0.25, 1/4 and 2.5e-3 all work){s.unit ? `, in ${s.unit}` : ""}:</span>
           <input bind:value={typed} inputmode="decimal" autocomplete="off" onkeydown={(e) => { if (e.key === "Enter" && ready) void check(); }} />
           {#if s.unit}<span class="unit">{s.unit}</span>{/if}
         </label>
       {:else}
-        <p class="section-note">Maths between dollar signs, shown as you type. For working on paper or in code, say where it is (a file in the repository).</p>
-        <AnswerEditor bind:this={editor} bind:value={text} bind:selection pins={placed.marks} label="Your answer" rows={14} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
+        {#if recording}<TutorTools session={tutor} {text} {working} {selection} />{/if}
+        <AnswerEditor bind:this={editor} bind:value={text} bind:selection pins={placed.marks} label="Your answer" rows={12} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
+        <p class="a-note caption">Maths is typeset everywhere except the line you are writing. For working on paper or in code, say where it is.</p>
       {/if}
       {#if s.kind !== "text"}
         <details class="exercise-working" bind:open={showWorking}>
@@ -252,22 +271,21 @@
           {/if}
         </details>
       {/if}
-      <div class="exercise-actions">
-        {#if s.kind === "text"}
-          <button class="toggle primary" type="button" disabled={busy || !ready} onclick={markMine}>Mark it yourself</button>
-          {#if recording}<button class="toggle" type="button" disabled={busy || !ready} onclick={askAgent}>Ask an agent to mark it</button>{/if}
-        {:else}
-          <button class="toggle primary" type="button" disabled={busy || !ready} onclick={check}>Check</button>
-        {/if}
-        <button class="link" type="button" disabled={busy} onclick={giveUp}>Show the solution</button>
-      </div>
-      {#if recording && (s.kind === "text" || working.trim() || versions.length)}
-        <div class="draft-bar">
-          <span class="section-note">{savedAt ? `Draft saved ${new Date(savedAt).toLocaleTimeString(undefined, { timeStyle: "short" })}` : "Your draft is saved as you type"}</span>
-          <button class="link" type="button" onclick={keep}>Keep this version</button>
-          {#if versions.length}
-            <details class="draft-versions">
-              <summary>Versions ({versions.length})</summary>
+      {#if showing}
+        <div class="draft-shown" role="region" aria-label={`Your draft as it was at ${showing.id}`}>
+          <p class="caption">Your answer at {showing.id} ({showing.reason}), {when(showing.at)}: <button class="link" type="button" onclick={() => restore(showing!)}>restore it</button> <button class="link" type="button" onclick={() => (showing = null)}>close</button></p>
+          {#if showing.text}<Prose html={html(showing.text)} />{/if}
+          {#if showing.working}<p class="caption">Working:</p><Prose html={html(showing.working)} />{/if}
+          {#if !showing.text && !showing.working}<p class="empty">It was empty.</p>{/if}
+        </div>
+      {/if}
+      <div class="a-foot">
+        {#if recording && (s.kind === "text" || working.trim() || versions.length)}
+          <span class="saved"><i class={["box", savedAt && "on"]} aria-hidden="true"></i>{savedAt ? "Draft saved" : "Saved as you type"}</span>
+          <details class="draft-versions">
+            <summary>Versions{versions.length ? ` (${versions.length})` : ""}</summary>
+            <div class="versions-pop">
+              <button class="link" type="button" onclick={keep}>Keep this version</button>
               <ol>
                 {#each [...versions].reverse() as v (v.id)}
                   <li><span class="draft-v">{v.id}</span> {v.reason} · {when(v.at)}
@@ -275,24 +293,18 @@
                     <button class="link" type="button" onclick={() => restore(v)}>Restore</button></li>
                 {/each}
               </ol>
-            </details>
-          {/if}
-        </div>
-        {#if s.kind === "text" && recording}
-          <TutorPanel exercise={c.id} dir={c.directory} {text} {working} {selection} bind:turns unanchored={placed.gone}
-            onreveal={(id) => editor?.reveal(id) ?? false}
-            onshow={(v) => { const x = versions.find((y) => y.id === v); if (x) showing = x; }}
-            onrestore={(v) => { const x = versions.find((y) => y.id === v); if (x) void restore(x); }} />
+            </div>
+          </details>
         {/if}
-        {#if showing}
-          <div class="draft-shown" role="region" aria-label={`Your draft as it was at ${showing.id}`}>
-            <p class="section-note">Your draft at {showing.id} ({showing.reason}), {when(showing.at)}:</p>
-            {#if showing.text}<Prose html={html(showing.text)} />{/if}
-            {#if showing.working}<p class="section-note">Working:</p><Prose html={html(showing.working)} />{/if}
-            {#if !showing.text && !showing.working}<p class="empty">It was empty.</p>{/if}
-          </div>
+        <span class="sp"></span>
+        <button class="link" type="button" disabled={busy} onclick={giveUp}>Show the solution</button>
+        {#if s.kind === "text"}
+          <button class="toggle" type="button" disabled={busy || !ready} onclick={markMine}>Mark it yourself</button>
+          {#if recording}<button class="toggle primary" type="button" disabled={busy || !ready} onclick={askAgent}>Ask an agent to mark it</button>{/if}
+        {:else}
+          <button class="toggle primary" type="button" disabled={busy || !ready} onclick={check}>Check</button>
         {/if}
-      {/if}
+      </div>
     {:else if stage === "grade"}
       <h2>Your answer</h2>
       <blockquote><Prose html={html(text)} /></blockquote>
@@ -307,7 +319,7 @@
       </p>
       {#if s.kind !== "text" && !gaveUp && recording && lastId}
         {#if sentForReview}
-          <p class="section-note">Your working is waiting for review: an agent reads it next time you ask to be taught or tested, or mark it yourself under Your attempts. The review decides the result.</p>
+          <p class="caption">Your working is waiting for review: an agent reads it next time you ask to be taught or tested, or mark it yourself under Your attempts. The review decides the result.</p>
         {:else if verdict === "missed"}
           <div class="exercise-offer">
             <p>If it was a slip, or you would like to know where it went wrong, send your working for review. A slip in a sound method counts as partly right.</p>
@@ -326,7 +338,7 @@
         <h2>Solution</h2>
         <Prose html={html(parts.solution)} />
       {:else}
-        <p class="section-note">There is no written solution. Check against the notes it tests{#if tests.length}: {#each tests as t, i (t)}{i ? ", " : ""}<a href={conceptHref(t)}>{store.concepts.get(t)?.title}</a>{/each}{/if}.</p>
+        <p class="caption">There is no written solution. Check against the notes it tests{#if tests.length}: {#each tests as t, i (t)}{i ? ", " : ""}<a href={conceptHref(t)}>{store.concepts.get(t)?.title}</a>{/each}{/if}.</p>
       {/if}
     {/if}
 
@@ -336,7 +348,7 @@
     {/if}
     {#if stage === "grade" || marking}
       <div class="practice-grades" role="group" aria-label="How did you do?">
-        <span class="section-note">{marking?.working && marking.result !== null ? "Against the solution, how sound was the working? A slip in a sound method is partly; a right answer without a sound argument is partly too." : "Against the solution, how did you do?"}</span>
+        <span class="caption">{marking?.working && marking.result !== null ? "Against the solution, how sound was the working? A slip in a sound method is partly; a right answer without a sound argument is partly too." : "Against the solution, how did you do?"}</span>
         <button class="toggle" type="button" disabled={busy} onclick={() => grade("missed")}>Missed it</button>
         <button class="toggle" type="button" disabled={busy} onclick={() => grade("partly")}>Partly</button>
         <button class="toggle primary" type="button" disabled={busy} onclick={() => grade("got")}>Got it</button>
@@ -345,14 +357,35 @@
     {#if stage === "done" || stage === "queued"}
       <p class="exercise-next">
         {#if set && nextInSet}<a class="toggle primary" href={conceptHref(nextInSet)}>Next in “{set.note}”: {store.concepts.get(nextInSet)?.title ?? nextInSet}</a>
-        {:else if set}<a class="toggle primary" href="#/learn">Set finished: back to Learn</a>{/if}
+        {:else if set}<a class="toggle primary" href="#/">Set finished: back to Today</a>{/if}
         <button class="toggle" type="button" onclick={again}>Try again</button>
       </p>
     {/if}
-  </div>
+  </section>
 
+  {#if s.kind === "text" && recording}
+    <TeacherMargin session={tutor} dir={c.directory} root={bench} {text} {confidence}
+      onreveal={(id) => editor?.reveal(id) ?? false}
+      onshow={(v) => { const x = versions.find((y) => y.id === v); if (x) showing = x; }}
+      onrestore={(v) => { const x = versions.find((y) => y.id === v); if (x) void restore(x); }} />
+  {:else}
+    <section class="margin-col" aria-label="Your attempts">
+      <div class="m-head"><b>Your attempts</b>{#if mine.length}<span>{mine.length}</span>{/if}</div>
+      {#if !mine.length}<p class="caption m-empty">None yet. A choice or a number is checked here as soon as you answer.</p>{/if}
+      {@render attemptList()}
+    </section>
+  {/if}
+
+  {#if s.kind === "text" && mine.length}
+    <section class="bench-attempts" aria-label="Your attempts">
+      <h2 class="section-h">Your attempts</h2>
+      {@render attemptList()}
+    </section>
+  {/if}
+</div>
+
+{#snippet attemptList()}
   {#if mine.length}
-    <h2 class="section-h">Your attempts</h2>
     <ul class="explain-list exercise-attempts">
       {#each mine as a (a.id)}
         <li class={a.result ?? "waiting"}>
@@ -368,7 +401,7 @@
       {/each}
     </ul>
   {/if}
-</section>
+{/snippet}
 
 {#snippet workingBox()}
   <AnswerEditor bind:value={working} label="Your working" rows={9} placeholder="Your working, step by step: maths between dollar signs." />

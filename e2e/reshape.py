@@ -49,7 +49,7 @@ with sync_playwright() as pw:
     broken_before = broken_links()
 
     # A new folder from the home page: a new bubble.
-    p.goto(URL + "?nosw#/")
+    p.goto(URL + "?nosw#/library")
     p.get_by_role("button", name="Add to the knowledge base").click()
     p.get_by_role("menuitem", name="New folder").click()
     p.get_by_label("Name").fill("Philosophy")

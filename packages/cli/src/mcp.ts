@@ -493,8 +493,9 @@ default), with the profile. Follow it.`, { name: z.string() }, ({ name }) => {
 
   tool("teacher_read", `Read one of the teacher's private files about the developer: "profile.md"
 (what they find easy and hard, how they learn, what to retest; each claim
-citing evidence as [e:<event id>]) or "sources.md" (the research log: what was
-searched, found, chosen or rejected and why). Gives its recent history; with
+citing evidence as [e:<event id>]), "sources.md" (the research log: what was
+searched, found, chosen or rejected and why) or "next.md" (the next step,
+shown on the developer's Today). Gives its recent history; with
 developer_edit=true, the developer's own latest edit as a diff, to answer
 (they may dispute a claim). Never quote these to anyone else.`, { name: z.string(), developer_edit: z.boolean().default(false) }, ({ name, developer_edit }) => {
     if (!learner.enabled(cfg)) return LEARNER_OFF;
@@ -515,8 +516,11 @@ developer_edit=true, the developer's own latest edit as a diff, to answer
     }
   });
 
-  tool("teacher_write", `Write one of the teacher's private files ("profile.md" or "sources.md"),
-replacing it whole: read it first, and keep what still holds. In the profile,
+  tool("teacher_write", `Write one of the teacher's private files ("profile.md", "sources.md" or
+"next.md"), replacing it whole: read it first, and keep what still holds.
+next.md is the one next step, shown on the developer's Today: a sentence or
+two, with links, and optional frontmatter \`about\` (the exercise or note id it
+concerns, so it is pinned beside that row) and \`pen\` (red, green or blue). In the profile,
 every claim cites the events behind it as [e:<event id>] (from learner_events);
 a claim without evidence is not written. Each write is kept in the teacher's
 history, with \`message\` saying what changed.`, { name: z.string(), text: z.string(), message: opt(z.string()), actor: opt(z.string()) }, ({ name, text, message, actor }) => {

@@ -7,7 +7,7 @@ performance measures named ``rd:<step>`` (see ``js/util.js``); this script reads
 them, then drives a fixed pan and zoom and records every frame.
 
     uv run --group bench python bench/run.py
-    uv run --group bench python bench/run.py --bundles dg,field --profiles phone --themes space
+    uv run --group bench python bench/run.py --bundles dg,field --profiles phone --themes light
 
 Results go to ``.bench/results/`` as JSON; ``bench/compare.py`` sets two side by
 side. Headless Chromium draws in software, so paint costs are higher than on a
@@ -44,9 +44,7 @@ PROFILES = {
     "tunnel": {"viewport": (1280, 800), "scale": 1, "mobile": False, "cpu": 1,
                "net": {"latency": 150, "down": 500_000, "up": 250_000}},
 }
-THEMES = {"studio": ("studio", "light"), "space": ("space", "dark"), "minimalist": ("minimalist", "light"),
-          "terminal": ("terminal", "dark"),
-          "blueprint": ("blueprint", "dark"), "brutalist": ("brutalist", "light")}
+THEMES = {"dark": ("marginalia", "dark"), "light": ("marginalia", "light")}
 
 INIT = """
 window.__long = [];
@@ -166,13 +164,19 @@ def first(measures: list[dict], name: str) -> dict | None:
 
 
 def load_metrics(page) -> dict:
+    # Downhill routes and contour outlines arrive from the worker after the map
+    # has settled; wait a little for them, so their times are reported too.
+    try:
+        page.wait_for_function("() => performance.getEntriesByName('rd:map-downhill').length > 0", timeout=5000, polling=50)
+    except Exception:
+        pass  # gates routing, or no links to route
     ms = page.evaluate(MEASURES)
     render = first(ms, "map-render")
     settled = first(ms, "map-settled")
     out = {"first_map_ms": r1(render["start"] + render["duration"]) if render else None,
            # the measure runs from when the page opened
            "settled_ms": r1(settled["duration"]) if settled else None}
-    for step in ("data", "map-model", "map-place", "map-layout", "map-routes", "map-render"):
+    for step in ("data", "map-model", "map-place", "map-layout", "map-routes", "map-render", "map-outlines", "map-downhill", "map-terrain"):
         m = first(ms, step)
         out[step.replace("map-", "") + "_ms"] = r1(m["duration"]) if m else None
     info = page.evaluate(PAGE)
@@ -300,7 +304,7 @@ def table(runs: list[dict]) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--bundles", default="dg,subject,area,field,ceiling", help="dg and/or presets: " + ", ".join(synth.PRESETS))
-    ap.add_argument("--themes", default="studio,space", help=", ".join(THEMES))
+    ap.add_argument("--themes", default="dark", help=", ".join(THEMES))
     ap.add_argument("--profiles", default="desktop,phone", help=", ".join(PROFILES))
     ap.add_argument("--label", help="a name for this run, kept in the results")
     ap.add_argument("--fresh", action="store_true", help="regenerate the synthetic bundles")

@@ -87,6 +87,8 @@ async function renderNow(root: HTMLElement): Promise<void> {
     return;
   }
   mermaid.initialize(mermaidConfig());
+  // Mermaid sizes text by measuring it: measure in the theme's fonts, not their stand-ins.
+  try { await document.fonts?.ready; } catch { /* no font loading API */ }
   for (const el of blocks) {
     if (!el.isConnected) continue;
     const source = el.querySelector(".mermaid-source code")?.textContent ?? "";
@@ -96,6 +98,8 @@ async function renderNow(root: HTMLElement): Promise<void> {
       const { svg } = await mermaid.render(id, source);
       el.innerHTML = svg;
       fit(el.querySelector("svg"));
+      // A face that arrives later can widen the text again.
+      void document.fonts?.ready.then(() => fit(el.querySelector("svg")));
       el.dataset.rendered = "done";
     } catch (err) {
       // Mermaid can leave its scratch container behind when parsing fails.

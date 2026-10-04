@@ -23,7 +23,7 @@
     {/if}
     <div>
       <div class="root-row">
-        <a class="root-link" href="#/">{dirLabel("")}</a>
+        <a class="root-link" href="#/library">{dirLabel("")}</a>
         {#if editing.enabled}
           <RowMenu label="Add to the knowledge base" items={[
             { label: "New note", run: () => actions.open({ kind: "new-note", folder: "" }) },

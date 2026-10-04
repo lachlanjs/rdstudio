@@ -4,11 +4,11 @@
 // customising how the agent teaches is possible, not encouraged.
 
 import {
-  deleteApiTeacherAi, getApiTeacherAi, postApiTeacherAiCheck, postApiTeacherAiConnect,
+  deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect,
   deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
   postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherSkillsByName,
 } from "./api/sdk.gen.ts";
-import type { AiState, Draft, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
+import type { AiState, Draft, DraftSummary, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
 import { learner, store } from "./data.svelte.ts";
 import { RESULT_LABEL } from "./explain.ts";
 
@@ -146,6 +146,11 @@ export function linkEvidence(html: string): string {
 // versions kept at the moments that matter. Nothing happens while the record is off.
 
 export const drafts = {
+  /** Drafts in progress, most recent first (none while the record is off). */
+  async list(): Promise<DraftSummary[]> {
+    if (store.site.static || !learner.enabled) return [];
+    try { return (await getApiTeacherDrafts()).data ?? []; } catch { return []; }
+  },
   async read(exercise: string): Promise<Draft | null> {
     if (store.site.static || !learner.enabled) return null;
     try { return (await getApiTeacherDraftsById({ path: { id: exercise } })).data ?? null; } catch { return null; }
@@ -195,3 +200,20 @@ export const ai = {
 };
 
 export const money = (n: number): string => (n === 0 ? "$0" : n < 0.01 ? `${(n * 100).toFixed(2)}¢` : `$${n.toFixed(2)}`);
+
+// ------------------------------------------------------------------ the next step
+// next.md, written by the next skill: a step or two, with frontmatter `about`
+// (the exercise or note it concerns) and `pen` (red, green or blue).
+
+export interface NextStep { about: string | null; pen: "red" | "green" | "blue"; text: string; at: string | null }
+
+export async function nextStep(): Promise<NextStep | null> {
+  const f = await teacher.file("next.md");
+  if (!f?.text?.trim()) return null;
+  const m = /^---\n([\s\S]*?)\n---\n?/.exec(f.text);
+  const front = m ? m[1]! : "";
+  const field = (k: string) => new RegExp(`^${k}:\\s*(.+)$`, "m").exec(front)?.[1]?.trim().replace(/^["']|["']$/g, "") ?? null;
+  const pen = field("pen");
+  return { about: field("about")?.replace(/\.md$/, "").replace(/^\//, "") ?? null, pen: pen === "green" || pen === "blue" ? pen : "red",
+    text: (m ? f.text.slice(m[0].length) : f.text).trim(), at: f.history[0]?.at ?? null };
+}

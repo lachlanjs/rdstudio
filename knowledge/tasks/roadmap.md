@@ -102,6 +102,21 @@ See [work together](/design/tutor.md) and [streaks](/design/streaks.md).
 - [x] [T50 The server-side teacher](/tasks/T50-teacher-service.md)
 - [x] [T51 Work together](/tasks/T51-work-together.md)
 
+# M12 — Redesign
+
+See the [redesign](/design/redesign.md) and the brand book in
+`design/project/README.md`.
+
+- [x] [T52 One theme: tokens and fonts](/tasks/T52-theme-tokens.md)
+- [x] [T53 The shell: spaces, palette and You](/tasks/T53-shell.md)
+- [x] [T54 Today](/tasks/T54-today.md)
+- [x] [T55 The workbench](/tasks/T55-workbench.md)
+- [x] [T56 Library](/tasks/T56-library.md)
+- [x] [T57 The Atlas](/tasks/T57-atlas.md)
+- [x] [T58 Phone layouts](/tasks/T58-phone.md)
+- [x] [T59 Project mode](/tasks/T59-project-mode.md)
+- [x] [T60 The Atlas: contour folders and downhill routes](/tasks/T60-atlas-contours.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)

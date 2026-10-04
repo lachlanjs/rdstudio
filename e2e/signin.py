@@ -75,12 +75,12 @@ with sync_playwright() as pw:
     browser = pw.chromium.launch()
     p = browser.new_page()
     p.goto(URL)
-    p.wait_for_selector(".live")
+    p.wait_for_selector(".bar[data-live]")
     p.wait_for_function("navigator.serviceWorker.controller !== null || new Promise(r => setTimeout(() => r(false), 4000))")
     p.reload()  # now controlled by the service worker
-    p.wait_for_selector(".live")
+    p.wait_for_selector(".bar[data-live]")
     check("the service worker controls the page", p.evaluate("navigator.serviceWorker.controller !== null"))
-    expect(p.locator(".live")).to_have_text("Live")
+    expect(p.locator(".bar")).to_have_attribute("data-live", "live")
 
     wall["on"] = True  # the tunnel's sign-in expires
     expect(p.locator(".live.signin")).to_have_text("Sign in", timeout=10000)
@@ -89,8 +89,8 @@ with sync_playwright() as pw:
 
     p.locator(".live.signin").click()
     p.wait_for_url(f"http://127.0.0.1:{PROXY}/*", timeout=10000)
-    p.wait_for_selector(".live")
-    expect(p.locator(".live")).to_have_text("Live", timeout=10000)
+    p.wait_for_selector(".bar[data-live]")
+    expect(p.locator(".bar")).to_have_attribute("data-live", "live", timeout=10000)
     check("following it reaches the sign-in page and comes back working", not wall["on"])
     check("the address is tidied", "signin" not in p.url, p.url)
     browser.close()
