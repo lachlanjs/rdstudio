@@ -42,6 +42,6 @@ export const TRUST_LABEL: Record<TrustState, string> = {
 
 const segments = (id: string) => id.split("/").map(encodeURIComponent).join("/");
 export const conceptHref = (id: string): string => "#/k/" + segments(id);
-export const dirHref = (id: string): string => (id ? "#/d/" + segments(id) : "#/");
+export const dirHref = (id: string): string => (id ? "#/d/" + segments(id) : "#/library");
 
 export const titleCase = (name: string): string => (name ? name.charAt(0).toUpperCase() + name.slice(1) : name);

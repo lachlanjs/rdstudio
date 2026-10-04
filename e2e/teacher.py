@@ -184,8 +184,8 @@ with sync_playwright() as pw:
     p.get_by_role("link", name="How the agent teaches you here").click()
     p.get_by_role("heading", name="Teacher", exact=True).wait_for()
     p.locator(".teacher-skills li").first.wait_for()
-    check("the Teacher page is reached from the Learn tab, which stays the current tab",
-          p.locator("nav a[aria-current=page]", has_text="Learn").count() == 1)
+    check("the Teacher page is reached from the Learn tab, and belongs to You",
+          p.locator(".you-button[aria-current=page]").count() == 1)
     check("the profile is guessed from the repository", p.get_by_text("Learning a topic, guessed from what is in the repository").count() == 1)
     rows = p.locator(".teacher-skills li")
     check("the skills are listed, teach first, all rdstudio's defaults",
@@ -249,6 +249,33 @@ with sync_playwright() as pw:
     rows.first.wait_for()
     check("the profile set from the command line is in rdstudio.toml and shown",
           'profile = "codebase"' in (ROOT / "rdstudio.toml").read_text() and p.get_by_text("Learning a codebase.").count() == 1, out)
+
+    # ------------------------------------------------------------ the shell (T53)
+    p.goto(URL + "?nosw&shell#/")
+    p.locator("nav a[data-tab=today][aria-current=page]").wait_for()
+    check("the shell: Today is home, beside Library, Atlas and Practice",
+          p.locator("nav.tabs a").all_inner_texts()[:4] == ["Today", "Library", "Atlas", "Practice"] or [t.split()[0] for t in p.locator("nav.tabs a").all_inner_texts()] == ["Today", "Library", "Atlas", "Practice"])
+    p.keyboard.press("Control+k")
+    p.get_by_label("Jump to a note or action").first.wait_for()
+    p.keyboard.type("smooth man")
+    first = p.locator(".palette li").first.inner_text()
+    p.keyboard.press("Enter")
+    p.wait_for_url("**#/k/manifolds/smooth-manifold")
+    check("the palette jumps to a note by a few letters of its name", "Smooth manifold" in first, first)
+    p.locator(".palette-box").click()
+    p.keyboard.type("chang")
+    p.keyboard.press("Enter")
+    p.wait_for_url("**#/changes")
+    check("and to anything the app does", p.locator("nav a[aria-current=page]").count() == 0 and p.locator(".quiet-link[aria-current=page]").count() == 1)
+    p.goto(URL + "?nosw&shell2#/project")
+    p.locator(".project-places").wait_for()
+    check("Project gathers changes, review, reports, procedures and skills", p.locator(".project-places li").count() == 5)
+    p.locator(".you-button").click()
+    check("the You menu holds the teacher, settings and light or dark", p.locator(".you-menu a", has_text="Teacher").count() == 1 and p.locator(".you-row button").count() == 3)
+    p.locator(".you-row button", has_text="Light").click()
+    check("light or dark from the You menu", p.evaluate("document.documentElement.dataset.mode") == "light")
+    p.locator(".you-row button", has_text="Dark").click()
+    p.keyboard.press("Escape")
 
     # ------------------------------------------------------------ goals and exercises (T44)
     def attempts(kind="attempt"):
@@ -418,7 +445,7 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw&set#/learn")
     p.get_by_role("heading", name="Set for you").wait_for()
     check("exercises an agent sets are at the top of the Learn tab, with a count on the tab",
-          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=learn] .count").inner_text().strip() == "2", got)
+          p.locator(".set-for-you .set-note").inner_text() == "Diagnostic: charts" and p.locator("nav a[data-tab=today] .count").inner_text().strip() == "2", got)
     p.locator(".set-for-you").get_by_role("link", name="Start").click()
     p.locator(".exercise-choice").first.wait_for()
     p.locator(".exercise-choice", has_text="Two charts").click()
@@ -431,7 +458,7 @@ with sync_playwright() as pw:
     p.get_by_role("button", name="Check").click()
     p.get_by_role("link", name="Set finished: back to Learn").click()
     p.get_by_role("heading", name="Learn", exact=True).wait_for()
-    check("a finished set leaves the Learn tab, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=learn] .count").count() == 0)
+    check("a finished set leaves Today, and its count goes", p.get_by_role("heading", name="Set for you").count() == 0 and p.locator("nav a[data-tab=today] .count").count() == 0)
     state = json.loads(mcp(("learner_state", {}))[0])
     check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 

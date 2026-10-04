@@ -1,97 +1,109 @@
 <script lang="ts">
-  // The shell: header, tabs, the live indicator, and the page below.
+  // The shell (T53): the project and its mode, the four spaces (Today,
+  // Library, Atlas, Practice), Project as the quiet link, the command palette
+  // and the You menu; then the page. See knowledge/design/redesign.md.
   import "../app.css";
   import "katex/dist/katex.min.css";
-  import githubLight from "highlight.js/styles/github.min.css?url";
-  import githubDark from "highlight.js/styles/github-dark.min.css?url";
   import type { Snippet } from "svelte";
   import { page } from "$app/state";
   import { afterNavigate } from "$app/navigation";
-  import { store } from "$lib/data.svelte.ts";
+  import { store, learner } from "$lib/data.svelte.ts";
   import { editing } from "$lib/edit.svelte.ts";
   import ActionDialogs from "$lib/components/ActionDialogs.svelte";
-  import { procedures, reviewCount } from "$lib/review.ts";
+  import CommandPalette from "$lib/components/CommandPalette.svelte";
+  import { reviewCount } from "$lib/review.ts";
   import { setCount } from "$lib/exercises.ts";
-  import { settings } from "$lib/settings.svelte.ts";
+  import { MODES, settings } from "$lib/settings.svelte.ts";
+  import { palette, projectMode } from "$lib/shell.svelte.ts";
+  import { teacher } from "$lib/teacher.svelte.ts";
 
   let { children }: { children: Snippet } = $props();
 
-  // Which tab a route belongs to.
-  const TABS: Record<string, string> = {
-    "/": "knowledge", "/d/[...id]": "knowledge", "/k/[...id]": "knowledge", "/map/[...focus]": "map", "/path/[...id]": "map",
-    "/graph": "graph", "/learn": "learn", "/tour/[...id]": "learn", "/tours/[...name]": "learn", "/practice/[...rest]": "learn", "/teacher/[...rest]": "learn", "/changes": "changes", "/review": "review", "/reports": "reports",
-    "/r/[...path]": "reports", "/procedures": "procedures", "/p/[...id]": "procedures", "/settings": "settings",
-    "/skills": "skills", "/skill/[...name]": "skills", "/agent/[...name]": "skills",
+  // Which space a route belongs to.
+  const SPACES: Record<string, string> = {
+    "/": "today",
+    "/library": "library", "/d/[...id]": "library", "/k/[...id]": "library",
+    "/map/[...focus]": "atlas", "/path/[...id]": "atlas", "/graph": "atlas", "/tour/[...id]": "atlas", "/tours/[...name]": "atlas",
+    "/practice/[...rest]": "practice", "/learn": "practice",
+    "/project": "project", "/changes": "project", "/review": "project", "/reports": "project", "/r/[...path]": "project",
+    "/procedures": "project", "/p/[...id]": "project", "/skills": "project", "/skill/[...name]": "project", "/agent/[...name]": "project",
+    "/teacher/[...rest]": "you", "/settings": "you",
   };
-  const tab = $derived(TABS[page.route.id ?? ""] ?? "knowledge");
+  const space = $derived(SPACES[page.route.id ?? ""] ?? "library");
   const review = $derived(store.loaded ? reviewCount() : 0);
   const setForYou = $derived(store.loaded ? setCount() : 0);
-  const showProcedures = $derived(procedures().length > 0 || tab === "procedures");
+  const mode = $derived(projectMode());
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
   let drawer = $state(false);
+  let you = $state(false);
   let fullscreen = $state(false);
   const canFullscreen = typeof document !== "undefined" && document.fullscreenEnabled && !matchMedia("(display-mode: fullscreen)").matches;
 
-  afterNavigate(() => { drawer = false; });
+  afterNavigate(() => { drawer = false; you = false; });
   // The drawer's styles hang off the body (the page behind it dims).
   $effect(() => { document.body.classList.toggle("drawer-open", drawer); });
   $effect(() => store.watch()); // live updates, stopped if the shell ever goes away
-
-  // highlight.js's stylesheet follows the mode, or the system when it is "system".
-  const codeMedia = $derived({
-    light: settings.mode === "system" ? "(prefers-color-scheme: light)" : settings.mode === "light" ? "all" : "not all",
-    dark: settings.mode === "system" ? "(prefers-color-scheme: dark)" : settings.mode === "dark" ? "all" : "not all",
-  });
+  $effect(() => { if (!store.site.static && !teacher.loaded) void teacher.load(); });
 
   function toggleFullscreen() {
     if (document.fullscreenElement) void document.exitFullscreen();
     else document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
   }
+  const LIVE: Record<string, string> = { live: "Live: the page refreshes when files change", offline: "Offline: showing what was last loaded", static: "An exported snapshot", signin: "The server asks you to sign in again" };
 </script>
 
-<svelte:head>
-  <link rel="stylesheet" href={githubLight} media={codeMedia.light} />
-  <link rel="stylesheet" href={githubDark} media={codeMedia.dark} />
-</svelte:head>
-
-<svelte:window onkeydown={(e) => { if (e.key === "Escape") drawer = false; }} />
+<svelte:window onkeydown={(e) => { if (e.key === "Escape") { drawer = false; you = false; } }} />
 <svelte:document onfullscreenchange={() => (fullscreen = Boolean(document.fullscreenElement))} />
 
-<header class="bar">
-  <button class="menu" type="button" aria-label="Show contents" aria-expanded={drawer} hidden={tab !== "knowledge"} onclick={() => (drawer = !drawer)}>
+<header class="bar" data-live={store.live}>
+  <button class="menu" type="button" aria-label="Show contents" aria-expanded={drawer} hidden={space !== "library"} onclick={() => (drawer = !drawer)}>
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
   </button>
-  <a class="brand" href="#/">{store.site.title || "rdstudio"}</a>
-  <nav class="tabs" aria-label="Sections">
+  <a class="brand" href="#/">rdstudio</a>
+  <span class="project-name" title={store.site.title}>{store.site.title}</span>
+  {#if mode}<span class="mode-tag" title={mode === "Learning" ? "A learning project: the learning layer leads" : "A project: its upkeep leads, the learning layer sits on top"}>{mode}</span>{/if}
+  <nav class="tabs" aria-label="Spaces">
     {#snippet link(id: string, href: string, label: string, count?: number)}
-      <a {href} data-tab={id} aria-current={tab === id ? "page" : undefined}>{label}{#if count}<span class="count"> {count}</span>{/if}</a>
+      <a {href} data-tab={id} aria-current={space === id ? "page" : undefined}>{label}{#if count}<span class="count"> {count}</span>{/if}</a>
     {/snippet}
-    {@render link("knowledge", "#/", "Knowledge")}
-    {@render link("map", "#/map", "Map")}
-    {@render link("graph", "#/graph", "Graph")}
-    {@render link("learn", "#/learn", "Learn", setForYou)}
-    {@render link("changes", "#/changes", "Changes")}
-    {@render link("review", "#/review", "Review", review)}
-    {@render link("reports", "#/reports", "Reports", store.reports.length)}
-    {#if showProcedures}{@render link("procedures", "#/procedures", "Procedures")}{/if}
-    {@render link("skills", "#/skills", "Skills & agents")}
+    {@render link("today", "#/", "Today", setForYou)}
+    {@render link("library", "#/library", "Library")}
+    {@render link("atlas", "#/map", "Atlas")}
+    {@render link("practice", "#/practice", "Practice")}
   </nav>
-  {#if store.live === "signin"}
-    <!-- The server (a dev tunnel, a proxy) wants you to sign in again: a page
-         load with ?signin goes past the offline copy to the sign-in page. -->
-    <a class="live offline signin" href="./?signin" data-sveltekit-reload title="The server asks you to sign in again; until then this page cannot update or save">Sign in</a>
-  {:else if store.live !== "static"}
-    <span class={["live", store.live === "offline" && "offline"]} title="The page refreshes when files change">{store.live === "offline" ? "Offline" : "Live"}</span>
-  {/if}
-  {#if canFullscreen}
-    <button class="fullscreen" type="button" aria-label="Full screen" aria-pressed={fullscreen} title="Full screen" onclick={toggleFullscreen}>
-      <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" /></svg>
+  <span class="bar-end">
+    {#if store.live === "signin"}
+      <!-- The server (a dev tunnel, a proxy) wants you to sign in again: a page
+           load with ?signin goes past the offline copy to the sign-in page. -->
+      <a class="live offline signin" href="./?signin" data-sveltekit-reload title="The server asks you to sign in again; until then this page cannot update or save">Sign in</a>
+    {:else if store.live === "offline"}
+      <span class="live offline" title={LIVE.offline}>Offline</span>
+    {/if}
+    <a class="quiet-link" href="#/project" data-tab="project" aria-current={space === "project" ? "page" : undefined}>Project{#if review}<span class="count"> {review}</span>{/if}</a>
+    <button class="palette-box" type="button" onclick={() => (palette.open = true)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}>
+      <span class="palette-text">Jump to a note or action</span><kbd>{mac ? "⌘K" : "Ctrl K"}</kbd>
     </button>
-  {/if}
-  <a class="settings-link" href="#/settings" data-tab="settings" aria-label="Settings" aria-current={tab === "settings" ? "page" : undefined}>
-    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" /><circle cx="10" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
-    <span>Settings</span>
-  </a>
+    <span class="you">
+      <button class="you-button" type="button" aria-haspopup="menu" aria-expanded={you} aria-current={space === "you" ? "page" : undefined} onclick={() => (you = !you)}>You <span aria-hidden="true">▾</span></button>
+      {#if you}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Escape closes it too) -->
+        <div class="you-scrim" onclick={() => (you = false)}></div>
+        <div class="you-menu" role="menu" aria-label="You">
+          <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, reports, procedures, skills</span></a>
+          <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
+          <a role="menuitem" href="#/settings">Settings</a>
+          <div class="you-row" role="group" aria-label="Light or dark">
+            {#each MODES as [id, label] (id)}
+              <button type="button" role="menuitemradio" aria-checked={settings.mode === id} onclick={() => settings.setMode(id)}>{label}</button>
+            {/each}
+          </div>
+          {#if canFullscreen}<button role="menuitem" type="button" onclick={() => { you = false; toggleFullscreen(); }}>{fullscreen ? "Leave full screen" : "Full screen"}</button>{/if}
+          <p class="you-status">{LIVE[store.live] ?? ""}{#if !store.site.static} · learner record {learner.enabled ? "on" : "off"}{/if}</p>
+        </div>
+      {/if}
+    </span>
+  </span>
 </header>
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Escape closes it too) -->
 <div class="scrim" onclick={() => (drawer = false)}></div>
@@ -99,3 +111,4 @@
   {@render children()}
 </main>
 {#if editing.enabled}<ActionDialogs />{/if}
+<CommandPalette />

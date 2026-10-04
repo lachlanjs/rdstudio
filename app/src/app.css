@@ -495,30 +495,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 
 /* ------------------------------------------------------------ settings */
 
-.settings-link {
-  display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 4px 0 10px;
-  color: var(--ink-soft); text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px;
-}
-.settings-link:hover { color: var(--ink); }
-.settings-link[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
-.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 8px 0 12px; }
-.theme-card {
-  display: grid; gap: 6px; text-align: left; cursor: pointer; padding: 14px 16px;
-  background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); color: var(--ink);
-}
-.theme-card:hover { border-color: var(--ink-faint); }
-.theme-card[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.theme-name { font-size: 17px; font-weight: 700; }
-.theme-sample { font-size: 16px; line-height: 1.4; }
-.theme-note { font-size: 13.5px; color: var(--ink-soft); }
-.theme-swatches { display: flex; gap: 12px; margin-top: 4px; }
-.swatches { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
-.swatches i { width: 18px; height: 18px; display: block; }
-@media (max-width: 760px) {
-  .settings-link span { display: none; }
-  .settings-link { height: 48px; }
-}
-
 /* A fixed page texture is cheap with a mouse but repaints on every scroll on phones. */
 @media (hover: hover) and (pointer: fine) {
   body { background-attachment: fixed; }
@@ -1083,3 +1059,70 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .hljs-string, .hljs-number, .hljs-literal, .hljs-regexp, .hljs-symbol, .hljs-attr, .hljs-attribute { color: var(--syntax-literal); }
 .hljs-comment, .hljs-quote { color: var(--text-soft); font-style: italic; }
 .hljs-title, .hljs-section { font-weight: 700; }
+
+/* ------------------------------------------------------------ the shell (T53) */
+
+.bar { gap: 0; }
+.bar .brand { margin-right: 18px; }
+.project-name { font: 13px/1 var(--font-ui); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
+.mode-tag { font: 12px/1 var(--font-ui); color: var(--text-soft); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); padding: 3px 6px; margin-left: 8px; white-space: nowrap; }
+.bar .tabs { margin-left: 28px; }
+.bar .tabs a { font: 13px/1 var(--font-ui); padding: 0 14px; }
+.bar-end { margin-left: auto; display: flex; align-items: center; gap: 18px; height: 100%; }
+.quiet-link { display: inline-flex; align-items: center; height: 100%; font: 13px/1 var(--font-ui); color: var(--text-soft); text-decoration: none; border-bottom: 2px solid transparent; }
+.quiet-link:hover { color: var(--text); }
+.quiet-link[aria-current="page"] { color: var(--text); border-bottom-color: var(--text); font-weight: 700; }
+.palette-box {
+  display: inline-flex; align-items: center; gap: 24px; padding: 6px 10px; cursor: pointer;
+  font: 13px/1 var(--font-ui); color: var(--text-soft); background: transparent; border: 1px solid var(--rule-strong); border-radius: var(--radius-md);
+}
+.palette-box:hover { color: var(--text); background: var(--surface-2); }
+.palette-box kbd, .pal-keys kbd { font: 12px/1 var(--font-ui); color: var(--text-faint); }
+.you { position: relative; }
+.you-button { border: 0; background: none; padding: 6px 2px; font: 13px/1 var(--font-ui); color: var(--text-soft); cursor: pointer; }
+.you-button:hover, .you-button[aria-current="page"], .you-button[aria-expanded="true"] { color: var(--text); }
+.you-scrim { position: fixed; inset: 0; z-index: 40; }
+.you-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 41; min-width: 280px; padding: 6px;
+  background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: var(--radius-lg);
+}
+.you-menu > a, .you-menu > button { display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; background: none; border-radius: var(--radius-md); color: var(--text); text-decoration: none; font: 13px/1.4 var(--font-ui); cursor: pointer; }
+.you-menu > a span { display: block; color: var(--text-faint); font-size: 12px; }
+.you-menu > a:hover, .you-menu > button:hover { background: var(--surface-3); }
+.you-row { display: flex; gap: 4px; padding: 6px 10px; }
+.you-row button { flex: 1; padding: 5px 0; font: 12px/1 var(--font-ui); color: var(--text-soft); background: none; border: 1px solid var(--rule); border-radius: var(--radius-sm); cursor: pointer; }
+.you-row button[aria-checked="true"] { color: var(--text); border-color: var(--text-soft); background: var(--surface-3); }
+.you-status { margin: 6px 10px 4px; padding-top: 8px; border-top: 1px solid var(--rule); font: 12px/1.4 var(--font-ui); color: var(--text-faint); }
+.bar .live { margin-left: 0; }
+
+/* The command palette */
+.palette-scrim { position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.palette {
+  position: fixed; z-index: 61; top: 12vh; left: 50%; transform: translateX(-50%); width: min(640px, calc(100vw - 32px));
+  background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: var(--radius-lg); overflow: hidden;
+}
+.palette input { width: 100%; box-sizing: border-box; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--text); font: 15px/1.4 var(--font-ui); outline: none; }
+.palette ul { list-style: none; margin: 0; padding: 6px; max-height: min(420px, 55vh); overflow: auto; }
+.palette li { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 8px 10px; border-radius: var(--radius-md); cursor: pointer; }
+.palette li.active { background: var(--surface-3); }
+.pal-label { font: 15px/1.35 var(--font-text); color: var(--text); }
+.palette li.action .pal-label { font: 13px/1.35 var(--font-ui); }
+.pal-detail { font: 12px/1.35 var(--font-ui); color: var(--text-faint); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pal-none { color: var(--text-faint); font-style: italic; cursor: default; }
+.pal-keys { margin: 0; padding: 8px 16px; border-top: 1px solid var(--rule); font: 12px var(--font-ui); color: var(--text-faint); }
+
+@media (max-width: 1100px) {
+  .palette-text { display: none; }
+  .palette-box { gap: 0; }
+  .project-name { max-width: 16ch; }
+}
+@media (max-width: 760px) {
+  .bar .brand { margin-right: 10px; height: 48px; flex: none; }
+  .project-name { flex: 1; min-width: 0; max-width: none; }
+  .mode-tag { display: none; }
+  .bar .tabs { margin-left: -12px; }
+  .bar-end { gap: 12px; height: 48px; }
+  .quiet-link { display: none; }
+}
+/* Project sits in the bar on wider screens, and in the You menu on a phone. */
+@media (min-width: 761px) { .you-menu .you-project { display: none; } }
