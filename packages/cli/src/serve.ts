@@ -64,6 +64,7 @@ const State = z.object({
   token: z.string().nullable().openapi({ description: "Send as X-Rdstudio-Token when writing." }),
   dir: z.string().nullable(),
   events: z.array(Event),
+  weekDays: z.number().int().openapi({ description: "Days a week must count for a weekly streak ([learner] week_days, default 4)." }),
 }).openapi("LearnerState");
 
 const getLearner = createRoute({
@@ -335,7 +336,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   app.openapi(getLearner, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     const on = learner.enabled(cfg);
-    return json(c, 200, { enabled: on, token: on ? token : null, dir: on ? learner.recordDir(cfg) : null, events: on ? learner.events(cfg) : [] });
+    return json(c, 200, { enabled: on, token: on ? token : null, dir: on ? learner.recordDir(cfg) : null, events: on ? learner.events(cfg) : [], weekDays: learner.weekDays() });
   }) as never);
 
   // A refused body is never read, so that connection is not reused.

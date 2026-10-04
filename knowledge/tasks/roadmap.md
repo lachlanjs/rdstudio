@@ -97,7 +97,7 @@ as it runs in a repository of its own.
 
 See [work together](/design/tutor.md) and [streaks](/design/streaks.md).
 
-- [ ] [T48 Streaks](/tasks/T48-streaks.md)
+- [x] [T48 Streaks](/tasks/T48-streaks.md)
 - [ ] [T49 Drafts and history](/tasks/T49-drafts-and-history.md)
 - [ ] [T50 The server-side teacher](/tasks/T50-teacher-service.md)
 - [ ] [T51 Work together](/tasks/T51-work-together.md)

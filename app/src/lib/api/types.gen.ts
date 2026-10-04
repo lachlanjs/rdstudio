@@ -12,6 +12,10 @@ export type LearnerState = {
     token: string | null;
     dir: string | null;
     events: Array<LearnerEvent>;
+    /**
+     * Days a week must count for a weekly streak ([learner] week_days, default 4).
+     */
+    weekDays: number;
 };
 
 /**

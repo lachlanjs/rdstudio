@@ -16,6 +16,12 @@ export function settings(): Table {
   return typeof s === "object" && s !== null ? (s as Table) : {};
 }
 
+/** Days a week must count for a weekly streak: [learner] week_days, 1 to 7, default 4. */
+export function weekDays(): number {
+  const n = settings().week_days;
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 7 ? n : 4;
+}
+
 export function enabled(cfg: Config): boolean {
   return Boolean(settings().enabled) && cfg.isProject;
 }

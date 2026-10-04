@@ -30,13 +30,18 @@
             "items": {
               "$ref": "#/components/schemas/LearnerEvent"
             }
+          },
+          "weekDays": {
+            "type": "integer",
+            "description": "Days a week must count for a weekly streak ([learner] week_days, default 4)."
           }
         },
         "required": [
           "enabled",
           "token",
           "dir",
-          "events"
+          "events",
+          "weekDays"
         ]
       },
       "LearnerEvent": {

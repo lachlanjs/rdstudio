@@ -396,6 +396,19 @@ with sync_playwright() as pw:
     state = json.loads(mcp(("learner_state", {}))[0])
     check("the agent sees the set is done", "set_for_developer" not in state, state.get("set_for_developer"))
 
+    # ------------------------------------------------------------ streaks (T48)
+    p.goto(URL + "?nosw&streaks#/learn")
+    tiles = p.locator(".streak")
+    tiles.first.wait_for()
+    texts = tiles.all_inner_texts()
+    check("streaks show at the top of the Learn tab: all three, recall, new learning, problem solving",
+          len(texts) == 4 and texts[0].startswith("All three") and texts[3].startswith("Problem solving"), texts)
+    check("today's exercises, new notes and an empty review queue keep all three going",
+          all("1 day" in t and ("Done today" in t or "Nothing due today" in t) for t in texts), texts)
+    p.locator(".streak-more-info summary").click()
+    check("the calendar marks today", p.locator(".cal-day.cal-today.cal-done").count() == 1)
+    p.screenshot(path=str(OUT / "teacher-streaks.png"))
+
     # ------------------------------------------------------------ working sent for review
     def events_named(kind):
         return attempts(kind)
