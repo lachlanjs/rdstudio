@@ -157,3 +157,35 @@ written to the task, as they are met.
     that notes and exercises rely on.
 - **Expect** a long run of refinements like these to the teaching skills.
   This log is where they are recorded, each with its reason.
+
+## 2026-10-04: working behind a checked answer
+
+- **The developer's idea:** choice and value exercises should also take
+  written working. Ticking "have my working reviewed" always sends it for
+  review. After a wrong answer, sending the working is offered again, so a
+  small mistake can earn partial credit and the teacher can find where it
+  went wrong.
+- **Built:**
+  - **The exercise view:** a folded "Show your working" box (Markdown and
+    maths, with a preview) and the tick box. After a wrong answer, an offer
+    to send the working, which reuses anything already written.
+  - **Reviewing:** a waiting review can be done by yourself ("Review your
+    working yourself", with the working beside the solution) or by an agent.
+    Your attempts show the working, and what the check found when a review
+    changed it.
+  - **Events:** an attempt carries `working` and `review`, or a later
+    `review_requested` adds them. The review's `attempt_marked` replaces the
+    check, so a marked attempt counts once, as marked.
+  - **Results:** a slip in a sound method is raised to partly. A right
+    answer without a sound argument is lowered to partly, and the note is no
+    longer understood on its strength.
+  - **MCP:** `exercise_pending` lists reviews with `checked` and `working`;
+    `exercise_mark` marks them; `exercise_record` takes working.
+  - **The `exercise` skill** gains "Reviewing working": find the first wrong
+    step, tell a slip from a misunderstanding, mark the whole, and name the
+    misunderstood idea in `gaps`.
+  - **Checked:** core tests (raising and lowering, requests after the fact,
+    working kept without review), MCP tests, and `e2e/teacher.py`
+    (7 more checks, 60 in all).
+- **Later:** photos of working on paper, with the phone app and the home
+  server.

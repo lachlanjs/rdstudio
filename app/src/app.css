@@ -986,3 +986,12 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 /* Exercises and goal panels sit in the reading column, like the prose. */
 .exercise, .goal-panel { max-width: var(--measure); }
 .exercise-value .section-note { max-width: none; }
+.exercise-working { margin: 14px 0 0; }
+.exercise-working > summary { cursor: pointer; color: var(--ink-soft); font-size: 14.5px; margin-bottom: 8px; }
+.exercise-review { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+.exercise-review input { accent-color: var(--accent); }
+.exercise-offer { margin: 10px 0 6px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--paper); }
+.exercise-offer p { margin: 0 0 8px; font-size: 14.5px; }
+.exercise-offer .toggle { margin-top: 10px; }
+.exercise-sub { font: 700 15px/1.3 var(--font-ui); margin: 14px 0 6px; }
+.attempt-working > summary { cursor: pointer; color: var(--ink-faint); font-size: 13.5px; }

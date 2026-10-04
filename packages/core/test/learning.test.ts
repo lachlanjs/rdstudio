@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, parseNumber, refId, refIds, requiresClosure,
+  answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, loadNote, needsMarking, parseNumber, refId, refIds, requiresClosure,
   reviewSchedule, splitSolution, studyLoad, tourBody, tourStops, type AnswerSpec, type LearnerEvent,
 } from "../src/index.ts";
 
@@ -173,7 +173,8 @@ test("an attempt is evidence for every note it tests, settled there and then or 
   expect(studyLoad(marked, Date.parse(t(3)) + 1000, day).today).toBe(0);
 
   const tried = attempts(marked);
-  expect(tried.get("ex/two")).toEqual([{ id: "2", exercise: "ex/two", at: t(2), answer: "Because…", result: "got", by: "agent/x", feedback: "Right.", gaps: [], gaveUp: false }]);
+  expect(tried.get("ex/two")).toEqual([{ id: "2", exercise: "ex/two", at: t(2), answer: "Because…", result: "got", by: "agent/x", feedback: "Right.", gaps: [], gaveUp: false,
+    working: "", review: false, checked: null, marked: true }]);
   expect(exerciseStatus(tried.get("ex/one"))).toBe("passed");
   expect(exerciseStatus(attempts(events).get("ex/two"))).toBe("waiting");
   expect(exerciseStatus(undefined)).toBe("untried");
@@ -218,4 +219,37 @@ test("exercises set by an agent: done when each is attempted since, or put aside
   ]);
   const more = [...events, { id: "5", event: "attempt", exercise: "x/a", tests: [], result: "missed", by: "self", at: t(6) }, { id: "6", event: "assigned_closed", ref: "3", at: t(7) }];
   expect(assignments(more).map((a) => [a.id, a.closed, a.done])).toEqual([["3", true, []], ["1", true, ["x/a", "x/b"]]]);
+});
+
+test("working behind a checked answer: sent for review, it replaces the check, up or down", () => {
+  const notes = [{ id: "a", hash: "h" }];
+  const t = (h: number) => `2026-10-03T${String(h).padStart(2, "0")}:00:00.000Z`;
+  // A right answer, working sent with it: counts as checked until reviewed.
+  const lucky = [{ id: "1", event: "attempt", exercise: "ex", tests: ["a"], answer: "4", result: "got", by: "dashboard", working: "Guessed.", review: true, at: t(1) }];
+  let a = attempts(lucky).get("ex")![0]!;
+  expect(a).toMatchObject({ result: "got", checked: "got", working: "Guessed.", review: true, marked: false });
+  expect(needsMarking(a)).toBe(true);
+  expect(discoveryStates(lucky, notes).get("a")!.state).toBe("understood");
+  // The review finds a lucky guess: lowered, and no longer evidence of understanding.
+  const reviewed = [...lucky, { id: "2", event: "attempt_marked", ref: "1", result: "partly", feedback: "Right number, no argument.", by: "agent/x", at: t(2) }];
+  a = attempts(reviewed).get("ex")![0]!;
+  expect(a).toMatchObject({ result: "partly", checked: "got", by: "agent/x", marked: true });
+  expect(needsMarking(a)).toBe(false);
+  expect(exerciseStatus([a])).toBe("partly");
+  expect(discoveryStates(reviewed, notes).get("a")!.state).toBe("discovered");
+  expect(reviewSchedule(reviewed, notes).get("a")).toMatchObject({ box: 0, last: t(2) });
+
+  // A wrong answer, working sent afterwards: a slip, raised to partly.
+  const slip = [{ id: "3", event: "attempt", exercise: "ex", tests: ["a"], answer: "5", result: "missed", by: "dashboard", at: t(3) },
+    { id: "4", event: "review_requested", ref: "3", working: "Var = 4·100/100 = 5 (added wrong).", at: t(4) }];
+  a = attempts(slip).get("ex")![0]!;
+  expect(a).toMatchObject({ result: "missed", review: true, working: "Var = 4·100/100 = 5 (added wrong)." });
+  expect(needsMarking(a)).toBe(true);
+  const raised = attempts([...slip, { id: "5", event: "attempt_marked", ref: "3", result: "partly", feedback: "Sound method; an arithmetic slip.", by: "self", at: t(5) }]).get("ex")![0]!;
+  expect(raised).toMatchObject({ result: "partly", checked: "missed", by: "self" });
+  // A request with no working, or after marking, changes nothing.
+  expect(attempts([slip[0]!, { id: "6", event: "review_requested", ref: "3", working: " ", at: t(6) }]).get("ex")![0]!.review).toBe(false);
+  // Working without asking for review is kept, but nothing waits.
+  const kept = attempts([{ id: "7", event: "attempt", exercise: "ex", tests: [], answer: "4", result: "got", by: "dashboard", working: "4·100/100", at: t(7) }]).get("ex")![0]!;
+  expect([kept.working, kept.review, needsMarking(kept)]).toEqual(["4·100/100", false, false]);
 });

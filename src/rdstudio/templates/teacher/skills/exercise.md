@@ -114,6 +114,29 @@ in the conversation is recorded with `exercise_record` first.
 A different correct route is `got`. An answer that reaches the right result by
 a wrong argument is `partly` at best.
 
+## Reviewing working
+
+A choice or value answer can carry the developer's working, and they can send
+it for review: with the answer, or afterwards when the check said wrong.
+`exercise_pending` lists these with `review: "working"`, what the check found
+(`checked`) and the `working`. Your marking replaces the check.
+
+1. Follow the working step by step against the solution, and find the first
+   step that goes wrong, if any.
+2. Say which kind of error it is: a **slip** (arithmetic, a dropped sign, a
+   misread number, in a sound method) or a **misunderstanding** (a wrong
+   rule, a missing idea, a step that does not follow). The difference is the
+   point of reviewing working.
+3. Mark the whole:
+   - right answer, sound working: `got`;
+   - a slip in a sound method: `partly`, even though the check said wrong;
+   - right answer without a sound argument (a guess, a lucky cancellation):
+     `partly`, even though the check said right;
+   - a misunderstanding: `missed`, with feedback naming the step and the
+     idea it needed.
+4. In `gaps`, name the idea behind a misunderstanding, not the slip. The
+   profile tracks misunderstandings; slips matter only if they recur.
+
 ## By profile
 
 - **topic:** derivations and calculations above all; one conceptual

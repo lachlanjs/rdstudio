@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  LearnerError, ProcedureError, answerSpec, assignments, attempts, goalProgress, isStudyNote, refIds, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
+  LearnerError, ProcedureError, answerSpec, assignments, attempts, goalProgress, isStudyNote, needsMarking, refIds, RESULTS, SearchIndex, cmp, contentHash, coverage, describe, discoveryStates, dueReviews, reviewSchedule, floatRepr, frontmatterText, graphOf, headings, isProcedure, pyRepr, round3, section,
   text, type Bundle,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
@@ -314,7 +314,7 @@ questions. Never quote it to anyone else.`, { id: opt(z.string()) }, ({ id }) =>
       const p = goalProgress(requiresOf(b, g.id), (id) => requiresOf(b, id), exercisesOf(b).filter((e) => e.goals.includes(g.id)).map((e) => e.id), states, tried);
       return { id: g.id, title: g.title, met: p.met, exercises: Object.fromEntries(p.exercises.map((e) => [e.id, e.status])), notes: p.coverage };
     });
-    const exerciseWaiting = [...tried.values()].flat().filter((a) => a.result === null).length;
+    const exerciseWaiting = [...tried.values()].flat().filter(needsMarking).length;
     const open = assignments(events, tried).filter((a) => !a.closed)
       .map((a) => ({ ref: a.id, note: a.note, at: a.at, to_do: a.exercises.filter((x) => !a.done.includes(x)), done: a.done }));
     return fmt({ by_folder: byFolder, due: due.map((r) => r.id), more_due: more, explain_waiting: unmarked(events).length,
@@ -378,13 +378,14 @@ mistaken points, briefly. A "got" counts as evidence the note is understood.`, {
     return fmt({ marked: ref, result, event: e.id });
   });
 
-  tool("exercise_pending", `Answers to Exercise notes that wait for marking (the developer chose an agent
-over marking it themselves): each with its ref, the exercise, the notes it
-tests and the answer. Read the exercise (its Solution section) and the notes
-before marking with exercise_mark.`, { limit: z.number().int().default(10) }, ({ limit }) => {
+  tool("exercise_pending", `Answers to Exercise notes that wait for marking: written answers the developer
+left for an agent, and answers checked in the dashboard whose working they
+sent for review (\`checked\` says what the check found; \`working\` is theirs).
+Each has its ref, the exercise and the notes it tests. Read the exercise (its
+Solution section) and the notes before marking with exercise_mark.`, { limit: z.number().int().default(10) }, ({ limit }) => {
     if (!learner.enabled(cfg)) return LEARNER_OFF;
     const b = bundle();
-    const waiting = [...attempts(learner.events(cfg)).values()].flat().filter((a) => a.result === null)
+    const waiting = [...attempts(learner.events(cfg)).values()].flat().filter(needsMarking)
       .sort((x, y) => cmp(x.at, y.at)).slice(0, Math.max(1, Math.min(limit, 50)));
     if (!waiting.length) return "No exercise answers are waiting.";
     const raw = new Map(learner.events(cfg).filter((e) => e.event === "attempt").map((e) => [e.id, e]));
@@ -392,14 +393,16 @@ before marking with exercise_mark.`, { limit: z.number().int().default(10) }, ({
       const e = raw.get(a.id)!;
       const tests = Array.isArray(e.tests) ? (e.tests as string[]) : [];
       const hashes = (e.hashes ?? {}) as Record<string, string>;
-      return { ref: a.id, exercise: a.exercise, title: b.concepts.get(a.exercise)?.title ?? null, tests, answer: a.answer, at: a.at,
+      return { ref: a.id, exercise: a.exercise, title: b.concepts.get(a.exercise)?.title ?? null, tests, answer: a.answer,
+        ...(a.working ? { working: a.working } : {}), ...(a.result !== null ? { review: "working", checked: a.checked ?? a.result } : {}), at: a.at,
         notes_changed_since: tests.filter((t) => b.concepts.has(t) && hashes[t] !== contentHash(b.concepts.get(t)!.body)) };
     }));
   });
 
   tool("exercise_record", `Record the developer's answer to an Exercise note given in this conversation
 (their words or working, unedited), so it can be marked with exercise_mark.
-Returns its ref. For a choice or value exercise, mark it straight after.`, { id: z.string(), answer: z.string() }, ({ id, answer }) => {
+Returns its ref. For a choice or value exercise, mark it straight after.
+\`working\`: the steps they showed, if any.`, { id: z.string(), answer: z.string(), working: opt(z.string()) }, ({ id, answer, working }) => {
     if (!learner.enabled(cfg)) return LEARNER_OFF;
     const b = bundle(), cid = b.resolveId(id);
     if (cid === null) return `No concept ${pyRepr(id)}.`;
@@ -407,7 +410,7 @@ Returns its ref. For a choice or value exercise, mark it straight after.`, { id:
     if (!answer.trim()) return "An answer is needed.";
     const ex = exercisesOf(b).find((e) => e.id === cid)!;
     const e = learner.append(cfg, { event: "attempt", exercise: cid, tests: ex.tests,
-      hashes: Object.fromEntries(ex.tests.map((t) => [t, contentHash(b.concepts.get(t)!.body)])), answer: answer.trim(), kind: "ai", via: "harness" });
+      hashes: Object.fromEntries(ex.tests.map((t) => [t, contentHash(b.concepts.get(t)!.body)])), answer: answer.trim(), ...(working?.trim() ? { working: working.trim() } : {}), kind: "ai", via: "harness" });
     return fmt({ ref: e.id, exercise: cid, tests: ex.tests });
   });
 
@@ -438,7 +441,11 @@ exercise_record) against its Solution section and the notes it tests: result
 that matters) or "missed". feedback: two to four sentences to the developer,
 naming what was right and what was missing or wrong, and why it matters,
 without writing the solution out for them again. gaps: the missing or
-mistaken points, briefly. A "got" counts as evidence for every note it tests.`, {
+mistaken points, briefly. A "got" counts as evidence for every note it tests.
+For working sent for review, mark the whole: a slip in a sound method is
+"partly" even though the checked answer was wrong; a right answer without a
+sound argument is "partly" even though the check passed. Your marking
+replaces the check.`, {
     ref: z.string(), result: z.enum(RESULTS), feedback: z.string(), gaps: opt(z.array(z.string())), actor: opt(z.string()),
   }, ({ ref, result, feedback, gaps, actor }) => {
     if (!learner.enabled(cfg)) return LEARNER_OFF;
@@ -446,7 +453,7 @@ mistaken points, briefly. A "got" counts as evidence for every note it tests.`, 
     const answer = events.find((e) => e.id === ref && e.event === "attempt");
     if (!answer) return `No exercise answer ${pyRepr(ref)}.`;
     const settled = [...attempts(events).values()].flat().find((a) => a.id === ref);
-    if (settled?.result) return `${ref} is already marked (${settled.result}, ${settled.by}).`;
+    if (settled && !needsMarking(settled)) return `${ref} is already marked (${settled.result}, ${settled.by}).`;
     if (!feedback.trim()) return "Feedback is needed: what was right, and what was missing.";
     const e = learner.append(cfg, { event: "attempt_marked", ref, exercise: answer.exercise, result, feedback: feedback.trim(),
       ...(gaps?.length ? { gaps } : {}), kind: "ai", by: actor || cfg.agent });
