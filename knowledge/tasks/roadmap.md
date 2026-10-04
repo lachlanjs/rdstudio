@@ -112,9 +112,10 @@ See the [redesign](/design/redesign.md) and the brand book in
 - [x] [T54 Today](/tasks/T54-today.md)
 - [x] [T55 The workbench](/tasks/T55-workbench.md)
 - [x] [T56 Library](/tasks/T56-library.md)
-- [ ] [T57 The Atlas](/tasks/T57-atlas.md)
+- [x] [T57 The Atlas](/tasks/T57-atlas.md)
 - [ ] [T58 Phone layouts](/tasks/T58-phone.md)
 - [ ] [T59 Project mode](/tasks/T59-project-mode.md)
+- [ ] [T60 The Atlas: contour folders and downhill routes](/tasks/T60-atlas-contours.md)
 
 # Future
 

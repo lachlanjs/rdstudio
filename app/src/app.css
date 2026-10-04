@@ -270,8 +270,8 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-.graph-wrap svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
-.graph-wrap svg:active { cursor: grabbing; }
+.graph-wrap > svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.graph-wrap > svg:active { cursor: grabbing; }
 .g-link { stroke: var(--ink-soft); stroke-opacity: .55; stroke-width: 1.2; fill: none; }
 .g-tree { stroke: var(--ink-faint); stroke-opacity: .5; stroke-width: 1; stroke-dasharray: 3 3; }
 .g-node { cursor: pointer; }
@@ -317,49 +317,96 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 
 /* ----------------------------------------------------------------- map */
 
-/* Themes restyle the map through these tokens (all optional): --map-canvas,
-   --map-image, --map-size, --region-open-alpha, --region-closed-alpha,
-   --region-dash, --place-fill, --route-from, --route-to, --route-both,
-   --territory-font and friends. No filters (glows, blurs, wobble): the map is
-   repainted on every zoom step, and filters made that 25 to 80 times slower
-   (bench/, T31). Effects are fills, strokes, dashes and opacity. */
-.map-wrap { background-color: var(--map-canvas, var(--paper)); background-image: var(--map-image, none); background-size: var(--map-size, auto); }
+/* The Atlas (T57, design/project/README.md "The Atlas"). Labels are Martian
+   Mono, narrowed. Folders are land with a dashed wall; closed ones are solid
+   discs. Routes are neutral lines (structure, not meaning); a selected note's
+   links are the blue pen, dotted. Reached ground is clear and the rest is a
+   dot stipple of fog; contours are steps of understanding and the frontier is
+   hachured on the side facing the fog. No filters (glows, blurs, wobble): the
+   map is repainted on every zoom step, and filters made that 25 to 80 times
+   slower (bench/, T31). Effects are fills, strokes, dashes and opacity. */
+.map-wrap { background: var(--surface); }
 .map-wrap .m-back { fill: transparent; }
-.m-dir { fill: var(--c); stroke: var(--c); cursor: zoom-in; transition: fill-opacity .2s, opacity .2s;
-  stroke-dasharray: var(--region-dash, none); }
-.m-dir.open { fill-opacity: var(--region-open-alpha, .035); stroke-opacity: .5; stroke-width: .8; }
-.m-dir.open.depth-1 { stroke-width: 1.5; stroke-opacity: .6; }
-.m-dir.closed { fill-opacity: var(--region-closed-alpha, .11); stroke-opacity: .55; stroke-width: 1; }
-.m-dir.closed:hover { fill-opacity: calc(var(--region-closed-alpha, .11) + .09); }
+.m-landfill { fill: var(--surface-1); }
+.m-dir { fill: none; stroke: var(--rule-strong); stroke-width: 1; cursor: zoom-in; transition: opacity .2s; }
+.m-dir.open.depth-1 { stroke-dasharray: 7 5; }
+.m-dir.open:not(.depth-1) { stroke-dasharray: 2 4; }
+.m-dir.closed { fill: var(--surface-2); fill-opacity: .92; stroke-width: 1.25; }
+.m-dir.closed:hover { fill: var(--surface-3); }
+.fogdot { fill: var(--text-soft); opacity: .5; }
+.a-fog { fill: url(#m-fogdots); fill-rule: evenodd; }
+.a-tint { fill: var(--text); fill-rule: evenodd; }
+.a-tint.t1, .a-tint.t2 { fill-opacity: .05; }
+.a-tint.t3 { fill-opacity: .06; }
+.a-contour { fill: none; stroke: var(--text-soft); stroke-width: 1; }
+.a-contour.c1 { opacity: .5; } .a-contour.c2 { opacity: .7; } .a-contour.c3 { opacity: .95; stroke-width: 1.5; }
+.a-front { fill: none; stroke: var(--text); stroke-width: 1.5; }
+.a-front.thin { stroke-width: 1; opacity: .8; }
+.a-hach { fill: none; stroke: var(--text); stroke-width: 1.25; }
+.m-terrain, .m-land { pointer-events: none; }
+/* Places: shape is the kind of note; fill and ring are where you stand. */
 .m-place { cursor: pointer; transition: opacity .2s; }
-.m-place .mark { fill: var(--place-fill, var(--c)); stroke: var(--paper); stroke-width: 1.5; }
-.m-place.ring .mark { fill: var(--paper); stroke: var(--place-fill, var(--c)); stroke-width: 2; }
-.m-place .ring { fill: none; stroke: var(--ink); stroke-width: 1.4; }
-.m-place.landmark .mark { stroke: var(--ink); stroke-width: 1.4; }
-.m-place:focus-visible { outline: none; }
-.m-place:focus-visible .mark { stroke: var(--accent); stroke-width: 3; }
-/* Route colour means direction only (set per route: a gradient from a note to
-   what it links to, or --route-both for links both ways). */
-.m-link { fill: none; stroke-opacity: var(--route-opacity, .55); stroke-linecap: round; transition: opacity .2s; }
-.m-link.s1 { stroke-opacity: .35; stroke-dasharray: 2 4; }
-.m-link.s3 { stroke-opacity: .75; }
+.m-place .mark { fill: var(--text-soft); stroke: none; }
+.m-place.st-undiscovered .mark { fill: var(--surface); stroke: var(--text-faint); stroke-width: 1.25; }
+.m-place.st-discovered .mark { fill: var(--surface); stroke: var(--text); stroke-width: 1.75; }
+.m-place.st-processed .mark, .m-place.st-understood .mark { fill: var(--text); }
+.m-place .bar { fill: none; stroke: var(--text-faint); stroke-width: 1.25; }
+.m-place.st-processed .bar, .m-place.st-understood .bar { stroke: var(--surface); }
+.m-place .ring-a, .m-place .ring-b { fill: none; stroke: var(--pen-green); stroke-width: 1.6; }
+.m-place.needs .ring-a { stroke: var(--pen-red); stroke-width: 2.2; }
+.m-place:focus { outline: none; }
+.m-place .sel { fill: none; stroke: var(--pen-blue); stroke-width: 1.75; stroke-dasharray: .1 4.6; stroke-linecap: round; }
+.m-place:focus-visible .sel { r: 13px; }
+/* Routes: neutral; wider with more links. */
+.m-link { fill: none; stroke: var(--text-soft); stroke-linecap: round; opacity: .9; transition: opacity .2s; }
+.m-link.quiet { opacity: .35; }
+.m-link.s1 { stroke-dasharray: 2 4; }
+.m-link.req, .m-link.dep, .m-link.trail { stroke: var(--pen-blue); opacity: 1; }
+.m-link.req { stroke-width: 3.2; stroke-dasharray: .1 7.5; }
+.m-link.dep { stroke-width: 1.9; stroke-dasharray: .1 4.2; }
+.m-link.trail { stroke-width: 3.2; stroke-dasharray: .1 7.5; }
+.m-key .m-link.req { stroke-width: 3; stroke-dasharray: .1 6; }
 svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
-svg.focusing .m-routes .m-link.hot { stroke-opacity: .95; stroke-dasharray: none; }
+svg.focusing .m-routes .m-link.hot { opacity: 1; stroke: var(--text); }
 .m-routes.context .m-link { opacity: .22; }
 .m-routes.context .m-link.hot { opacity: 1; }
 svg.focusing .m-place:not(.related) { opacity: .3; }
 svg.focusing .m-text.place:not(.related) { opacity: .3; }
-.m-implied { fill: none; stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
-.m-labels { pointer-events: none; }
-.m-text, .m-arc {
-  font: 12px var(--font-ui); fill: var(--ink);
-  paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round;
+.m-implied { fill: none; stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
+.m-labels, .m-counts, .m-leader { pointer-events: none; }
+.m-text, .m-arc, .m-count {
+  font: 11px var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text);
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round;
 }
-.m-text.place { fill: var(--ink); font-family: var(--place-font, var(--font-ui)); font-size: var(--place-size, 12px); }
-.m-text.landmark { font-weight: 700; font-size: 12.5px; }
-.m-text.territory { font-family: var(--territory-font, var(--font-ui)); font-style: var(--territory-style, normal); font-size: var(--territory-size, 14px); font-weight: var(--territory-weight, 600); letter-spacing: var(--territory-spacing, .06em); fill: var(--territory-ink, var(--ink-soft)); }
-.m-text.territory .count { font-size: 11.5px; font-weight: 400; letter-spacing: 0; fill: var(--ink-faint); }
-.m-arc { font-family: var(--territory-font, var(--font-ui)); font-style: var(--territory-style, normal); font-size: var(--territory-size, 14px); font-weight: var(--territory-weight, 600); letter-spacing: var(--territory-spacing, .08em); fill: var(--territory-ink, var(--ink-soft)); }
+.m-text.place.landmark { font-weight: 700; }
+.m-text.territory { font-size: 12px; font-weight: 600; font-variation-settings: "wdth" 90; fill: var(--text-soft); }
+.m-text.territory .count, .m-arc .count { font-weight: 400; fill: var(--text-faint); }
+.m-arc { font-size: 12px; font-weight: 600; font-variation-settings: "wdth" 90; fill: var(--text-soft); stroke-width: 5px; }
+.m-arc.sub { font-size: 11px; font-weight: 500; }
+.m-count { font-weight: 700; font-size: 12px; text-anchor: middle; }
+.m-count.quiet { opacity: .45; }
+.m-leader .leader { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }
+.m-leader .leader.card-red { stroke: var(--pen-red); }
+.m-leader .leader.card-green { stroke: var(--pen-green); }
+.m-leader .leader-dot { fill: var(--text-soft); }
+.m-leader .leader-dot.card-red { fill: var(--pen-red); }
+.m-leader .leader-dot.card-green { fill: var(--pen-green); }
+.map-wrap svg.moving .m-leader { display: none; }
+.atlas-card { position: absolute; right: 12px; top: 96px; width: 264px; padding: 12px 14px 14px; background: var(--surface-1);
+  border: 1px solid var(--rule); border-radius: var(--radius-md, 6px); font: 12px/16px var(--font-ui); color: var(--text-soft); }
+.atlas-card[hidden] { display: none; }
+.atlas-card h3 { margin: 0 24px 6px 0; font: 700 13px/16px var(--font-ui); color: var(--text); display: flex; gap: 10px; align-items: center; }
+.atlas-card h3::before { content: ""; flex: none; width: 24px; border-top: 1.5px solid var(--text-soft); }
+.atlas-card.card-red h3::before { border-top-color: var(--pen-red); }
+.atlas-card.card-green h3::before { border-top: 3px double var(--pen-green); }
+.atlas-card p { margin: 0 0 10px; font: 15px/1.45 var(--font-text); color: var(--text); }
+.atlas-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.atlas-card-actions .toggle { text-decoration: none; }
+.atlas-card-close { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: var(--text-faint); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
+.atlas-north { position: absolute; right: 24px; bottom: 64px; width: 120px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font: 11px/14px var(--font-map); font-variation-settings: "wdth" 84; color: var(--text-soft); text-align: center; pointer-events: none; }
+.atlas-north[hidden] { display: none; }
+.atlas-north .north-arrow { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }
 .map-crumbs {
   position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
   max-width: calc(100% - 400px); justify-content: flex-end;
@@ -368,11 +415,19 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .map-crumbs button { border: 0; background: none; color: var(--accent); font: inherit; padding: 2px 3px; cursor: pointer; }
 .map-crumbs button[aria-current] { color: var(--ink); font-weight: 700; cursor: default; }
 .map-crumbs span { color: var(--ink-faint); }
-.legend .key-landmark { background: var(--paper-raised); border: 1.5px solid var(--ink); box-shadow: 0 0 0 2px var(--paper-raised), 0 0 0 3.5px var(--ink); width: 8px; height: 8px; margin: 0 3px; }
-.m-key path { fill: var(--ink-soft); }
-.m-key.ring path { fill: none; stroke: var(--ink-soft); stroke-width: 1.6; }
-.map-panel { max-height: calc(100% - 24px); overflow: auto; }
-.map-tuning > summary { display: block; cursor: pointer; color: var(--ink-soft); font-size: 13.5px; }
+.m-key { flex: none; overflow: visible; }
+.m-key .key-shape { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }
+.map-panel { max-height: calc(100% - 24px); overflow: auto; width: 292px; font: 12px/16px var(--font-ui); color: var(--text-soft); }
+.map-panel .lens-title { margin: 0; font: 700 13px/16px var(--font-ui); color: var(--text); }
+.map-panel .lenses .toggle[aria-pressed="true"] { background: var(--surface-3); color: var(--text); border-color: var(--rule-strong); }
+.map-panel .legend { padding-top: 10px; border-top: 1px solid var(--rule); font-size: 12px; }
+.map-panel .kinds { gap: 4px 14px; }
+.map-panel .kinds span { gap: 6px; }
+.map-key { display: grid; gap: 2px; margin: 0; padding-left: 0; list-style: none; }
+.map-key li { display: flex; align-items: center; gap: 10px; min-height: 24px; }
+.map-summary { margin: 0; color: var(--text-faint); }
+.map-more > summary, .map-tuning > summary { cursor: pointer; color: var(--text-soft); }
+.map-more[open] { display: grid; gap: 8px; }
 .map-tuning .slider { grid-template-columns: 150px 1fr 44px; }
 .dual-slider { grid-template-columns: 104px 1fr; }
 .dual-slider output { grid-column: 2; text-align: left; }
@@ -390,10 +445,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .seg { font-size: 13px; color: var(--ink-soft); }
 .seg .toggle { padding: 2px 8px; font-size: 12.5px; }
 .map-hint { margin: 0; font-size: 12.5px; color: var(--ink-faint); }
-.route-key i { width: 26px; height: 3px; border-radius: 2px; }
-.route-key .key-dir { background: linear-gradient(90deg, var(--route-from, var(--accent)), var(--route-to, var(--stale))); }
-.route-key .key-both { background: var(--route-both, var(--ink-faint)); }
-.route-key .key-dotted { background: repeating-linear-gradient(90deg, var(--ink-faint) 0 2px, transparent 2px 6px); }
 .map-status { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); margin: 0;
   padding: 4px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--paper-raised);
   color: var(--ink-soft); font-size: 13px; pointer-events: none; }
@@ -445,6 +496,9 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   .map-crumbs { top: auto; bottom: 10px; left: 8px; right: 8px; max-width: none; justify-content: flex-start; }
   .map-create { bottom: 56px; right: 8px; }
   .map-create .toggle { min-height: 40px; }
+  .map-panel { width: auto; }
+  .map-panel .lens-title, .atlas-north { display: none; }
+  .atlas-card { top: auto; bottom: 104px; left: 8px; right: 8px; width: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -510,6 +564,7 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   .map-panel { max-height: calc(100% - 16px); }
   .graph-hint { display: none; }
   .map-crumbs { top: 8px; right: 8px; padding: 2px 6px; font-size: 12.5px; }
+  .map-panel .lens-title, .atlas-north { display: none; }
 }
 
 .fullscreen { border: 0; background: none; color: var(--ink-soft); cursor: pointer; padding: 6px; display: inline-flex; border-radius: var(--radius); }
@@ -534,10 +589,9 @@ svg.trail .m-place:not(.on-trail) { opacity: .28; }
 svg.trail .m-text.place:not(.on-trail) { opacity: .35; }
 svg.trail .m-text.on-trail { font-weight: 700; }
 .m-steps { pointer-events: none; }
-.m-step rect { fill: var(--paper-raised); stroke: var(--ink-soft); stroke-width: 1; }
-.m-step text { font: 700 10.5px/1 var(--font-ui); fill: var(--ink); text-anchor: middle; }
-.m-step.goal rect { fill: var(--accent); stroke: var(--accent); }
-.m-step.goal text { fill: var(--paper); }
+.m-step rect { fill: var(--surface); stroke: var(--pen-blue); stroke-width: 1.5; stroke-dasharray: .1 3.6; stroke-linecap: round; }
+.m-step text { font: 700 11px/1 var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text); text-anchor: middle; }
+.m-step.goal rect { fill: var(--surface-3); stroke-dasharray: none; }
 .trail-card {
   position: absolute; right: 12px; bottom: 12px; width: min(320px, calc(100% - 24px)); max-height: calc(100% - 80px); overflow: auto;
   background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 12px; font-size: 14px;
@@ -829,7 +883,6 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .you-marks .toggle { padding: 3px 12px; font-size: 13.5px; }
 .m-text.place.st-understood, .m-text.place.changed { font-weight: 700; }
 .m-text.place.st-undiscovered { fill: var(--ink-faint); }
-.m-place.st-undiscovered .mark { fill-opacity: .55; }
 .m-place.frontier, .m-text.place.frontier { opacity: .55; }
 .map-panel .hide-undiscovered { margin: 4px 0 8px; }
 .coverage { border-collapse: collapse; width: 100%; max-width: 760px; margin: 6px 0 10px; font-size: 14.5px; }

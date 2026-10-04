@@ -300,6 +300,38 @@ with sync_playwright() as pw:
     p.wait_for_timeout(800)
     check("…which hides what is not reached too", drawn() > hidden_places, (hidden_places, drawn()))
     p.screenshot(path=str(OUT / "learn-coverage-map.png"))
+
+    # ------------------------------------------------------------ the Atlas (T57)
+    p.wait_for_function("() => (document.querySelector('.m-terrain .a-front')?.getAttribute('d') || '').length > 20", timeout=10000)
+    check("the Atlas: the terrain of your understanding, with the fog beyond the frontier",
+          p.locator(".m-terrain .a-fog").count() == 1 and p.locator(".m-landfill").count() >= 1)
+    counts = p.locator(".m-count").evaluate_all("els => els.map(e => e.textContent)")
+    check("…links as trunks between top-level folders, each with its count", len(counts) >= 1 and all(c.isdigit() for c in counts), counts)
+    check("…a sentence on what is drawn", "trunk" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    check("…and north is later in the study order", p.locator(".atlas-north").is_visible())
+    place = p.locator(".m-place[data-ref]").first
+    ref = place.get_attribute("data-ref")
+    place.click()
+    card = p.locator(".atlas-card")
+    expect(card).to_be_visible()
+    expect(p.locator(f'.m-place.selected[data-ref="{ref}"]')).to_have_count(1)
+    check("clicking a note selects it: its card, and only its own links, in the blue pen",
+          p.locator(".m-routes .m-link.trunk").count() == 0 and p.locator(".m-count").count() == 0
+          and "build" in card.inner_text() and p.locator(f'.m-place.selected[data-ref="{ref}"]').count() == 1,
+          (p.locator(".m-routes .m-link.trunk").count(), p.locator(".m-count").count(), card.inner_text().replace("\n", " / ")))
+    p.screenshot(path=str(OUT / "learn-atlas-selected.png"))
+    p.keyboard.press("Escape")
+    expect(card).to_be_hidden()
+    p.get_by_role("button", name="Links", exact=True).click()
+    p.wait_for_timeout(300)
+    check("the Links lens off: the terrain and the folders alone", p.locator(".m-routes .m-link").count() == 0
+          and "Links are off" in p.locator(".map-summary").inner_text())
+    p.get_by_role("button", name="Links", exact=True).click()
+    place = p.locator(f'.m-place[data-ref="{ref}"]')
+    place.click()
+    card.get_by_role("link", name="Open the note").click()
+    p.wait_for_url(f"**#/k/{ref}")
+    check("…and Open the note opens it", True)
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("heading", name="Where you stand").wait_for()
     p.screenshot(path=str(OUT / "learn-tab.png"), full_page=True)

@@ -60,6 +60,7 @@
 * [T54 — Today](T54-today.md) - The home screen: streaks, Set for you, Continue where you left off, reviews due, changed since you looked, the teacher's next step pinned to its row, and goals.
 * [T55 — The workbench](T55-workbench.md) - Problem, answer and the teacher's margin in three columns, cards level with their words and joined to them by leader lines in each pen's line style; four exercise states.
 * [T56 — Library](T56-library.md) - The tree, the note, and the companion panel (details, your understanding, explain it back, ask the teacher).
-* [T57 — The Atlas](T57-atlas.md) - New markers, lenses one at a time, trunks with counts, terrain baked in the worker, north as later in the study order, and a layout that keeps notes in place; then contour folders and downhill routes once timed at scale.
+* [T57 — The Atlas](T57-atlas.md) - New markers, lenses one at a time, trunks with counts, terrain baked in the worker, north as later in the study order, and a layout that keeps notes in place. Contour folders and downhill routes follow in T60.
 * [T58 — Phone layouts](T58-phone.md) - The bottom tab bar, Today and the workbench at 390 wide, pins hanging under their paragraph, marking actions in place of the tab bar while an exercise is open.
 * [T59 — Project mode](T59-project-mode.md) - Learning or Project per project: Project mode's spaces, the Activity and Health lenses, and the learning layer on top of a project.
+* [T60 — The Atlas: contour folders and downhill routes](T60-atlas-contours.md) - Folder outlines as contours of their contents' fields, and routes that cross contours at right angles and gather in the flats, as options beside circles and gates; the default once timed at scale.
