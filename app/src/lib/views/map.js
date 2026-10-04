@@ -1724,9 +1724,17 @@ function controls({ view, tune, readout, summary }) {
     draw();
     return h("div", { class: "slider dual-slider", title: help }, h("span", {}, text), track, out);
   };
+  // On a phone the panel folds to one bar naming the lenses that are on (T58).
+  const lensNames = h("span", { class: "lens-names" });
+  const nameLenses = () => {
+    const e = effective();
+    const on = [e.showLinks && "Links", understanding.on && e.terrain && "Understanding"].filter(Boolean);
+    lensNames.textContent = on.length ? on.join(", ") : "none";
+  };
+  nameLenses();
   const toggle = (key, text, help) => {
     const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(!!o[key]), title: help }, text);
-    b.addEventListener("click", () => { M.user[key] = !effective()[key]; b.setAttribute("aria-pressed", String(M.user[key])); persist(); view(); });
+    b.addEventListener("click", () => { M.user[key] = !effective()[key]; b.setAttribute("aria-pressed", String(M.user[key])); persist(); nameLenses(); view(); });
     return b;
   };
   const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
@@ -1823,7 +1831,7 @@ function controls({ view, tune, readout, summary }) {
 
   return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
-      h("summary", {}, "Lenses"),
+      h("summary", {}, h("span", { class: "lens-label" }, "Lenses"), lensNames, h("span", { class: "lens-change" }, "Change")),
       h("h2", { class: "lens-title" }, "Lenses"),
       h("div", { class: "row lenses" },
         toggle("showLinks", "Links", "Trunks between folders, with their counts, and the links inside the folder in focus."),

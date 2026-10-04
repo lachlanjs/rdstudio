@@ -667,6 +667,22 @@ with sync_playwright() as pw:
     wide = pp.evaluate("document.documentElement.scrollWidth")
     check("on a phone an exercise fits without sideways scrolling", wide <= 390, wide)
     pp.screenshot(path=str(OUT / "teacher-exercise-phone.png"), full_page=True)
+    # Phone layouts (T58): the spaces in a bar at the bottom; an exercise's
+    # marking actions in its place, with a way back.
+    foot = pp.locator(".bench .a-foot").bounding_box()
+    check("on a phone an exercise's marking actions take the tab bar's place, with a way back",
+          not pp.locator(".tabbar").is_visible() and pp.get_by_role("button", name="Back").is_visible()
+          and foot is not None and abs(foot["y"] + foot["height"] - 844) < 2, foot)
+    pp.goto(URL + "?nosw#/")
+    pp.locator(".s-tile").first.wait_for()
+    check("…and elsewhere the spaces are a bar at the bottom", pp.locator(".tabbar").is_visible()
+          and pp.locator(".tabbar a, .tabbar button").count() == 5 and not pp.locator(".bar .tabs").is_visible())
+    pp.locator(".tabbar").get_by_role("button", name="More").tap()
+    check("…More holds the You menu", pp.get_by_role("menuitem", name="Teacher").is_visible())
+    pp.keyboard.press("Escape")
+    if pp.locator(".today-pin.has-inline").count():
+        check("…and the teacher's next step hangs under its row", pp.locator(".ex li.next-inline .pin").is_visible())
+    pp.screenshot(path=str(OUT / "teacher-today-phone.png"))
     pctx.close()
 
     check("no console errors", not errors, errors[:5])

@@ -65,7 +65,9 @@
     if (!root || !column) return;
     const rb = root.getBoundingClientRect(), cb = column.getBoundingClientRect();
     const wide = cb.left > rb.left + rb.width * 0.5; // the margin sits beside the answer, not under it
-    const withAnchor = cards.map((c) => ({ c, a: wide ? anchorOf(c.pin) : null }));
+    // Cards follow the order of the words they quote, also on a phone where
+    // they sit under the answer (each with a stem and its quote, no leader).
+    const withAnchor = cards.map((c) => ({ c, a: anchorOf(c.pin) }));
     const loose = withAnchor.filter((x) => !x.a), pinned = withAnchor.filter((x) => x.a).sort((x, y) => x.a!.bottom - y.a!.bottom || x.a!.right - y.a!.right);
     order = [...loose, ...pinned].map((x) => x.c.key);
     await tick();
@@ -73,6 +75,7 @@
     const nextTops: Record<string, number> = {};
     const lines: { d: string; colour: Colour; x: number; y: number }[] = [];
     let lane = 0;
+    if (!wide) { tops = {}; height = 0; leaders = []; return; }
     for (const { c, a } of [...loose, ...pinned]) {
       const el = column.querySelector<HTMLElement>(`[data-card="${CSS.escape(c.key)}"]`);
       if (!el) continue;

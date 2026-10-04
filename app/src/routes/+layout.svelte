@@ -45,6 +45,12 @@
   afterNavigate(() => { drawer = false; you = false; });
   // The drawer's styles hang off the body (the page behind it dims).
   $effect(() => { document.body.classList.toggle("drawer-open", drawer); });
+  // On a phone, an open exercise's marking actions take the tab bar's place (T58).
+  $effect(() => { document.body.classList.toggle("no-tabbar", exercise); });
+  function back() {
+    if (history.length > 1) history.back();
+    else location.hash = "#/practice";
+  }
   $effect(() => store.watch()); // live updates, stopped if the shell ever goes away
   $effect(() => { if (!store.site.static && !teacher.loaded) void teacher.load(); });
 
@@ -62,6 +68,12 @@
   <button class="menu" type="button" aria-label="Show contents" aria-expanded={drawer} hidden={space !== "library"} onclick={() => (drawer = !drawer)}>
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 4h14M2 9h14M2 14h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
   </button>
+  {#if exercise}
+    <button class="back" type="button" onclick={back} aria-label="Back">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M11 3L5 9l6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <span>Practice</span>
+    </button>
+  {/if}
   <a class="brand" href="#/">rdstudio</a>
   <span class="project-name" title={store.site.title}>{store.site.title}</span>
   {#if mode}<span class="mode-tag" title={mode === "Learning" ? "A learning project: the learning layer leads" : "A project: its upkeep leads, the learning layer sits on top"}>{mode}</span>{/if}
@@ -84,6 +96,7 @@
     {/if}
     <a class="quiet-link" href="#/project" data-tab="project" aria-current={space === "project" ? "page" : undefined}>Project{#if review}<span class="count"> {review}</span>{/if}</a>
     <button class="palette-box" type="button" onclick={() => (palette.open = true)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}>
+      <svg class="palette-icon" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12.5 12.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
       <span class="palette-text">Jump to a note or action</span><kbd>{mac ? "⌘K" : "Ctrl K"}</kbd>
     </button>
     <span class="you">
@@ -112,5 +125,22 @@
 <main id="view" tabindex="-1">
   {@render children()}
 </main>
+<!-- On a phone the spaces are a bar at the bottom, in reach of a thumb; More holds the You menu. -->
+<nav class="tabbar" aria-label="Spaces" hidden={exercise}>
+  {#snippet tab(id: string, href: string, label: string, icon: string, count?: number)}
+    <a {href} aria-current={space === id ? "page" : undefined}>
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d={icon} /></svg>
+      <span>{label}{#if count}<span class="count"> {count}</span>{/if}</span>
+    </a>
+  {/snippet}
+  {@render tab("today", "#/", "Today", "M11 7a4 4 0 1 1 0 8a4 4 0 1 1 0-8M11 2v2M11 18v2M2 11h2M18 11h2M4.6 4.6l1.4 1.4M16 16l1.4 1.4M4.6 17.4L6 16M16 6l1.4-1.4", setForYou)}
+  {@render tab("library", "#/library", "Library", "M4 4v14M8 4v14M12 4l4 14")}
+  {@render tab("practice", "#/practice", "Practice", "M14.5 4.5l3 3L8 17H5v-3zM12.5 6.5l3 3")}
+  {@render tab("atlas", "#/map", "Atlas", "M11 3a8 8 0 1 1 0 16a8 8 0 1 1 0-16M11 7a4 4 0 1 1 0 8a4 4 0 1 1 0-8")}
+  <button type="button" aria-haspopup="menu" aria-expanded={you} aria-current={["you", "project"].includes(space) ? "page" : undefined} onclick={() => (you = !you)}>
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 11h.01M11 11h.01M17 11h.01" /></svg>
+    <span>More</span>
+  </button>
+</nav>
 {#if editing.enabled}<ActionDialogs />{/if}
 <CommandPalette />
