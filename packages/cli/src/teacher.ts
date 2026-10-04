@@ -204,6 +204,111 @@ export function developerEdit(cfg: Config, name: string): { at: string; diff: st
   }
 }
 
+// ------------------------------------------------------------------ drafts
+// An exercise answer in progress, saved as it is typed (teacher/drafts/), with
+// versions kept at the moments that matter (a request to the teacher, or the
+// developer keeping one), so any response can be seen against the draft it
+// answered. Saving as you type does not commit; keeping a version does. When
+// the answer is submitted the draft is filed under the attempt's id.
+
+const EXERCISE_ID = /^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)*$/i;
+const MAX_DRAFT_BYTES = 200_000;
+const MAX_VERSIONS = 200;
+
+export interface DraftVersion {
+  id: string; // v1, v2, … in order
+  at: string;
+  reason: string; // "kept", "before restoring", "hint", "feedback", …
+  text: string;
+  working: string;
+}
+export interface Draft {
+  exercise: string;
+  text: string;
+  working: string;
+  updated: string | null;
+  versions: DraftVersion[];
+}
+
+function draftFile(cfg: Config, exercise: string): string {
+  if (!EXERCISE_ID.test(exercise) || exercise.split("/").includes("..")) throw new LearnerError("not an exercise id");
+  return join(teacherDir(cfg), "drafts", exercise.replaceAll("/", "~") + ".json");
+}
+
+export function readDraft(cfg: Config, exercise: string): Draft {
+  const path = draftFile(cfg, exercise);
+  const empty: Draft = { exercise, text: "", working: "", updated: null, versions: [] };
+  if (!existsSync(path)) return empty;
+  try {
+    return { ...empty, ...(JSON.parse(readFileSync(path, "utf8")) as Partial<Draft>), exercise };
+  } catch {
+    return empty;
+  }
+}
+
+function writeDraft(cfg: Config, d: Draft): void {
+  const path = draftFile(cfg, d.exercise);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(d, null, 1) + "\n", "utf8");
+}
+
+const textOf = (v: unknown): string => (typeof v === "string" ? v.replace(/\r\n?/g, "\n") : "");
+
+/** Save the draft as it is now (no commit: this happens as the developer types). */
+export function saveDraft(cfg: Config, exercise: string, body: { text?: unknown; working?: unknown }): Draft {
+  const d = readDraft(cfg, exercise);
+  const text = textOf(body.text), working = textOf(body.working);
+  if (Buffer.byteLength(text) + Buffer.byteLength(working) > MAX_DRAFT_BYTES) throw new LearnerError("that draft is too long");
+  const out = { ...d, text, working, updated: new Date().toISOString() };
+  writeDraft(cfg, out);
+  return out;
+}
+
+/** Keep the draft as it is now as a version (the teacher's moments, or the developer's own). */
+export function keepVersion(cfg: Config, exercise: string, reason: unknown): Draft {
+  const d = readDraft(cfg, exercise);
+  const why = typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 40) : "kept";
+  const last = d.versions.at(-1);
+  if (last && last.text === d.text && last.working === d.working && why === "kept") return d; // nothing new
+  const n = d.versions.length ? Number(d.versions.at(-1)!.id.slice(1)) + 1 : 1;
+  const out = { ...d, versions: [...d.versions, { id: `v${n}`, at: new Date().toISOString(), reason: why, text: d.text, working: d.working }].slice(-MAX_VERSIONS) };
+  writeDraft(cfg, out);
+  commit(cfg, `Draft of ${exercise}: v${n} (${why})`);
+  return out;
+}
+
+/** Restore a version: the draft as it is now is kept first, so a restore can be undone. */
+export function restoreVersion(cfg: Config, exercise: string, version: unknown): Draft {
+  const d = readDraft(cfg, exercise);
+  const v = d.versions.find((x) => x.id === version);
+  if (!v) throw new LearnerError(`no version ${String(version)}`);
+  const kept = d.text === v.text && d.working === v.working ? d : keepVersion(cfg, exercise, "before restoring");
+  const out = { ...kept, text: v.text, working: v.working, updated: new Date().toISOString() };
+  writeDraft(cfg, out);
+  return out;
+}
+
+/** The answer was submitted: file the draft (with its versions) under the attempt. */
+export function fileDraft(cfg: Config, exercise: string, attempt: unknown): { filed: string | null } {
+  const path = draftFile(cfg, exercise);
+  if (typeof attempt !== "string" || !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(attempt)) throw new LearnerError("expected the attempt's id");
+  if (!existsSync(path)) return { filed: null };
+  const d = readDraft(cfg, exercise);
+  const to = join(teacherDir(cfg), "drafts", "submitted", `${attempt}.json`);
+  mkdirSync(dirname(to), { recursive: true });
+  writeFileSync(to, JSON.stringify({ ...d, attempt }, null, 1) + "\n", "utf8");
+  unlinkSync(path);
+  commit(cfg, `Draft of ${exercise}: submitted (${attempt})`);
+  return { filed: attempt };
+}
+
+/** The draft filed with a submitted attempt, if any (for marking in context). */
+export function submittedDraft(cfg: Config, attempt: string): (Draft & { attempt: string }) | null {
+  if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(attempt)) return null;
+  const path = join(teacherDir(cfg), "drafts", "submitted", `${attempt}.json`);
+  try { return JSON.parse(readFileSync(path, "utf8")); } catch { return null; }
+}
+
 // ------------------------------------------------------------------ writing, with history
 
 function writeMany(cfg: Config, files: [string, string][], message: string): void {

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -94,6 +94,59 @@ export const getApiTeacherFilesByName = <ThrowOnError extends boolean = false>(o
  */
 export const putApiTeacherFilesByName = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherFilesByNameData, ThrowOnError>): RequestResult<PutApiTeacherFilesByNameResponses, PutApiTeacherFilesByNameErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherFilesByNameResponses, PutApiTeacherFilesByNameErrors, ThrowOnError>({
     url: '/api/teacher/files/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Your draft answer to an exercise, with its kept versions
+ */
+export const getApiTeacherDraftsById = <ThrowOnError extends boolean = false>(options: Options<GetApiTeacherDraftsByIdData, ThrowOnError>): RequestResult<GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsByIdErrors, ThrowOnError>({ url: '/api/teacher/drafts/{id}', ...options });
+
+/**
+ * Save the draft as it is now (as you type)
+ */
+export const putApiTeacherDraftsById = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherDraftsByIdData, ThrowOnError>): RequestResult<PutApiTeacherDraftsByIdResponses, PutApiTeacherDraftsByIdErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherDraftsByIdResponses, PutApiTeacherDraftsByIdErrors, ThrowOnError>({
+    url: '/api/teacher/drafts/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Keep the draft as it is now as a version
+ */
+export const postApiTeacherDraftsByIdVersions = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherDraftsByIdVersionsData, ThrowOnError>): RequestResult<PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherDraftsByIdVersionsErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherDraftsByIdVersionsErrors, ThrowOnError>({
+    url: '/api/teacher/drafts/{id}/versions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Restore a kept version (the draft as it is now is kept first)
+ */
+export const postApiTeacherDraftsByIdRestore = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherDraftsByIdRestoreData, ThrowOnError>): RequestResult<PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdRestoreErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdRestoreErrors, ThrowOnError>({
+    url: '/api/teacher/drafts/{id}/restore',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The answer was submitted: file the draft under the attempt
+ */
+export const postApiTeacherDraftsByIdSubmitted = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherDraftsByIdSubmittedData, ThrowOnError>): RequestResult<PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdSubmittedErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdSubmittedErrors, ThrowOnError>({
+    url: '/api/teacher/drafts/{id}/submitted',
     ...options,
     headers: {
         'Content-Type': 'application/json',

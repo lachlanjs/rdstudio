@@ -187,6 +187,33 @@ const putTeacherFile = createRoute({
   request: { params: FileName, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: FileSave } }, required: true } },
   responses: { 200: { description: "Saved", content: { "application/json": { schema: TeacherFileSchema } } }, ...teacherErrors },
 });
+const DraftVersionSchema = z.object({ id: z.string(), at: z.string(), reason: z.string(), text: z.string(), working: z.string() }).openapi("DraftVersion");
+const DraftSchema = z.object({
+  exercise: z.string(), text: z.string(), working: z.string(), updated: z.string().nullable(), versions: z.array(DraftVersionSchema),
+}).openapi("Draft");
+const DraftId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The exercise's note id (slashes encoded)." }) });
+const writeHeader = z.object({ "x-rdstudio-token": z.string() });
+const draftRoute = (method: "put" | "post", path: string, summary: string, body: z.ZodTypeAny) => createRoute({
+  method, path, summary,
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: body } }, required: true } },
+  responses: { 200: { description: "The draft", content: { "application/json": { schema: DraftSchema } } }, ...teacherErrors },
+});
+const getDraft = createRoute({
+  method: "get", path: "/api/teacher/drafts/{id}", summary: "Your draft answer to an exercise, with its kept versions",
+  request: { params: DraftId },
+  responses: { 200: { description: "The draft (empty if none)", content: { "application/json": { schema: DraftSchema } } }, ...teacherErrors },
+});
+const putDraft = draftRoute("put", "/api/teacher/drafts/{id}", "Save the draft as it is now (as you type)",
+  z.object({ text: z.string(), working: z.string().optional() }).openapi("DraftSave"));
+const keepDraftVersion = draftRoute("post", "/api/teacher/drafts/{id}/versions", "Keep the draft as it is now as a version",
+  z.object({ reason: z.string().optional() }).openapi("DraftKeep"));
+const restoreDraft = draftRoute("post", "/api/teacher/drafts/{id}/restore", "Restore a kept version (the draft as it is now is kept first)",
+  z.object({ version: z.string() }).openapi("DraftRestore"));
+const fileDraftRoute = createRoute({
+  method: "post", path: "/api/teacher/drafts/{id}/submitted", summary: "The answer was submitted: file the draft under the attempt",
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: z.object({ attempt: z.string() }).openapi("DraftSubmitted") } }, required: true } },
+  responses: { 200: { description: "Filed", content: { "application/json": { schema: z.object({ filed: z.string().nullable() }).openapi("DraftFiled") } } }, ...teacherErrors },
+});
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
   request: { params: SkillName, headers: z.object({ "x-rdstudio-token": z.string() }) },
@@ -434,6 +461,16 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { return json(c, 200, teacher.readFile(cfg, c.req.param("name") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
   }) as never);
   app.openapi(putTeacherFile, ((c: Context) => tourChange(c, (b) => teacher.writeFile(cfg, c.req.param("name") ?? "", b.text, teacher.BY_DEVELOPER))) as never);
+  app.openapi(getDraft, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    if (!learner.enabled(cfg)) return json(c, 409, { error: "the learner record is off ([learner] enabled in the user config)" });
+    try { return json(c, 200, teacher.readDraft(cfg, c.req.param("id") ?? "")); } catch (err) { return json(c, 400, { error: (err as Error).message }); }
+  }) as never);
+  const draftId = (c: Context) => c.req.param("id") ?? "";
+  app.openapi(putDraft, ((c: Context) => tourChange(c, (b) => teacher.saveDraft(cfg, draftId(c), b))) as never);
+  app.openapi(keepDraftVersion, ((c: Context) => tourChange(c, (b) => teacher.keepVersion(cfg, draftId(c), b.reason))) as never);
+  app.openapi(restoreDraft, ((c: Context) => tourChange(c, (b) => teacher.restoreVersion(cfg, draftId(c), b.version))) as never);
+  app.openapi(fileDraftRoute, ((c: Context) => tourChange(c, (b) => teacher.fileDraft(cfg, draftId(c), b.attempt))) as never);
   app.openapi(putSkill, ((c: Context) => tourChange(c, (b) => teacher.saveSkill(cfg, c.req.param("name") ?? "", b.text))) as never);
   app.openapi(deleteSkill, ((c: Context) => tourChange(c, () => ({ skill: teacher.resetSkill(cfg, c.req.param("name") ?? "") }), false)) as never);
 

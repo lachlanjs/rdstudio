@@ -115,6 +115,43 @@ export type TeacherFileSave = {
     text: string;
 };
 
+export type Draft = {
+    exercise: string;
+    text: string;
+    working: string;
+    updated: string | null;
+    versions: Array<DraftVersion>;
+};
+
+export type DraftVersion = {
+    id: string;
+    at: string;
+    reason: string;
+    text: string;
+    working: string;
+};
+
+export type DraftSave = {
+    text: string;
+    working?: string;
+};
+
+export type DraftKeep = {
+    reason?: string;
+};
+
+export type DraftRestore = {
+    version: string;
+};
+
+export type DraftFiled = {
+    filed: string | null;
+};
+
+export type DraftSubmitted = {
+    attempt: string;
+};
+
 export type SkillSave = {
     text: string;
 };
@@ -648,6 +685,208 @@ export type PutApiTeacherFilesByNameResponses = {
 };
 
 export type PutApiTeacherFilesByNameResponse = PutApiTeacherFilesByNameResponses[keyof PutApiTeacherFilesByNameResponses];
+
+export type GetApiTeacherDraftsByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}';
+};
+
+export type GetApiTeacherDraftsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type GetApiTeacherDraftsByIdError = GetApiTeacherDraftsByIdErrors[keyof GetApiTeacherDraftsByIdErrors];
+
+export type GetApiTeacherDraftsByIdResponses = {
+    /**
+     * The draft (empty if none)
+     */
+    200: Draft;
+};
+
+export type GetApiTeacherDraftsByIdResponse = GetApiTeacherDraftsByIdResponses[keyof GetApiTeacherDraftsByIdResponses];
+
+export type PutApiTeacherDraftsByIdData = {
+    body: DraftSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}';
+};
+
+export type PutApiTeacherDraftsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PutApiTeacherDraftsByIdError = PutApiTeacherDraftsByIdErrors[keyof PutApiTeacherDraftsByIdErrors];
+
+export type PutApiTeacherDraftsByIdResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PutApiTeacherDraftsByIdResponse = PutApiTeacherDraftsByIdResponses[keyof PutApiTeacherDraftsByIdResponses];
+
+export type PostApiTeacherDraftsByIdVersionsData = {
+    body: DraftKeep;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/versions';
+};
+
+export type PostApiTeacherDraftsByIdVersionsErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdVersionsError = PostApiTeacherDraftsByIdVersionsErrors[keyof PostApiTeacherDraftsByIdVersionsErrors];
+
+export type PostApiTeacherDraftsByIdVersionsResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PostApiTeacherDraftsByIdVersionsResponse = PostApiTeacherDraftsByIdVersionsResponses[keyof PostApiTeacherDraftsByIdVersionsResponses];
+
+export type PostApiTeacherDraftsByIdRestoreData = {
+    body: DraftRestore;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/restore';
+};
+
+export type PostApiTeacherDraftsByIdRestoreErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdRestoreError = PostApiTeacherDraftsByIdRestoreErrors[keyof PostApiTeacherDraftsByIdRestoreErrors];
+
+export type PostApiTeacherDraftsByIdRestoreResponses = {
+    /**
+     * The draft
+     */
+    200: Draft;
+};
+
+export type PostApiTeacherDraftsByIdRestoreResponse = PostApiTeacherDraftsByIdRestoreResponses[keyof PostApiTeacherDraftsByIdRestoreResponses];
+
+export type PostApiTeacherDraftsByIdSubmittedData = {
+    body: DraftSubmitted;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/drafts/{id}/submitted';
+};
+
+export type PostApiTeacherDraftsByIdSubmittedErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherDraftsByIdSubmittedError = PostApiTeacherDraftsByIdSubmittedErrors[keyof PostApiTeacherDraftsByIdSubmittedErrors];
+
+export type PostApiTeacherDraftsByIdSubmittedResponses = {
+    /**
+     * Filed
+     */
+    200: DraftFiled;
+};
+
+export type PostApiTeacherDraftsByIdSubmittedResponse = PostApiTeacherDraftsByIdSubmittedResponses[keyof PostApiTeacherDraftsByIdSubmittedResponses];
 
 export type GetApiEditData = {
     body?: never;

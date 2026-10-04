@@ -1031,3 +1031,11 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .cal-legend .cal-day { width: 12px; height: 12px; }
 .streak-more + .streak-more { margin-top: 0 !important; }
+.draft-bar { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin: 10px 0 0; font-size: 14px; }
+.draft-bar .section-note { margin: 0; }
+.draft-versions > summary { cursor: pointer; color: var(--ink-soft); }
+.draft-versions ol { list-style: none; padding: 0; margin: 6px 0 0; }
+.draft-versions li { padding: 3px 0; color: var(--ink-soft); }
+.draft-versions .link { margin-left: 8px; }
+.draft-v { font: 12.5px var(--font-mono); color: var(--ink-faint); }
+.draft-shown { margin: 10px 0; padding: 6px 14px; border: 1px dashed var(--rule); border-radius: var(--radius); background: var(--paper); }

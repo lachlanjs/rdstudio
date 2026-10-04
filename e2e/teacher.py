@@ -18,6 +18,9 @@ the sources log.
 Set for you (T46 finding): an agent sets exercises through MCP; they show at
 the top of the Learn tab with a count on the tab, lead one to the next, and
 the agent sees the set's progress.
+Drafts (T49): an answer saved as typed and back after a reload; a version
+kept, shown and restored, with what was there kept first; the draft filed
+with the attempt on submitting.
 Working (T46): working shown with a checked answer and sent for review,
 marked by an agent who lowers a right answer; a wrong answer's working sent
 afterwards, and reviewed by the developer against the solution.
@@ -459,6 +462,40 @@ with sync_playwright() as pw:
     settle(marks + 1, "attempt_marked")
     m = attempts("attempt_marked")[-1]
     check("your review is recorded as yours", m["ref"] == rr["ref"] and m["by"] == "self" and m["result"] == "missed", m)
+
+    # ------------------------------------------------------------ drafts (T49)
+    p.goto(URL + "?nosw&d1#/k/exercises/why-atlases")
+    ed = p.locator(".exercise-answer .answer-editor .cm-content")
+    ed.wait_for()
+    ed.fill("First thoughts: charts overlap.")
+    expect(p.locator(".draft-bar")).to_contain_text("Draft saved", timeout=5000)
+    p.goto(URL + "?nosw&d2#/k/exercises/why-atlases")
+    ed.wait_for()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("is back", timeout=5000)
+    check("a draft answer is saved as typed, and back after leaving", "First thoughts: charts overlap." in ed.inner_text())
+    p.get_by_role("button", name="Keep this version").click()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("Kept as v1")
+    ed.fill("Rewritten entirely, and worse.")
+    p.wait_for_timeout(900)
+    p.locator(".draft-versions summary").click()
+    p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Show").click()
+    check("a kept version can be shown beside the draft", "First thoughts" in p.locator(".draft-shown").inner_text() and "Rewritten" in ed.inner_text())
+    p.locator(".draft-versions li", has_text="v1").get_by_role("button", name="Restore").click()
+    expect(p.locator(".exercise .edit-status")).to_contain_text("Restored v1")
+    check("restoring brings it back, and keeps what was there as a version",
+          "First thoughts: charts overlap." in ed.inner_text() and p.locator(".draft-versions li", has_text="before restoring").count() == 1)
+    p.get_by_role("button", name="Mark it yourself").click()
+    n = len(attempts())
+    p.get_by_role("button", name="Partly").click()
+    settle(n + 1)
+    att = attempts()[-1]
+    filed = teacher_dir() / "drafts" / "submitted" / f"{att['id']}.json"
+    deadline = time.time() + 3
+    while time.time() < deadline and not filed.exists():
+        time.sleep(0.05)
+    check("submitting files the draft, with its versions, under the attempt",
+          filed.exists() and [v["id"] for v in json.loads(filed.read_text())["versions"]] == ["v1", "v2"]
+          and not (teacher_dir() / "drafts" / "exercises~why-atlases.json").exists())
 
     # Phone width: the editor fits.
     pctx, pp = page_for(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)

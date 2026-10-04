@@ -168,3 +168,28 @@ test("learner_events gives the evidence with ids, filtered by note, event and ti
   expect(await call("learner_events", { since: "2999-01-01" })).toBe("No events match.");
   expect(JSON.parse(await call("learner_events", { limit: 1 }))).toHaveLength(1);
 });
+
+test("drafts: saved as typed, versions kept, restored undoably, filed when submitted", () => {
+  const cfg = loadConfig(project());
+  expect(teacher.readDraft(cfg, "ex/one")).toEqual({ exercise: "ex/one", text: "", working: "", updated: null, versions: [] });
+  expect(() => teacher.readDraft(cfg, "../x")).toThrow(/not an exercise id/);
+  teacher.saveDraft(cfg, "ex/one", { text: "First go.\r\n", working: "" });
+  expect(teacher.history(cfg)).toEqual([]); // typing does not commit
+  let d = teacher.keepVersion(cfg, "ex/one", "hint");
+  expect(d.versions).toMatchObject([{ id: "v1", reason: "hint", text: "First go.\n" }]);
+  expect(teacher.keepVersion(cfg, "ex/one", "feedback").versions).toHaveLength(2); // each teacher moment is kept…
+  expect(teacher.keepVersion(cfg, "ex/one", undefined).versions).toHaveLength(2); // …but keeping it yourself, unchanged, adds nothing
+  teacher.saveDraft(cfg, "ex/one", { text: "Second go.", working: "w" });
+  d = teacher.restoreVersion(cfg, "ex/one", "v1");
+  expect(d.text).toBe("First go.\n");
+  expect(d.versions.at(-1)).toMatchObject({ id: "v3", reason: "before restoring", text: "Second go.", working: "w" });
+  expect(() => teacher.restoreVersion(cfg, "ex/one", "v9")).toThrow(/no version v9/);
+  expect(teacher.history(cfg).map((h) => h.message)).toEqual(["Draft of ex/one: v3 (before restoring)", "Draft of ex/one: v2 (feedback)", "Draft of ex/one: v1 (hint)"]);
+
+  const attempt = learner.append(cfg, { event: "attempt", exercise: "ex/one", tests: [], answer: "First go." });
+  expect(() => teacher.fileDraft(cfg, "ex/one", "nope")).toThrow(/attempt's id/);
+  expect(teacher.fileDraft(cfg, "ex/one", attempt.id)).toEqual({ filed: attempt.id });
+  expect(teacher.readDraft(cfg, "ex/one").versions).toEqual([]); // a fresh start next time
+  expect(teacher.submittedDraft(cfg, attempt.id)).toMatchObject({ exercise: "ex/one", attempt: attempt.id, versions: [{ id: "v1" }, { id: "v2" }, { id: "v3" }] });
+  expect(teacher.fileDraft(cfg, "ex/two", attempt.id)).toEqual({ filed: null });
+});

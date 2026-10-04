@@ -16,6 +16,9 @@
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
   import AnswerEditor from "./AnswerEditor.svelte";
+  import { onMount } from "svelte";
+  import type { DraftVersion } from "$lib/api/types.gen.ts";
+  import { drafts } from "$lib/teacher.svelte.ts";
 
   let { c, body }: { c: ConceptRecord; body: string } = $props();
 
@@ -55,6 +58,50 @@
   let lastId = $state<string | null>(null);
   let sentForReview = $state(false);
 
+  // ---------------------------------------------------------------- the draft
+  // Kept as you type (privately, beside your record), back when you return,
+  // with versions kept at the moments that matter, any of which can be shown
+  // beside the draft or restored.
+  let versions = $state<DraftVersion[]>([]);
+  let showing = $state<DraftVersion | null>(null);
+  let loaded = $state(false);
+  let savedAt = $state<string | null>(null);
+  onMount(() => {
+    void drafts.read(c.id).then((d) => {
+      if (d && (d.text || d.working)) {
+        if (s.kind === "text") text = d.text;
+        working = d.working;
+        if (d.working) showWorking = true;
+        message = `Your draft from ${new Date(d.updated ?? Date.now()).toLocaleString()} is back.`;
+      }
+      versions = d?.versions ?? [];
+      loaded = true;
+    });
+  });
+  $effect(() => {
+    const t = text, w = working;
+    if (!loaded || !recording || stage !== "answer") return;
+    const timer = setTimeout(() => { void drafts.save(c.id, s.kind === "text" ? t : "", w).then((d) => { if (d) savedAt = d.updated; }); }, 700);
+    return () => clearTimeout(timer);
+  });
+  async function keep() {
+    await drafts.save(c.id, s.kind === "text" ? text : "", working);
+    const d = await drafts.keep(c.id);
+    if (d) { versions = d.versions; message = `Kept as ${d.versions.at(-1)?.id}.`; }
+  }
+  async function restore(v: DraftVersion) {
+    await drafts.save(c.id, s.kind === "text" ? text : "", working);
+    const d = await drafts.restore(c.id, v.id);
+    if (!d) return;
+    if (s.kind === "text") text = d.text;
+    working = d.working;
+    if (d.working) showWorking = true;
+    versions = d.versions;
+    showing = null;
+    message = `Restored ${v.id}. What you had is kept as ${d.versions.at(-1)?.id}.`;
+  }
+  const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
   function again() {
     picked = []; typed = ""; text = ""; stage = "answer"; verdict = null; gaveUp = false; message = ""; reveal = false; marking = null;
     working = ""; showWorking = false; review = false; lastId = null; sentForReview = false;
@@ -70,6 +117,7 @@
       withWorking ? { working, review } : undefined);
     sentForReview = withWorking && review;
     busy = false;
+    if (lastId) { void drafts.submitted(c.id, lastId); versions = []; showing = null; }
     if (!lastId && recording) message = "Not saved: the learner record did not accept it.";
     return !!lastId;
   }
@@ -184,6 +232,32 @@
         {/if}
         <button class="link" type="button" disabled={busy} onclick={giveUp}>Show the solution</button>
       </div>
+      {#if recording && (s.kind === "text" || working.trim() || versions.length)}
+        <div class="draft-bar">
+          <span class="section-note">{savedAt ? `Draft saved ${new Date(savedAt).toLocaleTimeString(undefined, { timeStyle: "short" })}` : "Your draft is saved as you type"}</span>
+          <button class="link" type="button" onclick={keep}>Keep this version</button>
+          {#if versions.length}
+            <details class="draft-versions">
+              <summary>Versions ({versions.length})</summary>
+              <ol>
+                {#each [...versions].reverse() as v (v.id)}
+                  <li><span class="draft-v">{v.id}</span> {v.reason} · {when(v.at)}
+                    <button class="link" type="button" onclick={() => (showing = showing?.id === v.id ? null : v)}>{showing?.id === v.id ? "Hide" : "Show"}</button>
+                    <button class="link" type="button" onclick={() => restore(v)}>Restore</button></li>
+                {/each}
+              </ol>
+            </details>
+          {/if}
+        </div>
+        {#if showing}
+          <div class="draft-shown" role="region" aria-label={`Your draft as it was at ${showing.id}`}>
+            <p class="section-note">Your draft at {showing.id} ({showing.reason}), {when(showing.at)}:</p>
+            {#if showing.text}<Prose html={html(showing.text)} />{/if}
+            {#if showing.working}<p class="section-note">Working:</p><Prose html={html(showing.working)} />{/if}
+            {#if !showing.text && !showing.working}<p class="empty">It was empty.</p>{/if}
+          </div>
+        {/if}
+      {/if}
     {:else if stage === "grade"}
       <h2>Your answer</h2>
       <blockquote><Prose html={html(text)} /></blockquote>
