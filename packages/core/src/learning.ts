@@ -378,7 +378,16 @@ export interface Attempt {
   checked: Result | null;
   /** Marked after the fact, by an agent or by the developer. */
   marked: boolean;
+  /** Written with the teacher alongside: how many hints, feedback and discussions. */
+  help: { hint: number; feedback: number; discuss: number } | null;
 }
+
+const helpOf = (v: unknown): Attempt["help"] => {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>, n = (k: string) => (typeof o[k] === "number" && (o[k] as number) > 0 ? (o[k] as number) : 0);
+  const h = { hint: n("hint"), feedback: n("feedback"), discuss: n("discuss") };
+  return h.hint + h.feedback + h.discuss ? h : null;
+};
 
 /** Waiting for someone to mark it: a written answer not yet marked, or
  *  working sent for review and not yet reviewed. */
@@ -396,7 +405,8 @@ export function attempts(events: readonly LearnerEvent[]): Map<string, Attempt[]
       const working = typeof e.working === "string" ? e.working : "";
       const a: Attempt = { id: e.id, exercise: ex, at: String(e.at ?? ""), answer: typeof e.answer === "string" ? e.answer : "",
         result, by: result ? str(e.by) : null, feedback: null, gaps: [], gaveUp: e.gave_up === true,
-        working, review: e.review === true && !!working, checked: result && e.by === "dashboard" ? result : null, marked: false };
+        working, review: e.review === true && !!working, checked: result && e.by === "dashboard" ? result : null, marked: false,
+        help: helpOf(e.help) };
       byId.set(e.id, a);
       out.set(ex, [...(out.get(ex) ?? []), a]);
     } else if (e.event === "review_requested") {

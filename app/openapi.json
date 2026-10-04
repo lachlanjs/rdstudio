@@ -408,6 +408,38 @@
           "cost"
         ]
       },
+      "TutorAsk": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "hint",
+              "feedback",
+              "discuss"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "working": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "selection": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "text"
+        ]
+      },
       "Draft": {
         "type": "object",
         "properties": {
@@ -431,6 +463,14 @@
             "items": {
               "$ref": "#/components/schemas/DraftVersion"
             }
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "The teacher's replies while working together, oldest first."
           }
         },
         "required": [
@@ -438,7 +478,8 @@
           "text",
           "working",
           "updated",
-          "versions"
+          "versions",
+          "turns"
         ]
       },
       "DraftVersion": {
@@ -1680,6 +1721,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AiCheck"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad name or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/tutor/{id}": {
+      "post": {
+        "summary": "Ask the teacher about your draft (hint, feedback or discuss); the reply streams as server-sent events: text, then done with the turn, or error",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The exercise's note id (slashes encoded)."
+            },
+            "required": true,
+            "description": "The exercise's note id (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorAsk"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-sent events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

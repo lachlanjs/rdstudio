@@ -157,12 +157,27 @@ export type AiCheck = {
     cost: number;
 };
 
+export type TutorAsk = {
+    mode: 'hint' | 'feedback' | 'discuss';
+    text: string;
+    working?: string;
+    prompt?: string;
+    selection?: string;
+    confidence?: string;
+};
+
 export type Draft = {
     exercise: string;
     text: string;
     working: string;
     updated: string | null;
     versions: Array<DraftVersion>;
+    /**
+     * The teacher's replies while working together, oldest first.
+     */
+    turns: Array<{
+        [key: string]: unknown;
+    }>;
 };
 
 export type DraftVersion = {
@@ -860,6 +875,47 @@ export type PostApiTeacherAiCheckResponses = {
 };
 
 export type PostApiTeacherAiCheckResponse = PostApiTeacherAiCheckResponses[keyof PostApiTeacherAiCheckResponses];
+
+export type PostApiTeacherTutorByIdData = {
+    body: TutorAsk;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The exercise's note id (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/teacher/tutor/{id}';
+};
+
+export type PostApiTeacherTutorByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherTutorByIdError = PostApiTeacherTutorByIdErrors[keyof PostApiTeacherTutorByIdErrors];
+
+export type PostApiTeacherTutorByIdResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiTeacherTutorByIdResponse = PostApiTeacherTutorByIdResponses[keyof PostApiTeacherTutorByIdResponses];
 
 export type GetApiTeacherDraftsByIdData = {
     body?: never;

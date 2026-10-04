@@ -19,7 +19,8 @@ import { dirname, join } from "node:path";
 import { readToml, userConfigPath, type Config, type Table } from "./config.ts";
 import * as learner from "./learner.ts";
 
-export const OPENROUTER = "https://openrouter.ai/api/v1";
+/** OpenRouter's API (RDSTUDIO_OPENROUTER_URL points it elsewhere, for tests). */
+export const OPENROUTER = process.env.RDSTUDIO_OPENROUTER_URL || "https://openrouter.ai/api/v1";
 export const JOBS = ["hint", "feedback", "discuss", "marking", "check"] as const;
 export type Job = (typeof JOBS)[number];
 export const DEFAULT_MODELS: Record<Job, string> = {

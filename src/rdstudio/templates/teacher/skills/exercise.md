@@ -114,6 +114,16 @@ in the conversation is recorded with `exercise_record` first.
 A different correct route is `got`. An answer that reaches the right result by
 a wrong argument is `partly` at best.
 
+## Answers written with help
+
+An answer written with the teacher alongside comes with `help` (how many
+hints, feedback and discussions were asked for) and the `session` itself.
+The hints are part of the answer: mark what the developer did with them. A
+step they reached after a rung-3 hint is weaker evidence than one they found
+alone, but the marker judges how much weaker, case by case. Say in the
+feedback which steps were their own. A pattern of needing the same hint is
+for the profile (the `assess` skill).
+
 ## Reviewing working
 
 A choice or value answer can carry the developer's working, and they can send

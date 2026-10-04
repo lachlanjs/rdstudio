@@ -24,6 +24,8 @@ import { StoreError, existingNotePath } from "./store.ts";
 import * as learner from "./learner.ts";
 import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
+import * as tutor from "./tutor.ts";
+import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
 
@@ -191,6 +193,7 @@ const putTeacherFile = createRoute({
 const DraftVersionSchema = z.object({ id: z.string(), at: z.string(), reason: z.string(), text: z.string(), working: z.string() }).openapi("DraftVersion");
 const DraftSchema = z.object({
   exercise: z.string(), text: z.string(), working: z.string(), updated: z.string().nullable(), versions: z.array(DraftVersionSchema),
+  turns: z.array(z.record(z.string(), z.unknown())).openapi({ description: "The teacher's replies while working together, oldest first." }),
 }).openapi("Draft");
 const DraftId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" }, description: "The exercise's note id (slashes encoded)." }) });
 const writeHeader = z.object({ "x-rdstudio-token": z.string() });
@@ -243,6 +246,15 @@ const checkAi = createRoute({
   method: "post", path: "/api/teacher/ai/check", summary: "Check the connection with a tiny request (its cost is logged as \"check\")",
   request: { headers: z.object({ "x-rdstudio-token": z.string() }) },
   responses: { 200: { description: "The reply", content: { "application/json": { schema: z.object({ text: z.string(), model: z.string(), cost: z.number() }).openapi("AiCheck") } } }, ...teacherErrors },
+});
+const askTutor = createRoute({
+  method: "post", path: "/api/teacher/tutor/{id}",
+  summary: "Ask the teacher about your draft (hint, feedback or discuss); the reply streams as server-sent events: text, then done with the turn, or error",
+  request: { params: DraftId, headers: writeHeader, body: { content: { "application/json": { schema: z.object({
+    mode: z.enum(["hint", "feedback", "discuss"]), text: z.string(), working: z.string().optional(),
+    prompt: z.string().optional(), selection: z.string().optional(), confidence: z.string().optional(),
+  }).openapi("TutorAsk") } }, required: true } },
+  responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } }, ...teacherErrors },
 });
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
@@ -537,6 +549,28 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
       if (err instanceof models.ModelError) return refuse(c, err.status, err.message);
       throw err;
     }
+  }) as never);
+
+  app.openapi(askTutor, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (!learner.enabled(cfg)) return refuse(c, 409, "the learner record is off ([learner] enabled in the user config)");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+    const a: tutor.Ask = { exercise: c.req.param("id") ?? "", mode: body.mode as tutor.Mode, text: str(body.text) ?? "", working: str(body.working),
+      prompt: str(body.prompt), selection: str(body.selection), confidence: str(body.confidence) };
+    // Problems found before anything is sent are plain errors; after, they are events.
+    if (!(tutor.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${tutor.MODES.join(", ")}`);
+    if (!models.apiKey()) return refuse(c, 409, "No OpenRouter key: connect an account on the Teacher page.");
+    return streamSSE(c, async (stream) => {
+      try {
+        const { turn, seen } = await tutor.ask(cfg, a, (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); });
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ turn, seen }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
+      }
+    });
   }) as never);
 
   app.openapi(getDraft, ((c: Context) => {

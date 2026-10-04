@@ -174,7 +174,7 @@ test("an attempt is evidence for every note it tests, settled there and then or 
 
   const tried = attempts(marked);
   expect(tried.get("ex/two")).toEqual([{ id: "2", exercise: "ex/two", at: t(2), answer: "Because…", result: "got", by: "agent/x", feedback: "Right.", gaps: [], gaveUp: false,
-    working: "", review: false, checked: null, marked: true }]);
+    working: "", review: false, checked: null, marked: true, help: null }]);
   expect(exerciseStatus(tried.get("ex/one"))).toBe("passed");
   expect(exerciseStatus(attempts(events).get("ex/two"))).toBe("waiting");
   expect(exerciseStatus(undefined)).toBe("untried");
@@ -328,4 +328,12 @@ describe("streaks", () => {
     expect(w2).toEqual({ current: 2, best: 2, thisWeek: 1 });
     expect(run(days, mon + 15, { weekDays: 3 }).problems.weeks).toMatchObject({ current: 2, best: 2 });
   });
+});
+
+test("an attempt carries the help it had while it was written", () => {
+  const a = (help: unknown) => attempts([{ id: "1", event: "attempt", exercise: "x", tests: [], answer: "a", help, at: "2026-10-04T10:00:00Z" }]).get("x")![0]!.help;
+  expect(a({ hint: 2, feedback: 1 })).toEqual({ hint: 2, feedback: 1, discuss: 0 });
+  expect(a({ hint: 0 })).toBeNull();
+  expect(a(undefined)).toBeNull();
+  expect(a({ hint: -3, discuss: "x" })).toBeNull();
 });

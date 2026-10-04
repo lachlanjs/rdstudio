@@ -228,6 +228,8 @@ export interface Draft {
   working: string;
   updated: string | null;
   versions: DraftVersion[];
+  /** The teacher's replies while working together (tutor.ts's Turn), oldest first. */
+  turns: Record<string, unknown>[];
 }
 
 function draftFile(cfg: Config, exercise: string): string {
@@ -237,7 +239,7 @@ function draftFile(cfg: Config, exercise: string): string {
 
 export function readDraft(cfg: Config, exercise: string): Draft {
   const path = draftFile(cfg, exercise);
-  const empty: Draft = { exercise, text: "", working: "", updated: null, versions: [] };
+  const empty: Draft = { exercise, text: "", working: "", updated: null, versions: [], turns: [] };
   if (!existsSync(path)) return empty;
   try {
     return { ...empty, ...(JSON.parse(readFileSync(path, "utf8")) as Partial<Draft>), exercise };
@@ -274,6 +276,15 @@ export function keepVersion(cfg: Config, exercise: string, reason: unknown): Dra
   const out = { ...d, versions: [...d.versions, { id: `v${n}`, at: new Date().toISOString(), reason: why, text: d.text, working: d.working }].slice(-MAX_VERSIONS) };
   writeDraft(cfg, out);
   commit(cfg, `Draft of ${exercise}: v${n} (${why})`);
+  return out;
+}
+
+/** Keep one of the teacher's replies with the draft (it names the version it answered). */
+export function addTurn(cfg: Config, exercise: string, turn: Record<string, unknown> & { id: string; mode: string }): Draft {
+  const d = readDraft(cfg, exercise);
+  const out = { ...d, turns: [...d.turns, turn] };
+  writeDraft(cfg, out);
+  commit(cfg, `Draft of ${exercise}: ${turn.id} (${turn.mode})`);
   return out;
 }
 

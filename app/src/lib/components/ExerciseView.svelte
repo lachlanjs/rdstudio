@@ -16,7 +16,10 @@
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
   import AnswerEditor from "./AnswerEditor.svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
+  import TutorPanel from "./TutorPanel.svelte";
+  import type { Turn } from "$lib/tutor.ts";
+  import { locate, type PinMark } from "$lib/editor/pins.ts";
   import type { DraftVersion } from "$lib/api/types.gen.ts";
   import { drafts } from "$lib/teacher.svelte.ts";
 
@@ -63,6 +66,30 @@
   // with versions kept at the moments that matter, any of which can be shown
   // beside the draft or restored.
   let versions = $state<DraftVersion[]>([]);
+  // Working together: the teacher's replies, the editor (to reveal a pin) and what is selected in it.
+  let turns = $state<Turn[]>([]);
+  let editor = $state<{ reveal: (id: string) => boolean } | null>(null);
+  let selection = $state("");
+  let pinEpoch = $state(0); // place the pins again (after a restore)
+  const placed = $derived.by(() => {
+    void pinEpoch;
+    const now = untrack(() => text);
+    const marks: PinMark[] = [];
+    const gone = new Set<string>();
+    for (const t of turns) t.pins.forEach((p, i) => {
+      const at = locate(now, p.quote);
+      if (at) marks.push({ id: `${t.id}.${i}`, from: at.from, to: at.to, colour: p.colour });
+      else gone.add(`${t.id}.${i}`);
+    });
+    return { marks, gone };
+  });
+  // A reply keeps a version on the server: fetch the list again.
+  $effect(() => {
+    if (!turns.length) return;
+    void turns.length;
+    untrack(() => { void drafts.read(c.id).then((d) => { if (d) versions = d.versions; }); });
+  });
+  const helpCounts = () => turns.length ? { hint: turns.filter((t) => t.mode === "hint").length, feedback: turns.filter((t) => t.mode === "feedback").length, discuss: turns.filter((t) => t.mode === "discuss").length } : null;
   let showing = $state<DraftVersion | null>(null);
   let loaded = $state(false);
   let savedAt = $state<string | null>(null);
@@ -75,6 +102,7 @@
         message = `Your draft from ${new Date(d.updated ?? Date.now()).toLocaleString()} is back.`;
       }
       versions = d?.versions ?? [];
+      turns = (d?.turns ?? []) as unknown as Turn[];
       loaded = true;
     });
   });
@@ -98,6 +126,7 @@
     if (d.working) showWorking = true;
     versions = d.versions;
     showing = null;
+    pinEpoch++;
     message = `Restored ${v.id}. What you had is kept as ${d.versions.at(-1)?.id}.`;
   }
   const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -114,10 +143,10 @@
     busy = true;
     const withWorking = s.kind !== "text" && !gaveUp && !!working.trim();
     lastId = await submitAttempt(c, gaveUp ? "" : answerText(), result && by ? { result, by, gaveUp } : null,
-      withWorking ? { working, review } : undefined);
+      withWorking ? { working, review } : undefined, helpCounts());
     sentForReview = withWorking && review;
     busy = false;
-    if (lastId) { void drafts.submitted(c.id, lastId); versions = []; showing = null; }
+    if (lastId) { void drafts.submitted(c.id, lastId); versions = []; showing = null; turns = []; }
     if (!lastId && recording) message = "Not saved: the learner record did not accept it.";
     return !!lastId;
   }
@@ -212,7 +241,7 @@
         </label>
       {:else}
         <p class="section-note">Maths between dollar signs, shown as you type. For working on paper or in code, say where it is (a file in the repository).</p>
-        <AnswerEditor bind:value={text} label="Your answer" rows={14} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
+        <AnswerEditor bind:this={editor} bind:value={text} bind:selection pins={placed.marks} label="Your answer" rows={14} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
       {/if}
       {#if s.kind !== "text"}
         <details class="exercise-working" bind:open={showWorking}>
@@ -249,6 +278,12 @@
             </details>
           {/if}
         </div>
+        {#if s.kind === "text" && recording}
+          <TutorPanel exercise={c.id} dir={c.directory} {text} {working} {selection} bind:turns unanchored={placed.gone}
+            onreveal={(id) => editor?.reveal(id) ?? false}
+            onshow={(v) => { const x = versions.find((y) => y.id === v); if (x) showing = x; }}
+            onrestore={(v) => { const x = versions.find((y) => y.id === v); if (x) void restore(x); }} />
+        {/if}
         {#if showing}
           <div class="draft-shown" role="region" aria-label={`Your draft as it was at ${showing.id}`}>
             <p class="section-note">Your draft at {showing.id} ({showing.reason}), {when(showing.at)}:</p>
@@ -321,7 +356,7 @@
     <ul class="explain-list exercise-attempts">
       {#each mine as a (a.id)}
         <li class={a.result ?? "waiting"}>
-          <p class="explain-meta"><Time iso={a.at} /> · {a.gaveUp ? "gave up" : a.result ? STATUS_LABEL[a.result === "got" ? "passed" : a.result] : "waiting for marking"}{a.result && !a.gaveUp ? ` · ${BY_LABEL(a.by)}` : ""}{a.marked && a.checked && a.checked !== a.result ? ` (checked here: ${STATUS_LABEL[a.checked === "got" ? "passed" : a.checked].toLowerCase()})` : ""}{a.review && !a.marked ? " · working waiting for review" : ""}</p>
+          <p class="explain-meta"><Time iso={a.at} /> · {a.gaveUp ? "gave up" : a.result ? STATUS_LABEL[a.result === "got" ? "passed" : a.result] : "waiting for marking"}{a.result && !a.gaveUp ? ` · ${BY_LABEL(a.by)}` : ""}{a.marked && a.checked && a.checked !== a.result ? ` (checked here: ${STATUS_LABEL[a.checked === "got" ? "passed" : a.checked].toLowerCase()})` : ""}{a.review && !a.marked ? " · working waiting for review" : ""}{a.help ? ` · written with ${[a.help.hint && `${a.help.hint} ${a.help.hint === 1 ? "hint" : "hints"}`, a.help.feedback && "feedback", a.help.discuss && "discussion"].filter(Boolean).join(", ")}` : ""}</p>
           {#if a.answer}<blockquote><Prose html={html(a.answer)} /></blockquote>{/if}
           {#if a.working}<details class="attempt-working"><summary>Working</summary><Prose html={html(a.working)} /></details>{/if}
           {#if a.feedback}<p class="explain-feedback">{a.feedback}</p>{/if}

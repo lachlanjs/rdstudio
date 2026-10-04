@@ -378,10 +378,21 @@ mistaken points, briefly. A "got" counts as evidence the note is understood.`, {
     return fmt({ marked: ref, result, event: e.id });
   });
 
+  /** The help an answer had while it was written (work together), for its marker. */
+  const helpWith = (attempt: string) => {
+    const turns = (teacher.submittedDraft(cfg, attempt)?.turns ?? []) as { mode: string; rung?: number | null; prompt?: string | null; reply?: string }[];
+    if (!turns.length) return {};
+    const count = (m: string) => turns.filter((t) => t.mode === m).length;
+    return { help: { hint: count("hint"), feedback: count("feedback"), discuss: count("discuss") },
+      session: turns.map((t) => ({ mode: t.mode, ...(t.rung ? { rung: t.rung } : {}), ...(t.prompt ? { asked: t.prompt } : {}), reply: t.reply })) };
+  };
+
   tool("exercise_pending", `Answers to Exercise notes that wait for marking: written answers the developer
 left for an agent, and answers checked in the dashboard whose working they
 sent for review (\`checked\` says what the check found; \`working\` is theirs).
-Each has its ref, the exercise and the notes it tests. Read the exercise (its
+Each has its ref, the exercise and the notes it tests; an answer written with
+the teacher alongside has \`help\` (hints, feedback and discussions asked for)
+and the \`session\` itself. Read the exercise (its
 Solution section) and the notes before marking with exercise_mark.`, { limit: z.number().int().default(10) }, ({ limit }) => {
     if (!learner.enabled(cfg)) return LEARNER_OFF;
     const b = bundle();
@@ -395,6 +406,7 @@ Solution section) and the notes before marking with exercise_mark.`, { limit: z.
       const hashes = (e.hashes ?? {}) as Record<string, string>;
       return { ref: a.id, exercise: a.exercise, title: b.concepts.get(a.exercise)?.title ?? null, tests, answer: a.answer,
         ...(a.working ? { working: a.working } : {}), ...(a.result !== null ? { review: "working", checked: a.checked ?? a.result } : {}), at: a.at,
+        ...helpWith(a.id),
         notes_changed_since: tests.filter((t) => b.concepts.has(t) && hashes[t] !== contentHash(b.concepts.get(t)!.body)) };
     }));
   });

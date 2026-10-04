@@ -15,6 +15,7 @@ import { blocksTheme, renderedBlocks } from "./blocks.ts";
 import { format, formatKeymap, type Format } from "./commands.ts";
 import { livePreview, livePreviewTheme } from "./livePreview.ts";
 import { mathsSyntax } from "./maths.ts";
+import { pinsField, pinsTheme } from "./pins.ts";
 
 export type { Format };
 
@@ -29,6 +30,8 @@ export interface EditorOptions {
   /** A box within a page (an answer), rather than the whole page: no room
    *  left below the text for scrolling past the end. */
   inline?: boolean;
+  /** The selection changed: its text ("" when nothing is selected). */
+  onSelect?: (text: string) => void;
 }
 
 const mode = new Compartment();
@@ -100,7 +103,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       markdown({ base: markdownLanguage, extensions: [mathsSyntax], completeHTMLTags: false }),
       syntaxHighlighting(highlight),
       theme,
-      ...(opts.inline ? [inlineTheme] : []),
+      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : []),
       mode.of(modeExtensions(Boolean(opts.source))),
       closeBrackets(),
       // Only brackets: closing quotes would get in the way of apostrophes in prose.
@@ -120,7 +123,13 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       // Scrolling to the cursor keeps it clear of the sticky bars above and
       // the toolbar below (fixed above the keyboard on a phone).
       EditorView.scrollMargins.of(() => ({ top: covered(".edit-top", "bottom"), bottom: covered(".format-bar", "top") + 8 })),
-      EditorView.updateListener.of((u) => { if (u.docChanged) opts.onChange(u.state.doc.toString()); }),
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged) opts.onChange(u.state.doc.toString());
+        if (opts.onSelect && (u.selectionSet || u.docChanged)) {
+          const r = u.state.selection.main;
+          opts.onSelect(r.empty ? "" : u.state.sliceDoc(r.from, r.to));
+        }
+      }),
     ],
   });
   return new EditorView({ state, parent });
