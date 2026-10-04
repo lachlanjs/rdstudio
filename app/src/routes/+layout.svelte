@@ -29,7 +29,9 @@
     "/procedures": "project", "/p/[...id]": "project", "/skills": "project", "/skill/[...name]": "project", "/agent/[...name]": "project",
     "/teacher/[...rest]": "you", "/settings": "you",
   };
-  const space = $derived(SPACES[page.route.id ?? ""] ?? "library");
+  // An exercise is opened as a note, but it belongs to Practice.
+  const exercise = $derived(page.route.id === "/k/[...id]" && store.concepts.get(page.params.id ?? "")?.type === "Exercise");
+  const space = $derived(exercise ? "practice" : SPACES[page.route.id ?? ""] ?? "library");
   const review = $derived(store.loaded ? reviewCount() : 0);
   const setForYou = $derived(store.loaded ? setCount() : 0);
   const mode = $derived(projectMode());

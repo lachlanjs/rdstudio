@@ -63,6 +63,9 @@
 
 {#if !c}
   <Missing what={id} />
+{:else if c.type === "Exercise" && !session}
+  <!-- An exercise is the workbench: the whole width, in the Practice space. -->
+  {#await body then text}<ExerciseView {c} body={text} onedit={editing.enabled ? startEditing : undefined} />{/await}
 {:else}
   <KnowledgeLayout current={"k:" + id}>
     {#if session}
@@ -96,11 +99,7 @@
           {#if understanding.on}<CatchUp {c} {look} />{/if}
           {#if c.type === "Tour"}<p class="tour-follow"><a class="toggle primary" href={tourHref(c.id)}>Follow this tour</a></p>{/if}
         </header>
-        {#if c.type === "Exercise"}
-          {#await body then text}<ExerciseView {c} body={text} />{/await}
-        {:else}
-          {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
-        {/if}
+        {#await body then text}<Prose html={render(text, { dir: c.directory })} />{/await}
         {#if c.type === "Goal"}<GoalPanel {c} />{/if}
         {#if understanding.on && isStudyNote(c)}<ExplainBack {c} />{/if}
       </article>
