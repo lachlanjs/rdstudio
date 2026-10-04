@@ -15,6 +15,7 @@
   import { render } from "$lib/markdown.ts";
   import Prose from "./Prose.svelte";
   import Time from "./Time.svelte";
+  import AnswerEditor from "./AnswerEditor.svelte";
 
   let { c, body }: { c: ConceptRecord; body: string } = $props();
 
@@ -35,7 +36,6 @@
   let picked = $state<number[]>([]);
   let typed = $state("");
   let text = $state("");
-  let preview = $state(false);
   /** Where this go has got to: answering, then a verdict (checked here or by
    *  you), saved for an agent, or given up. */
   let stage = $state<"answer" | "grade" | "done" | "queued">("answer");
@@ -50,15 +50,14 @@
   // Working behind a choice or a value, and whether to have it reviewed.
   let working = $state("");
   let showWorking = $state(false);
-  let workingPreview = $state(false);
   let review = $state(false);
   /** The attempt just made, and whether its working has gone for review. */
   let lastId = $state<string | null>(null);
   let sentForReview = $state(false);
 
   function again() {
-    picked = []; typed = ""; text = ""; preview = false; stage = "answer"; verdict = null; gaveUp = false; message = ""; reveal = false; marking = null;
-    working = ""; showWorking = false; workingPreview = false; review = false; lastId = null; sentForReview = false;
+    picked = []; typed = ""; text = ""; stage = "answer"; verdict = null; gaveUp = false; message = ""; reveal = false; marking = null;
+    working = ""; showWorking = false; review = false; lastId = null; sentForReview = false;
   }
 
   const answerText = (): string =>
@@ -164,13 +163,8 @@
           {#if s.unit}<span class="unit">{s.unit}</span>{/if}
         </label>
       {:else}
-        <p class="section-note">Markdown, with maths between dollar signs. For working on paper or in code, say where it is (a file in the repository).</p>
-        {#if preview}
-          <div class="exercise-preview"><Prose html={html(text || "*Nothing yet.*")} /></div>
-        {:else}
-          <textarea bind:value={text} rows="8" aria-label="Your answer"></textarea>
-        {/if}
-        <button class="link" type="button" onclick={() => (preview = !preview)}>{preview ? "Back to writing" : "Preview"}</button>
+        <p class="section-note">Maths between dollar signs, shown as you type. For working on paper or in code, say where it is (a file in the repository).</p>
+        <AnswerEditor bind:value={text} label="Your answer" rows={14} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
       {/if}
       {#if s.kind !== "text"}
         <details class="exercise-working" bind:open={showWorking}>
@@ -268,11 +262,5 @@
 </section>
 
 {#snippet workingBox()}
-  <p class="section-note">Markdown, with maths between dollar signs.</p>
-  {#if workingPreview}
-    <div class="exercise-preview"><Prose html={html(working || "*Nothing yet.*")} /></div>
-  {:else}
-    <textarea bind:value={working} rows="5" aria-label="Your working"></textarea>
-  {/if}
-  <button class="link" type="button" onclick={() => (workingPreview = !workingPreview)}>{workingPreview ? "Back to writing" : "Preview"}</button>
+  <AnswerEditor bind:value={working} label="Your working" rows={9} placeholder="Your working, step by step: maths between dollar signs." />
 {/snippet}

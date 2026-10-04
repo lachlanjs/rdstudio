@@ -189,3 +189,26 @@ written to the task, as they are met.
     (7 more checks, 60 in all).
 - **Later:** photos of working on paper, with the phone app and the home
   server.
+
+## 2026-10-04: written answers in the live preview
+
+- **The developer's stipulation:** a written answer should use the same live
+  preview as the note editor, in a larger box.
+- **Built:** `AnswerEditor`, the note editor (CodeMirror, live preview, maths
+  typeset off the line being written, links to notes with `[[`) in a framed
+  box.
+  - It is used for written answers (14 lines tall), working (9 lines) and
+    explain-back (9 lines, loaded only when that section is opened).
+  - The editor's code is fetched when a box first appears, so reading pages
+    stay light. If it cannot load, a plain box takes its place.
+  - The preview buttons are gone.
+  - **Checked:** at a wide desktop width and on a phone (no sideways
+    scrolling); `e2e/teacher.py`, 60 checks; `learn.py` and `edit.py`.
+- **Noticed again:** `e2e/learn.py` stopped once without a result and passed
+  on the rerun. The flaky step needs finding.
+- **Waiting on the developer:** three ideas, given in part.
+  - **Work together:** a teacher that watches the developer's draft and
+    answers in one of three modes: hint, feedback, discuss.
+  - **Streaks,** which go against the "no scores or streaks" rule of the
+    practice design.
+  - **A third idea,** not given yet.
