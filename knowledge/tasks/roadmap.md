@@ -93,6 +93,15 @@ as it runs in a repository of its own.
 - [ ] [T46 Trial: dynamical mean-field theory](/tasks/T46-dmft-trial.md)
 - [ ] [T47 Mounting a shared knowledge base](/tasks/T47-mounts.md)
 
+# M11 — Tutor and streaks
+
+See [work together](/design/tutor.md) and [streaks](/design/streaks.md).
+
+- [ ] [T48 Streaks](/tasks/T48-streaks.md)
+- [ ] [T49 Drafts and history](/tasks/T49-drafts-and-history.md)
+- [ ] [T50 The server-side teacher](/tasks/T50-teacher-service.md)
+- [ ] [T51 Work together](/tasks/T51-work-together.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)

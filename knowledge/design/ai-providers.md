@@ -81,7 +81,8 @@ kind of job, with defaults.
 
 # Order
 
-1. **The home server as the teacher.** An agent loop on `rdstudio serve`,
+1. **The home server as the teacher.** Started by [work together](/design/tutor.md):
+   `rdstudio serve` calls OpenRouter, which is the same thing on a laptop. An agent loop on `rdstudio serve`,
    with an OpenRouter or local model, marking waiting answers automatically.
    It builds on the home server of [projects, accounts and
    sync](/design/projects-and-sync.md), and gives every device, phone
