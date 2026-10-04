@@ -15,6 +15,7 @@
   import { drafts as draftsApi, nextStep, type NextStep } from "$lib/teacher.svelte.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
   import Prose from "./Prose.svelte";
+  import SetsForYou from "./SetsForYou.svelte";
 
   const on = $derived(understanding.on);
   const now = Date.now();
@@ -35,14 +36,8 @@
   const drafted = $derived(new Set(drafts.map((d) => d.exercise)));
   const attempts = $derived(tried());
   const stateOf = (id: string): Shown => shownState(id, drafted, attempts);
-  const CLASS: Record<Shown, string> = { passed: "st-pass", missed: "st-miss", "in progress": "st-prog", "not tried": "st-none" };
   const cont = $derived(drafts.find((d) => store.concepts.has(d.exercise)) ?? null);
-  const setHead = (note: string) => {
-    const i = note.indexOf(":");
-    const desc = i > 0 ? note.slice(i + 1).trim() : "";
-    return [i > 0 ? note.slice(0, i) : note, desc.charAt(0).toUpperCase() + desc.slice(1)];
-  };
-  const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long" });
+
 
   // The teacher's next step, pinned to the row it is about (when that row is on the page).
   let root = $state<HTMLElement>();
@@ -119,28 +114,7 @@
       </section>
       {#if understanding.loadNote()}<p class="section-note load">Your streaks are safe for today: a break now will do more for what you have learnt than more of it.</p>{/if}
 
-      {#each sets as set (set.id)}
-        {@const [head, desc] = setHead(set.note)}
-        <section class="sec">
-          <div class="sec-head"><span class="kind">Set for you</span><span class="caption">{set.done.length} of {set.exercises.length} answered · set {fmtDay(set.at)} by the teacher</span></div>
-          <h2>{head}</h2>
-          {#if desc}<p class="desc">{desc}</p>{/if}
-          <ol class="ex">
-            {#each set.exercises as x, i (x)}
-              {@const s = stateOf(x)}
-              <li data-row={x} class={s === "not tried" ? "none" : ""}>
-                <span class="n">{i + 1}</span><a class="t" href={conceptHref(x)}>{title(x)}</a><span class={["st", CLASS[s]]}>{s}</span>
-              </li>
-              {#if next && next.about === x}
-                <!-- In one column the next step hangs under its row by a stem (in two, it is in the margin). -->
-                <li class="next-inline">
-                  <aside class={["pin", "pin-" + next.pen]}><div class="pin-head"><b>The teacher’s next step</b></div><Prose html={render(next.text)} /></aside>
-                </li>
-              {/if}
-            {/each}
-          </ol>
-        </section>
-      {/each}
+      <SetsForYou {sets} {next} {stateOf} />
 
       {#if cont}
         {@const c = store.concepts.get(cont.exercise)!}

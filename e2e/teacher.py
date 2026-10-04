@@ -253,8 +253,14 @@ with sync_playwright() as pw:
     # ------------------------------------------------------------ the shell (T53)
     p.goto(URL + "?nosw&shell#/")
     p.locator("nav a[data-tab=today][aria-current=page]").wait_for()
-    check("the shell: Today is home, beside Library, Atlas and Practice",
-          p.locator("nav.tabs a").all_inner_texts()[:4] == ["Today", "Library", "Atlas", "Practice"] or [t.split()[0] for t in p.locator("nav.tabs a").all_inner_texts()] == ["Today", "Library", "Atlas", "Practice"])
+    # The profile is codebase now, so this is a Project (T59): Project is a main
+    # space and Practice the quiet link, and Today is the project's.
+    p.locator(".project-today").wait_for()
+    check("the shell in project mode: Today is home, beside Library, Atlas and Project, with Practice the quiet link",
+          [t.split()[0] for t in p.locator("nav.tabs a").all_inner_texts()] == ["Today", "Library", "Atlas", "Project"]
+          and p.locator(".quiet-link").inner_text().startswith("Practice") and p.locator(".mode-tag").inner_text() == "Project")
+    check("…and Today counts the week's work and lists what needs you",
+          p.locator(".project-today .s-tile").count() == 4 and p.get_by_text("Needs you").count() == 1)
     p.keyboard.press("Control+k")
     p.get_by_label("Jump to a note or action").first.wait_for()
     p.keyboard.type("smooth man")
@@ -266,7 +272,14 @@ with sync_playwright() as pw:
     p.keyboard.type("chang")
     p.keyboard.press("Enter")
     p.wait_for_url("**#/changes")
-    check("and to anything the app does", p.locator("nav a[aria-current=page]").count() == 0 and p.locator(".quiet-link[aria-current=page]").count() == 1)
+    check("and to anything the app does", p.locator("nav.tabs a[data-tab=project][aria-current=page]").count() == 1)
+    p.goto(URL + "?nosw#/map")
+    p.locator(".m-place").first.wait_for(timeout=20000)
+    p.wait_for_timeout(800)
+    check("in project mode the Atlas shows the Activity lens, with no north arrow",
+          p.locator(".map-panel .lenses button[aria-pressed=true]", has_text="Activity").count() == 1 and not p.locator(".atlas-north").is_visible())
+    # Back to learning a topic, for the learning layer's own checks below.
+    cli("teacher", "profile", "topic")
     p.goto(URL + "?nosw&shell2#/project")
     p.locator(".project-places").wait_for()
     check("Project gathers changes, review, reports, procedures and skills", p.locator(".project-places li").count() == 5)

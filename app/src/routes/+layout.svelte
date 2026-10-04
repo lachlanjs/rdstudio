@@ -35,6 +35,7 @@
   const review = $derived(store.loaded ? reviewCount() : 0);
   const setForYou = $derived(store.loaded ? setCount() : 0);
   const mode = $derived(projectMode());
+  const project = $derived(mode === "Project");
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
   let drawer = $state(false);
@@ -84,7 +85,8 @@
     {@render link("today", "#/", "Today", setForYou)}
     {@render link("library", "#/library", "Library")}
     {@render link("atlas", "#/map", "Atlas")}
-    {@render link("practice", "#/practice", "Practice")}
+    <!-- Project mode swaps Practice and Project: the project's upkeep leads (T59). -->
+    {#if project}{@render link("project", "#/project", "Project", review)}{:else}{@render link("practice", "#/practice", "Practice")}{/if}
   </nav>
   <span class="bar-end">
     {#if store.live === "signin"}
@@ -94,7 +96,11 @@
     {:else if store.live === "offline"}
       <span class="live offline" title={LIVE.offline}>Offline</span>
     {/if}
-    <a class="quiet-link" href="#/project" data-tab="project" aria-current={space === "project" ? "page" : undefined}>Project{#if review}<span class="count"> {review}</span>{/if}</a>
+    {#if project}
+      <a class="quiet-link" href="#/practice" data-tab="practice" aria-current={space === "practice" ? "page" : undefined}>Practice</a>
+    {:else}
+      <a class="quiet-link" href="#/project" data-tab="project" aria-current={space === "project" ? "page" : undefined}>Project{#if review}<span class="count"> {review}</span>{/if}</a>
+    {/if}
     <button class="palette-box" type="button" onclick={() => (palette.open = true)} aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}>
       <svg class="palette-icon" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M12.5 12.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
       <span class="palette-text">Jump to a note or action</span><kbd>{mac ? "⌘K" : "Ctrl K"}</kbd>
@@ -105,7 +111,11 @@
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Escape closes it too) -->
         <div class="you-scrim" onclick={() => (you = false)}></div>
         <div class="you-menu" role="menu" aria-label="You">
-          <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, reports, procedures, skills</span></a>
+          {#if project}
+            <a role="menuitem" class="you-project" href="#/practice">Practice<span>goals, exercises and drills</span></a>
+          {:else}
+            <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, reports, procedures, skills</span></a>
+          {/if}
           <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
           <a role="menuitem" href="#/settings">Settings</a>
           <div class="you-row" role="group" aria-label="Light or dark">
@@ -135,9 +145,13 @@
   {/snippet}
   {@render tab("today", "#/", "Today", "M11 7a4 4 0 1 1 0 8a4 4 0 1 1 0-8M11 2v2M11 18v2M2 11h2M18 11h2M4.6 4.6l1.4 1.4M16 16l1.4 1.4M4.6 17.4L6 16M16 6l1.4-1.4", setForYou)}
   {@render tab("library", "#/library", "Library", "M4 4v14M8 4v14M12 4l4 14")}
-  {@render tab("practice", "#/practice", "Practice", "M14.5 4.5l3 3L8 17H5v-3zM12.5 6.5l3 3")}
+  {#if project}
+    {@render tab("project", "#/project", "Project", "M4 6h14M4 11h14M4 16h9", review)}
+  {:else}
+    {@render tab("practice", "#/practice", "Practice", "M14.5 4.5l3 3L8 17H5v-3zM12.5 6.5l3 3")}
+  {/if}
   {@render tab("atlas", "#/map", "Atlas", "M11 3a8 8 0 1 1 0 16a8 8 0 1 1 0-16M11 7a4 4 0 1 1 0 8a4 4 0 1 1 0-8")}
-  <button type="button" aria-haspopup="menu" aria-expanded={you} aria-current={["you", "project"].includes(space) ? "page" : undefined} onclick={() => (you = !you)}>
+  <button type="button" aria-haspopup="menu" aria-expanded={you} aria-current={space === "you" || space === (project ? "practice" : "project") ? "page" : undefined} onclick={() => (you = !you)}>
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M5 11h.01M11 11h.01M17 11h.01" /></svg>
     <span>More</span>
   </button>

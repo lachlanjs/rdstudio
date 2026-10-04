@@ -38,7 +38,8 @@ export const VIEW_DEFAULTS = {
   labels: 30, detail: 60,
   showLinks: true, // the Links lens: trunks between top-level folders, and the links inside the folder in focus
   allLinks: false, // every link at the shown scale instead, filtered as below
-  terrain: true, // the Understanding lens
+  terrain: true, // the terrain of the height lens
+  height: null, // the height lens: "understanding", "activity" or "health"; by default understanding, or activity in project mode
   // Folder shape: "contour" (the outline follows the contents) or "circle"
   // (the packing's own circles); routing: "downhill" (crossing contours at
   // right angles, gathering in the flats) or "gates" (gates, corridors and
@@ -107,6 +108,48 @@ function effective() {
   const o = Object.assign({}, VIEW_DEFAULTS, TUNING_DEFAULTS, project, M.user);
   if (projectMode() === "Project") o.north = 0; // direction means nothing on a project's map
   return o;
+}
+
+// ------------------------------------------------------------ height lenses
+
+// What the terrain's height means (T59): where you stand (understanding, 0
+// not reached to 3 understood), how recently a note changed (activity: this
+// week, this month, this quarter; 90 days untouched is fog), or how settled
+// it is (health: one step each for reviewed by a person, tested by an
+// exercise, and current, neither its checks nor its content stale).
+export const LENSES = { understanding: "Understanding", activity: "Activity", health: "Health" };
+const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
+const LEVEL_CLASS = ["st-undiscovered", "st-discovered", "st-processed", "st-understood"];
+function heightLens(o) {
+  const lens = LENSES[o.height] ? o.height : projectMode() === "Project" ? "activity" : "understanding";
+  return lens === "understanding" && !understanding.on ? "activity" : lens;
+}
+let changesSeen = null, changedAt = new Map();
+function lastChanged() {
+  if (changesSeen === store.changes) return changedAt;
+  changesSeen = store.changes;
+  changedAt = new Map();
+  for (const c of store.changes.commits) {
+    const t = c.pending || !c.date ? Date.now() : Date.parse(c.date);
+    for (const f of c.files) if (!(changedAt.get(f.path) >= t)) changedAt.set(f.path, t);
+  }
+  return changedAt;
+}
+let testedSeen = null, testedSet = new Set();
+function tested() {
+  if (testedSeen === store.concepts) return testedSet;
+  testedSeen = store.concepts;
+  testedSet = new Set(exerciseNotes().flatMap(testsOf));
+  return testedSet;
+}
+function lensValue(lens, c) {
+  if (lens === "understanding") return LEVEL[understanding.state(c.id)?.state] ?? 0;
+  if (lens === "activity") {
+    const t = lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
+    const days = (Date.now() - t) / 86400000;
+    return days <= 7 ? 3 : days <= 30 ? 2 : days <= 90 ? 1 : 0;
+  }
+  return (c.trust === "human-reviewed" ? 1 : 0) + (tested().has(c.id) ? 1 : 0) + (!c.verification_stale && !c.content_stale ? 1 : 0);
 }
 
 function markerFor(type) {
@@ -747,7 +790,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   }
   const hiddenCount = () => { let k = 0; for (const c of store.concepts.values()) if (!understanding.visible(c.id)) k++; return k; };
   // Classes for where a note stands for you: its title's weight and the place's ink.
-  const reach = (n) => (n.data.kind === "concept" ? understanding.cls(n.data.ref) + (understanding.frontier(n.data.ref) ? " frontier" : "") : "");
+  const reach = (n) => (n.data.kind !== "concept" ? ""
+    : heightLens(o) !== "understanding" ? LEVEL_CLASS[lensValue(heightLens(o), n.data.c)]
+    : understanding.cls(n.data.ref) + (understanding.frontier(n.data.ref) ? " frontier" : ""));
 
   // What links are drawn, as routes between shown items (merged per pair):
   // a tour's or study path's own; a selected note's own links, in the blue
@@ -942,8 +987,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // ------------------------------------------------------------ terrain
 
   // Height under the Understanding lens: not reached 0 to understood 3.
-  const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
-  const levelOf = (n) => LEVEL[understanding.state(n.data.ref)?.state] ?? 0;
+  const lens = () => heightLens(o);
+  const levelOf = (n) => lensValue(lens(), n.data.c);
   const baked = new Map(); // top-level folder id → its terrain, kept while a newer one is baked
   const asked = new Set();
   function terrainOf(top) {
@@ -970,7 +1015,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // full: tints, every contour, the frontier and its hachures. overview: one
   // contour. reduced: the fog and a thin frontier, so routes carry the detail.
   function drawTerrain(tops, t, mode) {
-    const on = understanding.on && o.terrain;
+    const on = !!o.terrain;
     gTerrain.attr("display", on ? null : "none");
     svg.classed("terrain", on);
     if (!on) return;
@@ -1019,6 +1064,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // Notes an exercise testing them was missed on: the teacher says they need work.
   let needsAt = null, needsSet = new Set();
   function needsWork() {
+    if (lens() !== "understanding") return new Set();
     if (needsAt === learner.events) return needsSet;
     needsAt = learner.events;
     const all = tried();
@@ -1113,7 +1159,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Notes are drawn as places of bounded size; one not reached a little smaller.
     const dot = (n) => {
       const r = Math.max(2.5, Math.min(n.data.landmark ? o.dotMax + 2.5 : o.dotMax, n.r * o.dot * t.k));
-      return understanding.on && !levelOf(n) && !needs.has(n.data.ref) ? r * 0.8 : r;
+      return (lens() !== "understanding" || understanding.on) && !levelOf(n) && !needs.has(n.data.ref) ? r * 0.8 : r;
     };
     const ringed = (n) => needs.has(n.data.ref) || levelOf(n) === 3;
     const radius = (n) => (n.data.kind === "concept" ? dot(n) + (ringed(n) ? 5 : 0) : sr(n));
@@ -1275,9 +1321,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       .on("pointerleave", () => { tip.hidden = true; hover(null); })
       .each(function (n) {
         const r = dot(n), g = d3.select(this);
-        const red = needs.has(n.data.ref), green = !red && levelOf(n) === 3 && understanding.on;
-        g.select(".sel").attr("r", n === selected ? r + (red || green ? 10 : 7) : 0);
-        g.select(".ring-a").attr("r", red || green ? r + 5 : 0);
+        // On the Activity lens the top state is a plain ring: recent is not right.
+        const red = needs.has(n.data.ref), top = !red && levelOf(n) === 3 && (lens() !== "understanding" || understanding.on);
+        const green = top && lens() !== "activity";
+        g.classed("plain", top && !green);
+        g.select(".sel").attr("r", n === selected ? r + (red || top ? 10 : 7) : 0);
+        g.select(".ring-a").attr("r", red || top ? r + 5 : 0);
         g.select(".ring-b").attr("r", green ? r + 2.5 : 0);
         g.select(".mark").attr("d", d3.symbol(SYMBOLS[n.data.marker], Math.PI * r * r)());
         g.select(".bar").attr("d", n.data.marker === "ring" ? `M${-r} 0H${r}` : null);
@@ -1728,7 +1777,7 @@ function controls({ view, tune, readout, summary }) {
   const lensNames = h("span", { class: "lens-names" });
   const nameLenses = () => {
     const e = effective();
-    const on = [e.showLinks && "Links", understanding.on && e.terrain && "Understanding"].filter(Boolean);
+    const on = [e.showLinks && "Links", e.terrain && LENSES[heightLens(e)]].filter(Boolean);
     lensNames.textContent = on.length ? on.join(", ") : "none";
   };
   nameLenses();
@@ -1812,14 +1861,23 @@ function controls({ view, tune, readout, summary }) {
   const dotAt = (r) => d3.symbol(d3.symbolCircle, Math.PI * r * r)();
   const place = (cls, r, rings = "") => `<g class="m-place circle ${cls}">${rings}<path class="mark" d="${dotAt(r)}"/></g>`;
   const item = (icon, text) => h("li", {}, icon, h("span", {}, text));
-  const states = understanding.on ? [
-    item(svgKey(place("st-understood", 3.5, '<circle class="ring-a" r="8.5"/><circle class="ring-b" r="6"/>')), "Understood: filled, double green ring"),
-    item(svgKey(place("st-processed", 4.5)), "Worked through: filled"),
-    item(svgKey(place("st-discovered", 4.5)), "Opened: outline"),
-    item(svgKey(place("st-undiscovered", 3.5)), "Not reached: faint, in fog"),
-    item(svgKey(place("needs st-discovered", 4, '<circle class="ring-a" r="8.5"/>')), "The teacher says: needs work"),
-    item(svgKey('<path d="M2 12H20" class="a-front"/><path d="M4 12v-6M8 12v-3M12 12v-6M16 12v-3M20 12v-6" class="a-hach"/>', "0 0 22 22"), "Frontier: hachures face the fog"),
-  ] : [];
+  // Where each note stands under the height lens, and the frontier.
+  const states = (lens) => {
+    const ring2 = '<circle class="ring-a" r="8.5"/><circle class="ring-b" r="6"/>', ring1 = '<circle class="ring-a" r="8.5"/>';
+    const words = {
+      understanding: ["Understood: filled, double green ring", "Worked through: filled", "Opened: outline", "Not reached: faint, in fog"],
+      activity: ["Changed this week: filled, ringed", "This month: filled", "This quarter: outline", "90 days untouched: faint, in fog"],
+      health: ["Reviewed, tested and current: double green ring", "Two of the three: filled", "One: outline", "None: faint, in fog"],
+    }[lens];
+    return [
+      item(svgKey(place("st-understood" + (lens === "activity" ? " plain" : ""), 3.5, lens === "activity" ? ring1 : ring2)), words[0]),
+      item(svgKey(place("st-processed", 4.5)), words[1]),
+      item(svgKey(place("st-discovered", 4.5)), words[2]),
+      item(svgKey(place("st-undiscovered", 3.5)), words[3]),
+      ...(lens === "understanding" ? [item(svgKey(place("needs st-discovered", 4, ring1)), "The teacher says: needs work")] : []),
+      item(svgKey('<path d="M2 12H20" class="a-front"/><path d="M4 12v-6M8 12v-3M12 12v-6M16 12v-3M20 12v-6" class="a-hach"/>', "0 0 22 22"), "Frontier: hachures face the fog"),
+    ];
+  };
   const lines = [
     item(svgKey('<path d="M2 11H20" class="m-link trunk" stroke-width="2"/>', "0 0 22 22"), "Trunk: the links between two folders, with their count"),
     item(svgKey('<circle r="8" class="m-dir open depth-1"/>'), "A folder's wall: trunks leave by gates on it"),
@@ -1827,7 +1885,26 @@ function controls({ view, tune, readout, summary }) {
     item(svgKey('<path d="M2 11H20" class="m-link dep"/>', "0 0 22 22"), "What builds on the selected note"),
     item(svgKey(place("landmark", 6)), "Landmark: drawn larger"),
   ];
-  const key = h("ul", { class: "legend map-key" }, ...states, ...lines);
+  const key = h("ul", { class: "legend map-key" });
+  const drawKey = () => { const e = effective(); key.replaceChildren(...(e.terrain ? states(heightLens(e)) : []), ...lines); };
+  drawKey();
+  // The height lenses: one at a time; choosing the one shown again puts the terrain away.
+  const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || understanding.on).map(([value, label]) => {
+    const b = h("button", { class: "toggle", type: "button", title: {
+      understanding: "The terrain of where you stand: reached ground is clear, the rest is fog.",
+      activity: "High ground is recent work: changed this week, this month, this quarter; 90 days untouched is fog.",
+      health: "High ground is settled: one step each for reviewed by a person, tested by an exercise, and current.",
+    }[value] }, label);
+    b.addEventListener("click", () => {
+      const e = effective();
+      if (e.terrain && heightLens(e) === value) M.user.terrain = false;
+      else { M.user.terrain = true; M.user.height = value; }
+      persist(); nameLenses(); drawKey(); pressHeights(); view();
+    });
+    return [value, b];
+  });
+  const pressHeights = () => { const e = effective(); for (const [value, b] of heights) b.setAttribute("aria-pressed", String(!!e.terrain && heightLens(e) === value)); };
+  pressHeights();
 
   return h("div", { class: "graph-panel map-panel" },
     h("details", { class: "graph-options", open: !narrow },
@@ -1835,7 +1912,7 @@ function controls({ view, tune, readout, summary }) {
       h("h2", { class: "lens-title" }, "Lenses"),
       h("div", { class: "row lenses" },
         toggle("showLinks", "Links", "Trunks between folders, with their counts, and the links inside the folder in focus."),
-        understanding.on ? toggle("terrain", "Understanding", "The terrain of where you stand: reached ground is clear, the rest is fog.") : ""),
+        ...heights.map(([, b]) => b)),
       understanding.on ? h("label", { class: "hide-undiscovered" }, (() => {
         const box = h("input", { type: "checkbox" });
         box.checked = understanding.hiding;

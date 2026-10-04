@@ -77,6 +77,14 @@ Each is checkable by looking at a screenshot or reading the code.
   and drawn by transforming the paths: when one note's value changes, only its
   folder is baked again. A bake takes about 3 ms whether the folder holds 60
   notes or 3,000. With the learner record off there is no terrain.
+- **Height lenses (T59):** the terrain's height is one of three lenses,
+  one at a time. **Understanding** (above) is the learning default.
+  **Activity** is the project default: when the note last changed in git (or
+  its file's time), this week, this month or this quarter, with 90 days
+  untouched as fog; its top state is a plain ring, since recent is not right.
+  **Health** is one step each for reviewed by a person, tested by an
+  exercise, and current; its top state is a double green ring. The markers
+  and the key follow the lens.
 - **North:** within each folder, a child's mean depth in the chain of
   requires- and uses-links pulls it north (`north`), so north is later in the
   study order and the arrow on the map says so. Project mode turns it off.
@@ -192,7 +200,8 @@ current values in the right form to copy into a project.
 | `labels` | 30 | Most labels shown at once, most important first |
 | `detail` | 60 | A folder opens when its radius on screen passes this many pixels |
 | `showLinks` | true | The Links lens: trunks between top-level folders, and the links inside the folder in focus |
-| `terrain` | true | The Understanding lens: the terrain of where you stand (needs the learner record) |
+| `terrain` | true | Show the terrain of the height lens |
+| `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
 | `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above) or `circle` (the packing's circles, names on the arc) |
 | `routing` | `"downhill"` | `downhill` (crosses contours at right angles, gathers in the flats) or `gates` (gates, corridors and bundling) |
 | `allLinks` | false | Draw every link at the shown scale instead of trunks, filtered by the settings below |
