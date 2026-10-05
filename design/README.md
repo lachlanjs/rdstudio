@@ -38,7 +38,7 @@ draws them.
 - **Station terminal theme** (`tools/station.mjs`, `Station*` sketches): a
   third chooseable theme beside the terminal lean and retro-futurist. Mixed
   case, upper case for labels only.
-- **Maths font sheet** (`tools/mathfonts.mjs`, `MathFonts`): the 11 MathJax 4
+- **Maths font sheet** (`tools/mathfonts.mjs`, `MathFonts`): seven of the MathJax 4
   fonts beside KaTeX with Charter letters, rendered at build time from
   `tools/mathfonts/*.json`.
 - **Calmer Atlas** (`AtlasCalm`, `AtlasCalmHover`): the contour Atlas with
