@@ -1,0 +1,1 @@
+The tight searched layout at overview. Folders are free-form regions of cells around their notes; one trunk per pair of folders. North is not enforced, so the north arrow is hidden.

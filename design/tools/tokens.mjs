@@ -56,6 +56,17 @@ export const colors = [
   c('retro-text', '#f1e7cf', '#1c2a20', 'Retro option text: pale straw phosphor in dark, dark green-black ink in light. On retro-surface to retro-surface-3.'),
   c('retro-text-soft', '#cdbf9f', '#3c4d40', 'Retro option secondary text, contours. On retro-surface to retro-surface-3.'),
   c('retro-text-faint', '#a89b7c', '#4c5d51', 'Retro option metadata. 4.5:1 or more on every retro surface.'),
+  // Station terminal option: a cold white phosphor on blue-black, after late-1970s film computers. For fun; a user setting.
+  c('station-surface', '#060a0f', '#e4eaee', 'Station option ground: blue-black tube in dark, cold printout paper in light.'),
+  c('station-surface-1', '#0b1118', '#edf1f4', 'Station option first raised step (panels, land on the Atlas).'),
+  c('station-surface-2', '#101922', '#f6f8fa', 'Station option second raised step (teacher cards, closed folders).'),
+  c('station-surface-3', '#18242f', '#d3dce2', 'Station option third step (pressed and selected).'),
+  c('station-rule', '#1c2a35', '#c2cdd4', 'Station option hairlines and the map grid. Decorative structure.'),
+  c('station-rule-strong', '#6f8794', '#647883', 'Station option control borders and panel frames (3:1 or more on every station surface).'),
+  c('station-text', '#e6eff3', '#101a22', 'Station option text: cold white phosphor in dark, blue-black ink in light. Reversed blocks use it as their fill.'),
+  c('station-text-soft', '#a9bcc6', '#34454f', 'Station option secondary text.'),
+  c('station-text-faint', '#8499a5', '#4b5d68', 'Station option metadata and dotted leaders. 4.5:1 or more on every station surface.'),
+  c('station-line', '#8fcfdb', '#1f6373', 'Station option drawing line: frames, map outlines, contours and connector lines. Pale cyan; structure only, never a meaning.'),
 ];
 
 

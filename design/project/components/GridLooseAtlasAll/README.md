@@ -1,0 +1,1 @@
+The loose searched layout with all 98 links drawn singly. About a quarter of the route runs beside another route, against three quarters in GridAtlasAll.

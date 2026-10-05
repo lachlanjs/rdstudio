@@ -1,0 +1,1 @@
+The loose searched layout zoomed into Manifolds with every link that touches it.

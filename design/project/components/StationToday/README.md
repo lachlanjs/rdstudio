@@ -1,0 +1,1 @@
+Today in the station terminal option: pixel and mono type on blue-black, upper case for labels only, reversed title bars, thin cyan frames, segmented counters and a key legend with dotted leaders. Layout and content are the terminal lean's; the pens are unchanged.

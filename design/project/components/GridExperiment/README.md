@@ -1,0 +1,1 @@
+Six layouts of the same notes and links side by side, every link drawn singly, with measured crossings, route length, share of route beside another route, cell size and how much of the north-is-later order survives. The evidence for searching positions and routes together.

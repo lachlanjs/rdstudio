@@ -2,8 +2,9 @@
 
 The output of the redesign described in
 [`knowledge/design/redesign.md`](../knowledge/design/redesign.md): tokens,
-fonts, usage rules and 34 static sketches, plus the scripts that generate
-them. Nothing here is wired into the app yet.
+fonts, usage rules and 53 static sketches, plus the scripts that generate
+them. The app has since been built from the first set (M12); the later
+sketches listed under "Added since M12" are proposals and are not in the app.
 
 ## What is here
 
@@ -28,6 +29,40 @@ npm run audit -- AtlasLinks ProjectToday     # text contrast check
 `shot` and `audit` need a Chromium that Playwright can find; set
 `CHROMIUM_PATH` to use a specific one. To view a sketch by hand, open
 `design/harness/<Name>.html` after a build.
+
+## Added since M12
+
+None of this is in the app. Each is a set of sketches and the script that
+draws them.
+
+- **Station terminal theme** (`tools/station.mjs`, `Station*` sketches): a
+  third chooseable theme beside the terminal lean and retro-futurist. Mixed
+  case, upper case for labels only.
+- **Maths font sheet** (`tools/mathfonts.mjs`, `MathFonts`): seven of the MathJax 4
+  fonts beside KaTeX with Charter letters, rendered at build time from
+  `tools/mathfonts/*.json`.
+- **Calmer Atlas** (`AtlasCalm`, `AtlasCalmHover`): the contour Atlas with
+  less drawn at rest.
+- **Grid Atlas** (`tools/grid.mjs`, `GridAtlas*`, `StationGridAtlas*`): a
+  third folder shape, `grid`, beside `circle` and `contour`. Notes are blocks
+  of cells, height is nesting, routes are A* over cells and end on block
+  edges. The kind of note is a glyph in the block.
+- **Searched grid layout** (`tools/gridopt.mjs`, `GridExperiment`,
+  `GridFreeAtlas*`, `GridLooseAtlas*`): note positions and routes optimised
+  together by simulated annealing, with folders as free-form regions of
+  cells. `GridExperiment` holds the measured comparison of six layouts. The
+  preferred one is loose (4 clear cells between notes), with routes charged
+  for running side by side and later study weighted north: 89 crossings and
+  23% of route beside another route, against 211 and 75% for the unsearched
+  grid. `tools/gridopt-cache.json` holds the searched positions so a build
+  does not repeat the search (about four minutes for all four); delete it to
+  run the search again.
+
+Open on the grid Atlas: the layout is recomputed from scratch, so it is not
+stable when notes are added and there is no dragging or pinning; cells are
+small at overview in the loose layout (5.6px); folder shapes are irregular;
+each search was run with one seed on placeholder links; nothing is tested
+beyond 63 notes; the searched layouts have no station-theme sketches.
 
 ## What is decided
 

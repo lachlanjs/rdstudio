@@ -40,16 +40,17 @@ export const R_CSS = T_CSS.replaceAll('[data-dir="t"]', '[data-dir="r"]') + `
 [data-dir="r"] .north{font-family:var(--font-pixel);text-transform:uppercase;font-variation-settings:normal;font-size:11px}
 `;
 
-// the Atlas is built elsewhere: re-skin a finished Atlas page into the retro option
-export function retroAtlas(html, subtitle) {
-  const grid = '<pattern id="rgrid" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="var(--retro-surface)"/><path d="M30 26v8M26 30h8" stroke="var(--retro-rule)" stroke-width="1" fill="none"/></pattern>';
+// the Atlas is built elsewhere: re-skin a finished Atlas page into a theme option
+export function reskinAtlas(html, { subtitle, group, dir, css, defs, title }) {
   return html
-    .replace(/<!-- @dsCard group="[^"]*" width=1440 height=900 subtitle="[^"]*" -->/, `<!-- @dsCard group="${GROUP_R}" width=1440 height=900 subtitle="${subtitle}" -->`)
-    .replaceAll('data-dir="a"', 'data-dir="r"')
-    .replace('<pattern id="fogdots"', grid + '<pattern id="fogdots"')
-    .replace('</style>\n</head>', R_CSS + '</style>\n</head>')
-    .replace(/<title>[^<]*<\/title>/, '<title>Retro-futurist option, Atlas</title>');
+    .replace(/<!-- @dsCard group="[^"]*" width=1440 height=900 subtitle="[^"]*" -->/, `<!-- @dsCard group="${group}" width=1440 height=900 subtitle="${subtitle}" -->`)
+    .replaceAll('data-dir="a"', `data-dir="${dir}"`)
+    .replace('<pattern id="fogdots"', defs + '<pattern id="fogdots"')
+    .replace('</style>\n</head>', css + '</style>\n</head>')
+    .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`);
 }
+export const retroAtlas = (html, subtitle) => reskinAtlas(html, { subtitle, group: GROUP_R, dir: 'r', css: R_CSS, title: 'Retro-futurist option, Atlas',
+  defs: '<pattern id="rgrid" width="60" height="60" patternUnits="userSpaceOnUse"><rect width="60" height="60" fill="var(--retro-surface)"/><path d="M30 26v8M26 30h8" stroke="var(--retro-rule)" stroke-width="1" fill="none"/></pattern>' });
 
 export function retroDocs() {
   return {

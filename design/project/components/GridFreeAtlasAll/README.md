@@ -1,0 +1,1 @@
+The tight searched layout with all 98 links drawn singly. Compare with GridAtlasAll, which has about three times the crossings.

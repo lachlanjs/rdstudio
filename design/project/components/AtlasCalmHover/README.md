@@ -1,0 +1,1 @@
+The calmer Atlas with the pointer on a folder: its trunks stay, other trunks go quiet, and one card gives its progress, what needs work, what it builds on and what builds on it.
