@@ -27,7 +27,7 @@ import { understanding, STATE_LABEL } from "../understanding.svelte.ts";
 import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { projectMode } from "../shell.svelte.ts";
 import { start, plainModel, layoutKey, cached, remember, previous, relative, applyPositions, positions, computeLayout, computeTerrain, computeOutlines, computeRoutes, computeGrid, computeGridRoutes } from "./layout.js";
-import { build as gridBuild, freeG, plainGrid, endOf, lanes as gridLanes, offsetLine, roundPath } from "./grid.js";
+import { build as gridBuild, freeG, plainGrid, endOf, lanes as gridLanes, offsetLine, roundPath, SPREAD as GRID_SPREAD } from "./grid.js";
 import { widthOf, LEVELS as T_LEVELS } from "./terrain.js";
 import { folderSpecs } from "./contours.js";
 import { codeMap, codeHref, healthOf, KIND_LABEL, LINK_LABEL } from "../code.ts";
@@ -1218,7 +1218,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   let smoothXyr = null;
   let grid = null; // { at, G, u, searched, version, reach }
   const gridRouted = new Map(), gridAsked = new Set(); // routes per set, from the worker
-  const GRID_KEY = "rdstudio.grid";
+  const GRID_KEY = "rdstudio.grid.3"; // .3: the roomier grid (spread 5, deeper walls, wider blocks)
   const gridLinks = () => model.edges.filter(([, , s]) => s >= 2).map(([a, b]) => [a, b]);
   const savedGrid = () => { try { return JSON.parse(localStorage.getItem(GRID_KEY) || "null"); } catch { return null; } };
   function ensureGrid() {
@@ -1249,7 +1249,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // did not know (added since) keeps its snapped place.
   function searched(pos) {
     for (const n of L.root.leaves()) { const at = pos[n.data.ref]; if (at) { n.gx = at[0]; n.gy = at[1]; } else { n.gx = Math.round(n.gx * 1.25); n.gy = Math.round(n.gy * 1.25); } }
-    adopt(freeG(L.root, 4), true);
+    adopt(freeG(L.root, GRID_SPREAD), true);
   }
   function adopt(G, isSearched) {
     const u = 1000 / Math.max(G.W, G.H);
@@ -1349,7 +1349,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       });
     // Folder titles, in their own reserved cells, with what is reached.
     const fsz = Math.max(10, Math.min(12, C * 0.72));
-    layer("g-titles").selectAll("text").data(folders.filter(() => C >= 3), (f) => f.data.id).join((enter) => {
+    // Top-level names always (in full, past the wall if need be); inner ones once there is room.
+    layer("g-titles").selectAll("text").data(folders.filter((f) => f.depth === 1 || C >= 3), (f) => f.data.id).join((enter) => {
       const tx = enter.append("text").attr("class", "g-title m-text territory");
       tx.append("tspan").attr("class", "name");
       tx.append("tspan").attr("class", "count");
@@ -1358,7 +1359,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       // Up to the folder's width (its title row may be shorter than its name).
       const max = Math.floor((Math.max(f.tw ?? 0, f.w - ((f.tx ?? f.gx) - f.gx)) * C - 14) / (fsz * 0.62)), cnt = " " + reachedOf(f);
       let name = f.data.label;
-      if (name.length + cnt.length > max) name = name.slice(0, Math.max(3, max - cnt.length - 1)) + "…";
+      if (f.depth > 1 && name.length + cnt.length > max) name = name.slice(0, Math.max(3, max - cnt.length - 1)) + "…";
       const tx = d3.select(this).attr("x", X(f.tx ?? f.gx) + 8).attr("y", Y(f.ty ?? f.gy) + Math.max(C / 2 + fsz * 0.36, fsz + 3)).style("font-size", `${fsz.toFixed(1)}px`);
       tx.select(".name").text(name);
       tx.select(".count").text(cnt);

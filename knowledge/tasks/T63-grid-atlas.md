@@ -64,3 +64,33 @@ Grid. Contours stay the default until the grid is timed at scale.
   - the searched layout kept in the browser;
   - selecting a block;
   - back to contours with nothing of the grid left behind.
+
+# Follow-up (2026-10-05): faster, roomier
+
+The developer found the Atlas too slow, the folders too compressed and the
+contours too tightly packed, on the grid.
+
+- **Too slow:** on rdstudio's own notes (about 120) the grid blocked the
+  page for up to 112 s.
+  - Its routes now run in the worker (plain typed arrays, `routeCells`);
+    a set of routes is drawn when it arrives.
+  - Each A* search keeps to a window around its ends.
+  - There are fewer re-routing passes when there are many routes.
+  - The search checks the clock on every move, stops at 1.5 times its
+    budget, and its move count is calibrated to finish within the budget
+    (3 s by default). It starts cool on big maps.
+  - Now rdstudio's grid settles in 0.4 s, the search takes 0.5 s, routes
+    0.25 s, and there are no long tasks.
+- **Compressed:** a big folder (Tasks, 67 notes) was snapped over a 232 by
+  236 box, because its tightest scale started from where two near-coincident
+  notes put it. Its region then broke into islands.
+  - The scale now starts from the blocks' own area, and falls back to rows
+    in the smooth layout's order.
+  - The snapping keeps the gaps the search asks for (5 cells between notes,
+    6 between folders, walls 3 in).
+  - Regions reach a cell further, with 3 cells between nested walls (not 2)
+    and rounder outlines.
+  - Blocks are 11 cells wide, so names read.
+  - Top-level names are always shown, in full, over a halo.
+- The browser's kept layout is versioned (`rdstudio.grid.3`), so older,
+  tighter layouts are not reused.

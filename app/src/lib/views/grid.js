@@ -6,7 +6,7 @@
 //          to cells: inside each folder the children keep their relative
 //          places, scaled down as far as they go and nudged apart until notes
 //          have GAP_NOTES clear cells between them and folders GAP_FOLDERS. A
-//          note is a block of 8 by 2 cells, larger with many links. A folder
+//          note is a block of 11 by 2 cells, larger with many links. A folder
 //          has a title row, a free row and a margin inside its wall.
 // Search   Optionally (searched), positions and routes are optimised together
 //          by simulated annealing, and folders become free-form regions: the
@@ -21,7 +21,10 @@
 // Lanes    Routes sharing a cell edge take different offsets and run side by
 //          side; a later route is drawn over an earlier one with a gap.
 
-const GAP_NOTES = 2, GAP_FOLDERS = 3, PAD = 2, TIGHT = 0.5, MARGIN = 3;
+// The snapped grid keeps the gaps the search will ask for (SPREAD between
+// notes; enough between folders that their regions stay apart), so the
+// search starts from a layout that keeps its rules and only refines it.
+const GAP_NOTES = 5, GAP_FOLDERS = 6, PAD = 3, TIGHT = 0.5, MARGIN = 3;
 
 const isNote = (n) => n.data.kind === "concept";
 const folderOf = (n) => n.data.kind === "dir" && n.children;
@@ -34,7 +37,7 @@ export function build(root, deg, { gapN = GAP_NOTES, gapF = GAP_FOLDERS } = {}) 
   const size = (n) => {
     if (!folderOf(n)) { // a note, or an empty folder (drawn as a small block)
       const d = deg.get(n.data.ref) || 0;
-      n.w = isNote(n) ? (d >= 6 ? 9 : 8) : 6; n.h = d >= 9 ? 3 : 2;
+      n.w = isNote(n) ? (d >= 6 ? 12 : 11) : 6; n.h = d >= 9 ? 3 : 2; // wide enough for a name to read when zoomed in
       return;
     }
     n.children.forEach(size);
@@ -61,8 +64,24 @@ export function build(root, deg, { gapN = GAP_NOTES, gapF = GAP_FOLDERS } = {}) 
       }
       return false;
     };
-    let P = at(kc);
-    for (let k = kc * TIGHT; k < kc; k *= 1.06) { const Q = at(k); if (relax(Q) && clear(Q)) { P = Q; break; } }
+    // Start from the scale at which the blocks would cover about half the
+    // box (not from half of kc, which two near-coincident notes make huge).
+    const need = kids.reduce((s, c) => s + (c.w + gap) * (c.h + gap), 0);
+    const xs = kids.map((c) => c.x), ys = kids.map((c) => c.y);
+    const spanArea = Math.max(1e-9, (Math.max(...xs) - Math.min(...xs) + 1e-3) * (Math.max(...ys) - Math.min(...ys) + 1e-3));
+    const kArea = Math.min(kc, Math.max(kc * 0.02, Math.sqrt((2 * need) / spanArea)));
+    let P = null;
+    for (let k = Math.min(kc * TIGHT, kArea); k < kc; k *= 1.06) { const Q = at(k); if (relax(Q) && clear(Q)) { P = Q; break; } }
+    const boxArea = (Q) => (Math.max(...Q.map((p) => p.x + p.c.w)) - Math.min(...Q.map((p) => p.x))) * (Math.max(...Q.map((p) => p.y + p.c.h)) - Math.min(...Q.map((p) => p.y)));
+    if (P && kids.length > 6 && boxArea(P) > 2.5 * need) P = null; // settled, but too thin: rows below
+    // A crowd the nudging cannot settle would be left at the scale where
+    // nothing touches, spread so thin its region falls apart: pack it in
+    // rows instead, in the order of the smooth layout (top to bottom, then
+    // left to right), so it keeps its rough arrangement and stays compact.
+    if (!P) {
+      const loose = at(kc), rows = shelves(kids, gap);
+      P = boxArea(rows) < boxArea(loose) ? rows : loose;
+    }
     const x0 = Math.min(...P.map((p) => p.x)), y0 = Math.min(...P.map((p) => p.y));
     for (const p of P) { p.c.rx = p.x - x0; p.c.ry = p.y - y0; }
     const bw = Math.max(...P.map((p) => p.c.rx + p.c.w)), bh = Math.max(...P.map((p) => p.c.ry + p.c.h));
@@ -95,14 +114,36 @@ function cells(root, W, H, titles = null) {
   return { root, W, H, elev, blocked, owner, folders };
 }
 
+// Children in rows, sorted by their smooth y then x: about as wide as tall.
+function shelves(kids, gap) {
+  const area = kids.reduce((s, c) => s + (c.w + gap) * (c.h + gap), 0), width = Math.max(...kids.map((c) => c.w)) + gap;
+  const target = Math.max(width, Math.sqrt(area * 1.6));
+  const order = [...kids].sort((a, b) => a.y - b.y || a.x - b.x);
+  const rowsOf = [];
+  for (const c of order) { const row = rowsOf.at(-1); if (row && row.w + c.w + gap <= target) { row.items.push(c); row.w += c.w + gap; } else rowsOf.push({ items: [c], w: c.w + gap }); }
+  const out = [];
+  let y = 0;
+  for (const row of rowsOf) {
+    row.items.sort((a, b) => a.x - b.x);
+    let x = 0;
+    for (const c of row.items) { out.push({ c, x, y }); x += c.w + gap; }
+    y += Math.max(...row.items.map((c) => c.h)) + gap;
+  }
+  return out;
+}
+
 // ------------------------------------------------------------- free-form folders
 
-const reachOf = (f, spread) => Math.max(2, Math.ceil(spread / 2) + 1) + 2 * (f.height - 1);
+// How far a folder's region reaches beyond its notes: a cell more than the
+// design's sketch, and three cells for each level of folders inside it, so
+// nested walls do not run in tight parallel bands.
+export const SPREAD = 5;
+const reachOf = (f, spread) => Math.max(3, Math.ceil(spread / 2) + 2) + 3 * (f.height - 1);
 
 /** Folders as regions: every cell within reach of one of their notes, with
  *  narrow notches filled; the title takes the row above the topmost note. */
 export function freeG(root, spread = 2) {
-  const leaves = root.leaves(), CL = 2;
+  const leaves = root.leaves(), CL = 3; // notches up to 6 cells wide are filled: rounder regions
   const folders = root.descendants().filter((n) => folderOf(n) && n.depth > 0).sort((a, b) => a.depth - b.depth);
   const M = Math.max(3, ...folders.map((f) => reachOf(f, spread))) + 3;
   const x0 = Math.min(...leaves.map((n) => n.gx)) - M, y0 = Math.min(...leaves.map((n) => n.gy)) - M;
@@ -314,7 +355,7 @@ const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t =
  * notes are added. Returns {ref: [gx, gy]} for every note.
  * Weights as the design's "loose, routes apart, north kept".
  */
-export function search(root, links, { spread = 4, budget = 3000, start = null, seed = 7 } = {}) {
+export function search(root, links, { spread = SPREAD, budget = 3000, start = null, seed = 7 } = {}) {
   const w = { len: 0.08, x: 6, over: 2, area: 1, north: 1, hold: 0.5, dense: 1 };
   const SCREEN = [1090, 836];
   const t0 = Date.now();
@@ -401,7 +442,10 @@ export function search(root, links, { spread = 4, budget = 3000, start = null, s
     // A move costs about notes² + links² + links × notes.
     // Calibrated so a search takes about its budget (about 3 ms a move for 130 notes and 250 links).
     const iters = Math.max(200, Math.min(200000, Math.round((budget * 40000) / (n * n + L.length * L.length + L.length * n + 1))));
-    const T0 = start ? 4 : 25, T1 = 0.05, cap = t0 + budget * 1.5; // the clock is only a safety net, but a firm one
+    // With few moves (a big map) there is no time to cool from hot: start
+    // cool, so the search only improves on the snapped layout and folders
+    // stay whole rather than being scattered by a random walk.
+    const T0 = start || iters < 20000 ? Math.min(4, 25 * iters / 20000 + 0.5) : 25, T1 = 0.05, cap = t0 + budget * 1.5; // the clock is only a safety net, but a firm one
     for (let it = 0; it < iters; it++) {
       if (Date.now() > cap) break;
       const T = T0 * Math.pow(T1 / T0, it / iters);
