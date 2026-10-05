@@ -127,8 +127,9 @@ show.
 - [x] [T61 The Station theme](/tasks/T61-station-theme.md)
 - [x] [T62 A calmer Atlas](/tasks/T62-calmer-atlas.md)
 - [x] [T63 The grid Atlas](/tasks/T63-grid-atlas.md)
-- [ ] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
+- [x] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
 - [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md)
+- [ ] [T66 The code map: an index of the code, and notes attached to it](/tasks/T66-code-map.md)
 
 # Future
 
