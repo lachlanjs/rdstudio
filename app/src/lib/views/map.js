@@ -988,6 +988,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   // Height under the Understanding lens: not reached 0 to understood 3.
   const lens = () => heightLens(o);
+  const terrainOn = () => !!o.terrain && (lens() !== "understanding" || understanding.on);
+  // A folder's notes reached under the height lens, of all of them: "14/18".
+  const reachedOf = (n) => {
+    const notes = n.leaves().filter((l) => l.data.kind === "concept");
+    return terrainOn() ? `${notes.filter((l) => levelOf(l) > 0).length}/${notes.length}` : String(notes.length);
+  };
   const levelOf = (n) => (n.data.kind === "concept" ? lensValue(lens(), n.data.c) : 0); // an empty folder is a leaf too
   const baked = new Map(); // top-level folder id → its terrain, kept while a newer one is baked
   const asked = new Set();
@@ -1025,40 +1031,15 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const ts = tops.map(terrainOf).filter(Boolean);
     const lv = [0, 1, 2, 3].map((i) => ts.map((T) => multi(T.levels[i])).join(""));
     const steps = mode === "full" ? [1, 2, 3] : mode === "overview" ? [1] : [];
+    // Calmer (T62): reached ground is a lighter tone and the frontier a thin
+    // line; no stipple for the fog and no hachures.
     const data = [
+      { id: "reached", cls: "a-reached", d: lv[0] },
       ...steps.map((i) => ({ id: "tint" + i, cls: `a-tint t${i}`, d: lv[i] })),
-      { id: "fog", cls: "a-fog", d: `M${-w} ${-hgt}H${2 * w}V${2 * hgt}H${-w}Z` + lv[0] },
       ...steps.map((i) => ({ id: "c" + i, cls: `a-contour c${i}`, d: lv[i] })),
-      { id: "front", cls: "a-front" + (mode === "reduced" ? " thin" : ""), d: lv[0] },
-      { id: "hach", cls: "a-hach", d: mode === "reduced" ? "" : hachures(ts, X, Y) },
+      { id: "front", cls: "a-front thin", d: lv[0] },
     ];
     gTerrain.selectAll("path").data(data, (d) => d.id).join("path").attr("class", (d) => d.cls).attr("d", (d) => d.d);
-  }
-
-  // Ticks along the frontier every 11px on screen, long and short in turn,
-  // on the side facing the fog.
-  function hachures(ts, X, Y) {
-    const out = [];
-    let tick = 0;
-    for (const T of ts) for (const r of T.front) {
-      let acc = 0;
-      for (let i = 4; i < r.length; i += 4) {
-        const x0 = X(r[i - 4]), y0 = Y(r[i - 3]), x1 = X(r[i]), y1 = Y(r[i + 1]);
-        const seg = Math.hypot(x1 - x0, y1 - y0);
-        if (!seg) continue;
-        let d = 0;
-        while (acc + (seg - d) >= 11) {
-          d += 11 - acc; acc = 0;
-          const f = d / seg, x = x0 + (x1 - x0) * f, y = y0 + (y1 - y0) * f;
-          if (x < -20 || y < -20 || x > w + 20 || y > hgt + 20) continue;
-          const nx = r[i - 2] + (r[i + 2] - r[i - 2]) * f, ny = r[i - 1] + (r[i + 3] - r[i - 1]) * f, l = Math.hypot(nx, ny) || 1;
-          const len = tick++ % 2 ? 4 : 8;
-          out.push(`M${x.toFixed(1)} ${y.toFixed(1)}l${((nx / l) * len).toFixed(1)} ${((ny / l) * len).toFixed(1)}`);
-        }
-        acc += seg - d;
-      }
-    }
-    return out.join("");
   }
 
   // Notes an exercise testing them was missed on: the teacher says they need work.
@@ -1171,15 +1152,20 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       if (n.data.kind !== "dir") return;
       if (!n.parent || (open.has(n.parent) && sr(n) >= o.detail)) open.add(n);
     });
-    const visible = [];
-    L.root.each((n) => { if (n.parent && open.has(n.parent) && onScreen(n) && shownOnMap(n)) visible.push(n); });
-
     // Focus: the deepest open folder under the centre of the view.
     focus = L.root;
     for (const n of open) {
       const d = Math.hypot(sx(n) - w / 2, sy(n) - hgt / 2);
       if (d < sr(n) && sr(n) >= Math.min(w, hgt) * 0.3 && n.depth > focus.depth) focus = n;
     }
+    // Calmer (T62): a note not reached is not drawn until its folder is in
+    // focus; the folder's label counts what is reached instead (14/18).
+    const unseen = (n) => n.data.kind === "concept" && terrainOn() && !levelOf(n) && !needs.has(n.data.ref)
+      && n !== selected && !step.has(n.data.ref) && !n.data.landmark
+      && !(lens() === "understanding" && understanding.onFrontier(n.data.ref)) // where to go next stays in sight
+      && (focus === L.root || !n.ancestors().includes(focus));
+    const visible = [];
+    L.root.each((n) => { if (n.parent && open.has(n.parent) && onScreen(n) && shownOnMap(n) && !unseen(n)) visible.push(n); });
     drawCrumbs();
     // The selected note, in this layout (a change of contents makes new nodes).
     if (selected && L.byId.get(selected.data.id) !== selected) { selected = L.byId.get(selected.data.id) || null; fillCard(); }
@@ -1198,8 +1184,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       .attr("class", (n) => `m-dir ${open.has(n) ? "open" : "closed"} depth-${Math.min(n.depth, 3)}`)
       .call(shape)
       .on("click", (event, n) => { event.stopPropagation(); zoomTo(n === focus && n.parent ? n.parent : n); })
-      .on("pointerenter", (event, n) => showTip(event, n))
-      .on("pointerleave", () => { tip.hidden = true; });
+      .on("pointerenter", (event, n) => { showTip(event, n); hoverFolder(n); })
+      .on("pointerleave", () => { tip.hidden = true; hoverFolder(null); });
 
     // Routes: neutral lines, wider with more links; a selected note's own in the blue pen.
     const { routes } = routesFor(open);
@@ -1365,7 +1351,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         const box = [x - width / 2, y - 12, x + width / 2, y + 3];
         if (!fits(box)) continue;
         placed.push(box);
-        heads.push({ n, x, y, count: noteCount(n) });
+        heads.push({ n, x, y, count: reachedOf(n) });
         continue;
       }
       const R = sr(n) + 6; // just outside the wall
@@ -1433,7 +1419,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       .attr("href", (a) => "#arc-" + a.n.data.id.replace(/[^\w-]/g, "_"))
       .call((tp) => {
         tp.select(".name").text((a) => a.n.data.label);
-        tp.select(".count").text((a) => " " + a.n.leaves().filter((l) => l.data.kind === "concept").length);
+        tp.select(".count").text((a) => " " + reachedOf(a.n));
       });
     gLabels.selectAll("text.m-head").data(heads, (d) => d.n.data.id).join((enter) => {
       const text = enter.append("text").attr("text-anchor", "middle");
@@ -1647,6 +1633,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     }));
   }
 
+  // Pointing at a folder keeps its own routes and quiets the others (T62).
+  function hoverFolder(n) {
+    svg.classed("folder-hover", !!n);
+    svg.selectAll(".m-routes path").classed("hot", (m) => !!n && (m.p === n || m.q === n || m.p.ancestors().includes(n) || m.q.ancestors().includes(n)));
+  }
+
   function showTip(event, n) {
     const d = n.data;
     const lines = [h("strong", {}, d.label)];
@@ -1654,8 +1646,25 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       lines.push(h("span", {}, `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
       if (d.c.description) lines.push(h("div", {}, d.c.description));
     } else {
-      const count = n.leaves().filter((l) => l.data.kind === "concept").length;
-      lines.push(h("span", {}, `Folder · ${count} note${count === 1 ? "" : "s"}`));
+      // A folder's card: progress, what needs work, what it builds on and what builds on it.
+      const notes = n.leaves().filter((l) => l.data.kind === "concept");
+      const inside = new Set(notes.map((l) => l.data.ref));
+      const reached = notes.filter((l) => levelOf(l) > 0).length;
+      lines.push(h("span", {}, terrainOn()
+        ? `${reached} of ${notes.length} note${notes.length === 1 ? "" : "s"} ${lens() === "understanding" ? "reached" : lens() === "activity" ? "changed in the last 90 days" : "with at least one fact of health"}`
+        : `Folder · ${notes.length} note${notes.length === 1 ? "" : "s"}`));
+      const work = notes.filter((l) => needsWork().has(l.data.ref));
+      if (work.length) lines.push(h("div", {}, `Needs work: ${work.map((l) => l.data.label).join(", ")}`));
+      const topName = (ref) => { const m = L.byId.get("c:" + ref); const top = m && m.ancestors().find((a) => a.depth === 1); return top && top !== m ? top.data.label : m?.data.label; };
+      const on = new Set(), by = new Set();
+      for (const [a, b, s] of model.edges) {
+        if (s < 2) continue;
+        if (inside.has(a) && !inside.has(b)) on.add(topName(b));
+        if (inside.has(b) && !inside.has(a)) by.add(topName(a));
+      }
+      on.delete(undefined); by.delete(undefined);
+      if (on.size) lines.push(h("div", {}, `Builds on: ${[...on].join(", ")}`));
+      if (by.size) lines.push(h("div", {}, `Built on by: ${[...by].join(", ")}`));
     }
     tip.replaceChildren(...lines);
     const box = wrap.getBoundingClientRect();
@@ -1865,9 +1874,9 @@ function controls({ view, tune, readout, summary }) {
   const states = (lens) => {
     const ring2 = '<circle class="ring-a" r="8.5"/><circle class="ring-b" r="6"/>', ring1 = '<circle class="ring-a" r="8.5"/>';
     const words = {
-      understanding: ["Understood: filled, double green ring", "Worked through: filled", "Opened: outline", "Not reached: faint, in fog"],
-      activity: ["Changed this week: filled, ringed", "This month: filled", "This quarter: outline", "90 days untouched: faint, in fog"],
-      health: ["Reviewed, tested and current: double green ring", "Two of the three: filled", "One: outline", "None: faint, in fog"],
+      understanding: ["Understood: filled, double green ring", "Worked through: filled", "Opened: outline", "Not reached: faint, drawn when its folder is in focus"],
+      activity: ["Changed this week: filled, ringed", "This month: filled", "This quarter: outline", "90 days untouched: faint, drawn when its folder is in focus"],
+      health: ["Reviewed, tested and current: double green ring", "Two of the three: filled", "One: outline", "None: faint, drawn when its folder is in focus"],
     }[lens];
     return [
       item(svgKey(place("st-understood" + (lens === "activity" ? " plain" : ""), 3.5, lens === "activity" ? ring1 : ring2)), words[0]),
@@ -1875,7 +1884,7 @@ function controls({ view, tune, readout, summary }) {
       item(svgKey(place("st-discovered", 4.5)), words[2]),
       item(svgKey(place("st-undiscovered", 3.5)), words[3]),
       ...(lens === "understanding" ? [item(svgKey(place("needs st-discovered", 4, ring1)), "The teacher says: needs work")] : []),
-      item(svgKey('<path d="M2 12H20" class="a-front"/><path d="M4 12v-6M8 12v-3M12 12v-6M16 12v-3M20 12v-6" class="a-hach"/>', "0 0 22 22"), "Frontier: hachures face the fog"),
+      item(svgKey('<rect x="1" y="5" width="20" height="12" class="m-landfill"/><path d="M1 5h11v12H1Z" class="a-reached"/><path d="M12 5v12" class="a-front thin"/>', "0 0 22 22"), "Lighter ground is reached; the thin line is the frontier"),
     ];
   };
   const lines = [
@@ -1885,7 +1894,16 @@ function controls({ view, tune, readout, summary }) {
     item(svgKey('<path d="M2 11H20" class="m-link dep"/>', "0 0 22 22"), "What builds on the selected note"),
     item(svgKey(place("landmark", 6)), "Landmark: drawn larger"),
   ];
-  const key = h("ul", { class: "legend map-key" });
+  const key = h("ul", { class: "legend map-key", hidden: !M.user.keyOpen });
+  // The key is folded by default (T62): one button opens it.
+  const keyButton = h("button", { class: "toggle key-button", type: "button", "aria-expanded": String(!!M.user.keyOpen) }, M.user.keyOpen ? "Hide the key" : "Show the key");
+  keyButton.addEventListener("click", () => {
+    M.user.keyOpen = !M.user.keyOpen;
+    key.hidden = !M.user.keyOpen;
+    keyButton.textContent = M.user.keyOpen ? "Hide the key" : "Show the key";
+    keyButton.setAttribute("aria-expanded", String(M.user.keyOpen));
+    persist();
+  });
   const drawKey = () => { const e = effective(); key.replaceChildren(...(e.terrain ? states(heightLens(e)) : []), ...lines); };
   drawKey();
   // The height lenses: one at a time; choosing the one shown again puts the terrain away.
@@ -1920,6 +1938,7 @@ function controls({ view, tune, readout, summary }) {
         return box;
       })(), "Hide what I have not reached") : "",
       kinds,
+      h("div", { class: "row" }, keyButton),
       key,
       summary,
       h("details", { class: "map-more" },

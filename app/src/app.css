@@ -329,8 +329,12 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .map-wrap .m-back { fill: transparent; }
 .m-landfill { fill: var(--surface-1); }
 .m-dir { fill: none; stroke: var(--rule-strong); stroke-width: 1; cursor: zoom-in; transition: opacity .2s; }
-.m-dir.open.depth-1 { stroke-dasharray: 7 5; }
-.m-dir.open:not(.depth-1) { stroke-dasharray: 2 4; }
+.m-dir.open.depth-1 { stroke-dasharray: none; }
+.m-dir.open:not(.depth-1) { stroke-dasharray: 4 4; }
+.a-reached { fill: var(--surface-2); fill-rule: evenodd; }
+.m-key .m-landfill { fill: var(--surface-1); }
+svg.folder-hover .m-routes .m-link:not(.hot) { opacity: .2; }
+svg.folder-hover .m-count { opacity: .35; }
 .m-dir.closed { fill: var(--surface-2); fill-opacity: .92; stroke-width: 1.25; }
 .m-dir.closed:hover { fill: var(--surface-3); }
 .fogdot { fill: var(--text-soft); opacity: .5; }
@@ -341,7 +345,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .a-contour { fill: none; stroke: var(--text-soft); stroke-width: 1; }
 .a-contour.c1 { opacity: .5; } .a-contour.c2 { opacity: .7; } .a-contour.c3 { opacity: .95; stroke-width: 1.5; }
 .a-front { fill: none; stroke: var(--text); stroke-width: 1.5; }
-.a-front.thin { stroke-width: 1; opacity: .8; }
+.a-front.thin { stroke-width: 1; opacity: .7; }
 .a-hach { fill: none; stroke: var(--text); stroke-width: 1.25; }
 .m-terrain, .m-land { pointer-events: none; }
 /* Places: shape is the kind of note; fill and ring are where you stand. */

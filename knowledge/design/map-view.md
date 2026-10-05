@@ -77,6 +77,13 @@ Each is checkable by looking at a screenshot or reading the code.
   and drawn by transforming the paths: when one note's value changes, only its
   folder is baked again. A bake takes about 3 ms whether the folder holds 60
   notes or 3,000. With the learner record off there is no terrain.
+- **Calmer (T62):** reached ground is a lighter tone and the frontier a thin
+  line, with no fog stipple or hachures; walls are thin and solid
+  (subfolders dashed). Notes not reached are drawn only once their folder is
+  in focus, apart from the frontier and landmarks, and each folder's name
+  counts what is reached (12/18). The key is folded behind one button.
+  Pointing at a folder keeps its routes, quiets the rest, and shows a card:
+  progress, what needs work, what it builds on and what builds on it.
 - **Height lenses (T59):** the terrain's height is one of three lenses,
   one at a time. **Understanding** (above) is the learning default.
   **Activity** is the project default: when the note last changed in git (or

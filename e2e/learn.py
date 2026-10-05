@@ -290,7 +290,8 @@ with sync_playwright() as pw:
     p.wait_for_timeout(200)
     check("filtering still finds everything", p.locator(".tree .item").count() >= 1, p.locator(".tree .item").count())
     p.locator(".filter").fill("")
-    p.goto(URL + "?nosw#/map")
+    # In a folder in focus, where the calmer map draws what is not reached (T62).
+    p.goto(URL + "?nosw#/map/manifolds")
     p.wait_for_selector(".m-dir", timeout=20000)
     p.wait_for_timeout(800)
     drawn = lambda: p.locator(".m-place").count() + p.locator(".m-dir").count()
@@ -300,11 +301,17 @@ with sync_playwright() as pw:
     p.wait_for_timeout(800)
     check("…which hides what is not reached too", drawn() > hidden_places, (hidden_places, drawn()))
     p.screenshot(path=str(OUT / "learn-coverage-map.png"))
+    p.goto(URL + "?nosw#/map")
+    p.wait_for_selector(".m-dir", timeout=20000)
 
     # ------------------------------------------------------------ the Atlas (T57)
     p.wait_for_function("() => (document.querySelector('.m-terrain .a-front')?.getAttribute('d') || '').length > 20", timeout=10000)
-    check("the Atlas: the terrain of your understanding, with the fog beyond the frontier",
-          p.locator(".m-terrain .a-fog").count() == 1 and p.locator(".m-landfill").count() >= 1)
+    check("the Atlas: the terrain of your understanding, reached ground lighter (calmer: no fog stipple, no hachures)",
+          p.locator(".m-terrain .a-reached").count() == 1 and p.locator(".m-terrain .a-fog, .m-terrain .a-hach").count() == 0 and p.locator(".m-landfill").count() >= 1)
+    heads = p.locator("text.m-head .count").evaluate_all("els => els.map(e => e.textContent)")
+    check("…folders count the notes reached (14/18)", any("/" in t for t in heads), heads)
+    check("…and the key is folded behind one button", not p.locator(".map-key").is_visible() and p.get_by_role("button", name="Show the key").is_visible())
+    p.wait_for_function("() => document.querySelectorAll('.m-count').length > 0", timeout=10000)  # downhill routes come from the worker
     counts = p.locator(".m-count").evaluate_all("els => els.map(e => e.textContent)")
     check("…links as trunks between top-level folders, each with its count", len(counts) >= 1 and all(c.isdigit() for c in counts), counts)
     check("…a sentence on what is drawn", "trunk" in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())

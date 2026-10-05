@@ -125,7 +125,7 @@ together"), then a codebase test bed so project mode has a real project to
 show.
 
 - [x] [T61 The Station theme](/tasks/T61-station-theme.md)
-- [ ] [T62 A calmer Atlas](/tasks/T62-calmer-atlas.md)
+- [x] [T62 A calmer Atlas](/tasks/T62-calmer-atlas.md)
 - [ ] [T63 The grid Atlas](/tasks/T63-grid-atlas.md)
 - [ ] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
 

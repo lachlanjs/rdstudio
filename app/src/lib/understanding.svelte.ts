@@ -63,6 +63,11 @@ class Understanding {
   visible(id: string): boolean {
     return !this.hiding || this.#shown.reached.has(id) || this.#shown.frontier.has(id);
   }
+  /** On the frontier, whether or not hiding is on: one link from a reached
+   *  note, or before anything is reached, a starting point. */
+  onFrontier(id: string): boolean {
+    return this.on && this.#shown.frontier.has(id);
+  }
   /** Shown only as the frontier: drawn faintly. */
   frontier(id: string): boolean {
     return this.hiding && this.#shown.frontier.has(id);
