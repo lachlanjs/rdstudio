@@ -6,6 +6,7 @@
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
+import { build as gridBuild, search as gridSearchPositions } from "./grid.js";
 
 export const SIZE = 1000; // layout units
 // Bump when the algorithm changes, so cached layouts are not reused.
@@ -275,6 +276,20 @@ export function computeTerrain(folders) {
 // Contour folders' outlines (contours.js), off the main thread.
 export function computeOutlines(specs) {
   return ask({ outlines: specs }, () => outlines(specs));
+}
+
+// The grid Atlas's searched positions (grid.js): from the plain model and its
+// smooth positions, snapped, then searched within a time budget.
+export function gridSearch({ model, xyr, links, budget, from }) {
+  const { root } = start(model.root);
+  applyPositions(root, xyr);
+  const deg = new Map();
+  for (const [a, b] of links) { deg.set(a, (deg.get(a) || 0) + 1); deg.set(b, (deg.get(b) || 0) + 1); }
+  gridBuild(root, deg);
+  return gridSearchPositions(root, links, { budget, start: from });
+}
+export function computeGrid(input) {
+  return ask({ grid: input }, () => gridSearch(input));
 }
 
 // Downhill routes (contours.js), off the main thread. The grid is built once

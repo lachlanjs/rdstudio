@@ -68,3 +68,4 @@
 * [T62 — A calmer Atlas](T62-calmer-atlas.md) - Less ink, the same information: a lighter tone for reached ground, a thin frontier, thin solid walls, unreached notes counted not drawn at overview, the key folded, a card for a folder.
 * [T63 — The grid Atlas](T63-grid-atlas.md) - A third folder shape: everything on a coarse square grid, notes as blocks, folders as free-form regions, layout and routes searched together, routes in lanes with over and under.
 * [T64 — A codebase test bed: a nanobind simulation](T64-codebase-testbed.md) - A dummy project in Python and C++ (nanobind), with CMake, CI, documentation and notes, to show project mode on a real codebase, down to classes and functions.
+* [T65 — Bake the grid Atlas into the repository](T65-atlas-bake.md) - An rdstudio atlas command that searches the grid layout for as long as it likes and writes the positions into the repository, so everyone sees the same, stable map; the app starts from it.

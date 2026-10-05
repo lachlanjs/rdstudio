@@ -26,7 +26,8 @@ import { editing } from "../edit.svelte.ts";
 import { understanding, STATE_LABEL } from "../understanding.svelte.ts";
 import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { projectMode } from "../shell.svelte.ts";
-import { start, plainModel, layoutKey, cached, remember, previous, relative, applyPositions, computeLayout, computeTerrain, computeOutlines, computeRoutes } from "./layout.js";
+import { start, plainModel, layoutKey, cached, remember, previous, relative, applyPositions, positions, computeLayout, computeTerrain, computeOutlines, computeRoutes, computeGrid } from "./layout.js";
+import { build as gridBuild, freeG, routeAll as gridRouteAll, offsetLine, roundPath } from "./grid.js";
 import { widthOf } from "./terrain.js";
 import { folderSpecs } from "./contours.js";
 
@@ -45,6 +46,7 @@ export const VIEW_DEFAULTS = {
   // right angles, gathering in the flats) or "gates" (gates, corridors and
   // bundling). Positions, lenses and terrain are the same under both (T60).
   folders: "contour", routing: "downhill",
+  gridBudget: 4000, // the grid Atlas's layout search, in milliseconds (in the worker; cached)
   // How far apart a link's ends are in the folder tree, counted in bubble walls:
   // "out" is the larger of the two ends' distances out to the lowest shared
   // folder, "path" is the total crossed going out and back in.
@@ -667,6 +669,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const gSteps = world.append("g").attr("class", "m-steps");
   const gLabels = world.append("g").attr("class", "m-labels");
   const gLeader = world.append("g").attr("class", "m-leader");
+  const gGrid = world.insert("g", ".m-leader").attr("class", "m-grid").attr("display", "none");
+  const gridDots = defs.append("pattern").attr("id", "m-griddots").attr("patternUnits", "userSpaceOnUse");
+  gridDots.append("circle").attr("class", "g-dot");
 
   let model = timed("map-model", buildModel);
   // The map is placed at once: from this browser's cache when it has laid out
@@ -711,6 +716,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   function settle(key, xyr) {
     applyPositions(L.root, xyr);
+    smoothXyr = xyr;
+    grid = null;
     placedKey = key;
     status.hidden = true;
     cache = null;
@@ -804,7 +811,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   function routesFor(open) {
     const mode = tour || trail ? "trail" : selected ? "selected" : !o.showLinks ? "none" : o.allLinks ? "all" : "trunks";
     const filters = mode === "all" ? ["distMeasure", "distMin", "distMax", "rateMin", "rateMax", "hideImplied", "focusOnly", "lanes"].map((k) => o[k]).join(",") : "";
-    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + mode + "|" + filters + "|" + o.hideImplied
+    const signature = [...open].map((n) => n.data.id).sort().join(",") + "|" + mode + "|" + filters + "|" + o.hideImplied + (grid?.G ? "|grid" + grid.version : "")
       + (mode === "trunks" || (mode === "all" && o.focusOnly) ? "|" + focus.data.id : "") + (mode === "selected" ? "|" + selected.data.id : "")
       + (trail ? "|" + (tour ? tour.key : path) : "") + (understanding.hiding ? "|hiding:" + understanding.states.size + ":" + hiddenCount() : "");
     if (cache?.signature === signature) return cache;
@@ -869,6 +876,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         counted++;
         if (focus !== L.root && inFocus(na) && inFocus(nb)) { add(shownRep(na), shownRep(nb), [a, b, s]); continue; }
         const ta = topOf(na), tb = topOf(nb);
+        // On the grid, a link with one end in the folder in focus leaves from
+        // that note itself and runs to the other folder (as the design's grid).
+        if (grid?.G && focus !== L.root && inFocus(na) !== inFocus(nb)) {
+          add(inFocus(na) ? shownRep(na) : ta, inFocus(nb) ? shownRep(nb) : tb, [a, b, s]);
+          continue;
+        }
         // Trunks of the folder in focus keep their strength; the rest fade.
         const mine = focus === L.root || ta === topOf(focus) || tb === topOf(focus);
         add(ta, tb, [a, b, s], mine ? "trunk" : "trunk quiet");
@@ -897,7 +910,11 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Heavier bundles first, so lighter ones follow their corridors.
     const router = makeRouter(o);
     const routes = [...merged.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : 1));
-    if (o.routing === "downhill" && placedKey) {
+    if (grid?.G) {
+      // On the grid: A* over cells, each route reconsidered twice, in lanes (grid.js).
+      gridRouteAll(grid.G, routes);
+      for (const m of routes) { m.grid = true; if (!m.cells.length) m.pts = null; }
+    } else if (o.routing === "downhill" && placedKey) {
       // Solved in the worker and kept per pair; a route not back yet is not drawn.
       const key = downhillKey();
       if (downhill.key !== key) downhill = { key, routes: new Map(), pending: new Set(), angles: [] };
@@ -1111,6 +1128,166 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     gLeader.selectAll("circle").data([0]).join("circle").attr("class", "leader-dot " + card.className.replace("atlas-card", "").trim()).attr("cx", x1).attr("cy", y1).attr("r", 3);
   }
 
+  // ------------------------------------------------------------ the grid Atlas (T63)
+
+  // The grid is made from the smooth layout: snapped at once, then searched in
+  // the worker within a time budget and cached in this browser; when the
+  // contents change, the search starts from the cached places, so the map
+  // keeps them. On the grid, every node's x, y and r are those of its cells
+  // (the smooth positions come back when the grid is left).
+  let smoothXyr = null;
+  let grid = null; // { at, G, u, searched, version, reach }
+  const GRID_KEY = "rdstudio.grid";
+  const gridLinks = () => model.edges.filter(([, , s]) => s >= 2).map(([a, b]) => [a, b]);
+  const savedGrid = () => { try { return JSON.parse(localStorage.getItem(GRID_KEY) || "null"); } catch { return null; } };
+  function ensureGrid() {
+    if (o.folders !== "grid" || !placedKey) {
+      if (grid) { grid = null; if (smoothXyr) applyPositions(L.root, smoothXyr); cache = null; delete wrap.dataset.grid; }
+      return null;
+    }
+    if (grid?.at === placedKey) return grid;
+    if (smoothXyr) applyPositions(L.root, smoothXyr);
+    const deg = new Map();
+    for (const [a, b] of gridLinks()) { deg.set(a, (deg.get(a) || 0) + 1); deg.set(b, (deg.get(b) || 0) + 1); }
+    const snapped = gridBuild(L.root, deg);
+    grid = { at: placedKey, version: 0 };
+    const saved = savedGrid();
+    if (saved?.key === placedKey) { searched(saved.pos); return grid; }
+    adopt(snapped, false);
+    const at = placedKey, t0 = performance.now();
+    computeGrid({ model: plainModel(model), xyr: smoothXyr ?? positions(L.root), links: gridLinks(), budget: o.gridBudget, from: saved?.pos ?? null }).then((pos) => {
+      if (left || grid?.at !== at) return;
+      measure("map-grid-search", t0);
+      try { localStorage.setItem(GRID_KEY, JSON.stringify({ key: at, pos })); } catch { /* storage full: search again next time */ }
+      searched(pos);
+      schedule();
+    });
+    return grid;
+  }
+  // The searched places, with folders as free-form regions; a note the search
+  // did not know (added since) keeps its snapped place.
+  function searched(pos) {
+    for (const n of L.root.leaves()) { const at = pos[n.data.ref]; if (at) { n.gx = at[0]; n.gy = at[1]; } else { n.gx = Math.round(n.gx * 1.25); n.gy = Math.round(n.gy * 1.25); } }
+    adopt(freeG(L.root, 4), true);
+  }
+  function adopt(G, isSearched) {
+    const u = 1000 / Math.max(G.W, G.H);
+    L.root.each((n) => {
+      if (n.gx === undefined) return;
+      n.x = (n.gx + n.w / 2) * u; n.y = (n.gy + n.h / 2) * u; n.r = (Math.max(n.w, n.h) / 2) * u;
+    });
+    // Each folder's wall, in cells: its region's outline, or its box with the corners cut.
+    const gen = d3.contours().size([G.W, G.H]);
+    for (const f of G.folders) {
+      if (f.mask) f.outline = gen.contour(Array.from(f.mask), 0.5).coordinates;
+      else {
+        const c = 0.5, x0 = f.gx, y0 = f.gy, x1 = f.gx + f.w, y1 = f.gy + f.h;
+        f.outline = [[[[x0 + c, y0], [x1 - c, y0], [x1, y0 + c], [x1, y1 - c], [x1 - c, y1], [x0 + c, y1], [x0, y1 - c], [x0, y0 + c], [x0 + c, y0]]]];
+      }
+    }
+    grid = { ...grid, G, u, searched: isSearched, version: (grid?.version ?? 0) + 1, reach: null };
+    wrap.dataset.grid = isSearched ? "searched" : "snapped"; // for tests and inspection
+    cache = null;
+  }
+
+  function drawGrid(G, t, open, needs) {
+    const u = grid.u, C = u * t.k;
+    const X = (i) => t.applyX(i * u), Y = (j) => t.applyY(j * u);
+    const ring = (r) => "M" + r.map(([x, y]) => X(x).toFixed(1) + " " + Y(y).toFixed(1)).join("L") + "Z";
+    const multi = (polys) => polys.map((poly) => poly.map(ring).join("")).join("");
+    // Reached ground: folder cells within one cell of a reached note (understanding is tone, not height).
+    const values = L.root.leaves().map((n) => (levelOf(n) > 0 ? 1 : 0)).join("");
+    if (grid.reach?.key !== values) {
+      const reach = new Float32Array(G.W * G.H);
+      if (terrainOn()) for (const n of L.root.leaves()) if (n.data.kind === "concept" && levelOf(n) > 0)
+        for (let j = n.gy - 1; j <= n.gy + n.h; j++) for (let i = n.gx - 1; i <= n.gx + n.w; i++)
+          if (i >= 0 && j >= 0 && i < G.W && j < G.H && G.elev[j * G.W + i] && G.blocked[j * G.W + i] !== 2) reach[j * G.W + i] = 1;
+      grid.reach = { key: values, coords: d3.contours().size([G.W, G.H]).contour(Array.from(reach), 0.5).coordinates };
+    }
+    const { routes } = routesFor(open);
+    const own = (m) => m.cls === "req" || m.cls === "dep";
+    const lane = Math.max(2.2, Math.min(5, C / 4.2));
+    const line = (m) => roundPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), (m.lane || 0) * lane), Math.min(7, C * 0.45));
+    const wid = (c) => (1 + Math.log2(c) * 0.8).toFixed(2);
+    // The dotted grid, when the cells are big enough to see.
+    gridDots.attr("width", C).attr("height", C).attr("patternTransform", `translate(${X(0)},${Y(0)})`)
+      .select("circle").attr("cx", 0.75).attr("cy", 0.75).attr("r", 0.75);
+    const layer = (cls) => gGrid.selectAll(`:scope > g.${cls.split(" ").join(".")}`).data([0]).join("g").attr("class", cls);
+    layer("g-ground").selectAll("rect").data(C >= 5 ? [0] : []).join("rect").attr("class", "g-dots").attr("width", w).attr("height", hgt).attr("fill", "url(#m-griddots)");
+    const folders = G.folders;
+    layer("g-floors").selectAll("path").data(folders, (f) => f.data.id).join("path").attr("class", (f) => `g-floor d${Math.min(3, f.depth)}`).attr("d", (f) => multi(f.outline))
+      .on("click", (event, f) => { event.stopPropagation(); zoomTo(f === focus && f.parent ? f.parent : f); })
+      .on("pointerenter", (event, f) => { showTip(event, f); hoverFolder(f); })
+      .on("pointerleave", () => { tip.hidden = true; hoverFolder(null); });
+    layer("g-reach").selectAll("path").data(terrainOn() ? ["reach", "front"] : []).join("path").attr("class", (d) => (d === "reach" ? "a-reached" : "g-front")).attr("d", multi(grid.reach.coords));
+    layer("g-walls").selectAll("path").data(folders, (f) => f.data.id).join("path")
+      .attr("class", (f) => `g-wall d${Math.min(3, f.depth)}`).attr("d", (f) => multi(f.outline));
+    // Routes: a halo, then the line, each laid over the last with a gap.
+    const drawn = routes.filter((m) => m.pts);
+    layer("m-routes g-routes").selectAll("g.g-route").data(drawn, (m) => m.key).join((enter) => {
+      const g = enter.append("g").attr("class", "g-route");
+      g.append("path").attr("class", "rt-halo");
+      g.append("path").attr("class", "line");
+      return g;
+    }).each(function (m) {
+      const g = d3.select(this), d = line(m);
+      g.select(".rt-halo").attr("d", d).attr("stroke-width", own(m) ? 7 : +wid(m.count) + 3.5);
+      g.select(".line").datum(m).attr("d", d).attr("class", `line m-link s${m.strength} ${m.cls}`).attr("stroke-width", own(m) ? null : wid(m.count));
+    });
+    // Notes: blocks; faint, outlined, filled, or filled with a double green rule; a red frame needs work.
+    const cut = (n, c, inset) => { const x0 = X(n.gx) + inset, y0 = Y(n.gy) + inset, x1 = X(n.gx + n.w) - inset, y1 = Y(n.gy + n.h) - inset;
+      return `M${x0 + c} ${y0}H${x1 - c}L${x1} ${y0 + c}V${y1 - c}L${x1 - c} ${y1}H${x0 + c}L${x0} ${y1 - c}V${y0 + c}Z`; };
+    const notes = L.root.leaves().filter((n) => n.data.kind === "concept" && shownOnMap(n));
+    const labels = C >= 7;
+    layer("g-notes").selectAll("g.m-place").data(notes, (n) => n.data.id).join((enter) => {
+      const g = enter.append("g").attr("tabindex", 0).attr("role", "link");
+      g.append("path").attr("class", "gn");
+      g.append("path").attr("class", "gn-ok");
+      g.append("path").attr("class", "g-kind");
+      g.append("text").attr("class", "g-note");
+      return g;
+    })
+      .attr("class", (n) => `m-place grid-note ${reach(n)}${needs.has(n.data.ref) ? " needs" : ""}${n === selected ? " selected" : ""}${step.has(n.data.ref) ? " on-trail" : ""}`)
+      .attr("data-ref", (n) => n.data.ref)
+      .attr("aria-label", (n) => n.data.label)
+      .on("click", (event, n) => { event.stopPropagation(); if (n === selected) openNote(n); else select(n); })
+      .on("dblclick", (event, n) => { event.stopPropagation(); openNote(n); })
+      .on("keydown", (event, n) => { if (event.key === "Enter") openNote(n); else if (event.key === " ") { event.preventDefault(); select(n === selected ? null : n); } })
+      .on("pointerenter", (event, n) => showTip(event, n))
+      .on("pointerleave", () => { tip.hidden = true; })
+      .each(function (n) {
+        const g = d3.select(this), x0 = X(n.gx), y0 = Y(n.gy), bw = n.w * C, bh = n.h * C;
+        g.select(".gn").attr("d", cut(n, Math.min(4, C * 0.22), 1.5));
+        g.select(".gn-ok").attr("d", levelOf(n) === 3 && lens() !== "activity" ? `M${x0 + 5} ${y0 + bh - 5.5}h${bw - 10}M${x0 + 5} ${y0 + bh - 8.5}h${bw - 10}` : null);
+        // The kind of note: its glyph at the block's right end (or its middle, when too small for a name).
+        const r = Math.max(2.4, Math.min(4.2, C * 0.42)), gx = labels ? x0 + bw - 11 : x0 + bw / 2, gy = y0 + bh / 2 - (levelOf(n) === 3 ? 2 : 0);
+        g.select(".g-kind").attr("d", d3.symbol(SYMBOLS[n.data.marker], Math.PI * r * r)()).attr("transform", `translate(${gx},${gy})`);
+        const per = Math.floor((bw - 28) / 7.2);
+        const text = labels && per >= 4 ? (n.data.label.length > per ? n.data.label.slice(0, per - 1) + "…" : n.data.label) : "";
+        g.select(".g-note").attr("x", x0 + 7).attr("y", y0 + bh / 2 + (levelOf(n) === 3 ? 1 : 4)).text(text);
+      });
+    // Folder titles, in their own reserved cells, with what is reached.
+    const fsz = Math.max(10, Math.min(12, C * 0.72));
+    layer("g-titles").selectAll("text").data(folders.filter(() => C >= 3), (f) => f.data.id).join((enter) => {
+      const tx = enter.append("text").attr("class", "g-title m-text territory");
+      tx.append("tspan").attr("class", "name");
+      tx.append("tspan").attr("class", "count");
+      return tx;
+    }).each(function (f) {
+      // Up to the folder's width (its title row may be shorter than its name).
+      const max = Math.floor((Math.max(f.tw ?? 0, f.w - ((f.tx ?? f.gx) - f.gx)) * C - 14) / (fsz * 0.62)), cnt = " " + reachedOf(f);
+      let name = f.data.label;
+      if (name.length + cnt.length > max) name = name.slice(0, Math.max(3, max - cnt.length - 1)) + "…";
+      const tx = d3.select(this).attr("x", X(f.tx ?? f.gx) + 8).attr("y", Y(f.ty ?? f.gy) + Math.max(C / 2 + fsz * 0.36, fsz + 3)).style("font-size", `${fsz.toFixed(1)}px`);
+      tx.select(".name").text(name);
+      tx.select(".count").text(cnt);
+    });
+    // Trunk counts between top-level folders, half way along.
+    layer("g-counts").selectAll("text").data(drawn.filter((m) => m.cls.startsWith("trunk") && m.p.depth === 1 && m.q.depth === 1), (m) => m.key).join("text")
+      .attr("class", (m) => "m-count" + (m.cls.includes("quiet") ? " quiet" : ""))
+      .attr("x", (m) => X(m.pts[m.pts.length >> 1][0])).attr("y", (m) => Y(m.pts[m.pts.length >> 1][1]) + 4).text((m) => m.count);
+  }
+
   // ------------------------------------------------------------ downhill routes
 
   let downhill = { key: null, routes: new Map(), pending: new Set(), angles: [] };
@@ -1135,6 +1312,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const t = M.transform || d3.zoomIdentity;
     drawnAt = t; drawnWhen = performance.now();
     world.attr("transform", null);
+    const G = ensureGrid()?.G; // on the grid, the folder tree's places are its cells
     const sx = (n) => t.applyX(n.x), sy = (n) => t.applyY(n.y), sr = (n) => n.r * t.k;
     const needs = needsWork();
     // Notes are drawn as places of bounded size; one not reached a little smaller.
@@ -1150,7 +1328,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const open = new Set();
     L.root.each((n) => {
       if (n.data.kind !== "dir") return;
-      if (!n.parent || (open.has(n.parent) && sr(n) >= o.detail)) open.add(n);
+      if (!n.parent || (open.has(n.parent) && sr(n) >= o.detail) || G) open.add(n); // the grid is a plan: every folder is drawn
     });
     // Focus: the deepest open folder under the centre of the view.
     focus = L.root;
@@ -1169,6 +1347,19 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     drawCrumbs();
     // The selected note, in this layout (a change of contents makes new nodes).
     if (selected && L.byId.get(selected.data.id) !== selected) { selected = L.byId.get(selected.data.id) || null; fillCard(); }
+    for (const layer of [gLand, gTerrain, gRegions, gLinks, gFocus, gCounts, gNotes, gSteps, gLabels]) layer.attr("display", G ? "none" : null);
+    gGrid.attr("display", G ? null : "none");
+    if (!G && !gGrid.empty() && gGrid.node().firstChild) gGrid.selectAll("*").remove(); // left the grid: its notes go too
+    if (G) {
+      const gridRadius = (n) => (n.data.kind === "concept" ? (n.w * grid.u * t.k) / 2 : sr(n));
+      drawGrid(G, t, open, needs);
+      current = { sx, sy, radius: gridRadius };
+      svg.classed("trail", !!trail);
+      svg.classed("selecting", !!selected);
+      drawLeader(sx, sy, gridRadius);
+      north.hidden = !(o.north > 0 && model.ordered && !trail);
+      return;
+    }
 
     // The land: open top-level folders, which the terrain is clipped to.
     const tops = visible.filter((n) => n.depth === 1 && n.data.kind === "dir" && open.has(n));
@@ -1943,7 +2134,8 @@ function controls({ view, tune, readout, summary }) {
       summary,
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
-        choice("folders", "Folders", [["contour", "Contours", "Each folder's outline follows where its contents sit."],
+        choice("folders", "Folders", [["grid", "Grid", "Everything on a square grid: notes as blocks, folders as regions, routes along the cells in lanes. Its layout is searched in the background and kept."],
+          ["contour", "Contours", "Each folder's outline follows where its contents sit."],
           ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."]]),
         choice("routing", "Routes", [["downhill", "Downhill", "Routes cross folder outlines at right angles and gather in the flats between folders."],
           ["gates", "Gates", "Routes leave each folder by a gate on its wall and follow corridors between its contents."]]),

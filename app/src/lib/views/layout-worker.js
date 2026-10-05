@@ -3,6 +3,7 @@
 import { layoutPositions } from "./layout.js";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
+import { gridSearch } from "./layout.js";
 
 let grid = null; // the routing grid for one layout and its values: { key, grid }
 
@@ -15,6 +16,10 @@ self.onmessage = async ({ data }) => {
     }
     if (data.outlines) {
       self.postMessage({ id: data.id, result: outlines(data.outlines) });
+      return;
+    }
+    if (data.grid) {
+      self.postMessage({ id: data.id, result: gridSearch(data.grid) });
       return;
     }
     if (data.routes) {

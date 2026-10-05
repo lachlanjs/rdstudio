@@ -328,6 +328,22 @@ with sync_playwright() as pw:
     p.wait_for_timeout(500)
     check("circles and gates instead: names on the arc, no right-angle measure",
           p.locator("text.m-arc").count() >= 1 and "right angle" not in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
+    # The grid (T63): snapped at once, searched in the worker, then kept.
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Grid").click()
+    p.wait_for_function("() => document.querySelector('.map-wrap')?.dataset.grid === 'searched'", timeout=30000)
+    p.wait_for_timeout(500)
+    check("the grid Atlas: notes as blocks on cells, folders as regions, routes along the cells",
+          p.locator(".m-grid .grid-note").count() >= 20 and p.locator(".m-grid .g-floor").count() >= 5 and p.locator(".m-grid .g-route").count() >= 1,
+          (p.locator(".m-grid .grid-note").count(), p.locator(".m-grid .g-floor").count(), p.locator(".m-grid .g-route").count()))
+    kept = p.evaluate("() => JSON.parse(localStorage.getItem('rdstudio.grid') || 'null')")
+    check("…its searched layout kept in the browser", bool(kept and kept.get("pos")))
+    p.screenshot(path=str(OUT / "learn-atlas-grid.png"))
+    gnote = p.locator(".m-grid .grid-note[data-ref]").first
+    gnote.click()
+    expect(p.locator(".atlas-card")).to_be_visible()
+    expect(p.locator(".m-grid .grid-note.selected")).to_have_count(1)
+    check("…a block selects like a marker", True)
+    p.keyboard.press("Escape")
     p.get_by_role("group", name="Folders").get_by_role("button", name="Contours").click()
     p.get_by_role("group", name="Routes").get_by_role("button", name="Downhill").click()
     p.locator(".map-more > summary").click()

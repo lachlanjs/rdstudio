@@ -84,6 +84,12 @@ Each is checkable by looking at a screenshot or reading the code.
   counts what is reached (12/18). The key is folded behind one button.
   Pointing at a folder keeps its routes, quiets the rest, and shows a card:
   progress, what needs work, what it builds on and what builds on it.
+- **The grid (T63, `folders = "grid"`):** everything on square cells: notes
+  as 8 by 2 blocks, folders as free-form regions, height as nesting, routes
+  by A* along the cells in lanes. Snapped from the smooth layout at once,
+  then searched in the worker (`gridBudget`, a fixed number of moves for the
+  map's size), kept in the browser and warm-started after changes. See
+  `views/grid.js` and [T63](/tasks/T63-grid-atlas.md).
 - **Height lenses (T59):** the terrain's height is one of three lenses,
   one at a time. **Understanding** (above) is the learning default.
   **Activity** is the project default: when the note last changed in git (or
@@ -209,7 +215,8 @@ current values in the right form to copy into a project.
 | `showLinks` | true | The Links lens: trunks between top-level folders, and the links inside the folder in focus |
 | `terrain` | true | Show the terrain of the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
-| `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above) or `circle` (the packing's circles, names on the arc) |
+| `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above), `circle` (the packing's circles, names on the arc) or `grid` (square cells, blocks and regions) |
+| `gridBudget` | 4000 | The grid's layout search, as milliseconds on a reference machine (a fixed number of moves for the map's size) |
 | `routing` | `"downhill"` | `downhill` (crosses contours at right angles, gathers in the flats) or `gates` (gates, corridors and bundling) |
 | `allLinks` | false | Draw every link at the shown scale instead of trunks, filtered by the settings below |
 | `distMeasure` | `"out"` | How distance is counted: `out` (larger of the two ends' walls out to the shared folder) or `path` (all walls crossed) |

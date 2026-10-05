@@ -97,3 +97,7 @@
 [data-theme="station"] .m-link { stroke: var(--text); }
 [data-theme="station"] :is(.m-arc, .m-text.territory, .m-head, .m-count, .atlas-north) { font-family: var(--font-pixel); font-variation-settings: normal; font-weight: 400; text-transform: uppercase; }
 [data-theme="station"] .m-text.place { font-family: var(--font-pixel); font-variation-settings: normal; font-size: 11px; }
+[data-theme="station"] .g-wall { stroke: var(--line); }
+[data-theme="station"] .g-dot { fill: var(--line); opacity: .4; }
+[data-theme="station"] :is(.g-title, .g-note) { font-family: var(--font-pixel); font-variation-settings: normal; font-weight: 400; }
+[data-theme="station"] .g-title { text-transform: uppercase; }
