@@ -330,13 +330,16 @@ with sync_playwright() as pw:
           p.locator("text.m-arc").count() >= 1 and "right angle" not in p.locator(".map-summary").inner_text(), p.locator(".map-summary").inner_text())
     # The grid (T63): snapped at once, searched in the worker, then kept.
     p.get_by_role("group", name="Folders").get_by_role("button", name="Grid").click()
-    p.wait_for_function("() => document.querySelector('.map-wrap')?.dataset.grid === 'searched'", timeout=30000)
+    p.wait_for_function("() => document.querySelector('.map-wrap')?.dataset.grid === 'convex'", timeout=30000)
     p.wait_for_function("() => document.querySelectorAll('.m-grid .g-route').length > 0", timeout=15000)  # routes come from the worker
-    check("the grid Atlas: notes as blocks on cells, folders as regions, routes along the cells",
+    check("the grid Atlas: notes as blocks on cells, convex folders by default, routes along the cells",
           p.locator(".m-grid .grid-note").count() >= 20 and p.locator(".m-grid .g-floor").count() >= 5 and p.locator(".m-grid .g-route").count() >= 1,
           (p.locator(".m-grid .grid-note").count(), p.locator(".m-grid .g-floor").count(), p.locator(".m-grid .g-route").count()))
+    p.get_by_role("group", name="Grid folders").get_by_role("button", name="Free").click()
+    p.wait_for_function("() => document.querySelector('.map-wrap')?.dataset.grid === 'searched'", timeout=30000)
     kept = p.evaluate("() => JSON.parse(localStorage.getItem('rdstudio.grid.3') || 'null')")
-    check("…its searched layout kept in the browser", bool(kept and kept.get("pos")))
+    check("…free folders from a layout search, kept in the browser", bool(kept and kept.get("pos")))
+    p.get_by_role("group", name="Grid folders").get_by_role("button", name="Convex").click()
     p.screenshot(path=str(OUT / "learn-atlas-grid.png"))
     gnote = p.locator(".m-grid .grid-note[data-ref]").first
     gnote.click()

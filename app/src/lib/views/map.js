@@ -49,6 +49,7 @@ export const VIEW_DEFAULTS = {
   // bundling). Positions, lenses and terrain are the same under both (T60).
   folders: "contour", routing: "downhill",
   gridBudget: 3000, // the grid Atlas's layout search, in milliseconds (in the worker; cached)
+  gridShape: "convex", // the grid's folders: "convex" (boxes with the corners cut, from the snapped layout: never overlapping, instant) or "free" (regions shaped by a layout search)
   // How far apart a link's ends are in the folder tree, counted in bubble walls:
   // "out" is the larger of the two ends' distances out to the lowest shared
   // folder, "path" is the total crossed going out and back in.
@@ -306,6 +307,19 @@ function buildCodeModel() {
     });
   }
   for (const i of map.index.items) (i.parent ? nodes.get(i.parent) : root).children.push(nodes.get(i.id));
+  // A directory holding nothing but one directory is folded into it
+  // (src/ and src/nanosim/ become src/nanosim): one wall, not two.
+  const fold = (n) => {
+    if (n.kind !== "dir") return n;
+    while (n.code?.kind === "dir" && n.children.length === 1 && n.children[0].kind === "dir" && n.children[0].code?.kind === "dir") {
+      const only = n.children[0];
+      only.label = n.label + "/" + only.label;
+      n = only;
+    }
+    n.children = n.children.map(fold);
+    return n;
+  };
+  root.children = root.children.map(fold);
   const size = (n) => (n.kind === "dir" ? n.children.reduce((t, c) => t + size(c), 0) : 1);
   const order = (n) => { if (n.kind !== "dir") return; n.children.sort((a, b) => (b.kind === "dir") - (a.kind === "dir") || size(b) - size(a)); n.children.forEach(order); };
   order(root);
@@ -864,7 +878,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       for (const a of leaf.ancestors().reverse()) if (!(a.data.kind === "dir" && open.has(a))) return a;
       return leaf;
     };
-    const topOf = (n) => n.ancestors().find((a) => a.depth === 1) || n;
+    // Trunks join the top-level folders, or the level below when there are
+    // fewer than four, or on a code map.
+    const tops = L.root.children?.filter((c) => c.data.kind === "dir").length ?? 0;
+    // On a code map the meaningful parts are a level down (src/core, src/bindings).
+    const trunkDepth = (model.code || tops < 4) && L.root.children?.some((c) => c.children?.some((g) => g.data.kind === "dir")) ? 2 : 1;
+    const topOf = (n) => { const a = n.ancestors(); return a.find((x) => x.depth === trunkDepth) || a.find((x) => x.depth === 1) || n; };
     const merged = new Map();
     const inFocus = (n) => n.ancestors().includes(focus);
     let hidden = 0, counted = 0;
@@ -958,9 +977,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       // On the grid: A* over cells in the worker, routed together per set of
       // routes and kept; a set not back yet is not drawn (grid.js).
       const key = grid.version + "|" + routes.map((m) => m.key).join(",");
-      const got = gridRouted.get(key);
+      // While a set is on its way, the routes of the last set that shares
+      // them stay drawn, so lines do not vanish and come back.
+      const got = gridRouted.get(key) ?? (gridLast?.version === grid.version ? gridLast.routes : null);
       for (const m of routes) { m.grid = true; const r = got?.get(m.key); m.cells = r?.cells ?? []; m.pts = r?.cells.length ? r.pts : null; }
       if (got) gridLanes(routes.filter((m) => m.cells.length));
+      if (gridRouted.has(key)) gridLast = { version: grid.version, routes: gridRouted.get(key) };
       else if (!gridAsked.has(key)) {
         gridAsked.add(key);
         const G = grid.G, version = grid.version, t0 = performance.now();
@@ -1218,6 +1240,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   let smoothXyr = null;
   let grid = null; // { at, G, u, searched, version, reach }
   const gridRouted = new Map(), gridAsked = new Set(); // routes per set, from the worker
+  let gridLast = null; // the last set drawn, shown while the next is on its way
   const GRID_KEY = "rdstudio.grid.3"; // .3: the roomier grid (spread 5, deeper walls, wider blocks)
   const gridLinks = () => model.edges.filter(([, , s]) => s >= 2).map(([a, b]) => [a, b]);
   const savedGrid = () => { try { return JSON.parse(localStorage.getItem(GRID_KEY) || "null"); } catch { return null; } };
@@ -1232,6 +1255,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     for (const [a, b] of gridLinks()) { deg.set(a, (deg.get(a) || 0) + 1); deg.set(b, (deg.get(b) || 0) + 1); }
     const snapped = gridBuild(L.root, deg);
     grid = { at: placedKey, version: 0 };
+    // Convex folders: the snapped layout's own boxes, nested and apart by
+    // construction, with nothing to search.
+    if (o.gridShape !== "free") { adopt(snapped, false); wrap.dataset.grid = "convex"; return grid; }
     const saved = savedGrid();
     if (saved?.key === placedKey) { searched(saved.pos); return grid; }
     adopt(snapped, false);
@@ -1365,7 +1391,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       tx.select(".count").text(cnt);
     });
     // Trunk counts between top-level folders, half way along.
-    layer("g-counts").selectAll("text").data(drawn.filter((m) => m.cls.startsWith("trunk") && m.p.depth === 1 && m.q.depth === 1), (m) => m.key).join("text")
+    layer("g-counts").selectAll("text").data(drawn.filter((m) => m.cls.startsWith("trunk") && m.p.data.kind === "dir" && m.q.data.kind === "dir"), (m) => m.key).join("text")
       .attr("class", (m) => "m-count" + (m.cls.includes("quiet") ? " quiet" : ""))
       .attr("x", (m) => X(m.pts[m.pts.length >> 1][0])).attr("y", (m) => Y(m.pts[m.pts.length >> 1][1]) + 4).text((m) => m.count);
   }
@@ -1412,11 +1438,14 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       if (n.data.kind !== "dir") return;
       if (!n.parent || (open.has(n.parent) && sr(n) >= o.detail) || G) open.add(n); // the grid is a plan: every folder is drawn
     });
-    // Focus: the deepest open folder under the centre of the view.
-    focus = L.root;
-    for (const n of open) {
-      const d = Math.hypot(sx(n) - w / 2, sy(n) - hgt / 2);
-      if (d < sr(n) && sr(n) >= Math.min(w, hgt) * 0.3 && n.depth > focus.depth) focus = n;
+    // Focus: the deepest open folder under the centre of the view. Held
+    // while a gesture is under way, so panning does not swap the links drawn.
+    if (!moving || !focus || !L.byId.has(focus.data.id) || L.byId.get(focus.data.id) !== focus) {
+      focus = L.root;
+      for (const n of open) {
+        const d = Math.hypot(sx(n) - w / 2, sy(n) - hgt / 2);
+        if (d < sr(n) && sr(n) >= Math.min(w, hgt) * 0.3 && n.depth > focus.depth) focus = n;
+      }
     }
     // Calmer (T62): a note not reached is not drawn until its folder is in
     // focus; the folder's label counts what is reached instead (14/18).
@@ -1529,7 +1558,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     drawRoutes(gFocus, focused ? routes.filter((m) => inFocus(m.p) || inFocus(m.q)) : []);
     // A trunk's count: half way along the part of it outside both folders.
     const taken = [];
-    const counts = routes.filter((m) => m.pts && m.cls.startsWith("trunk") && m.p.depth === 1 && m.q.depth === 1).map((m) => {
+    const counts = routes.filter((m) => m.pts && m.cls.startsWith("trunk") && m.p.data.kind === "dir" && m.q.data.kind === "dir").map((m) => {
       if (m.org) {
         // Half way along the part outside both folders (found in the worker), or near it.
         const P = toScreen(m.pts), mid = m.mid ?? P.length >> 1;
@@ -1971,6 +2000,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
   wrap.refresh = () => { o = effective(); model = timed("map-model", () => buildModel(o)); rebuild(); };
   M.resource = () => wrap.refresh(); // the panel's Notes or Code
+  M.regrid = () => { o = effective(); grid = null; cache = null; schedule(); }; // the grid's folders, convex or free
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
   wrap.layout = () => L;
@@ -2225,6 +2255,8 @@ function controls({ view, tune, readout, summary }) {
         choice("folders", "Folders", [["grid", "Grid", "Everything on a square grid: notes as blocks, folders as regions, routes along the cells in lanes. Its layout is searched in the background and kept."],
           ["contour", "Contours", "Each folder's outline follows where its contents sit."],
           ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."]]),
+        choice("gridShape", "Grid folders", [["convex", "Convex", "On the grid, each folder is a box with its corners cut: never overlapping, laid out at once."],
+          ["free", "Free", "On the grid, each folder takes the shape of its notes, placed by a layout search."]], () => M.regrid?.()),
         choice("routing", "Routes", [["downhill", "Downhill", "Routes cross folder outlines at right angles and gather in the flats between folders."],
           ["gates", "Gates", "Routes leave each folder by a gate on its wall and follow corridors between its contents."]]),
         h("div", { class: "row" },
