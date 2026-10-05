@@ -2,7 +2,7 @@
 // again whenever the build's version changes (live updates), plus the private
 // learner record through rdstudio serve's API (the generated client in api/).
 
-import type { Changes, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, Skills } from "@rdstudio/core";
+import type { Changes, CodeIndex, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, Skills } from "@rdstudio/core";
 import { client } from "./api/client.gen.ts";
 import { deleteApiLearnerToursByName, getApiLearner, getApiLearnerTours, postApiLearner, putApiLearnerToursByName } from "./api/sdk.gen.ts";
 import type { LearnerEvent, PrivateTour } from "./api/types.gen.ts";
@@ -38,6 +38,8 @@ class Store {
   changes = $state.raw<Changes>({ available: false, commits: [] });
   reports = $state.raw<ReportRecord[]>([]);
   skills = $state.raw<Skills>({ skills: [], agents: [] });
+  /** The code map's index (T66), when the project's code is mapped. */
+  code = $state.raw<CodeIndex | null>(null);
   loaded = $state(false);
   live = $state<"live" | "offline" | "signin" | "static">("live");
   private bodies = new Map<string, string>();
@@ -56,6 +58,7 @@ class Store {
     this.changes = changes;
     this.reports = reports;
     this.skills = skills;
+    this.code = site.counts?.code ? await getJSON<CodeIndex>("code").catch(() => null) : null;
     this.loaded = true;
     measure("data", start);
   }

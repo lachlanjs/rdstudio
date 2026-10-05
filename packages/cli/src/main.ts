@@ -9,6 +9,7 @@ import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { indexCode } from "./code.ts";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
 import { brief } from "./brief.ts";
@@ -339,6 +340,14 @@ const COMMANDS: Record<string, Command> = {
     },
   },
 
+  "__index-code": {
+    help: "(internal) print the code map's index as JSON, for the build",
+    run(cfg) {
+      void indexCode(cfg).then((idx) => { process.stdout.write(idx ? JSON.stringify(idx) : ""); });
+      return 0;
+    },
+  },
+
   build: {
     help: "build the dashboard site",
     run(cfg) {
@@ -415,12 +424,12 @@ function usageError(command: string, message: string): number {
 }
 
 function help(): string {
-  const names = [...Object.keys(COMMANDS), ...PENDING].sort();
+  const names = [...Object.keys(COMMANDS).filter((n) => !n.startsWith("__")), ...PENDING].sort();
   return [
     "usage: rdstudio [-h] [--version] [-C DIRECTORY] <command> ...",
     "",
     "commands:",
-    ...Object.entries(COMMANDS).map(([n, c]) => `  ${n.padEnd(10)} ${c.help}`),
+    ...Object.entries(COMMANDS).filter(([n]) => !n.startsWith("__")).map(([n, c]) => `  ${n.padEnd(10)} ${c.help}`),
     `  (still in the Python command line: ${PENDING.join(", ")})`,
     "",
     `all: ${names.join(", ")}`,

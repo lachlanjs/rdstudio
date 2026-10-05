@@ -25,6 +25,7 @@
     "/library": "library", "/d/[...id]": "library", "/k/[...id]": "library",
     "/map/[...focus]": "atlas", "/path/[...id]": "atlas", "/graph": "atlas", "/tour/[...id]": "atlas", "/tours/[...name]": "atlas",
     "/practice/[...rest]": "practice", "/learn": "practice",
+    "/code/[...id]": "library",
     "/project": "project", "/changes": "project", "/review": "project", "/reports": "project", "/r/[...path]": "project",
     "/procedures": "project", "/p/[...id]": "project", "/skills": "project", "/skill/[...name]": "project", "/agent/[...name]": "project",
     "/teacher/[...rest]": "you", "/settings": "you",

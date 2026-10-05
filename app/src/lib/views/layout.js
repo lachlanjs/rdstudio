@@ -6,6 +6,7 @@
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
+import { build as gridBuild, search as gridSearchPositions } from "./grid.js";
 
 export const SIZE = 1000; // layout units
 // Bump when the algorithm changes, so cached layouts are not reused.
@@ -76,7 +77,9 @@ export function relative(root) {
 // towards the side where their links leave the folder, and later in the study
 // order further north.
 function arrange(root, byId, edges, o, prev) {
-  const leafEdges = edges.map(([a, b]) => [byId.get("c:" + a), byId.get("c:" + b)]).filter(([a, b]) => a && b);
+  // A link ends on a place, or on the code map on a folder (a file, a class).
+  const end = (ref) => byId.get("c:" + ref) || byId.get("d:" + ref);
+  const leafEdges = edges.map(([a, b]) => [end(a), end(b)]).filter(([a, b]) => a && b && !a.ancestors().includes(b) && !b.ancestors().includes(a));
   // A link matters only to the folders that contain one of its ends, so each
   // folder looks at those links alone (in their original order).
   const linksIn = new Map();
@@ -275,6 +278,20 @@ export function computeTerrain(folders) {
 // Contour folders' outlines (contours.js), off the main thread.
 export function computeOutlines(specs) {
   return ask({ outlines: specs }, () => outlines(specs));
+}
+
+// The grid Atlas's searched positions (grid.js): from the plain model and its
+// smooth positions, snapped, then searched within a time budget.
+export function gridSearch({ model, xyr, links, budget, from }) {
+  const { root } = start(model.root);
+  applyPositions(root, xyr);
+  const deg = new Map();
+  for (const [a, b] of links) { deg.set(a, (deg.get(a) || 0) + 1); deg.set(b, (deg.get(b) || 0) + 1); }
+  gridBuild(root, deg);
+  return gridSearchPositions(root, links, { budget, start: from });
+}
+export function computeGrid(input) {
+  return ask({ grid: input }, () => gridSearch(input));
 }
 
 // Downhill routes (contours.js), off the main thread. The grid is built once

@@ -8,6 +8,7 @@
 // localhost names, Tailscale names (*.ts.net, which `tailscale serve` passes
 // through) and --allow-host names, against DNS rebinding.
 
+import { codeStamp } from "./code.ts";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve, sep } from "node:path";
@@ -734,7 +735,7 @@ function fingerprint(cfg: Config): string {
   for (const f of [join(cfg.root, "rdstudio.toml"), join(cfg.root, ".git", "HEAD"), join(cfg.root, ".git", "index")]) {
     if (existsSync(f)) { const st = statSync(f); stamp.push(`${f}\0${st.mtimeMs}\0${st.size}`); }
   }
-  return stamp.sort().join("\n");
+  return stamp.sort().join("\n") + "\n" + codeStamp(cfg); // the code map follows the code
 }
 
 const clock = () => new Date().toTimeString().slice(0, 8);

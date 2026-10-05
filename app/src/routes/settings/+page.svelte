@@ -1,6 +1,6 @@
 <script lang="ts">
   import { store } from "$lib/data.svelte.ts";
-  import { MODES, settings } from "$lib/settings.svelte.ts";
+  import { MODES, THEMES, settings } from "$lib/settings.svelte.ts";
 
   let graphReset = $state(false);
 
@@ -15,6 +15,14 @@
 <div class="page">
   <h1>Settings</h1>
   <p class="lede">Saved in this browser only. Other devices and the exported site keep their own settings.</p>
+
+  <h2 class="section-h">Theme</h2>
+  <div class="toggles" role="radiogroup" aria-label="Theme">
+    {#each THEMES as t (t.id)}
+      <button class="toggle" type="button" role="radio" aria-checked={settings.theme === t.id} title={t.what} onclick={() => settings.setTheme(t.id)}>{t.name}</button>
+    {/each}
+  </div>
+  <p class="section-note">{THEMES.find((t) => t.id === settings.theme)?.what}</p>
 
   <h2 class="section-h">Light or dark</h2>
   <div class="toggles" role="radiogroup" aria-label="Light or dark">

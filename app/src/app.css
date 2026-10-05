@@ -329,8 +329,12 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .map-wrap .m-back { fill: transparent; }
 .m-landfill { fill: var(--surface-1); }
 .m-dir { fill: none; stroke: var(--rule-strong); stroke-width: 1; cursor: zoom-in; transition: opacity .2s; }
-.m-dir.open.depth-1 { stroke-dasharray: 7 5; }
-.m-dir.open:not(.depth-1) { stroke-dasharray: 2 4; }
+.m-dir.open.depth-1 { stroke-dasharray: none; }
+.m-dir.open:not(.depth-1) { stroke-dasharray: 4 4; }
+.a-reached { fill: var(--surface-2); fill-rule: evenodd; }
+.m-key .m-landfill { fill: var(--surface-1); }
+svg.folder-hover .m-routes .m-link:not(.hot) { opacity: .2; }
+svg.folder-hover .m-count { opacity: .35; }
 .m-dir.closed { fill: var(--surface-2); fill-opacity: .92; stroke-width: 1.25; }
 .m-dir.closed:hover { fill: var(--surface-3); }
 .fogdot { fill: var(--text-soft); opacity: .5; }
@@ -341,7 +345,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .a-contour { fill: none; stroke: var(--text-soft); stroke-width: 1; }
 .a-contour.c1 { opacity: .5; } .a-contour.c2 { opacity: .7; } .a-contour.c3 { opacity: .95; stroke-width: 1.5; }
 .a-front { fill: none; stroke: var(--text); stroke-width: 1.5; }
-.a-front.thin { stroke-width: 1; opacity: .8; }
+.a-front.thin { stroke-width: 1; opacity: .7; }
 .a-hach { fill: none; stroke: var(--text); stroke-width: 1.25; }
 .m-terrain, .m-land { pointer-events: none; }
 /* Places: shape is the kind of note; fill and ring are where you stand. */
@@ -1486,3 +1490,31 @@ p code { overflow-wrap: anywhere; }
 .need-what { display: block; font: 12px/16px var(--font-ui); margin-top: 2px; }
 /* The Activity lens's top state: a plain ring, since recent is not right. */
 .m-place.plain .ring-a { stroke: var(--text); stroke-width: 1.5; }
+
+/* The grid Atlas (T63): a plan on square cells. Height is nesting, one tone
+   lighter per level; understanding is tone and fill, not height. */
+.g-dot { fill: var(--rule-strong); opacity: .45; }
+.g-floor { cursor: zoom-in; }
+.g-floor.d1 { fill: var(--surface-1); }
+.g-floor.d2 { fill: var(--surface-2); }
+.g-floor.d3 { fill: var(--surface-3); }
+.g-wall { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; pointer-events: none; }
+.g-wall.d2, .g-wall.d3 { stroke-width: 1; }
+.m-grid .a-reached { fill: var(--text); fill-opacity: .06; pointer-events: none; }
+.g-front { fill: none; stroke: var(--text-soft); stroke-width: 1; stroke-dasharray: 1 3; stroke-linecap: round; pointer-events: none; }
+.g-routes { pointer-events: none; }
+.g-routes .rt-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+.g-routes .line { stroke-linejoin: round; }
+.grid-note { cursor: pointer; }
+.grid-note .gn { stroke: var(--rule-strong); stroke-width: 1; fill: var(--surface); }
+.grid-note.st-discovered .gn { stroke: var(--text); fill: var(--surface-1); }
+.grid-note.st-processed .gn, .grid-note.st-understood .gn { stroke: var(--text); stroke-width: 1.25; fill: var(--surface-3); }
+.grid-note.needs .gn { stroke: var(--pen-red); stroke-width: 2; }
+.grid-note.selected .gn { stroke: var(--pen-blue); stroke-width: 2; }
+.grid-note:focus-visible .gn { stroke: var(--pen-blue); stroke-width: 2.5; }
+.gn-ok { stroke: var(--pen-green); stroke-width: 1.5; fill: none; }
+.g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
+.g-note { font: 11px var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text); pointer-events: none; }
+.grid-note.st-undiscovered .g-note { fill: var(--text-faint); }
+.g-title { font-family: var(--font-map); font-variation-settings: "wdth" 88; font-weight: 600; fill: var(--text); pointer-events: none; stroke: none; }
+.g-title .count { font-weight: 400; fill: var(--text-soft); }

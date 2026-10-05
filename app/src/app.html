@@ -47,6 +47,7 @@
   })();
 </script>
 <link id="theme-css" rel="stylesheet" href="%sveltekit.assets%/themes/marginalia.css">
+<link rel="stylesheet" href="%sveltekit.assets%/themes/station.css">
 <link rel="stylesheet" href="%sveltekit.assets%/fonts.css">
 <script>
   // Apply the saved theme and mode before first paint (see lib/settings.svelte.ts).
@@ -55,6 +56,8 @@
       // One theme (Marginalia), dark first; light, or following the system, when chosen.
       var mode = localStorage.getItem("rdstudio.mode");
       document.documentElement.dataset.mode = mode === "light" || mode === "system" ? mode : "dark";
+      // The theme: Marginalia, or the Station option layered on it.
+      document.documentElement.dataset.theme = localStorage.getItem("rdstudio.theme") === "station" ? "station" : "marginalia";
     } catch (e) { /* storage unavailable: defaults apply */ }
   })();
 </script>
