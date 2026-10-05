@@ -1,0 +1,1 @@
+Stress test of the grid Atlas: every link drawn on its own from note to note, nothing merged or hidden. It shows what the router does under load, and is not proposed as a default view.

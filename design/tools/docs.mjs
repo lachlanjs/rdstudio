@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
-// the licence texts are kept beside the fonts they cover and are only re-read here
-const rd = (f) => fs.readFileSync(new URL('../project/assets/Licences/' + f, import.meta.url), 'utf8');
+const U = '/root/.claude/uploads/e879b4f0-04e0-5527-95bd-9d6b24bf3eaf/';
+const rd = (f) => fs.readFileSync(U + f, 'utf8');
 
 export const README = `A knowledge base for learning hard subjects: notes, a map of how they connect, exercises, and an AI teacher that marks and tutors. Dark first, light second. Calm enough to think in for hours, with one or two things nobody else does.
 
@@ -65,6 +65,7 @@ The components are sketches of the redesign, not production components, grouped 
 - **A + B** is Marginalia with the Survey Atlas, the recommended combination: Survey's contours, hachures, grid references and north arrow used only on the Atlas.
 - **A, terminal lean** is a user setting on top of A, not a fourth direction; its key hints and status line are accepted as designed: square corners, numbered spaces with the current one in reverse video, the palette as a prompt, framed panes with the title set into the border, key hints in brackets on every action, a block caret and a status line. It adds no tokens. The pens, Charter for reading and the leader lines are unchanged.
 - **Retro-futurist** is a theme option, not a direction: the terminal lean pushed to an pale phosphor display (\`retro-*\` tokens), with Departure Mono for names, headings and numbers, reversed title blocks, 2px frames and scan lines. Prose and maths stay in Charter. The pens keep their colours and line styles, so the phosphor tone is never a meaning. It has no glow, because blur and large shadows are ruled out. It breaks one rule of the base on purpose: uppercase labels. It is a user setting, like the terminal lean.
+- **Station terminal** is a second theme option, made for fun: a late-1970s film computer (\`station-*\` tokens). Cold white phosphor on blue-black, Departure Mono for labels and headings and Ioskeley Mono for the rest, upper case for short labels only, reversed header bars, thin cyan frames (\`station-line\`), segmented counters, a key legend with dotted leaders, scan lines, and the Atlas as a deck plan on a grid. Prose is mono in mixed case. The pens are unchanged. A chooseable user setting, alongside the terminal lean and the retro theme.
 - **Phone** is A with the Survey Atlas at 390 wide: a bottom tab bar (Today, Library, Practice, Atlas, More), 16px gutters, 44px targets. There is no margin on a phone, so a pin hangs under the row or paragraph it is about by a short stem in its pen's line and quotes the words it pins.
 
 ### The Atlas: structure first, terrain on top
@@ -102,6 +103,46 @@ Study path and Tour are routes too: they replace Links, they do not stack on it.
 
 Positions, the four states, the lenses and the terrain are identical under both. **\`contour\` with \`downhill\` is the default** for a new project; \`circle\` with \`gates\` is the option, and the fallback until downhill routing has been timed above 63 notes. The mixed pairings are not sketched.
 
+**A calmer default (proposal).** The two sketches under "Atlas · calmer" remove ink without removing information:
+
+- Reached ground is a lighter tone. There is no stipple for fog and no hachures; the frontier is a thin line.
+- Folder outlines are solid and thin. Subfolders are dashed.
+- Unreached notes are not drawn at overview. Each folder's label says how many are reached (14/18). They appear when the folder is zoomed.
+- The key is closed by default and opens from one button. The lens buttons stay.
+- Pointing at a folder keeps its trunks, quiets the others, and shows one card: progress, what needs work, what it builds on and what builds on it.
+
+**The grid Atlas (prototype).** A third folder shape, \`grid\`, beside \`circle\` and \`contour\`. Everything sits on a coarse square grid.
+
+- *Layout.* Positions come from the smooth layout (the packing and forces of the previous app, later study further north) and are then snapped to cells. Inside each folder the children keep their relative places; the folder is scaled down as far as it will go, and anything left overlapping is nudged apart until every pair of notes has 2 clear cells between them and every pair of folders has 3. A note is a block of 8 by 2 cells, larger when it has many links so they have more edge to leave from. A folder has a title row, a free row under it and 2 cells of margin inside its wall; folders nest.
+- *Kind of note.* The glyph in each block is the kind of note (circle definition, diamond theorem, triangle example, square trick, barred circle reference). It is an option: a per-project setting, on in these sketches.
+- *Which links.* Every requires and uses link counts, implied ones included; nothing is hidden. Overview merges them into one trunk per pair of folders. A folder in focus shows each of its own links singly and keeps the other trunks quiet. \`GridAtlasAll\` draws all of them singly as a stress test, not as a proposed default.
+- *Height is nesting.* 0 between folders, 1 inside a folder, 2 inside a subfolder. The only contours are folder walls, on grid lines with the corners cut. Each level is one tone lighter.
+- *Understanding is tone and fill, not height.* Ground within one cell of a reached note is lighter, with a dotted edge. A note block is faint (not reached), outlined (opened), filled (worked through) or filled with a double green rule (understood); a red frame is needs work.
+- *Titles sit in their own cells.* A folder's title row and a note's block are reserved, so labels never collide and nothing is routed through them.
+- *Routes are A\* over cells* with 45 degree steps. A step costs its length, plus 5 for each change of height, a little for each turn, 2.5 for each cell of a folder the route has no business in, and 0.45 for each route already in the cell. Each route is re-routed twice after the others are down. A route ends on the edge of the block it joins.
+- *Lanes.* Routes that share a cell edge take different offsets and run side by side. A later route is drawn over an earlier one with a gap, so a crossing reads as over and under.
+
+**Layout and routes searched together (experiment, \`tools/gridopt.mjs\`).** \`GridExperiment\` compares six layouts of the same 63 notes with all 98 links drawn singly and measured. "Beside" is the share of route cells that have another route in the same cell or one touching it.
+
+| Layout | Crossings | Cells of route | Beside another route | Cell size at overview | North kept |
+|---|---|---|---|---|---|
+| As published (rectangles, from the smooth layout) | 211 | 2360 | 75% | 6.7px | 91% |
+| Spread only (twice the gaps, no search) | 230 | 3164 | 68% | 5.4px | 91% |
+| Searched, tight (2 clear cells between notes) | 71 | 1570 | 54% | 8.6px | 78% |
+| Searched, loose (4 clear cells) | 105 | 2405 | 54% | 6.0px | 87% |
+| Loose, routes kept apart | 86 | 2175 | 27% | 5.8px | 81% |
+| Loose, routes apart, north kept | 89 | 2509 | 23% | 5.6px | 92% |
+
+- *Free-form folders.* A folder is every cell within reach of one of its notes (reach grows with the gap between notes, and by 2 for each level of folders inside it), with narrow notches filled. Its wall is the outline of that set; its title takes the top row above its topmost note.
+- *Hard rules.* Sibling notes keep the chosen number of clear cells (2 tight, 4 loose). Notes of different folders keep enough distance that the regions cannot touch and 2 cells stay free between them. Each folder's notes stay close enough to form one region.
+- *Search.* Simulated annealing over note positions (move a note, swap two siblings, move or mirror a folder), 200,000 moves judged on a stand-in for the routes: straight-line length and crossings, lines passing over other notes, how far each folder sprawls, and how small the cells get when the map is fitted to the screen. Then 160 to 220 moves judged on the real routes; a move is kept only if the measured score improves.
+- *Routes kept apart.* Two parts. The router charges 0.3 per route already in a touching cell (\`near\`), on top of 0.45 per route in the same cell, so a route prefers an empty corridor to running alongside another. The search is charged for straight lines that pass through the same 8 by 8 block of cells, and the real-route pass for the measured crowding.
+- *North is optional.* It is a weight in the search: 0.3 for each pair of notes whose vertical order disagrees with the study order. Off in the first four rows, on in the last. "North kept" is the share of pairs that agree.
+- Spreading alone does not help: routes get longer and cross as often. Position matters more than room. Room does help once the router is told to use it: the share of route beside another falls from 54% to about 25%.
+- Keeping north cost almost nothing here: 3 more crossings and 15% more route for 92% agreement against 81%.
+
+Not yet in the prototype: stability (the layout is recomputed from scratch, so adding a note can move others); dragging a block to a new place and pinning it there; over and under at crossings between routes in different cells; a hex grid.
+
 What the terrain needs from the layout:
 
 1. Notes stay where they are. A note that moves takes its hill with it.
@@ -133,7 +174,7 @@ Bake the terrain, do not draw it per frame: compute contours per top-level folde
 ### Code and maths
 
 - Code blocks and inline code are Ioskeley Mono (the \`code\` style). Syntax highlighting uses two hues that no pen uses: \`syntax-keyword\` (violet, also bold) and \`syntax-literal\` (amber, strings and numbers). Comments are italic in \`text-soft\`, the name being defined is bold, everything else is \`text\`. Any highlighter works if its token classes are mapped onto these five roles. Never use the syntax tokens outside code, and never use red, green or blue for syntax.
-- Maths letters and digits are Charter, so they match the reading text. Symbols, Greek and big operators stay in the KaTeX fonts.
+- Maths letters and digits are Charter, so they match the reading text. Symbols, Greek and big operators stay in the KaTeX fonts. The Maths fonts sheet sets seven other serif maths fonts beside Charter (STIX Two, Termes, Pagella, Schola, Bonum, New Computer Modern, Latin Modern); each of those needs MathJax 4 in place of KaTeX.
 
 Use the direction tokens (\`survey-*\`, \`instrument-*\`) only inside their own direction's screens. The pens are shared by all three.
 
@@ -176,10 +217,10 @@ export const LICENCE_README = `Licences for the fonts in \`fonts/\`. Keep these 
 `;
 
 export const licences = () => ({
-  'Bitstream-Charter.txt': rd('Bitstream-Charter.txt'),
-  'Ioskeley-Mono-OFL.txt': rd('Ioskeley-Mono-OFL.txt'),
-  'Martian-Mono-OFL.txt': rd('Martian-Mono-OFL.txt'),
-  'Departure-Mono-OFL.txt': rd('Departure-Mono-OFL.txt'),
+  'Bitstream-Charter.txt': rd('a9cbd899-charter-bitstream.txt'),
+  'Ioskeley-Mono-OFL.txt': rd('9f7555d4-ioskeley-mono-OFL.txt'),
+  'Martian-Mono-OFL.txt': rd('91df04d9-martian-mono-OFL.txt'),
+  'Departure-Mono-OFL.txt': rd('7eee6fdd-departure-mono-OFL.txt'),
   'README.md': LICENCE_README,
 });
 
@@ -266,3 +307,27 @@ COMP_READMES.OrganicNote = `Exploration, state 4. The selected note's links leav
 COMP_READMES.RetroToday = `Today in the retro-futurist option: an pale phosphor display with pixel headings, reversed title blocks, 2px panel frames, scan lines and a status line. Layout and content are the terminal lean's. The pens are unchanged, so passed, missed and links read exactly as in Marginalia.`;
 COMP_READMES.RetroWorkbench = `The workbench in the retro-futurist option. The problem, the answer and the maths stay in Charter for reading; labels, buttons and card heads are pixel or mono type in the phosphor tone. Pins and leader lines are Marginalia's.`;
 COMP_READMES.RetroAtlas = `The Atlas as a vector display: contour folders and downhill routes, drawn in pale phosphor lines on a grid of registration marks, with a note selected. The only change from the exploration sketch is the theme.`;
+
+COMP_READMES.StationToday = `Today in the station terminal option: pixel and mono type on blue-black, upper case for labels only, reversed title bars, thin cyan frames, segmented counters and a key legend with dotted leaders. Layout and content are the terminal lean's; the pens are unchanged.`;
+COMP_READMES.StationWorkbench = `The workbench in the station terminal option. Prose is mono in mixed case; maths keeps its own letters. Pins, marked words and leader lines are Marginalia's.`;
+COMP_READMES.StationAtlas = `The Atlas in the station terminal option, on the calmer default: contour folders drawn as a deck plan on a grid, trunks with counts, cyan drawing lines. Only the theme differs.`;
+
+COMP_READMES.MathFonts = `Eight serif maths fonts set beside Charter reading text, with the same sentence and two display equations in each. The first card is the current setup (KaTeX, with Charter for letters and digits). The other seven are MathJax 4 fonts, rendered to SVG at build time, so the sheet itself needs no extra font files.
+
+KaTeX has one maths font. Choosing any of the others means moving the app from KaTeX to MathJax 4.`;
+COMP_READMES.AtlasCalm = `A proposal for a calmer default Atlas. Reached ground is a lighter tone, with no stipple and no hachures; outlines are solid and thin; unreached notes are not drawn at overview and each folder's label carries its progress; the key opens on demand. Links, trunks, counts and contours are unchanged.`;
+COMP_READMES.AtlasCalmHover = `The calmer Atlas with the pointer on a folder: its trunks stay, other trunks go quiet, and one card gives its progress, what needs work, what it builds on and what builds on it.`;
+
+COMP_READMES.GridAtlas = `Prototype of the Atlas on a square grid, at overview. Folders are nested blocks placed as in the smooth layout, with 3 clear cells between folders and 2 between notes. Height is nesting; ground near a reached note is lighter with a dotted edge. The glyph in each block is the kind of note. Every link counts, merged into one trunk per pair of folders with its count. Content is placeholder.`;
+COMP_READMES.GridAtlasAll = `Stress test of the grid Atlas: every link drawn on its own from note to note, nothing merged or hidden. It shows what the router does under load, and is not proposed as a default view.`;
+COMP_READMES.GridAtlasFolder = `The grid Atlas zoomed into Manifolds. Every link that touches the folder is drawn singly: links inside it, and each note's links out to the edge of another folder. Note titles sit inside their blocks with the kind of note at the right; long titles are cut short. Blocks with no title are placeholder notes.`;
+COMP_READMES.StationGridAtlas = `The grid Atlas at overview in the station terminal theme. Only the theme differs.`;
+COMP_READMES.StationGridAtlasFolder = `The zoomed grid Atlas in the station terminal theme, with pixel type in the title rows and note blocks.`;
+
+COMP_READMES.GridExperiment = `Six layouts of the same notes and links side by side, every link drawn singly, with measured crossings, route length, share of route beside another route, cell size and how much of the north-is-later order survives. The evidence for searching positions and routes together.`;
+COMP_READMES.GridFreeAtlas = `The tight searched layout at overview. Folders are free-form regions of cells around their notes; one trunk per pair of folders. North is not enforced, so the north arrow is hidden.`;
+COMP_READMES.GridFreeAtlasAll = `The tight searched layout with all 98 links drawn singly. Compare with GridAtlasAll, which has about three times the crossings.`;
+COMP_READMES.GridFreeAtlasFolder = `The tight searched layout zoomed into Manifolds with every link that touches it.`;
+COMP_READMES.GridLooseAtlas = `The loose searched layout at overview: 4 clear cells between notes, routes charged for running side by side, later study pulled north. One trunk per pair of folders.`;
+COMP_READMES.GridLooseAtlasAll = `The loose searched layout with all 98 links drawn singly. About a quarter of the route runs beside another route, against three quarters in GridAtlasAll.`;
+COMP_READMES.GridLooseAtlasFolder = `The loose searched layout zoomed into Manifolds with every link that touches it.`;

@@ -1,0 +1,1 @@
+A proposal for a calmer default Atlas. Reached ground is a lighter tone, with no stipple and no hachures; outlines are solid and thin; unreached notes are not drawn at overview and each folder's label carries its progress; the key opens on demand. Links, trunks, counts and contours are unchanged.

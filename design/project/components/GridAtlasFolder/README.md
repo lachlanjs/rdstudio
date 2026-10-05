@@ -1,0 +1,1 @@
+The grid Atlas zoomed into Manifolds. Every link that touches the folder is drawn singly: links inside it, and each note's links out to the edge of another folder. Note titles sit inside their blocks with the kind of note at the right; long titles are cut short. Blocks with no title are placeholder notes.

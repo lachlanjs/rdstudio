@@ -1,0 +1,1 @@
+The zoomed grid Atlas in the station terminal theme, with pixel type in the title rows and note blocks.

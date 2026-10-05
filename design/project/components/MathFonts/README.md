@@ -1,0 +1,3 @@
+Eight serif maths fonts set beside Charter reading text, with the same sentence and two display equations in each. The first card is the current setup (KaTeX, with Charter for letters and digits). The other seven are MathJax 4 fonts, rendered to SVG at build time, so the sheet itself needs no extra font files.
+
+KaTeX has one maths font. Choosing any of the others means moving the app from KaTeX to MathJax 4.

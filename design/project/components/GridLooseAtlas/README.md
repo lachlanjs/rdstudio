@@ -1,0 +1,1 @@
+The loose searched layout at overview: 4 clear cells between notes, routes charged for running side by side, later study pulled north. One trunk per pair of folders.

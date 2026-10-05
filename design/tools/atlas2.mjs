@@ -19,7 +19,7 @@ const DG = { name: 'Differential geometry', mode: 'Learning' };
 const KIND = { "Stokes' theorem": 'theorem', 'Gauss–Bonnet theorem': 'theorem', 'Theorema Egregium': 'theorem', 'Partitions of unity': 'theorem', 'Submanifolds and the regular value theorem': 'theorem', 'Integral curves and flows': 'theorem', 'Levi-Civita connection': 'theorem',
   'The Möbius band as a line bundle': 'example', m1: 'example', s2: 'example', k4: 'example', b1: 'trick', 'Compute in normal coordinates': 'trick', a3: 'trick', x1: 'reference', x2: 'reference', x3: 'reference' };
 export const N = (name, level = 0, big = false) => ({ name, level, big, type: KIND[name] || 'definition' });
-const TREE = ['Differential geometry', [
+export const TREE = ['Differential geometry', [
   ['Foundations', [
     ['Analysis', [N('a1', 3), N('a2', 3), N('a3', 3)]],
     ['Topology', [N('t1', 3), N('t2', 3), N('t3', 2), N('t4', 3)]],
@@ -43,7 +43,7 @@ const TREE = ['Differential geometry', [
 ]];
 // a -> what it requires (3) or uses (2)
 export const E = (a, bs, s = 3) => bs.map((b) => [a, b, s]);
-const EDGES = [
+export const EDGES = [
   ...E('Smooth manifold', ['t1', 't2', 'a1']), ...E('Smooth maps and diffeomorphisms', ['Smooth manifold', 'a1']), ...E('m2', ['Smooth manifold']), ...E('m1', ['Smooth manifold'], 2),
   ...E('Partitions of unity', ['Smooth manifold', 't4']), ...E('Submanifolds and the regular value theorem', ['Differential of a smooth map', 'a2']), ...E('Immersions, submersions and embeddings', ['Differential of a smooth map', 'Submanifolds and the regular value theorem']),
   ...E('Tangent space', ['Smooth manifold', 'l1']), ...E('Differential of a smooth map', ['Tangent space', 'Smooth maps and diffeomorphisms']), ...E('Tangent bundle', ['Tangent space']), ...E('Vector fields', ['Tangent bundle']),
@@ -59,9 +59,9 @@ const EDGES = [
   ...E('g1', ['Smooth manifold', 'Vector fields']), ...E('g2', ['g1', 'Lie bracket']), ...E('x1', ['Smooth manifold'], 1), ...E('x2', ['Riemannian metric'], 1), ...E('x3', ['Differential forms'], 1),
   ...E('t3', ['t1']), ...E('t4', ['t2']), ...E('a2', ['a1', 'l1']), ...E('a3', ['a1']), ...E('l3', ['l2']), ...E('l2', ['l1']),
 ];
-const STRUGGLING = 'Vector fields';
+export const STRUGGLING = 'Vector fields';
 
-function model(ds) {
+export function model(ds) {
   const { tree: TREE, edges: EDGES } = ds;
   const rank = new Map();
   const out = new Map(); for (const [a, b, s] of EDGES) if (s >= 2) (out.get(a) || out.set(a, []).get(a)).push(b);
@@ -109,7 +109,7 @@ export function shapeSvg(type, x, y, r, cls) {
 
 // ---- one view of the map ----
 // links implied by a chain of other requires-links (a transitive reduction, as the previous app does)
-function impliedSet(edges) {
+export function impliedSet(edges) {
   const out = new Map(); for (const [a, b, s] of edges) if (s === 3) (out.get(a) || out.set(a, []).get(a)).push(b);
   const imp = new Set();
   for (const [a, c, s] of edges) { if (s !== 3) continue;
@@ -120,7 +120,7 @@ function impliedSet(edges) {
 
 // links: 'all' every link at the shown scale | 'none' | 'trunks' one route per pair of top-level folders | 'focus' the focused folder's inside links plus trunks
 // terrain: 'full' | 'overview' frontier and one contour | 'reduced' fog and frontier only
-export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], links = 'all', terrain = 'full', focus = null, org = null, W = 1440, H = 852 }) {
+export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], links = 'all', terrain = 'full', focus = null, org = null, calm = false, W = 1440, H = 852 }) {
   const X = (x) => (x - cx) * k + sx, Y = (y) => (y - cy) * k + sy;
   const root = L.root, tops = root.children;
   const open = new Set([root]);
@@ -142,6 +142,7 @@ export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], li
     if (links === 'none' || s < 3 || implied.has(a + '\n' + b)) continue;
     const ta = topOf(na), tb = topOf(nb);
     if (links === 'trunks') { add(ta, tb, ''); continue; }
+    if (links === 'hover') { add(ta, tb, ta.data.ref === focus || tb.data.ref === focus ? '' : 'quiet'); continue; } // pointing at a folder keeps its trunks and quiets the rest
     const fa = ta.data.ref === focus, fb = tb.data.ref === focus;
     if (fa && fb) add(shownRep(na), shownRep(nb), ''); else add(ta, tb, fa || fb ? '' : 'quiet');
   }
@@ -192,13 +193,15 @@ export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], li
   const clip = tops.map((n) => (org ? blob(n, '') : circ(n, ''))).join('');
   const arcLabel = (n, i, cls) => {
     const r = n.r * k + 9, x = X(n.x), y = Y(n.y), a0 = -Math.PI * 0.78, a1 = -Math.PI * 0.22;
-    return `<path id="arc${i}" d="M${(x + r * Math.cos(a0)).toFixed(1)} ${(y + r * Math.sin(a0)).toFixed(1)}A${r.toFixed(1)} ${r.toFixed(1)} 0 0 1 ${(x + r * Math.cos(a1)).toFixed(1)} ${(y + r * Math.sin(a1)).toFixed(1)}" fill="none"/><text class="${cls}"><textPath href="#arc${i}" startOffset="50%" text-anchor="middle">${n.data.ref} <tspan class="a-count">${n.leaves().length}</tspan></textPath></text>`;
+    return `<path id="arc${i}" d="M${(x + r * Math.cos(a0)).toFixed(1)} ${(y + r * Math.sin(a0)).toFixed(1)}A${r.toFixed(1)} ${r.toFixed(1)} 0 0 1 ${(x + r * Math.cos(a1)).toFixed(1)} ${(y + r * Math.sin(a1)).toFixed(1)}" fill="none"/><text class="${cls}"><textPath href="#arc${i}" startOffset="50%" text-anchor="middle">${n.data.ref} <tspan class="a-count">${cnt(n)}</tspan></textPath></text>`;
   };
+  // calm: a folder's label carries its progress, so unreached notes need not be drawn at overview
+  const cnt = (n) => (calm ? `${n.leaves().filter((l) => l.data.level > 0).length}/${n.leaves().length}` : n.leaves().length);
   const folders = shown.filter((n) => n.data.kind === 'dir');
   const folderSvg = folders.map((n, i) => {
     if (org) {
       const b = org.box(n), x = X((b.x0 + b.x1) / 2), top = Y(b.y0);
-      if (open.has(n)) return blob(n, n.depth > 1 ? 'w-sub' : 'w-top') + `<text x="${x.toFixed(1)}" y="${(top - 7).toFixed(1)}" text-anchor="middle" class="a-folder${n.depth > 1 ? ' sub' : ''}">${n.data.ref} <tspan class="a-count">${n.leaves().length}</tspan></text>`;
+      if (open.has(n)) return blob(n, n.depth > 1 ? 'w-sub' : 'w-top') + `<text x="${x.toFixed(1)}" y="${(top - 7).toFixed(1)}" text-anchor="middle" class="a-folder${n.depth > 1 ? ' sub' : ''}">${n.data.ref} <tspan class="a-count">${cnt(n)}</tspan></text>`;
       const y = Y((b.y0 + b.y1) / 2);
       return blob(n, 'w-closed') + `<text x="${x.toFixed(1)}" y="${(y - 2).toFixed(1)}" text-anchor="middle" class="a-folder">${n.data.ref}</text><text x="${x.toFixed(1)}" y="${(y + 13).toFixed(1)}" text-anchor="middle" class="a-label dim">${n.leaves().length} notes</text>`;
     }
@@ -213,7 +216,7 @@ export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], li
     const ring = n.data.ref === L.struggling ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 6).toFixed(1)}" class="ring-red"/>` : l === 3 && L.rings === 'plain' ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 5).toFixed(1)}" class="ring-plain"/>` : l === 3 ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 6.5).toFixed(1)}" class="ring-green-out"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r + 4).toFixed(1)}" class="ring-green-in"/>` : '';
     return ring + shapeSvg(n.data.type, x, y, r, cls);
   };
-  const notes = shown.filter((n) => n.data.kind === 'concept');
+  const notes = shown.filter((n) => n.data.kind === 'concept' && !(calm && k < 1.4 && n.data.level === 0 && n.data.ref !== L.struggling));
   const inView = (n) => X(n.x) > 300 && X(n.x) < W - 20 && Y(n.y) > 10 && Y(n.y) < H - 10;
   // labels: landmarks always, the rest once zoomed in; each tries right then left of its marker and is dropped if both collide
   const want = notes.filter((n) => inView(n) && n.data.ref.length > 2 && (n.data.big || k > 1.4 || n.data.ref === selected))
@@ -246,15 +249,15 @@ export function view(L, T, { k, cx, cy, sx, sy, openAt, selected, avoid = [], li
     for (let i = 0; i < P.length - 1; i++) for (let t = 0; t < 1; t += 0.04) { const x = P[i][0] + (P[i + 1][0] - P[i][0]) * t, y = P[i][1] + (P[i + 1][1] - P[i][1]) * t;
       if ([m.p, m.q].every((c) => Math.hypot(x - X(c.x), y - Y(c.y)) > c.r * k + 6)) out.push([x, y]); }
     return out.length ? out[Math.floor(out.length / 2)] : P[Math.floor(P.length / 2)]; };
-  const svg = `<svg class="atlas" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Atlas of Differential geometry: nested folders, routes through their gates, and the terrain of your understanding">
+  const svg = `<svg class="atlas${calm ? ' calm' : ''}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Atlas of Differential geometry: nested folders, routes through their gates, and the terrain of your understanding">
   <defs><clipPath id="walls">${clip}</clipPath><pattern id="fogdots" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.8" class="fogdot"/></pattern></defs>
   <rect width="${W}" height="${H}" class="a-sea"/>
   ${walls}
   <g clip-path="url(#walls)">
     ${terrain === 'full' ? `<path d="${lv[0]}" class="a-tint t1"/><path d="${lv[1]}" class="a-tint t2"/><path d="${lv[2]}" class="a-tint t3"/>` : terrain === 'overview' ? `<path d="${lv[1]}" class="a-tint t2"/>` : ''}
-    <path d="M0 0H${W}V${H}H0Z${front}" fill-rule="evenodd" class="a-fogdots"/>
+    ${calm ? `<path d="${front}" class="a-reach"/>` : `<path d="M0 0H${W}V${H}H0Z${front}" fill-rule="evenodd" class="a-fogdots"/>`}
     ${terrain === 'full' ? `<path d="${lv[0]}" class="a-contour c1"/><path d="${lv[1]}" class="a-contour c2"/><path d="${lv[2]}" class="a-contour c3"/>` : terrain === 'overview' ? `<path d="${lv[1]}" class="a-contour c2"/>` : ''}
-    <path d="${front}" class="a-front${terrain === 'reduced' ? ' thin' : ''}"/>${terrain === 'reduced' ? '' : `<path d="${hach.join('')}" class="a-hach"/>`}
+    <path d="${front}" class="a-front${terrain === 'reduced' || calm ? ' thin' : ''}"/>${terrain === 'reduced' || calm ? '' : `<path d="${hach.join('')}" class="a-hach"/>`}
   </g>
   ${plain.map((m) => `<path d="${pathFor(m)}" class="rt-halo" stroke-width="${(+wid(m.count) + 3).toFixed(2)}"/>`).join('')}
   ${plain.map((m) => `<path d="${pathFor(m)}" class="rt${m.cls ? ' quiet' : ''}" stroke-width="${wid(m.count)}"/>`).join('')}
@@ -281,6 +284,13 @@ export const A2_CSS = `
 .a-front.thin{stroke-width:1;opacity:.8}
 .m-land{fill:none;stroke:var(--text-soft);stroke-width:1}
 .m-bar{stroke:var(--text-faint);stroke-width:1.25;fill:none}
+.a-reach{fill:var(--text);fill-opacity:.06}
+.calm .w-top{stroke-dasharray:none;stroke:var(--rule-strong)}
+.calm .w-sub{stroke-dasharray:3 4}
+.calm .a-land{fill:var(--surface-1)}
+.lens .keybtn{margin-top:12px}
+.tip{position:absolute;width:236px}
+.tip .pin{position:relative}
 .kinds{display:flex;flex-wrap:wrap;gap:4px 14px;margin:12px 0 0;padding:10px 0 0;border-top:1px solid var(--rule)}
 .kinds span{display:inline-flex;align-items:center;gap:6px}
 .kinds svg{overflow:visible;flex:none}
@@ -318,12 +328,12 @@ const NORTH = `<div class="north"><svg width="28" height="56" viewBox="0 0 28 56
 
 const MARKS = [[lg.understood, 'Understood: filled, double green ring'], [lg.worked, 'Worked through: filled'], [lg.opened, 'Opened: outline'], [lg.none, 'Not reached: faint, in fog'], [lg.needs, 'The teacher says: needs work'], [lg.land, 'Landmark: drawn larger']];
 const KINDS = `<div class="kinds">${[['definition', 'Definition'], ['theorem', 'Theorem'], ['example', 'Example'], ['trick', 'Trick'], ['reference', 'Reference']].map(([t, n]) => `<span><svg width="14" height="16" viewBox="-7 -8 14 16">${shapeSvg(t, 0, 0, 5, 'm-open')}</svg>${n}</span>`).join('')}</div>`;
-export function page(v, { zoomed, stats, legend, on = ['Links', 'Understanding'], showCard = zoomed, proj = DG, north = true, kinds = true, chips = ['Links', 'Understanding', 'Study path', 'Tour', 'Goal'], hint = 'Click a note to open it, a region to zoom in, empty space to step out.', note = '' }) {
+export function page(v, { zoomed, stats, legend, on = ['Links', 'Understanding'], showCard = zoomed, proj = DG, north = true, kinds = true, chips = ['Links', 'Understanding', 'Study path', 'Tour', 'Goal'], hint = 'Click a note to open it, a region to zoom in, empty space to step out.', note = '', compact = false, extra = '' }) {
   legend = legend || [...MARKS, [lg.frontier, 'Frontier: hachures face the fog'], [lg.wall, 'A folder’s wall; routes leave by gates on it'], [lg.route, 'One route per pair of places; wider = more links'], ...(zoomed ? [[lg.sel, 'Links of the selected note']] : [])];
   const lens = `<aside class="lens" aria-label="Lenses"><h2>Lenses</h2>
     <div class="chips">${chips.map((n) => `<button class="btn" type="button"${on.includes(n) ? ' aria-pressed="true"' : ''}>${n}</button>`).join('')}</div>
-    ${kinds ? KINDS : ''}
-    <ul class="legend" style="list-style:none;margin:14px 0 0;padding:10px 0 0;border-top:1px solid var(--rule)">${legend.map(([i, t]) => `<li>${i}<span>${t}</span></li>`).join('')}</ul>
+    ${compact ? `${kinds ? KINDS : ''}<button class="btn keybtn" type="button">Show the key</button>` : `${kinds ? KINDS : ''}
+    <ul class="legend" style="list-style:none;margin:14px 0 0;padding:10px 0 0;border-top:1px solid var(--rule)">${legend.map(([i, t]) => `<li>${i}<span>${t}</span></li>`).join('')}</ul>`}
     <p class="note">${stats}</p>${note ? `<p class="note">${note}</p>` : ''}</aside>`;
   let card = '';
   if (showCard && v.selNode) {
@@ -339,6 +349,7 @@ ${lens}
 ${zoomed ? '<div class="crumbs">Differential geometry / <b>Manifolds</b></div>' : ''}
 ${card}
 ${north ? NORTH : ''}
+${extra}
 <div class="hint">${hint}</div>
 <div class="fabs"><button class="btn" type="button">New note</button><button class="btn" type="button">New folder</button></div>
 </div>
@@ -393,11 +404,24 @@ export function atlas2Docs() {
     OrganicNote: doc({ marker: co('Exploration, a note selected. Its links leave it downhill, across the understanding contours and the folder outlines.'), title: 'Atlas exploration, a note selected', css: ATLAS_CSS + A2_CSS, js: '',
       body: page(oNote.v, { zoomed: true, on: ['Understanding'], stats: ang(oNote.st), legend: [[lg.sel, 'What the selected note requires or uses'], [lg.dep, 'What builds on the selected note'], ...MARKS, [lg.frontier, 'Frontier: hachures face the fog'], WALL] }) }),
   };
+  // ---- a calmer default (proposal): tone for reached ground, no stipple or hachures, progress in the folder label, the key on demand ----
+  const GC = 'Atlas · calmer (proposal)';
+  const cc = (subtitle) => `@dsCard group="${GC}" width=1440 height=900 subtitle="${subtitle}"`;
+  const cRest = mk({ ...O, links: 'trunks', terrain: 'overview', calm: true }), cHover = mk({ ...O, links: 'hover', focus: 'Manifolds', terrain: 'overview', calm: true });
+  const mf = L.byId.get('d:Differential geometry/Manifolds'), tipX = 1180, tipY = 300, mfReached = mf.leaves().filter((l) => l.data.level > 0).length;
+  const tip = `<div class="tip" style="left:${tipX.toFixed(0)}px;top:${tipY.toFixed(0)}px"><aside class="pin pin-hint"><div class="pin-head"><b>Manifolds</b></div><p>${mfReached} of ${mf.leaves().length} notes reached. Needs work: <a href="#">Vector fields</a>.</p><p class="who">Builds on Foundations (9 links). Riemannian, Forms, Surfaces and Lie groups build on it.</p></aside></div>`;
+  const calmDocs = {
+    AtlasCalm: doc({ marker: cc('Proposal for a calmer default. Reached ground is a lighter tone, with no stipple and no hachures. Unreached notes are not drawn at this scale; each folder’s label says how many are reached. The key opens on demand.'), title: 'Atlas, calmer default', css: ATLAS_CSS + A2_CSS, js: '',
+      body: page(cRest.v, { zoomed: false, compact: true, stats: 'Lighter ground is what you have reached. 14/18 means 14 of 18 notes reached.' }) }),
+    AtlasCalmHover: doc({ marker: cc('The same view with the pointer on Manifolds: its trunks stay, the others go quiet, and a card says where the folder stands and what depends on what.'), title: 'Atlas, calmer default, pointing at a folder', css: ATLAS_CSS + A2_CSS, js: '',
+      body: page(cHover.v, { zoomed: false, compact: true, stats: 'Lighter ground is what you have reached. 14/18 means 14 of 18 notes reached.', extra: tip }) }),
+  };
   console.log('organic angles', oLinks.st, oFolder.st, oNote.st);
   const card = (subtitle) => `@dsCard group="${GROUP_AT}" width=1440 height=900 subtitle="${subtitle}"`;
   return {
     ...four,
     ...explore,
+    ...calmDocs,
     AtlasStructure: doc({ marker: card('Before: everything at once. The whole field, laid out and routed by the previous app’s own code, with the terrain of understanding on top. Subfolders are closed; links merge into one route per pair of places.'),
       title: 'Atlas, structure and routes', css: ATLAS_CSS + A2_CSS, body: page(over, { zoomed: false, stats: `${n} notes, ${links} links, drawn as ${over.routes.length} routes.` }), js: '' }),
     AtlasStructureOpen: doc({ marker: card('Before: everything at once. Zoomed into Manifolds: subfolders open, the same routes split to their notes, and one note selected so its own links stand out.'),

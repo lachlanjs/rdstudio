@@ -1,0 +1,1 @@
+The workbench in the station terminal option. Prose is mono in mixed case; maths keeps its own letters. Pins, marked words and leader lines are Marginalia's.

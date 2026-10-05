@@ -1,0 +1,1 @@
+The Atlas in the station terminal option, on the calmer default: contour folders drawn as a deck plan on a grid, trunks with counts, cyan drawing lines. Only the theme differs.
