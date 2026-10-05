@@ -988,7 +988,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   // Height under the Understanding lens: not reached 0 to understood 3.
   const lens = () => heightLens(o);
-  const levelOf = (n) => lensValue(lens(), n.data.c);
+  const levelOf = (n) => (n.data.kind === "concept" ? lensValue(lens(), n.data.c) : 0); // an empty folder is a leaf too
   const baked = new Map(); // top-level folder id → its terrain, kept while a newer one is baked
   const asked = new Set();
   function terrainOf(top) {

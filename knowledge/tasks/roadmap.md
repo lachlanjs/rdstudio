@@ -117,6 +117,18 @@ See the [redesign](/design/redesign.md) and the brand book in
 - [x] [T59 Project mode](/tasks/T59-project-mode.md)
 - [x] [T60 The Atlas: contour folders and downhill routes](/tasks/T60-atlas-contours.md)
 
+# M13 — Station, the grid Atlas, and a codebase to tell the modes apart
+
+The second round from Claude Design (`design/project/README.md`: Station
+terminal, "Atlas · calmer", "The grid Atlas", "Layout and routes searched
+together"), then a codebase test bed so project mode has a real project to
+show.
+
+- [x] [T61 The Station theme](/tasks/T61-station-theme.md)
+- [ ] [T62 A calmer Atlas](/tasks/T62-calmer-atlas.md)
+- [ ] [T63 The grid Atlas](/tasks/T63-grid-atlas.md)
+- [ ] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)

@@ -64,3 +64,7 @@
 * [T58 — Phone layouts](T58-phone.md) - The bottom tab bar, Today and the workbench at 390 wide, pins hanging under their paragraph, marking actions in place of the tab bar while an exercise is open.
 * [T59 — Project mode](T59-project-mode.md) - Learning or Project per project: Project mode's spaces, the Activity and Health lenses, and the learning layer on top of a project.
 * [T60 — The Atlas: contour folders and downhill routes](T60-atlas-contours.md) - Folder outlines as contours of their contents' fields, and routes that cross contours at right angles and gather in the flats, as options beside circles and gates; the default once timed at scale.
+* [T61 — The Station theme](T61-station-theme.md) - A theme option on top of Marginalia: a late-1970s film computer, chosen in Settings.
+* [T62 — A calmer Atlas](T62-calmer-atlas.md) - Less ink, the same information: a lighter tone for reached ground, a thin frontier, thin solid walls, unreached notes counted not drawn at overview, the key folded, a card for a folder.
+* [T63 — The grid Atlas](T63-grid-atlas.md) - A third folder shape: everything on a coarse square grid, notes as blocks, folders as free-form regions, layout and routes searched together, routes in lanes with over and under.
+* [T64 — A codebase test bed: a nanobind simulation](T64-codebase-testbed.md) - A dummy project in Python and C++ (nanobind), with CMake, CI, documentation and notes, to show project mode on a real codebase, down to classes and functions.
