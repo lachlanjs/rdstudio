@@ -215,6 +215,7 @@ current values in the right form to copy into a project.
 | `showLinks` | true | The Links lens: trunks between top-level folders, and the links inside the folder in focus |
 | `terrain` | true | Show the terrain of the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
+| `source` | (by mode) | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md); the default in project mode when the code is indexed) |
 | `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above), `circle` (the packing's circles, names on the arc) or `grid` (square cells, blocks and regions) |
 | `gridBudget` | 4000 | The grid's layout search, as milliseconds on a reference machine (a fixed number of moves for the map's size) |
 | `routing` | `"downhill"` | `downhill` (crosses contours at right angles, gathers in the flats) or `gates` (gates, corridors and bundling) |

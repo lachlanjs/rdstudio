@@ -1159,8 +1159,20 @@ print("first peak of g(r) at r =", r[np.argmax(g)])
 
 # ------------------------------------------------------------------ rdstudio notes
 G = "generated:\n  by: claude-code/claude-opus-5-5\n  at: 2026-10-05T12:00:00Z"
+# Which code each note is about (code: in its frontmatter, T66): an item's id, a file, or a name.
+CODE = {
+    "design/particle-system.md": ["src/nanosim/core/system.hpp#nanosim::ParticleSystem"],
+    "design/cell-lists.md": ["CellList"],
+    "design/zero-copy-views.md": ["src/bindings/bind_core.cpp#bind_core"],
+    "design/integrators.md": ["Integrator", "RK4"],
+    "design/forces.md": ["Force", "Gravity", "LennardJones"],
+    "decisions/default-integrator.md": ["VelocityVerlet", "python/nanosim/simulation.py#INTEGRATORS"],
+    "decisions/why-nanobind.md": ["src/bindings/module.cpp"],
+    "concepts/minimum-image.md": ["minimum_image"],
+}
 def note(path, typ, title, desc, body, extra=""):
-    f(f"knowledge/{path}", f"---\ntype: {typ}\ntitle: {title}\ndescription: {desc}\n{extra}{G}\n---\n\n{textwrap.dedent(body).strip()}\n")
+    code = f"code: [{', '.join(repr(c).replace(chr(39), chr(34)) for c in CODE[path])}]\n" if path in CODE else ""
+    f(f"knowledge/{path}", f"---\ntype: {typ}\ntitle: {title}\ndescription: {desc}\n{extra}{code}{G}\n---\n\n{textwrap.dedent(body).strip()}\n")
 
 note("overview.md", "Overview", "nanosim", "Particle simulations with a C++ core bound to Python by nanobind.", """
 # What this is

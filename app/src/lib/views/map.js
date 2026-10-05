@@ -30,6 +30,7 @@ import { start, plainModel, layoutKey, cached, remember, previous, relative, app
 import { build as gridBuild, freeG, routeAll as gridRouteAll, offsetLine, roundPath } from "./grid.js";
 import { widthOf } from "./terrain.js";
 import { folderSpecs } from "./contours.js";
+import { codeMap, codeHref, healthOf, KIND_LABEL, LINK_LABEL } from "../code.ts";
 
 
 const KEY = "rdstudio.map";
@@ -40,6 +41,7 @@ export const VIEW_DEFAULTS = {
   showLinks: true, // the Links lens: trunks between top-level folders, and the links inside the folder in focus
   allLinks: false, // every link at the shown scale instead, filtered as below
   terrain: true, // the terrain of the height lens
+  source: null, // what is mapped: "notes", or "code" (T66); by default code in project mode when the code is indexed
   height: null, // the height lens: "understanding", "activity" or "health"; by default understanding, or activity in project mode
   // Folder shape: "contour" (the outline follows the contents) or "circle"
   // (the packing's own circles); routing: "downhill" (crossing contours at
@@ -84,6 +86,8 @@ export const MARKERS = {
   definition: "circle", theorem: "diamond", lemma: "diamond", proposition: "diamond", corollary: "diamond",
   example: "triangle", trick: "square", reference: "ring", overview: "star",
   decision: "square", task: "triangle", question: "cross", idea: "wye", procedure: "star",
+  // The code map's items (T66).
+  function: "circle", method: "circle", class: "square", field: "triangle", constant: "diamond", target: "star", job: "star", file: "ring", dir: "ring",
 };
 const SYMBOLS = {
   circle: d3.symbolCircle, diamond: d3.symbolDiamond, triangle: d3.symbolTriangle, square: d3.symbolSquare,
@@ -122,9 +126,14 @@ function effective() {
 export const LENSES = { understanding: "Understanding", activity: "Activity", health: "Health" };
 const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
 const LEVEL_CLASS = ["st-undiscovered", "st-discovered", "st-processed", "st-understood"];
+/** What the Atlas maps: the notes, or the code (T66). */
+export function sourceOf(o) {
+  if (!store.code) return "notes";
+  return o.source === "code" || o.source === "notes" ? o.source : projectMode() === "Project" ? "code" : "notes";
+}
 function heightLens(o) {
   const lens = LENSES[o.height] ? o.height : projectMode() === "Project" ? "activity" : "understanding";
-  return lens === "understanding" && !understanding.on ? "activity" : lens;
+  return lens === "understanding" && (!understanding.on || sourceOf(o) === "code") ? "activity" : lens;
 }
 let changesSeen = null, changedAt = new Map();
 function lastChanged() {
@@ -145,9 +154,10 @@ function tested() {
   return testedSet;
 }
 function lensValue(lens, c) {
+  if (c.code && lens === "health") { const map = codeMap(); return map ? healthOf(map, c.code) : 0; }
   if (lens === "understanding") return LEVEL[understanding.state(c.id)?.state] ?? 0;
   if (lens === "activity") {
-    const t = lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
+    const t = c.code ? lastChanged().get(c.code.path) ?? 0 : lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
     const days = (Date.now() - t) / 86400000;
     return days <= 7 ? 3 : days <= 30 ? 2 : days <= 90 ? 1 : 0;
   }
@@ -206,7 +216,8 @@ function chainOrder(leaves, adjacent) {
   return order;
 }
 
-function buildModel() {
+function buildModel(o = effective()) {
+  if (sourceOf(o) === "code") return buildCodeModel();
   // Tours are walks through the map, not places on it (understanding-layer.md).
   const concepts = [...store.concepts.values()].filter(isStudyNote);
   const ids = concepts.map((c) => c.id);
@@ -273,6 +284,37 @@ function buildModel() {
   }
   const maxDepth = Math.max(0, ...Object.keys(store.tree).filter(Boolean).map((id) => id.split("/").length));
   return { root: dirs.get(""), edges, implied: impliedLinks(ids, edges), hasRatings, maxDepth, ordered: [...depth.values()].some((d) => d > 0) };
+}
+
+// The code map as the Atlas's model (T66): directories, files and classes are
+// folders; functions, methods, fields, constants, targets and jobs (and files
+// or classes with nothing in them) are places. Links may end on a folder (a
+// file imports a file). Every link counts; tests are drawn like "see also".
+function buildCodeModel() {
+  const map = codeMap();
+  const root = { kind: "dir", id: "d:", ref: "", label: store.site.title || "Code", children: [] };
+  const nodes = new Map();
+  const container = (i) => i.kind === "dir" || (map.children.get(i.id)?.length ?? 0) > 0;
+  const degree = new Map();
+  for (const [a, b] of map.index.links) { degree.set(a, (degree.get(a) || 0) + 1); degree.set(b, (degree.get(b) || 0) + 1); }
+  for (const i of map.index.items) {
+    if (container(i)) nodes.set(i.id, { kind: "dir", id: "d:" + i.id, ref: i.id, label: i.name, code: i, children: [] });
+    else nodes.set(i.id, {
+      kind: "concept", id: "c:" + i.id, ref: i.id, label: i.name, code: i, landmark: false, marker: markerFor(i.kind), rank: 0,
+      weight: 1 + Math.log2(1 + (degree.get(i.id) || 0)),
+      c: { id: i.id, title: i.name, type: KIND_LABEL[i.kind], description: i.doc, trust: "unverified", verification_stale: false, content_stale: false, path: i.path, mtime: 0, links: [], backlinks: [], meta: {}, directory: i.parent ?? "", code: i },
+    });
+  }
+  for (const i of map.index.items) (i.parent ? nodes.get(i.parent) : root).children.push(nodes.get(i.id));
+  const size = (n) => (n.kind === "dir" ? n.children.reduce((t, c) => t + size(c), 0) : 1);
+  const order = (n) => { if (n.kind !== "dir") return; n.children.sort((a, b) => (b.kind === "dir") - (a.kind === "dir") || size(b) - size(a)); n.children.forEach(order); };
+  order(root);
+  const STR = { tests: 1, builds: 1 };
+  const strongest = new Map();
+  for (const [a, b, kind] of map.index.links) { const k = a + "\n" + b; strongest.set(k, Math.max(strongest.get(k) || 0, STR[kind] ?? 2)); }
+  const edges = [...strongest].map(([k, s]) => [...k.split("\n"), s]);
+  const depthOf = (id) => id.split("/").length;
+  return { root, edges, implied: new Set(), hasRatings: false, maxDepth: Math.max(1, ...map.index.items.map((i) => depthOf(i.path))), ordered: false, code: true };
 }
 
 // Links implied by others: a → c is implied when c can also be reached from a
@@ -673,7 +715,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const gridDots = defs.append("pattern").attr("id", "m-griddots").attr("patternUnits", "userSpaceOnUse");
   gridDots.append("circle").attr("class", "g-dot");
 
-  let model = timed("map-model", buildModel);
+  let model = timed("map-model", () => buildModel(o));
+  // A place or, on the code map, a folder (a file, a class) that a link ends on.
+  const byRef = (ref) => L.byId.get("c:" + ref) || (model.code ? L.byId.get("d:" + ref) : undefined);
   // The map is placed at once: from this browser's cache when it has laid out
   // the same contents with the same settings before, otherwise in the quick
   // starting arrangement while the full layout is worked out in a worker
@@ -838,7 +882,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       m.dir = m.count === 1 ? way : m.dir === way ? way : 0;
       merged.set(key, m);
     };
-    const ends = (a, b) => [L.byId.get("c:" + a), L.byId.get("c:" + b)];
+    const ends = (a, b) => [byRef(a), byRef(b)];
     const hiddenImplied = (a, b) => o.hideImplied && model.hasRatings && model.implied.has(a + "\n" + b);
     if (tour) {
       // From each stop to the next, whether or not the notes link.
@@ -1085,13 +1129,14 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   }
   function openNote(n) {
     persist();
-    location.hash = conceptHref(n.data.ref);
+    location.hash = n.data.code ? codeHref(n.data.ref) : conceptHref(n.data.ref);
   }
   const plural = (k, one, many = one + "s") => `${k} ${k === 1 ? one : many}`;
   function fillCard() {
     card.hidden = !selected;
     if (!selected) return;
     const n = selected, ref = n.data.ref;
+    if (n.data.code) return fillCodeCard(n);
     const st = understanding.state(ref)?.state;
     const reqs = model.edges.filter(([a, , s]) => a === ref && s >= 2).length;
     const builds = model.edges.filter(([, b, s]) => b === ref && s >= 2).length;
@@ -1110,6 +1155,25 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       h("div", { class: "atlas-card-actions" }, open,
         exercises.length ? h("a", { class: "toggle", href: conceptHref(exercises[0].id) }, exercises.length === 1 ? "Exercise" : `Exercises (${exercises.length})`) : "",
         reqs ? h("a", { class: "toggle", href: "#/path/" + ref, title: "This note and everything it requires, in reading order" }, "Study path") : ""));
+  }
+
+  // A code item's card: what it is, where, and its links by kind.
+  function fillCodeCard(n) {
+    const i = n.data.code, map = codeMap();
+    const count = (list) => { const k = {}; for (const [, , kind] of list ?? []) k[kind] = (k[kind] || 0) + 1; return k; };
+    const outs = count(map.out.get(i.id)), ins = count(map.into.get(i.id));
+    const words = [...Object.entries(outs).map(([k, v]) => `${LINK_LABEL[k][0].toLowerCase()} ${v}`), ...Object.entries(ins).map(([k, v]) => `${LINK_LABEL[k][1].toLowerCase()} ${v}`)];
+    const notes = map.notes.get(i.id) ?? [];
+    const open = h("a", { class: "toggle primary", href: codeHref(i.id) }, "Open");
+    open.addEventListener("click", () => persist());
+    const close = h("button", { class: "atlas-card-close", type: "button", "aria-label": "Close" }, "×");
+    close.addEventListener("click", () => select(null));
+    card.className = "atlas-card";
+    card.setAttribute("aria-label", i.name);
+    card.replaceChildren(
+      h("h3", {}, i.name), close,
+      h("p", {}, `${KIND_LABEL[i.kind]} in ${i.path}${i.line ? `:${i.line}` : ""}.${words.length ? " " + words.join(", ").replace(/^./, (c) => c.toUpperCase()) + "." : ""}`),
+      h("div", { class: "atlas-card-actions" }, open, ...notes.slice(0, 2).map((c) => h("a", { class: "toggle", href: conceptHref(c.id) }, c.title))));
   }
 
   // The card's leader: from the selected note's marker to the card, in its pen.
@@ -1558,7 +1622,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     for (const n of closed) {
       if (arcs.length + texts.length + heads.length >= budget) break;
       const count = noteCount(n);
-      const lines = [n.data.label, `${count} note${count === 1 ? "" : "s"}`];
+      const unit = model.code ? "item" : "note";
+      const lines = [n.data.label, `${count} ${unit}${count === 1 ? "" : "s"}`];
       const width = n.data.label.length * 7.8;
       if (sr(n) < 14) continue;
       const out = outlineOf(n); // in the middle of its outline, or of its circle
@@ -1649,7 +1714,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const related = new Set([n.data.id]);
     for (const [a, b] of model.edges) {
       const other = a === n.data.ref ? b : b === n.data.ref ? a : null;
-      const on = other && L.byId.get("c:" + other);
+      const on = other && byRef(other);
       if (!on) continue;
       related.add(on.data.id);
       related.add(cache.shownRep(on).data.id);
@@ -1669,7 +1734,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (o.hideImplied && model.hasRatings) {
       for (const [a, b] of model.edges) {
         if (!model.implied.has(a + "\n" + b) || (a !== n.data.ref && b !== n.data.ref)) continue;
-        const on = L.byId.get("c:" + (a === n.data.ref ? b : a));
+        const on = byRef(a === n.data.ref ? b : a);
         const r = on && cache.shownRep(on);
         if (r && r !== n) hiddenEnds.push(r);
       }
@@ -1886,7 +1951,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
   wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = timed("map-model", buildModel); o = effective(); rebuild(); };
+  wrap.refresh = () => { o = effective(); model = timed("map-model", () => buildModel(o)); rebuild(); };
+  M.resource = () => wrap.refresh(); // the panel's Notes or Code
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
   wrap.layout = () => L;
@@ -2014,13 +2080,14 @@ function controls({ view, tune, readout, summary }) {
   drawDistance();
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
   // One of a few values, as pressed buttons.
-  const choice = (key, text, options) => {
+  // `current`: the value in use, when it can be chosen automatically (the source).
+  const choice = (key, text, options, after = null, current = () => effective()[key]) => {
     const buttons = options.map(([value, label, help]) => {
-      const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(effective()[key] === value), title: help }, label);
+      const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(current() === value), title: help }, label);
       b.addEventListener("click", () => {
         M.user[key] = value;
         buttons.forEach((x, i) => x.setAttribute("aria-pressed", String(options[i][0] === value)));
-        persist(); view();
+        persist(); if (after) after(); else view();
       });
       return b;
     });
@@ -2053,7 +2120,8 @@ function controls({ view, tune, readout, summary }) {
   };
   const kinds = h("div", { class: "legend map-legend kinds" });
   const types = new Map();
-  for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+  if (sourceOf(o) === "code") for (const i of store.code.items) { if (i.kind !== "dir" && !types.has(KIND_LABEL[i.kind])) types.set(KIND_LABEL[i.kind], markerFor(i.kind)); }
+  else for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
   for (const [type, shape] of [...types].sort()) {
     const d = d3.symbol(SYMBOLS[shape], 30)();
     kinds.append(h("span", {}, svgKey(`<path d="${d}" class="key-shape"/>${shape === "ring" ? '<path d="M-3.1 0H3.1" class="key-shape bar"/>' : ""}`, "-7 -7 14 14"), titleCase(type)));
@@ -2098,7 +2166,7 @@ function controls({ view, tune, readout, summary }) {
   const drawKey = () => { const e = effective(); key.replaceChildren(...(e.terrain ? states(heightLens(e)) : []), ...lines); };
   drawKey();
   // The height lenses: one at a time; choosing the one shown again puts the terrain away.
-  const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || understanding.on).map(([value, label]) => {
+  const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || (understanding.on && sourceOf(effective()) !== "code")).map(([value, label]) => {
     const b = h("button", { class: "toggle", type: "button", title: {
       understanding: "The terrain of where you stand: reached ground is clear, the rest is fog.",
       activity: "High ground is recent work: changed this week, this month, this quarter; 90 days untouched is fog.",
@@ -2122,7 +2190,7 @@ function controls({ view, tune, readout, summary }) {
       h("div", { class: "row lenses" },
         toggle("showLinks", "Links", "Trunks between folders, with their counts, and the links inside the folder in focus."),
         ...heights.map(([, b]) => b)),
-      understanding.on ? h("label", { class: "hide-undiscovered" }, (() => {
+      understanding.on && sourceOf(o) !== "code" ? h("label", { class: "hide-undiscovered" }, (() => {
         const box = h("input", { type: "checkbox" });
         box.checked = understanding.hiding;
         box.addEventListener("change", () => { understanding.setHiding(box.checked); view(); });
@@ -2134,6 +2202,8 @@ function controls({ view, tune, readout, summary }) {
       summary,
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
+        store.code ? choice("source", "Map", [["code", "Code", "The code itself: directories, files, classes, functions; imports, calls and bindings as links."],
+          ["notes", "Notes", "The knowledge base's notes and the links between them."]], () => M.resource?.(), () => sourceOf(effective())) : "",
         choice("folders", "Folders", [["grid", "Grid", "Everything on a square grid: notes as blocks, folders as regions, routes along the cells in lanes. Its layout is searched in the background and kept."],
           ["contour", "Contours", "Each folder's outline follows where its contents sit."],
           ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."]]),

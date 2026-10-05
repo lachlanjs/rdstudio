@@ -129,7 +129,7 @@ show.
 - [x] [T63 The grid Atlas](/tasks/T63-grid-atlas.md)
 - [x] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
 - [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md)
-- [ ] [T66 The code map: an index of the code, and notes attached to it](/tasks/T66-code-map.md)
+- [x] [T66 The code map: an index of the code, and notes attached to it](/tasks/T66-code-map.md)
 
 # Future
 

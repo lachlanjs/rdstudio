@@ -77,7 +77,9 @@ export function relative(root) {
 // towards the side where their links leave the folder, and later in the study
 // order further north.
 function arrange(root, byId, edges, o, prev) {
-  const leafEdges = edges.map(([a, b]) => [byId.get("c:" + a), byId.get("c:" + b)]).filter(([a, b]) => a && b);
+  // A link ends on a place, or on the code map on a folder (a file, a class).
+  const end = (ref) => byId.get("c:" + ref) || byId.get("d:" + ref);
+  const leafEdges = edges.map(([a, b]) => [end(a), end(b)]).filter(([a, b]) => a && b && !a.ancestors().includes(b) && !b.ancestors().includes(a));
   // A link matters only to the folders that contain one of its ends, so each
   // folder looks at those links alone (in their original order).
   const linksIn = new Map();

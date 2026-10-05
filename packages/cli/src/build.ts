@@ -1,6 +1,7 @@
 // Build the dashboard: the web app plus the bundle's data as JSON, written so
 // that it is byte for byte what the Python build writes (src/rdstudio/build.py).
 
+import { codeIndexSync } from "./code.ts";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -158,6 +159,10 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     "reports.json": dump(reports),
     "skills.json": dump(skills),
   };
+  // The code map (T66), when the project's code is mapped.
+  const code = codeIndexSync(cfg);
+  if (code) payload["code.json"] = dump(code);
+  else if (existsSync(join(data, "code.json"))) unlinkSync(join(data, "code.json"));
   const info: SiteInfo = {
     title: cfg.title,
     knowledge: cfg.knowledge,
@@ -167,7 +172,7 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     static: Boolean(opts.export),
     map: (cfg.raw.map as Record<string, unknown> | undefined) ?? {}, // project defaults for the Map tab ([map] in rdstudio.toml)
     issues,
-    counts: { concepts: concepts.length, reports: reports.length, skills: skills.skills.length, agents: skills.agents.length },
+    counts: { concepts: concepts.length, reports: reports.length, skills: skills.skills.length, agents: skills.agents.length, ...(code ? { code: code.items.length } : {}) },
   };
   payload["site.json"] = dump(info);
 

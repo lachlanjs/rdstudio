@@ -15,7 +15,7 @@ export interface SiteInfo {
   static: boolean; // an exported snapshot: no polling, no learner record
   map: Record<string, unknown>; // [map] in rdstudio.toml
   issues: { path: string; level: "error" | "warning"; code: IssueCode; message: string }[];
-  counts: { concepts: number; reports: number; skills: number; agents: number };
+  counts: { concepts: number; reports: number; skills: number; agents: number; code?: number };
 }
 
 /** One entry of data/concepts.json. */
@@ -68,6 +68,37 @@ export interface Commit {
   files: ChangedFile[];
   pending?: boolean;
   merge?: boolean;
+}
+
+/** One item of the code map (T66): a directory, a file, or something defined in one. */
+export interface CodeItem {
+  /** A directory "src/core/", a file "src/core/system.hpp", or "file#qualified::name". */
+  id: string;
+  kind: "dir" | "file" | "class" | "function" | "method" | "field" | "constant" | "target" | "job";
+  name: string;
+  qual: string;
+  parent: string | null;
+  path: string;
+  lang: string;
+  line: number;
+  end: number;
+  signature: string;
+  doc: string;
+  /** Up to 60 lines of its source, for its page. */
+  src: string;
+  /** A file declaring a Python extension module (NB_MODULE, PYBIND11_MODULE): its name. */
+  module?: string;
+  /** The Python name it is bound to. */
+  bound?: string;
+  /** A C++ definition's declaration. */
+  declaration?: string;
+}
+export type CodeLink = [from: string, to: string, kind: "imports" | "includes" | "calls" | "uses" | "binds" | "implements" | "tests" | "builds"];
+/** data/code.json, when the project's code is mapped. */
+export interface CodeIndex {
+  root: string;
+  items: CodeItem[];
+  links: CodeLink[];
 }
 
 /** data/changes.json */
