@@ -94,3 +94,27 @@ contours too tightly packed, on the grid.
   - Top-level names are always shown, in full, over a halo.
 - The browser's kept layout is versioned (`rdstudio.grid.3`), so older,
   tighter layouts are not reused.
+
+# Follow-up (2026-10-05): convex folders, steady lines
+
+The developer asked for convex folders with more separation, found too few
+lines on nanosim, and saw lines vanish and come back while panning.
+
+- **Convex folders, the default (`gridShape = "convex"`):** each folder is a
+  box with its corners cut, taken straight from the snapped layout. Boxes
+  are nested and apart by construction (5 cells between notes, 6 between
+  folders, walls 3 cells in), so they never overlap or break apart, and
+  need no search. The free-form regions and their layout search stay as
+  `gridShape = "free"` (More options, Grid folders).
+- **Steady lines:**
+  - The folder in focus is held while a gesture is under way.
+  - While the next set of grid routes is on its way, the last set stays
+    drawn.
+  - Measured while panning: 9 routes on DG and 22 on nanosim throughout,
+    never zero.
+- **More lines on code maps:**
+  - Trunks join second-level folders (`src/bindings`, the C++ package,
+    `python/nanosim`, the tests), also on any map with fewer than four
+    top-level folders. Counts show on trunks between any two folders.
+  - A directory holding only one directory folds into it (`python/nanosim`).
+  - nanosim now shows 22 trunks, not 4.

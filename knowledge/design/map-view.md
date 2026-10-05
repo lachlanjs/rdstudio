@@ -226,7 +226,8 @@ current values in the right form to copy into a project.
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
 | `source` | (by mode) | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md); the default in project mode when the code is indexed) |
 | `folders` | `"contour"` | Folder shape: `contour` (the outline follows the contents, names above), `circle` (the packing's circles, names on the arc) or `grid` (square cells, blocks and regions) |
-| `gridBudget` | 4000 | The grid's layout search, as milliseconds on a reference machine (a fixed number of moves for the map's size) |
+| `gridShape` | `"convex"` | The grid's folders: `convex` (boxes with the corners cut, from the snapped layout) or `free` (regions shaped by the layout search) |
+| `gridBudget` | 3000 | The grid's layout search, as milliseconds on a reference machine (a fixed number of moves for the map's size) |
 | `routing` | `"downhill"` | `downhill` (crosses contours at right angles, gathers in the flats) or `gates` (gates, corridors and bundling) |
 | `allLinks` | false | Draw every link at the shown scale instead of trunks, filtered by the settings below |
 | `distMeasure` | `"out"` | How distance is counted: `out` (larger of the two ends' walls out to the shared folder) or `path` (all walls crossed) |
