@@ -133,58 +133,105 @@ export function freeG(root, spread = 2) {
 
 const DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
 
-export function makeRouter(G, { climb = 5, turn45 = 0.35, turn90 = 0.9, foreign = 2.5, crowd = 0.45, near = 0.3 } = {}) {
-  const { W, H, elev, blocked, owner } = G;
+/** The grid as plain data a worker can take: cells' height, what blocks
+ *  them, and which folder each lies in (its index + 1, or 0). Kept on G. */
+export function plainGrid(G) {
+  if (G.plain) return G.plain;
+  const index = new Map(G.folders.map((f, k) => [f, k + 1]));
+  const owner = new Int32Array(G.W * G.H);
+  for (let c = 0; c < owner.length; c++) owner[c] = G.owner[c] ? index.get(G.owner[c]) : 0;
+  G.index = index;
+  G.plain = { W: G.W, H: G.H, elev: G.elev, blocked: G.blocked, owner };
+  return G.plain;
+}
+
+/** One end of a route, as plain data: the free cells touching block b from
+ *  outside (with the point on b's edge each leaves from), its box, and the
+ *  folders it lies in (a route may cross those for free). */
+export function endOf(G, b) {
+  const { W, H, blocked } = G, ring = [];
+  if (b.mask) {
+    for (let j = b.gy; j < b.gy + b.h; j++) for (let i = b.gx; i < b.gx + b.w; i++) {
+      if (!b.mask[j * W + i]) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = i + dx, nj = j + dy;
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H || b.mask[nj * W + ni] || blocked[nj * W + ni]) continue;
+        ring.push(ni, nj, i + 0.5 + dx / 2, j + 0.5 + dy / 2);
+      }
+    }
+  } else {
+    const add = (i, j, x, y) => { if (i >= 0 && j >= 0 && i < W && j < H && !blocked[j * W + i]) ring.push(i, j, x, y); };
+    for (let i = b.gx; i < b.gx + b.w; i++) { add(i, b.gy - 1, i + 0.5, b.gy); add(i, b.gy + b.h, i + 0.5, b.gy + b.h); }
+    for (let j = b.gy; j < b.gy + b.h; j++) { add(b.gx - 1, j, b.gx, j + 0.5); add(b.gx + b.w, j, b.gx + b.w, j + 0.5); }
+  }
+  plainGrid(G);
+  return { ring, box: [b.gx, b.gy, b.w, b.h], up: b.ancestors().map((f) => G.index.get(f)).filter(Boolean) };
+}
+
+/**
+ * Route each ask ({a, b}: ends from endOf), heaviest first, each re-routed
+ * once or twice after the others are down. Plain data in and out, so it runs
+ * in the layout worker. Returns [{cells, pts}] in the asks' order.
+ */
+export function routeCells(P, asks, { climb = 5, turn45 = 0.35, turn90 = 0.9, foreign = 2.5, crowd = 0.45, near = 0.3 } = {}) {
+  const { W, H, elev, blocked, owner } = P;
   const use = new Uint16Array(W * H), beside = new Uint16Array(W * H);
   const mark = (c, d) => {
     use[c] += d;
     const i = c % W, j = (c / W) | 0;
     for (let y = Math.max(0, j - 1); y <= Math.min(H - 1, j + 1); y++) for (let x = Math.max(0, i - 1); x <= Math.min(W - 1, i + 1); x++) if (x !== i || y !== j) beside[y * W + x] += d;
   };
-  // Free cells touching block b from outside, with the point on b's edge they leave from.
-  const ring = (b) => {
-    const out = [];
-    if (b.mask) {
-      for (let j = b.gy; j < b.gy + b.h; j++) for (let i = b.gx; i < b.gx + b.w; i++) {
-        if (!b.mask[j * W + i]) continue;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const ni = i + dx, nj = j + dy;
-          if (ni < 0 || nj < 0 || ni >= W || nj >= H || b.mask[nj * W + ni] || blocked[nj * W + ni]) continue;
-          out.push([ni, nj, i + 0.5 + dx / 2, j + 0.5 + dy / 2]);
-        }
-      }
-      return out;
-    }
-    for (let i = b.gx; i < b.gx + b.w; i++) { out.push([i, b.gy - 1, i + 0.5, b.gy]); out.push([i, b.gy + b.h, i + 0.5, b.gy + b.h]); }
-    for (let j = b.gy; j < b.gy + b.h; j++) { out.push([b.gx - 1, j, b.gx, j + 0.5]); out.push([b.gx + b.w, j, b.gx + b.w, j + 0.5]); }
-    return out.filter(([i, j]) => i >= 0 && j >= 0 && i < W && j < H && !blocked[j * W + i]);
-  };
   const dist = new Float32Array(W * H * 9), prev = new Int32Array(W * H * 9), seen = new Uint32Array(W * H * 9);
-  let stamp = 0;
+  let heapK = new Float64Array(4096), heapV = new Int32Array(4096), stamp = 0;
   function route(a, b) {
-    const allowed = new Set([...a.ancestors(), ...b.ancestors()]);
-    const src = ring(a), dst = new Map(ring(b).map((r) => [r[1] * W + r[0], r]));
-    if (!src.length || !dst.size) return null;
-    const tx = b.gx + b.w / 2, ty = b.gy + b.h / 2;
-    const hfn = (i, j) => { const dx = Math.abs(i + 0.5 - tx), dy = Math.abs(j + 0.5 - ty); return Math.max(0, Math.max(dx, dy) + 0.41 * Math.min(dx, dy) - Math.max(b.w, b.h)); };
+    const allowed = new Set([...a.up, ...b.up]);
+    if (!a.ring.length || !b.ring.length) return null;
+    const dst = new Map();
+    for (let k = 0; k < b.ring.length; k += 4) dst.set(b.ring[k + 1] * W + b.ring[k], k);
+    const [bgx, bgy, bw, bh] = b.box, [agx, agy, aw, ah] = a.box;
+    const tx = bgx + bw / 2, ty = bgy + bh / 2;
+    const hfn = (i, j) => { const dx = Math.abs(i + 0.5 - tx), dy = Math.abs(j + 0.5 - ty); return Math.max(0, Math.max(dx, dy) + 0.41 * Math.min(dx, dy) - Math.max(bw, bh)); };
     stamp++;
-    const heap = [];
-    const push = (e) => { heap.push(e); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
-    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    // Search a window around both ends, not the whole grid.
+    const span = Math.max(Math.max(agx + aw, bgx + bw) - Math.min(agx, bgx), Math.max(agy + ah, bgy + bh) - Math.min(agy, bgy));
+    const pad = Math.max(12, Math.round(span * 0.4));
+    const wx0 = Math.max(0, Math.min(agx, bgx) - pad), wx1 = Math.min(W - 1, Math.max(agx + aw, bgx + bw) + pad);
+    const wy0 = Math.max(0, Math.min(agy, bgy) - pad), wy1 = Math.min(H - 1, Math.max(agy + ah, bgy + bh) + pad);
+    let size = 0;
+    const push = (k, v) => {
+      if (size === heapK.length) { const K = new Float64Array(size * 2), V = new Int32Array(size * 2); K.set(heapK); V.set(heapV); heapK = K; heapV = V; }
+      let i = size++;
+      while (i > 0) { const p = (i - 1) >> 1; if (heapK[p] <= k) break; heapK[i] = heapK[p]; heapV[i] = heapV[p]; i = p; }
+      heapK[i] = k; heapV[i] = v;
+    };
+    let topK = 0;
+    const pop = () => {
+      const v = heapV[0];
+      topK = heapK[0];
+      size--;
+      const k = heapK[size], w = heapV[size];
+      let i = 0;
+      for (;;) { const l = 2 * i + 1; if (l >= size) break; const c = l + 1 < size && heapK[l + 1] < heapK[l] ? l + 1 : l; if (heapK[c] >= k) break; heapK[i] = heapK[c]; heapV[i] = heapV[c]; i = c; }
+      heapK[i] = k; heapV[i] = w;
+      return v;
+    };
     const D = (s) => (seen[s] === stamp ? dist[s] : Infinity);
     const set = (s, g, p) => { seen[s] = stamp; dist[s] = g; prev[s] = p; };
     const start = new Map();
-    for (const r of src) { const c = r[1] * W + r[0], s = c * 9 + 8, g = 1 + crowd * use[c]; if (g < D(s)) { set(s, g, -1); push([g + hfn(r[0], r[1]), s]); start.set(c, r); } }
+    for (let k = 0; k < a.ring.length; k += 4) {
+      const i = a.ring[k], j = a.ring[k + 1], c = j * W + i, s = c * 9 + 8, g = 1 + crowd * use[c];
+      if (g < D(s)) { set(s, g, -1); push(g + hfn(i, j), s); start.set(c, k); }
+    }
     let end = -1;
-    while (heap.length) {
-      const [f, s] = pop();
+    while (size) {
+      const s = pop();
       const c = (s / 9) | 0, d = s % 9, g = D(s);
-      if (f - hfn(c % W, (c / W) | 0) > g + 1e-4) continue;
+      if (topK - hfn(c % W, (c / W) | 0) > g + 1e-4) continue;
       if (dst.has(c)) { end = s; break; }
       const ci = c % W, cj = (c / W) | 0;
       for (let k = 0; k < 8; k++) {
-        const [dx, dy] = DIRS[k], ni = ci + dx, nj = cj + dy;
-        if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+        const dx = DIRS[k][0], dy = DIRS[k][1], ni = ci + dx, nj = cj + dy;
+        if (ni < wx0 || nj < wy0 || ni > wx1 || nj > wy1) continue;
         const nc = nj * W + ni;
         if (blocked[nc]) continue;
         if (dx && dy) { const c1 = cj * W + ni, c2 = nj * W + ci; if (blocked[c1] || blocked[c2] || elev[c1] !== elev[c] || elev[c2] !== elev[c] || elev[nc] !== elev[c]) continue; } // no cutting corners
@@ -192,32 +239,38 @@ export function makeRouter(G, { climb = 5, turn45 = 0.35, turn90 = 0.9, foreign 
         if (d !== 8 && d !== k) { const t = Math.min((k - d + 8) % 8, (d - k + 8) % 8); cost += t === 1 ? turn45 : turn90 * (t >= 3 ? 2 : 1); }
         if (owner[nc] && !allowed.has(owner[nc])) cost += foreign;
         const ns = nc * 9 + k, ng = g + cost;
-        if (ng < D(ns)) { set(ns, ng, s); push([ng + hfn(ni, nj), ns]); }
+        if (ng < D(ns)) { set(ns, ng, s); push(ng + hfn(ni, nj), ns); }
       }
     }
     if (end < 0) return null;
-    const out = [];
-    for (let s = end; s !== -1; s = prev[s]) out.push((s / 9) | 0);
-    out.reverse();
-    for (const c of out) mark(c, 1);
-    const a0 = start.get(out[0]), b0 = dst.get(out[out.length - 1]);
-    return { cells: out, pts: [[a0[2], a0[3]], ...out.map((c) => [(c % W) + 0.5, ((c / W) | 0) + 0.5]), [b0[2], b0[3]]] };
+    const cells = [];
+    for (let s = end; s !== -1; s = prev[s]) cells.push((s / 9) | 0);
+    cells.reverse();
+    for (const c of cells) mark(c, 1);
+    const ak = start.get(cells[0]), bk = dst.get(cells[cells.length - 1]);
+    return { cells, pts: [[a.ring[ak + 2], a.ring[ak + 3]], ...cells.map((c) => [(c % W) + 0.5, ((c / W) | 0) + 0.5]), [b.ring[bk + 2], b.ring[bk + 3]]] };
   }
-  const release = (r) => { for (const c of r.cells) mark(c, -1); };
-  return { route, release };
+  const out = asks.map((q) => route(q.a, q.b) || { cells: [], pts: [] });
+  // Each reconsiders twice once the others are down; once, or not at all, on a busy map.
+  const passes = asks.length > 60 ? 0 : asks.length > 25 ? 1 : 2;
+  for (let pass = 0; pass < passes; pass++) asks.forEach((q, k) => {
+    if (!out[k].cells.length) return;
+    for (const c of out[k].cells) mark(c, -1);
+    out[k] = route(q.a, q.b) || { cells: [], pts: [] };
+  });
+  return out;
 }
 
-/** Route pairs ([{p, q, ...}], heaviest first), then let each reconsider twice. */
+/** Route pairs ([{p, q, ...}]) here and now (tests, and without a worker). */
 export function routeAll(G, list, router = {}) {
-  const R = makeRouter(G, router);
-  for (const m of list) Object.assign(m, R.route(m.p, m.q) || { cells: [], pts: [] });
-  for (let pass = 0; pass < 2; pass++) for (const m of list) { if (!m.cells.length) continue; R.release(m); Object.assign(m, R.route(m.p, m.q) || { cells: [], pts: [] }); }
+  const res = routeCells(plainGrid(G), list.map((m) => ({ a: endOf(G, m.p), b: endOf(G, m.q) })), router);
+  list.forEach((m, k) => Object.assign(m, res[k]));
   lanes(list.filter((m) => m.cells.length));
   return list;
 }
 
 // Lanes: routes sharing a cell edge get different offsets (in lane steps).
-function lanes(routes) {
+export function lanes(routes) {
   const key = (a, b) => (a < b ? a + ":" + b : b + ":" + a), at = new Map();
   routes.forEach((r, i) => { r.edges = new Set(); for (let k = 1; k < r.cells.length; k++) { const e = key(r.cells[k - 1], r.cells[k]); r.edges.add(e); (at.get(e) || at.set(e, []).get(e)).push(i); } });
   const OFF = [0, 1, -1, 2, -2, 3, -3];
@@ -255,7 +308,7 @@ const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t =
 /**
  * Search note positions (simulated annealing on a stand-in for the routes).
  * The number of moves is fixed by `budget` and the size of the map (about
- * budget × 75,000 / (notes² + links²)), so the result is the same on every
+ * budget × 40,000 / (notes² + links² + links × notes)), so the result is the same on every
  * machine; a wall clock of four times the budget is only a safety net. Starts from the snapped grid, or from `start`
  * ({ref: [gx, gy]}) for the notes it knows, so a map keeps its places as
  * notes are added. Returns {ref: [gx, gy]} for every note.
@@ -345,10 +398,12 @@ export function search(root, links, { spread = 4, budget = 3000, start = null, s
     let cur = cost(), sx = X.slice(), sy = Y.slice();
     // Annealing: the temperature falls over a fixed number of moves. A warm
     // start (from places kept before) begins cooler, so it keeps them.
-    const iters = Math.max(500, Math.min(200000, Math.round((budget * 75000) / (n * n + L.length * L.length + 1))));
-    const T0 = start ? 4 : 25, T1 = 0.05, cap = t0 + budget * 4;
+    // A move costs about notes² + links² + links × notes.
+    // Calibrated so a search takes about its budget (about 3 ms a move for 130 notes and 250 links).
+    const iters = Math.max(200, Math.min(200000, Math.round((budget * 40000) / (n * n + L.length * L.length + L.length * n + 1))));
+    const T0 = start ? 4 : 25, T1 = 0.05, cap = t0 + budget * 1.5; // the clock is only a safety net, but a firm one
     for (let it = 0; it < iters; it++) {
-      if ((it & 255) === 0 && Date.now() > cap) break;
+      if (Date.now() > cap) break;
       const T = T0 * Math.pow(T1 / T0, it / iters);
       move(false);
       const c = cost();

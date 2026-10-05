@@ -6,11 +6,11 @@
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
-import { build as gridBuild, search as gridSearchPositions } from "./grid.js";
+import { build as gridBuild, search as gridSearchPositions, routeCells } from "./grid.js";
 
 export const SIZE = 1000; // layout units
 // Bump when the algorithm changes, so cached layouts are not reused.
-const VERSION = 3;
+const VERSION = 4;
 // The settings that change positions (the rest only change drawing).
 export const LAYOUT_KEYS = ["room", "spread", "outward", "spacing", "margin", "north"];
 const CACHE = "rdstudio.layout";
@@ -101,7 +101,10 @@ function arrange(root, byId, edges, o, prev) {
     const inner = folder.depth ? folder.r - Math.min(o.margin * unit, folder.r * 0.25) : folder.r;
     const gap = o.spacing * unit;
     const area = kids.reduce((s, c) => s + c.r * c.r, 0) || 1;
-    const k = Math.min(1, Math.sqrt((o.room * inner * inner) / area));
+    // The top level gets more room than the folders inside it, so the map
+    // fills the screen instead of sitting in its middle third.
+    const room = folder.depth === 0 ? Math.max(o.room, 0.55) : o.room;
+    const k = Math.min(1, Math.sqrt((room * inner * inner) / area));
     for (const c of kids) {
       scaleTree(c, k);
       moveTree(c, folder.x + (c.x - folder.x) * (inner / folder.r) - c.x, folder.y + (c.y - folder.y) * (inner / folder.r) - c.y);
@@ -292,6 +295,11 @@ export function gridSearch({ model, xyr, links, budget, from }) {
 }
 export function computeGrid(input) {
   return ask({ grid: input }, () => gridSearch(input));
+}
+
+// Grid routes (grid.js), off the main thread.
+export function computeGridRoutes(key, plain, asks) {
+  return ask({ gridRoutes: { key, plain, asks } }, () => routeCells(plain, asks));
 }
 
 // Downhill routes (contours.js), off the main thread. The grid is built once
