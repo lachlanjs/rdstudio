@@ -1516,5 +1516,6 @@ p code { overflow-wrap: anywhere; }
 .g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
 .g-note { font: 11px var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text); pointer-events: none; }
 .grid-note.st-undiscovered .g-note { fill: var(--text-faint); }
-.g-title { font-family: var(--font-map); font-variation-settings: "wdth" 88; font-weight: 600; fill: var(--text); pointer-events: none; stroke: none; }
+.g-title { font-family: var(--font-map); font-variation-settings: "wdth" 88; font-weight: 600; fill: var(--text); pointer-events: none;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .g-title .count { font-weight: 400; fill: var(--text-soft); }

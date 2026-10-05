@@ -9,10 +9,11 @@
 // Runs in the layout worker (layout-worker.js), or here when there is none.
 
 import { contours } from "d3";
-import { stamp, THR } from "./contours.js";
+import { stamp, clampToDisc, THR } from "./contours.js";
 
-// Contours: the frontier (where reached ground meets the fog), then steps of understanding.
-export const LEVELS = [0.4, 0.9, 1.6, 2.3];
+// Contours: the frontier (where reached ground meets the fog), then two steps
+// of understanding, spaced so lines do not crowd (four were too many).
+export const LEVELS = [0.4, 1.3, 2.3];
 const CELLS = 112; // across a folder; cost follows the grid, not the notes
 
 /**
@@ -26,7 +27,7 @@ const CELLS = 112; // across a folder; cost follows the grid, not the notes
  *   front: the frontier's rings as [x, y, nx, ny, ...], (nx, ny) pointing downhill, towards the fog.
  */
 export function bake(f) {
-  const half = f.mask ? f.r * 1.4 : f.r; // an outline can reach a little beyond the circle
+  const half = f.r * 1.05; // an outline stays within the circle (contours.js, discAt)
   const n = CELLS, cell = (2 * half) / n, x0 = f.cx - half, y0 = f.cy - half;
   const num = new Float64Array(n * n), den = new Float64Array(n * n);
   // Stamp each note: a Gaussian as wide as its own spacing, cut off at three widths.
@@ -49,14 +50,20 @@ export function bake(f) {
     // 0 on and outside the outline, rising to 1 a little way inside.
     const inside = new Float64Array(n * n);
     stamp(f.mask, inside, x0 + cell / 2, y0 + cell / 2, cell, n, n);
+    clampToDisc(f.mask, inside, x0 + cell / 2, y0 + cell / 2, cell, n, n);
     for (let i = 0; i < vals.length; i++) {
-      const t = Math.max(0, Math.min(1, (inside[i] - THR) / 0.45));
+      // A gentle ramp, so the contours that must turn inside the outline do
+      // not all bunch up against it.
+      const t = Math.max(0, Math.min(1, (inside[i] - THR) / 1.2));
       vals[i] *= t * t * (3 - 2 * t);
     }
   }
   const gen = contours().size([n, n]);
   const toLayout = (rings) => rings.map((poly) => poly.map((ring) => ring.map(([x, y]) => [round(x0 + x * cell), round(y0 + y * cell)])));
-  const shapes = LEVELS.map((t) => gen.contour(vals, t));
+  // Drop islands too small to read (one note's own ring in a crowd).
+  const minArea = (0.05 * f.r) ** 2 / (cell * cell);
+  const area = (ring) => { let a = 0; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]); return Math.abs(a / 2); };
+  const shapes = LEVELS.map((t) => { const s = gen.contour(vals, t); s.coordinates = s.coordinates.filter((poly) => area(poly[0]) >= minArea); return s; });
   // Which way is downhill at a point of the frontier, from the grid's slope there.
   const at = (i, j) => vals[Math.min(n - 1, Math.max(0, j)) * n + Math.min(n - 1, Math.max(0, i))];
   const front = [];
@@ -74,10 +81,20 @@ export function bake(f) {
 
 const round = (v) => Math.round(v * 100) / 100;
 
-/** How wide a note's hill is: 0.62 of the way to its nearest sibling (a note
- *  or a subfolder), so nested folders get finer terrain. */
+/** How wide a note's hill is: the typical spacing in its folder (the median
+ *  distance from each child to its nearest sibling), so hills in a crowd
+ *  merge into one plateau instead of each note growing its own rings; and
+ *  nested folders still get finer terrain. */
+const spacing = new WeakMap();
 export function widthOf(n) {
-  let d = n.parent.r;
-  for (const c of n.parent.children) if (c !== n) d = Math.min(d, Math.hypot(c.x - n.x, c.y - n.y));
-  return Math.max(4, d * 0.62);
+  const p = n.parent;
+  let s = spacing.get(p);
+  if (s === undefined || s.at !== p.r) {
+    const kids = p.children, nn = [];
+    for (const a of kids) { let d = Infinity; for (const b of kids) if (a !== b) d = Math.min(d, Math.hypot(a.x - b.x, a.y - b.y)); if (Number.isFinite(d)) nn.push(d); }
+    nn.sort((x, y) => x - y);
+    s = { at: p.r, d: nn.length ? nn[nn.length >> 1] : p.r * 0.5 };
+    spacing.set(p, s);
+  }
+  return Math.max(4, s.d * 1.0);
 }

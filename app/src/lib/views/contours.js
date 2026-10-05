@@ -32,12 +32,22 @@ export function folderSpecs(root) {
     if (f.data.kind !== "dir" || !f.parent || !f.children) return;
     const kids = f.children;
     const nn = kids.map((c) => Math.min(...kids.filter((o) => o !== c).map((o) => Math.hypot(o.x - c.x, o.y - c.y)))).filter(Number.isFinite).sort((a, b) => a - b);
-    const sigma = Math.max(f.r * 0.04, nn.length ? nn[Math.floor(nn.length / 2)] * 0.6 : f.r * 0.5);
+    // Wider than the spacing's half, so an outline is round and leaves room
+    // around what it holds rather than hugging each child.
+    const sigma = Math.max(f.r * 0.06, nn.length ? nn[Math.floor(nn.length / 2)] * 0.85 : f.r * 0.5);
     const pts = [];
-    for (const c of kids) pts.push(c.x, c.y, c.data.kind === "dir" ? c.r * 0.7 : 0);
+    for (const c of kids) pts.push(c.x, c.y, c.data.kind === "dir" ? c.r * 0.8 : 0);
     out.push({ id: f.data.id, depth: f.depth, x: f.x, y: f.y, r: f.r, sigma, kids: pts });
   });
   return out;
+}
+
+/** How much of a folder's field is kept at (x, y): all of it well inside
+ *  the folder's circle, none at its edge, so a round outline never spills
+ *  into a neighbour the layout packed beside it. */
+export function discAt(spec, x, y) {
+  const t = Math.max(0, Math.min(1, (spec.r - Math.hypot(x - spec.x, y - spec.y)) / (0.18 * spec.r)));
+  return t * t * (3 - 2 * t);
 }
 
 /** A folder's field at (x, y). */
@@ -48,7 +58,12 @@ export function fieldAt(spec, x, y) {
     const d = Math.max(0, Math.hypot(x - k[i], y - k[i + 1]) - k[i + 2]);
     v += Math.exp(-(d * d) / two);
   }
-  return v;
+  return v * discAt(spec, x, y);
+}
+
+// Keep a stamped field within the folder's circle (discAt), cell by cell.
+export function clampToDisc(spec, grid, x0, y0, cell, n, m) {
+  for (let j = 0; j < m; j++) for (let i = 0; i < n; i++) grid[j * n + i] *= discAt(spec, x0 + i * cell, y0 + j * cell);
 }
 
 // Add a folder's field onto a grid (x0, y0, cell, n wide, m high), each
@@ -72,9 +87,10 @@ export function stamp(spec, grid, x0, y0, cell, n, m, weight = 1) {
 /** Every folder's outline, in layout units: [{ id, shape: MultiPolygon coordinates, box: [x0, y0, x1, y1] }]. */
 export function outlines(specs) {
   return specs.map((s) => {
-    const half = s.r * 1.4, cell = (2 * half) / CELLS, x0 = s.x - half, y0 = s.y - half;
+    const half = s.r * 1.05, cell = (2 * half) / CELLS, x0 = s.x - half, y0 = s.y - half;
     const vals = new Float64Array(CELLS * CELLS);
     stamp(s, vals, x0 + cell / 2, y0 + cell / 2, cell, CELLS, CELLS);
+    clampToDisc(s, vals, x0 + cell / 2, y0 + cell / 2, cell, CELLS, CELLS);
     const shape = contours().size([CELLS, CELLS]).contour(vals, THR).coordinates
       .map((poly) => poly.map((ring) => ring.map(([x, y]) => [round(x0 + x * cell), round(y0 + y * cell)])));
     let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;

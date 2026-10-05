@@ -77,6 +77,13 @@ Each is checkable by looking at a screenshot or reading the code.
   and drawn by transforming the paths: when one note's value changes, only its
   folder is baked again. A bake takes about 3 ms whether the folder holds 60
   notes or 3,000. With the learner record off there is no terrain.
+- **Smooth terrain (follow-up to T62):** a note's hill is as wide as its
+  folder's typical spacing (the median distance to a nearest sibling), so a
+  crowd makes a plateau, not a ring per note. There are three contours
+  (0.4, 1.3, 2.3), islands too small to read are dropped, and the terrain
+  ramps gently to nothing at a contour folder's outline. Outlines are round
+  (0.85 of the spacing per child) and kept inside their folder's circle, so
+  neighbours never overlap. The top level fills 55% of the map, not 30%.
 - **Calmer (T62):** reached ground is a lighter tone and the frontier a thin
   line, with no fog stipple or hachures; walls are thin and solid
   (subfolders dashed). Notes not reached are drawn only once their folder is
@@ -89,7 +96,9 @@ Each is checkable by looking at a screenshot or reading the code.
   by A* along the cells in lanes. Snapped from the smooth layout at once,
   then searched in the worker (`gridBudget`, a fixed number of moves for the
   map's size), kept in the browser and warm-started after changes. See
-  `views/grid.js` and [T63](/tasks/T63-grid-atlas.md).
+  `views/grid.js` and [T63](/tasks/T63-grid-atlas.md). Routes are found in the
+  worker too. Gaps: 5 cells between notes, 6 between folders; regions reach 5
+  cells, 3 more per level of nesting; blocks 11 by 2.
 - **Height lenses (T59):** the terrain's height is one of three lenses,
   one at a time. **Understanding** (above) is the learning default.
   **Activity** is the project default: when the note last changed in git (or
