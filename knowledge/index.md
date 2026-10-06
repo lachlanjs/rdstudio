@@ -2,6 +2,10 @@
 okf_version: "0.2"
 ---
 
+# Overview
+
+* [rdstudio](overview.md) - What this project is, in one sentence. (Placeholder; replace.)
+
 # Directories
 
 * [decisions](decisions/)

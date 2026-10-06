@@ -6,6 +6,11 @@
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
+import { snapLayout } from "./grid/snap.js";
+import { dagLayout } from "./grid/dag.js";
+import { nestedLayout } from "./grid/nested.js";
+import { buildCells } from "./grid/cells.js";
+import { makeRouter, routeAll as gridRouteAll } from "./grid/router.js";
 
 export const SIZE = 1000; // layout units
 // Bump when the algorithm changes, so cached layouts are not reused.
@@ -61,6 +66,27 @@ export function layoutPositions(model, o, prev = null) {
   const { root, byId } = start(model.root);
   arrange(root, byId, model.edges, o, prev);
   return positions(root);
+}
+
+// The grid Atlas's layout (grid/snap.js says what one is). `gridLayout` is
+// "nested" (each folder a layered DAG of its items and one item in its parent's,
+// grid/nested.js, T64), "layers" (one DAG for the whole map with folders round
+// its layers, grid/dag.js) or "snap" (the positions above snapped to cells, T62).
+export function gridLayout(model, o, prev = null) {
+  if (o.gridLayout === "layers") return dagLayout(model);
+  if (o.gridLayout !== "snap") return nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
+  const { root, byId } = start(model.root);
+  arrange(root, byId, model.edges, o, prev);
+  return snapLayout(root, model.edges);
+}
+
+// Routes over a grid layout's cells (grid/router.js). The cells and the
+// router's arrays are made once per layout and kept.
+export function gridRouter(layout) {
+  // On the nested layout the router draws back links and the links lit under
+  // the pointer, a few at a time: turns cost more there, so each takes few.
+  const cells = buildCells(layout), router = makeRouter(layout, cells, layout.trunks ? { turn45: 1.5, turn90: 3, crowd: 0.2 } : {});
+  return (asks) => gridRouteAll(router, asks, cells.W, cells.H);
 }
 
 // Where each item sits relative to its folder, from a layout: the `prev` of
@@ -284,6 +310,43 @@ export function computeRoutes(key, input, asks) {
   return ask({ routes: { key, input, asks } }, () => {
     if (localGrid?.key !== key) localGrid = { key, grid: routingGrid(input) };
     return routeAll(localGrid.grid, asks);
+  });
+}
+
+// The grid Atlas's layout, off the main thread, kept in this browser like the
+// positions above.
+// One is kept for each direction of flow, so turning a phone finds its map ready.
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 4; // bump whenever a grid layout changes what it returns, or browsers keep the old one
+const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
+export function gridKey(plain, o) {
+  return layoutKey(plain, o) + ".g" + GRID_VERSION + (o.gridLayout || "nested") + (o.gridFlow === "right" ? "r" : "u");
+}
+export function cachedGrid(key, o) {
+  try {
+    const hit = JSON.parse(localStorage.getItem(slot(o)) || "null");
+    return hit?.key === key ? hit.layout : null;
+  } catch {
+    return null;
+  }
+}
+export function computeGrid(key, plain, o, prev = null) {
+  const settings = Object.fromEntries([...LAYOUT_KEYS, "gridLayout", "gridFlow"].map((k) => [k, o[k]]));
+  return ask({ grid: { model: plain, o: settings, prev } }, () => gridLayout(plain, settings, prev)).then((layout) => {
+    try { localStorage.setItem(slot(o), JSON.stringify({ key, layout })); } catch { /* storage full or unavailable: lay out again next time */ }
+    return layout;
+  });
+}
+
+// Routes on a grid layout (grid/router.js), off the main thread. The router is
+// built once per key and kept (by the worker, or here).
+// The layout is sent to the worker once for each key, not with every ask.
+let localRouter = null, sentKey = null;
+export function computeGridRoutes(key, layout, asks) {
+  const first = sentKey !== key;
+  sentKey = key;
+  return ask({ gridRoutes: { key, layout: first ? layout : null, asks } }, () => {
+    if (localRouter?.key !== key) localRouter = { key, run: gridRouter(layout) };
+    return localRouter.run(asks);
   });
 }
 

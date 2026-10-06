@@ -164,10 +164,12 @@ def first(measures: list[dict], name: str) -> dict | None:
 
 
 def load_metrics(page) -> dict:
-    # Downhill routes and contour outlines arrive from the worker after the map
-    # has settled; wait a little for them, so their times are reported too.
+    # Downhill routes and contour outlines (or the grid Atlas's routes) arrive
+    # from the worker after the map has settled; wait a little for them, so
+    # their times are reported too.
     try:
-        page.wait_for_function("() => performance.getEntriesByName('rd:map-downhill').length > 0", timeout=5000, polling=50)
+        page.wait_for_function("() => ['rd:map-downhill', 'rd:map-grid-routes'].some((n) => performance.getEntriesByName(n).length > 0)",
+                               timeout=5000, polling=50)
     except Exception:
         pass  # gates routing, or no links to route
     ms = page.evaluate(MEASURES)
@@ -179,6 +181,9 @@ def load_metrics(page) -> dict:
     for step in ("data", "map-model", "map-place", "map-layout", "map-routes", "map-render", "map-outlines", "map-downhill", "map-terrain"):
         m = first(ms, step)
         out[step.replace("map-", "") + "_ms"] = r1(m["duration"]) if m else None
+    for step in ("grid-layout", "grid-routes"):  # the grid Atlas (--folders grid)
+        m = first(ms, "map-" + step)
+        out[step.replace("-", "_") + "_ms"] = r1(m["duration"]) if m else None
     info = page.evaluate(PAGE)
     out.update({k: r1(v) if isinstance(v, float) else v for k, v in info.items()})
     return out
@@ -234,13 +239,16 @@ def _frames_since(page, start: float) -> dict:
     }
 
 
-def run_case(browser, url: str, theme: str, profile: str, timeout_s: float, sw: bool = True) -> dict:
+def run_case(browser, url: str, theme: str, profile: str, timeout_s: float, sw: bool = True, folders: str | None = None) -> dict:
     p = PROFILES[profile]
     look, mode = THEMES[theme]
     ctx = browser.new_context(viewport=dict(zip(("width", "height"), p["viewport"])),
                               device_scale_factor=p["scale"], is_mobile=p["mobile"], has_touch=p["mobile"])
     ctx.add_init_script(INIT + f"try {{ localStorage.setItem('rdstudio.look', '{look}'); "
-                               f"localStorage.setItem('rdstudio.mode', '{mode}'); localStorage.removeItem('rdstudio.map'); }} catch {{}}")
+                               f"localStorage.setItem('rdstudio.mode', '{mode}'); "
+                               + (f"localStorage.setItem('rdstudio.map', JSON.stringify({{user: {{folders: '{folders}'}}}})); " if folders
+                                  else "localStorage.removeItem('rdstudio.map'); ")
+                               + "} catch {}")
     page = ctx.new_page()
     cdp = ctx.new_cdp_session(page)
     if p["cpu"] > 1:
@@ -287,6 +295,8 @@ def table(runs: list[dict]) -> str:
             ("settled ms", lambda r: r.get("load", {}).get("settled_ms")),
             ("layout", lambda r: r.get("load", {}).get("layout_ms")),
             ("routes", lambda r: r.get("load", {}).get("routes_ms")),
+            ("grid layout", lambda r: r.get("load", {}).get("grid_layout_ms")),
+            ("grid routes", lambda r: r.get("load", {}).get("grid_routes_ms")),
             ("render", lambda r: r.get("load", {}).get("render_ms")),
             ("fps", lambda r: r.get("interact", {}).get("fps")),
             ("frame p95", lambda r: r.get("interact", {}).get("frame_p95_ms")),
@@ -309,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--label", help="a name for this run, kept in the results")
     ap.add_argument("--fresh", action="store_true", help="regenerate the synthetic bundles")
     ap.add_argument("--no-sw", action="store_true", help="without the service worker (offline cache)")
+    ap.add_argument("--folders", choices=["contour", "circle", "grid"], help="the Atlas's folder shape (the project's or the default otherwise); grid is the grid Atlas")
     ap.add_argument("--web-dir", type=Path, help="serve this built dashboard (such as a saved copy of an older build) with the Node server")
     ap.add_argument("--timeout", type=float, default=180, help="seconds to wait for a map")
     ap.add_argument("--out", type=Path)
@@ -330,12 +341,12 @@ def main(argv: list[str] | None = None) -> int:
                     for profile in args.profiles.split(","):
                         print(f"{name} ({built['notes']} notes) · {theme} · {profile} …", file=sys.stderr, flush=True)
                         runs.append({"bundle": name, "theme": theme, "profile": profile, "build": built,
-                                     **run_case(browser, url, theme, profile, args.timeout, not args.no_sw)})
+                                     **run_case(browser, url, theme, profile, args.timeout, not args.no_sw, args.folders)})
             finally:
                 server.terminate()
                 server.wait()
         result = {"meta": {**meta(args.label), "chromium": browser.version, "service_worker": not args.no_sw,
-                           "dashboard": str(args.web_dir) if args.web_dir else "python"}, "runs": runs}
+                           "dashboard": str(args.web_dir) if args.web_dir else "python", "folders": args.folders}, "runs": runs}
         browser.close()
 
     out = args.out or WORK / "results" / f"{datetime.now():%Y%m%d-%H%M%S}-{result['meta']['commit']}.json"

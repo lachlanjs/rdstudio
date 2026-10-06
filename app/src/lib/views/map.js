@@ -44,7 +44,13 @@ export const VIEW_DEFAULTS = {
   // (the packing's own circles); routing: "downhill" (crossing contours at
   // right angles, gathering in the flats) or "gates" (gates, corridors and
   // bundling). Positions, lenses and terrain are the same under both (T60).
+  // "grid" is the grid Atlas (gridmap.js, T62), which takes this view's place.
   folders: "contour", routing: "downhill",
+  // The grid Atlas's layout (T64): "nested" (each folder a layered DAG of its
+  // items, and one item in its parent's), "layers" (one DAG for the whole map)
+  // or "snap" (the continuous layout snapped to cells, T62). And the top
+  // level's direction: "up", "right", or "auto" (up; right on a phone on its side).
+  gridLayout: "nested", gridFlow: "auto",
   // How far apart a link's ends are in the folder tree, counted in bubble walls:
   // "out" is the larger of the two ends' distances out to the lowest shared
   // folder, "path" is the total crossed going out and back in.
@@ -83,7 +89,7 @@ export const MARKERS = {
   example: "triangle", trick: "square", reference: "ring", overview: "star",
   decision: "square", task: "triangle", question: "cross", idea: "wye", procedure: "star",
 };
-const SYMBOLS = {
+export const SYMBOLS = {
   circle: d3.symbolCircle, diamond: d3.symbolDiamond, triangle: d3.symbolTriangle, square: d3.symbolSquare,
   star: d3.symbolStar, cross: d3.symbolCross, wye: d3.symbolWye, ring: d3.symbolCircle,
 };
@@ -94,7 +100,7 @@ const saved = (() => {
 })();
 
 // User choices (this browser) layered over project defaults over built-in defaults.
-const M = {
+export const M = {
   user: saved.user || saved.opts || {},
   transform: saved.transform ? d3.zoomIdentity.translate(saved.transform.x, saved.transform.y).scale(saved.transform.k) : null,
 };
@@ -103,7 +109,7 @@ function projectMap() {
   return store.site.map || {};
 }
 
-function effective() {
+export function effective() {
   const project = Object.fromEntries(Object.entries(projectMap()).filter(([k]) => k !== "markers"));
   const o = Object.assign({}, VIEW_DEFAULTS, TUNING_DEFAULTS, project, M.user);
   if (projectMode() === "Project") o.north = 0; // direction means nothing on a project's map
@@ -120,7 +126,7 @@ function effective() {
 export const LENSES = { understanding: "Understanding", activity: "Activity", health: "Health" };
 const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
 const LEVEL_CLASS = ["st-undiscovered", "st-discovered", "st-processed", "st-understood"];
-function heightLens(o) {
+export function heightLens(o) {
   const lens = LENSES[o.height] ? o.height : projectMode() === "Project" ? "activity" : "understanding";
   return lens === "understanding" && !understanding.on ? "activity" : lens;
 }
@@ -142,7 +148,7 @@ function tested() {
   testedSet = new Set(exerciseNotes().flatMap(testsOf));
   return testedSet;
 }
-function lensValue(lens, c) {
+export function lensValue(lens, c) {
   if (lens === "understanding") return LEVEL[understanding.state(c.id)?.state] ?? 0;
   if (lens === "activity") {
     const t = lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
@@ -158,7 +164,7 @@ function markerFor(type) {
   return SYMBOLS[shape] ? shape : "circle";
 }
 
-function persist() {
+export function persist() {
   const t = M.transform;
   try {
     localStorage.setItem(KEY, JSON.stringify({ user: M.user, transform: t ? { x: t.x, y: t.y, k: t.k } : null }));
@@ -204,7 +210,7 @@ function chainOrder(leaves, adjacent) {
   return order;
 }
 
-function buildModel() {
+export function buildModel() {
   // Tours are walks through the map, not places on it (understanding-layer.md).
   const concepts = [...store.concepts.values()].filter(isStudyNote);
   const ids = concepts.map((c) => c.id);
@@ -595,10 +601,19 @@ function crossings(routes, shown, itemRadius) {
 
 const curve = d3.line().curve(d3.curveBasis); // stays within its waypoints: no loops
 
+// The settings as this view draws them. The grid Atlas (gridmap.js) draws
+// `folders = "grid"`; a study path or a tour is still drawn here until the
+// grid has them (T63), on contours.
+function here() {
+  const o = effective();
+  if (o.folders === "grid") o.folders = "contour";
+  return o;
+}
+
 /** @param {string} [focusRef] @param {{ path?: string, tour?: any }} [opts] */
 export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   document.title = `${tour ? tour.title : "Map"} · ${store.site.title}`;
-  let o = effective();
+  let o = here();
   // A study path: a note and everything it requires, numbered in reading order.
   // Only requires links between them are drawn, and everything else fades.
   // A tour ({key, title, stops: [{id, title, text}], start, narrate, onStep,
@@ -627,8 +642,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const create = h("div", { class: "map-create", role: "group", "aria-label": "Create here", hidden: true }, newNote, newFolder);
   void editing.known.then(() => { create.hidden = !editing.enabled; });
   const panel = controls({
-    view: () => { o = effective(); cache = null; schedule(); },
-    tune: () => { o = effective(); cache = null; arrange(); schedule(); },
+    view: () => { if (!trail && effective().folders === "grid") return location.reload(); o = here(); cache = null; schedule(); }, // the grid is another view
+    tune: () => { o = here(); cache = null; arrange(); schedule(); },
     readout, summary,
   });
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
@@ -1686,7 +1701,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const onResize = () => { size(); schedule(); };
   window.addEventListener("resize", onResize);
   wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = timed("map-model", buildModel); o = effective(); rebuild(); };
+  wrap.refresh = () => { model = timed("map-model", buildModel); o = here(); rebuild(); };
   M.reset = () => zoomTo(L.root);
   wrap.routes = () => cache?.routes || []; // for tests and inspection
   wrap.layout = () => L;
@@ -1696,7 +1711,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
 // --------------------------------------------------------------- panel
 
-function controls({ view, tune, readout, summary }) {
+// `key` (optional) gives the key's items for a height lens: the grid Atlas has its own.
+export function controls({ view, tune, readout, summary, key: keyItems = null }) {
   const narrow = matchMedia("(max-width: 760px), (max-height: 560px)").matches; // start collapsed where space is short
   const o = effective();
   const slider = (key, text, min, max, step, onChange, help) => {
@@ -1886,7 +1902,10 @@ function controls({ view, tune, readout, summary }) {
     item(svgKey(place("landmark", 6)), "Landmark: drawn larger"),
   ];
   const key = h("ul", { class: "legend map-key" });
-  const drawKey = () => { const e = effective(); key.replaceChildren(...(e.terrain ? states(heightLens(e)) : []), ...lines); };
+  const drawKey = () => {
+    const e = effective();
+    key.replaceChildren(...(keyItems ? keyItems(heightLens(e), !!e.terrain) : [...(e.terrain ? states(heightLens(e)) : []), ...lines]));
+  };
   drawKey();
   // The height lenses: one at a time; choosing the one shown again puts the terrain away.
   const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || understanding.on).map(([value, label]) => {
@@ -1925,7 +1944,14 @@ function controls({ view, tune, readout, summary }) {
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
         choice("folders", "Folders", [["contour", "Contours", "Each folder's outline follows where its contents sit."],
-          ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."]]),
+          ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."],
+          ["grid", "Grid", "Everything on a square grid: notes as blocks, folders as nested rectangles, routes along the cells between them."]]),
+        choice("gridLayout", "Grid layout", [["nested", "Nested", "On the grid: each folder laid out as its own layered DAG, and one block in its parent's. Links between folders join their walls."],
+          ["layers", "Shared layers", "On the grid: one set of layers for the whole map, north later, with each folder a box round its notes' layers."],
+          ["snap", "Snapped", "On the grid: the continuous Atlas's positions, snapped to cells."]]),
+        choice("gridFlow", "Grid flows", [["auto", "Auto", "The nested layout's top level runs bottom to top; left to right on a phone turned on its side."],
+          ["up", "Up", "The top level runs from the bottom up; folders inside it left to right; and so on in turn."],
+          ["right", "Right", "The top level runs from left to right; folders inside it bottom to top; and so on in turn."]]),
         choice("routing", "Routes", [["downhill", "Downhill", "Routes cross folder outlines at right angles and gather in the flats between folders."],
           ["gates", "Gates", "Routes leave each folder by a gate on its wall and follow corridors between its contents."]]),
         h("div", { class: "row" },

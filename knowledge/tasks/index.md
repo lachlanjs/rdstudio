@@ -4,6 +4,7 @@
 
 # Task
 
+* [Bootstrap the knowledge base](bootstrap-knowledge-base.md) - Tailor this knowledge base to the project with the developer.
 * [T01 — Package skeleton and configuration](T01-package-skeleton.md) - pyproject, CLI entry point, project and global config loading.
 * [T02 — OKF library](T02-okf-library.md) - Parse bundles, frontmatter, links, trust tiers and staleness; lint; generate index.md.
 * [T03 — Deterministic search and sectioned reading](T03-search.md) - BM25 search with frontmatter filters; outline and section extraction.
@@ -64,3 +65,7 @@
 * [T58 — Phone layouts](T58-phone.md) - The bottom tab bar, Today and the workbench at 390 wide, pins hanging under their paragraph, marking actions in place of the tab bar while an exercise is open.
 * [T59 — Project mode](T59-project-mode.md) - Learning or Project per project: Project mode's spaces, the Activity and Health lenses, and the learning layer on top of a project.
 * [T60 — The Atlas: contour folders and downhill routes](T60-atlas-contours.md) - Folder outlines as contours of their contents' fields, and routes that cross contours at right angles and gather in the flats, as options beside circles and gates; the default once timed at scale.
+* [T61 — The Station theme](T61-station-theme.md) - Station as a second theme beside Marginalia: the theme picker back, the station tokens, and all of its terminal chrome (status line, key legend, numbered spaces, framed panes, scan lines).
+* [T62 — The grid Atlas: cells, routes and drawing](T62-grid-atlas.md) - The grid Atlas in the app as a third folder shape on real bundles: note blocks and rectangular folders on cells, A* routes with lanes, solved in the worker, behind a layout interface with a placeholder layout.
+* [T63 — The grid Atlas: parity, the Station skin and retiring the old Atlas](T63-grid-atlas-parity.md) - Everything the continuous Atlas does, on the grid (lenses, selection, study paths, tours, labels, phone), the Station skin, then the grid as the only Atlas and the old one deleted.
+* [T64 — The grid Atlas: a layout from the DAGs in each folder](T64-dag-layout.md) - Lay out the grid Atlas bottom-up: in each folder find a DAG among its links, place it by the Sugiyama method, freeze it, and repeat one folder up with subfolders as single items; back links are routed last at their own level.

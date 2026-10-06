@@ -442,6 +442,63 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .dual-fill { position: absolute; top: 9px; height: 3px; border-radius: 2px; background: var(--accent); }
 .dual-thumb { position: absolute; top: 2px; width: 11px; height: 17px; background: var(--accent);
   border: 2px solid var(--paper-raised); box-shadow: 0 0 0 1px var(--accent); }
+/* The grid Atlas (T62, design/project/README.md "The grid Atlas"). Height is
+   nesting: each level of folder is one tone lighter, and the only contours
+   are folder walls. Where you stand is tone and fill, never height. */
+.gridmap .g-sea { fill: transparent; }
+.gridmap-wrap.dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--rule-strong) 55%, transparent) 0 .8px, transparent 1.3px); }
+.g-floor { cursor: zoom-in; }
+.g-floor.d1 { fill: var(--surface-1); } .g-floor.d2 { fill: var(--surface-2); } .g-floor.d3 { fill: var(--surface-3); }
+.g-ground { pointer-events: none; }
+.g-reach { fill: var(--text); fill-opacity: .06; }
+/* The edge of reached ground is a plain line. The sketch dots it, but thousands of
+   dots repaint at 12 frames a second against 55 (the bench, 63 notes). */
+.g-front { fill: none; stroke: var(--rule-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.g-wall { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; cursor: zoom-in; }
+.g-wall.d2, .g-wall.d3 { stroke-width: 1; }
+.g-wall.closed { fill: var(--surface-2); }
+.g-wall.closed:hover { fill: var(--surface-3); }
+.g-routes, .g-titles, .g-counts { pointer-events: none; }
+.g-rt { fill: none; stroke: var(--text-soft); stroke-linecap: round; stroke-linejoin: round; }
+.g-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; }
+.g-routes .quiet { opacity: .35; }
+.back .g-rt { stroke-dasharray: 5 4; }
+/* The layout's own paths (T64): square runs that share a bus, so no halo cuts them where they join. */
+.g-routes .dag .g-halo { display: none; }
+.gridmap.whole .g-routes .dag .g-rt { stroke-width: .8px; }
+/* Pointing at a note lights what it depends on, in the blue pen: what it requires down its chain as a
+   line, what builds on it dotted; the rest steps back. */
+.g-hot { pointer-events: none; }
+.g-hot .g-rt { stroke: var(--pen-blue); stroke-width: 2px; }
+.g-hot .g-rt.dep { stroke-width: 1.6px; stroke-dasharray: .1 4.6; }
+.gridmap.lit .g-routes, .gridmap.lit .g-counts { opacity: .22; }
+.gridmap.lit .gn:not(.dep):not(.at) { opacity: .45; }
+.gn.dep .gn-block, .gn.at .gn-block { stroke: var(--pen-blue); stroke-width: 1.75; }
+.g-title, .g-note, .g-count { font-family: var(--font-map); fill: var(--text); }
+/* A title is wider than its row is tall when the map is small, so it keeps a rim of the ground's colour. */
+.g-title { font-weight: 600; font-variation-settings: "wdth" 88; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; stroke-linejoin: round; }
+.g-title.closed { text-anchor: middle; }
+/* On the folder's top edge (the nested layout): the title breaks the line, rimmed in the ground outside the folder. */
+.g-title.edge.open { stroke-width: 7px; }
+.g-title.edge.open.d1 { stroke: var(--surface); }
+.g-title.edge.open.d2 { stroke: var(--surface-1); }
+.g-title.edge.open.d3 { stroke: var(--surface-2); }
+.g-title .g-n { font-weight: 400; fill: var(--text-soft); }
+.g-count { font-size: 12px; font-weight: 700; font-variation-settings: "wdth" 84; text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+/* A note's block: faint not reached, outlined opened, filled worked through,
+   filled with a double green rule understood; a red frame needs work. */
+.gn { cursor: pointer; }
+.gn:focus { outline: none; }
+.gn-block { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.gn.l1 .gn-block { fill: var(--surface-1); stroke: var(--text); }
+.gn.l2 .gn-block, .gn.l3 .gn-block { fill: var(--surface-3); stroke: var(--text); stroke-width: 1.25; }
+.gn.bad .gn-block { stroke: var(--pen-red); stroke-width: 2; }
+.gn.sel .gn-block, .gn:focus-visible .gn-block { stroke: var(--pen-blue); stroke-width: 1.75; stroke-dasharray: .1 4.6; stroke-linecap: round; }
+.gn-ok { fill: none; stroke: var(--pen-green); stroke-width: 1.5; }
+.g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
+.g-note { font-size: 11px; font-variation-settings: "wdth" 84; }
+.gn.l0 .g-note { fill: var(--text-faint); }
+
 /* The lower thumb sits just left of its value and the upper just right, as
    the two halves of a bracket: apart even when both mark the same value. */
 .dual-thumb.lo { margin-left: -13px; border-radius: 9px 2px 2px 9px; }

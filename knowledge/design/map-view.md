@@ -4,7 +4,7 @@ title: Map view
 description: Criteria and design for the Atlas, the nested map of a knowledge base, where folders are regions, links are drawn at the scale they belong to, and the terrain shows where you stand.
 status: draft
 tags: [design, dashboard, map]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-26T04:20:31Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T00:19:21Z}
 ---
 
 # Purpose
@@ -240,3 +240,33 @@ spacing = 50
 Module = "square"
 Interface = "diamond"
 ```
+
+# The grid Atlas
+
+Chosen with `folders = "grid"` ([T62](/tasks/T62-grid-atlas.md)); it is to
+replace everything above ([decision](/decisions/grid-atlas.md)), and until it
+does this section describes only what is built.
+
+- **Cells:** everything sits on a square grid. A note is a block of 8 by 2
+  cells (9 wide from 6 links, 3 tall from 9). A folder is a rectangle with a
+  title row, a free row and 2 cells of margin; folders nest.
+- **Height is nesting:** 0 between folders, 1 inside one, 2 inside a
+  subfolder, each level a tone lighter. The only contours are folder walls.
+- **Where you stand** is tone and fill: ground within one cell of a reached
+  note is lighter; a block is faint, outlined, filled, or filled with a
+  double green rule; a red frame needs work.
+- **Layout:** plain data (`views/grid/snap.js` says what one is). For now the
+  positions of the layout above snapped to cells, siblings kept 2 cells
+  apart and folders 3. The layout from each folder's DAG
+  ([T64](/tasks/T64-dag-layout.md)) takes its place.
+- **Routes:** shortest paths over cells with 45 degree steps
+  (`views/grid/router.js`). A step costs its length, 5 for each wall crossed,
+  a little for each turn, 2.5 for each cell of a folder the route has no
+  business in, and 0.45 for each route already in the cell, up to 3. Notes
+  and title rows are closed. Routes sharing a cell edge run side by side in
+  lanes.
+- **Which links:** every requires- and uses-link. At overview, one trunk per
+  pair of top-level folders with its count. A folder in focus shows each of
+  its links singly and keeps the other trunks quiet.
+- **Detail:** a folder is one titled block until it is `detail` wide on
+  screen and a cell is 3px; notes carry their titles from a cell of 10px.

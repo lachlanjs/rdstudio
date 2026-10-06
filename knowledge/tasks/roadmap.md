@@ -117,6 +117,19 @@ See the [redesign](/design/redesign.md) and the brand book in
 - [x] [T59 Project mode](/tasks/T59-project-mode.md)
 - [x] [T60 The Atlas: contour folders and downhill routes](/tasks/T60-atlas-contours.md)
 
+# M13 — Station and the grid Atlas
+
+On the branch `grid-dag-view`, built from the sketches added to the design
+since M12 (`design/README.md`). Decisions:
+[Station](/decisions/station-theme.md) and
+[the grid Atlas](/decisions/grid-atlas.md). A layout built on the directed
+acyclic graphs in each folder is T64. In working order:
+
+- [ ] [T62 The grid Atlas: cells, routes and drawing](/tasks/T62-grid-atlas.md)
+- [ ] [T64 The grid Atlas: a layout from the DAGs in each folder](/tasks/T64-dag-layout.md)
+- [ ] [T63 The grid Atlas: parity, the Station skin and retiring the old Atlas](/tasks/T63-grid-atlas-parity.md)
+- [ ] [T61 The Station theme](/tasks/T61-station-theme.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)
