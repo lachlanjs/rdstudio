@@ -58,6 +58,12 @@ On the branch `feat/atlas-flat`, off `grid-dag-view`.
   another colour (`--far`), with fainter frames on those notes: the note's
   own requirements stand out from the whole tree under them.
 
+- **The tip keeps out of the way, 2026-10-07:** a note's tip sits beside
+  the note, not under the pointer: in the nearest place (below, above, to a
+  side, then further out) that covers none of the notes lit for it, nor the
+  panels. Pointing at each of the test bed's 63 notes in turn, with and
+  without folders, the tip covered none of what was lit.
+
 # Checks
 
 Unit tests for the clearance (no trunk within 2 cells of a note it passes,

@@ -781,6 +781,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         }
       });
 
+    placeTip(X, Y);
+
     // Titles, each with how many of the folder's notes are reached.
     const size = Math.max(10, Math.min(12, c * 0.72));
     const titled = folders.filter((i) => { const n = items[i]; return open[i] || (n.w * c >= 44 && n.h * c >= 16); });
@@ -840,6 +842,33 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     tip.style.left = `${Math.min(event.clientX - box.left + 14, box.width - 290)}px`;
     tip.style.top = `${event.clientY - box.top + 14}px`;
     tip.hidden = false;
+  }
+
+  // A note's tip sits beside the note, not under the pointer, in the nearest place that covers none of what
+  // is lit for it (the notes it depends on and that build on it), nor the panels: below it or above, to
+  // either side, then further out. Where every place covers something, the one that covers least.
+  function placeTip(X, Y) {
+    const n = hovered >= 0 ? L.items[hovered] : null;
+    if (tip.hidden || !n || n.kind !== "note") return;
+    const box = (i) => { const m = L.items[i]; return [X(m.gx) - 3, Y(m.gy) - 3, X(m.gx + m.w) + 3, Y(m.gy + m.h) + 3]; };
+    const at = wrap.getBoundingClientRect();
+    const fixed = [panel, crumbs, legend, card].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
+    const avoid = [box(hovered), ...(hot ? [...hot.notes].filter((i) => L.items[i]).map(box) : []), ...fixed];
+    const [x0, y0, x1, y1] = box(hovered), tw = tip.offsetWidth, th = tip.offsetHeight;
+    const covered = (x, y) => avoid.reduce((t, [a, b, c2, d]) => t + Math.max(0, Math.min(x + tw, c2) - Math.max(x, a)) * Math.max(0, Math.min(y + th, d) - Math.max(y, b)), 0);
+    let best = null;
+    for (let ring = 0; ring < 5 && !(best && best.cost === 0); ring++) {
+      const gx = 8 + ring * (tw * 0.5 + 12), gy = 8 + ring * (th * 0.6 + 12);
+      for (const [x, y] of [[x0, y1 + gy], [x1 - tw, y1 + gy], [x0, y0 - th - gy], [x1 - tw, y0 - th - gy], [x1 + gx, y0], [x0 - tw - gx, y0], [x1 + gx, y1 - th], [x0 - tw - gx, y1 - th],
+        [x1 + gx, y1 + gy], [x0 - tw - gx, y1 + gy], [x1 + gx, y0 - th - gy], [x0 - tw - gx, y0 - th - gy]]) {
+        const px = Math.max(8, Math.min(w - tw - 8, x)), py = Math.max(8, Math.min(hgt - th - 8, y));
+        const cost = covered(px, py);
+        if (!best || cost < best.cost) best = { x: px, y: py, cost };
+        if (cost === 0) break;
+      }
+    }
+    tip.style.left = `${Math.round(best.x)}px`;
+    tip.style.top = `${Math.round(best.y)}px`;
   }
 
   function size() {
