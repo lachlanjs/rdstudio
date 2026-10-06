@@ -61,7 +61,10 @@ with sync_playwright() as pw:
     # Folderless (T71): the whole map as one layout, each item with its folder's colour.
     p.get_by_role("group", name="Folders").get_by_role("button", name="None").click()
     p.wait_for_function("() => document.querySelectorAll('svg.gridmap .gn-folder').length > 20 && !document.querySelector('svg.gridmap .g-wall')", timeout=15000)
-    check("Folders: None: one layout with no folders, a colour on each item for its folder, and the folders named", p.locator(".map-crumbs .chip").count() >= 4, p.locator(".map-crumbs .chip").count())
+    check("Folders: None: one layout with no folders, a colour on each item for its folder, and the folders named", p.locator(".map-folders li").count() >= 4 and p.locator(".map-folders li").first.is_visible(), p.locator(".map-folders li").count())
+    p.locator(".map-folders > summary").click()
+    check("…the list of folders folds away", not p.locator(".map-folders li").first.is_visible())
+    p.locator(".map-folders > summary").click()
     p.screenshot(path=str(OUT / "code-atlas-flat.png"))
     p.get_by_role("group", name="Folders").get_by_role("button", name="Shown").click()
     p.wait_for_selector("svg.gridmap .g-wall", timeout=15000)

@@ -26,6 +26,7 @@ export const VIEW_DEFAULTS = {
   source: null, // what is mapped: "notes" (the default), or "code" (T66) when the code is indexed
   folderless: false, // the whole base as one DAG, with no folders; each note carries its folder's colour (T71)
   panelOpen: null, // the lens panel: open, or folded to its bar; by default open where there is room
+  foldersOpen: true, // the folderless view's list of folders and their colours: open, or folded to its heading
   // The top level runs "up", "right", or "auto" (up; right on a phone on its
   // side); the levels inside it turn in turn (T64).
   gridFlow: "auto",
@@ -116,6 +117,12 @@ function markerFor(type) {
   return SYMBOLS[shape] ? shape : "circle";
 }
 
+
+/** Keep one of this browser's choices (the views keep a few of their own: a legend open or shut). */
+export function remember(key, value) {
+  M.user[key] = value;
+  persist();
+}
 
 function persist() {
   try { localStorage.setItem(KEY, JSON.stringify({ user: M.user })); } catch { /* storage unavailable */ }

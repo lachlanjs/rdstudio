@@ -23,7 +23,7 @@ import { understanding, STATE_LABEL } from "../understanding.svelte.ts";
 import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { plainModel, gridKey, cachedGrid, computeGrid, computeGridRoutes } from "./layout.js";
 import { buildCells, reachedCells, maskPaths } from "./grid/cells.js";
-import { effective, buildModel, controls, heightLens, lensValue, SYMBOLS, M } from "./map.js";
+import { effective, buildModel, controls, heightLens, lensValue, remember, SYMBOLS, M } from "./map.js";
 import { codeMap, codeHref, KIND_LABEL, LINK_LABEL } from "../code.ts";
 
 const KEY = "rdstudio.gridmap";
@@ -96,6 +96,7 @@ function gridKeyItems(lens, terrain) {
     item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two items of a folder, with their count"),
     item('<g class="back"><path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/></g>', "Dashed: a back link, against the order of the layers"),
     item('<g class="g-hot"><path class="g-rt hot req" d="M2 11H20"/></g>', "Under the pointer: what the note requires"),
+    item('<g class="g-hot"><path class="g-rt hot req far" d="M2 11H20"/></g>', "Fainter: what those require in turn, all the way back"),
     item('<g class="g-hot"><path class="g-rt hot dep" d="M2 11H20"/></g>', "Under the pointer: what builds on it"),
   ];
 }
@@ -135,10 +136,18 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     readout, summary, key: gridKeyItems,
   });
   let panel = makePanel();
+  // The folderless view's legend: the folders and their colours, one to a line; it folds to its heading.
+  const folderRows = h("ul", {});
+  const legendShow = h("span", { class: "lens-change" });
+  const legend = h("details", { class: "map-folders", hidden: true, open: o.foldersOpen !== false },
+    h("summary", { title: "Show or hide the folders' colours" }, h("span", { class: "lens-label" }, "Folders"), legendShow), folderRows);
+  const legendFolded = () => { legendShow.textContent = legend.open ? "Hide" : "Show"; };
+  legend.addEventListener("toggle", () => { remember("foldersOpen", legend.open); legendFolded(); });
+  legendFolded();
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
   // The selected note: what it is, where you stand, and the way in.
   const card = h("section", { class: "atlas-card", hidden: true, "aria-live": "polite" });
-  wrap.append(panel, crumbs, create, tip, status, card, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
+  wrap.append(panel, crumbs, legend, create, tip, status, card, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
 
   const back = svg.append("rect").attr("class", "g-sea");
   // One layer, moved and scaled during a gesture and redrawn when it pauses, as on the continuous Atlas.
@@ -238,6 +247,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         folderList.push({ label: d.label, count, k });
       });
     }
+    legend.hidden = !flat || !folderList.length;
+    folderRows.replaceChildren(...folderList.map((f) => h("li", {}, h("i", { class: `f${f.k % 8}` }), h("span", {}, f.label), h("span", { class: "n" }, String(f.count)))));
     L.items.forEach((n, i) => { if (n.kind === "note") for (const p of up[i]) noteCount[p]++; });
     cache = null; drawn = []; tones = null;
     status.hidden = true;
@@ -409,7 +420,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         for (const b of needsOf[a]) {
           const inside = L.items[b].parent === home;
           if (!inside && a !== at) continue;
-          pairs.push([a, b, "hot req", far.get(a)]);
+          pairs.push([a, b, a === at ? "hot req" : "hot req far", far.get(a)]); // far: not required by the note itself, but by what it requires
           notes.add(b);
           if (!far.has(b)) { far.set(b, far.get(a) + 1); if (inside) todo.push(b); }
         }
@@ -420,7 +431,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Each is drawn away from the note pointed at. The layout's own path runs
     // from what is required to what requires it; the router's, the other way.
     for (const [a, b, cls, depth = 0] of pairs) {
-      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b), req = cls === "hot req";
+      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b), req = cls.startsWith("hot req");
       if (sa === sb) continue;
       const key = `${at}:${cls}${a}|${b}`; // one drawing of this link for this note, so it is drawn afresh for another
       if (own) routes.push({ key, a, b, cls, depth, rev: req, pts: own, lane: 0 });
@@ -706,7 +717,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const labels = c >= LABELS_AT;
     const station = document.documentElement.dataset.theme === "station";
     gNotes.selectAll("g").data(notes, (i) => items[i].id).join("g")
-      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? " dep" : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}`)
+      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? ((hot.far.get(i) ?? 1) > 1 ? " dep far" : " dep") : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}`)
       .attr("tabindex", 0).attr("role", "link").attr("aria-label", (i) => nodes.get(items[i].id)?.label || items[i].ref)
       .on("click", (event, i) => { event.stopPropagation(); if (selected === items[i].id) openNote(i); else select(items[i].id); })
       .on("dblclick", (event, i) => { event.stopPropagation(); openNote(i); })
@@ -724,7 +735,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         }
         if (hot && (hot.notes.has(i) || hot.at === i)) {
           // Lit: a frame in the blue pen, drawn round the note once the link to it has arrived.
-          const ring = g.append("path").attr("class", "gn-ring").attr("d", frame).node(), due = hot.since + ((hot.far.get(i) ?? 0) * STEP_MS + (hot.at === i ? 0 : DRAW_MS));
+          const ring = g.append("path").attr("class", (hot.far.get(i) ?? 1) > 1 ? "gn-ring far" : "gn-ring").attr("d", frame).node(), due = hot.since + ((hot.far.get(i) ?? 0) * STEP_MS + (hot.at === i ? 0 : DRAW_MS));
           if (animate && hot.at !== i && performance.now() < due) { // one already under way is shown whole, not begun again
             ring.style.setProperty("--len", ring.getTotalLength().toFixed(1));
             ring.style.setProperty("--delay", `${Math.max(0, due - performance.now())}ms`);
@@ -812,12 +823,6 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       b.addEventListener("click", () => zoomTo(i));
       return b;
     };
-    if (flat) { // no folders to stand in: the folders are named by their colours
-      crumbs.classList.add("folders");
-      crumbs.replaceChildren(button(-1, model.root.label), ...folderList.map((f) => h("span", { class: "chip" }, h("i", { class: `f${f.k % 8}` }), `${f.label} ${f.count}`)));
-      return;
-    }
-    crumbs.classList.remove("folders");
     crumbs.replaceChildren(button(-1, model.root.label), ...path.flatMap((i) => [h("span", { "aria-hidden": "true" }, "/"), button(i, nodes.get(L.items[i].id)?.label || L.items[i].ref)]));
   }
 

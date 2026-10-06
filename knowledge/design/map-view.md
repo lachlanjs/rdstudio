@@ -62,7 +62,11 @@ model, settings and lens panel) and `views/grid/`.
   third of each gap is left for routes.
 - **Folderless (optional):** the same layout over the whole base as one
   folder, so every note is in one DAG; a note's top-level folder is a strip
-  of colour on its edge, and the folders are named with their colours.
+  of colour on its edge, and the folders are listed with their colours
+  down the right, in a list that folds away.
+- **Under the pointer:** what the note requires is lit in the blue pen;
+  what those require in turn, all the way back, is fainter and in another
+  colour.
 - **Each folder is laid out on its own,** as a layered DAG of its items: its
   notes, and its subfolders, each one block. A link belongs to the lowest
   folder holding both its ends, and there joins the two items that hold
@@ -125,6 +129,7 @@ project's `[map]` table in `rdstudio.toml`, and choices made in the browser
 | `source` | `notes` | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md), when the code is indexed) |
 | `folderless` | false | The whole base as one layered DAG with no folders; each note carries its top-level folder's colour ([T71](/tasks/T71-atlas-flat-and-room.md)) |
 | `panelOpen` | (by room) | The lens panel open, or folded to its bar |
+| `foldersOpen` | true | The folderless view's list of folders open, or folded to its heading |
 | `hideImplied` | true | Leave out a link between two notes that a longer way already joins |
 | `gridFlow` | `"auto"` | The top level's direction: `up`, `right`, or `auto` (up; right on a touch device wider than tall) |
 

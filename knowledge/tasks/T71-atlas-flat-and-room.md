@@ -51,6 +51,13 @@ On the branch `feat/atlas-flat`, off `grid-dag-view`.
   Map: Code. Changing what is mapped makes the panel again, so its key and
   lenses fit.
 
+- **Follow-up, 2026-10-07:** the folders and their colours are a list down
+  the right, one to a line, that folds to its heading (`foldersOpen`). A
+  note pointed at lights what it requires in the blue pen, as before, and
+  what those require in turn, all the way back, fainter, thinner and in
+  another colour (`--far`), with fainter frames on those notes: the note's
+  own requirements stand out from the whole tree under them.
+
 # Checks
 
 Unit tests for the clearance (no trunk within 2 cells of a note it passes,
