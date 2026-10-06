@@ -41,9 +41,9 @@
 //                                router finds a way for when it is wanted)
 
 export const NOTE_W = 18, NOTE_H = 5; // room for a whole title, on two or three lines, before the map is zoomed far in
-const GAP = 2, GAP_FOLDERS = 3; // clear cells between neighbours in a layer
-const CHANNEL = 3; // free cells between two layers, at least
-export const PAD = 2; // cells between a folder's wall and its contents
+const GAP = 3, GAP_FOLDERS = 4; // clear cells between neighbours in a layer
+const CHANNEL = 4; // free cells between two layers, at least
+export const PAD = 3; // cells between a folder's wall and its contents
 const HEAD = 2; // free rows under a folder's top edge, where its title sits: they keep a subfolder's title clear of it
 const MARGIN = 3; // free cells around the whole map
 const MIN_FOLDER = 12; // a folder is at least this wide, for its title

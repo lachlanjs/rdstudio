@@ -53,7 +53,7 @@ model, settings and lens panel) and `views/grid/`.
 
 - **Cells:** everything sits on a square grid. A note is a block of 18 by 5
   cells, room for its whole title on two or three lines. A folder is a rectangle with cut
-  corners, 2 cells of margin inside and its title on its top edge; folders
+  corners, 3 cells of margin inside and its title on its top edge; folders
   nest, each level a tone lighter.
 - **Each folder is laid out on its own,** as a layered DAG of its items: its
   notes, and its subfolders, each one block. A link belongs to the lowest

@@ -73,7 +73,7 @@ function getWorker() {
 // One is kept for each direction of flow, so turning a phone finds its map
 // ready. The key is what the map contains and the direction: none of the
 // continuous layout's settings move anything on the grid.
-const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 6; // bump whenever the grid layout changes what it returns, or browsers keep the old one
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 7; // bump whenever the grid layout changes what it returns, or browsers keep the old one
 const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
 export function gridKey(plain, o) {
   return hash(JSON.stringify([GRID_VERSION, o.gridFlow === "right" ? "right" : "up", plain]));
