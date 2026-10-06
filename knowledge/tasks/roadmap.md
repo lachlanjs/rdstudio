@@ -127,7 +127,7 @@ acyclic graphs in each folder is T64. In working order:
 
 - [ ] [T62 The grid Atlas: cells, routes and drawing](/tasks/T62-grid-atlas.md)
 - [ ] [T64 The grid Atlas: a layout from the DAGs in each folder](/tasks/T64-dag-layout.md)
-- [ ] [T63 The grid Atlas: parity, the Station skin and retiring the old Atlas](/tasks/T63-grid-atlas-parity.md)
+- [x] [T63 The grid Atlas: parity, the Station skin and retiring the old Atlas](/tasks/T63-grid-atlas-parity.md)
 - [ ] [T61 The Station theme](/tasks/T61-station-theme.md)
 
 # Future

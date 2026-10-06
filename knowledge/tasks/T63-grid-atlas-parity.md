@@ -3,8 +3,8 @@ type: Task
 title: "T63 — The grid Atlas: parity, the Station skin and retiring the old Atlas"
 description: Everything the continuous Atlas does, on the grid (lenses, selection, study paths,
   tours, labels, phone), the Station skin, then the grid as the only Atlas and the old one deleted.
-tags: [task, m13, todo]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-05T23:44:02Z}
+tags: [task, m13, done]
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T04:08:46Z}
 ---
 
 # Prompt
@@ -50,4 +50,45 @@ layout has replaced the placeholder. In outline:
 
 # Outcome
 
-Not started.
+Done on 2026-10-06, on the developer's word to retire the old Atlas, on the
+branch `grid-dag-view`. The walkthroughs have not been run (see Not checked).
+
+- **On the grid now:**
+  - **A selected note's card:** where you stand, how many notes it requires
+    and build on it, Open the note, its exercise, its study path. No leader
+    line joins the card to the note.
+  - **Study paths and tours:** the notes numbered (a closed folder shows the
+    steps inside it), the links among a path's notes or from each tour stop
+    to the next lit in the blue pen, the rest stepped back, the same cards
+    as before, and the view opening on the whole path.
+  - **Hiding what you have not reached:** those notes and the folders
+    holding none are left out, with the trunks to them.
+  - **Landmarks** have a heavier frame.
+  - The lenses, hover, keyboard and the folder path were already there
+    (T62, T64).
+- **Removed:** the continuous Atlas: the circle packing and forces, contour
+  folders, downhill and gates routing, the terrain, lanes, the distance and
+  rating filters, the Tuning panel and its 13 sliders. `views/contours.js`
+  and `views/terrain.js` are gone; `views/map.js` went from 1,960 lines to
+  319 (the model, settings, lenses and panel) and `views/layout.js` to the
+  worker and the layout's cache. 91 style rules went with them.
+- **Settings:** `folders`, `routing` and the old tuning keys under `[map]`
+  are ignored. What remains is in [the design](/design/map-view.md).
+- **The bench** (`bench/run.py`) reports the grid's layout and routes as
+  `layout_ms` and `routes_ms`; `--folders` is gone.
+- **Not done:**
+  - **The Station skin** of the Atlas, which goes with
+    [T61](/tasks/T61-station-theme.md).
+  - **A label budget:** every note large enough on screen carries its title.
+  - **Keeping notes in place** when the contents change: the layout is
+    worked out afresh.
+  - **On a phone on its side** the lens bar covers the map's top left.
+- **Not checked:** the walkthroughs. `e2e/learn.py` (18 places),
+  `e2e/teacher.py` (4) and `e2e/compose.py` (2) look for the old Atlas's
+  elements (`.m-place`, `.m-link`, `.m-dir`, the Tuning panel, "off a right
+  angle") and will fail until rewritten for the grid, which needs their test
+  bed (the differential geometry bundle), not on this machine.
+- **Checked:** the app's 38 tests and type check; by eye on the abstract
+  algebra bundle: the map, a note pointed at, a note selected, the study
+  path to Abel-Ruffini (57 steps), and a phone both ways up. A tour has not
+  been tried: that bundle has none.

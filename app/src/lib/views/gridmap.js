@@ -8,32 +8,28 @@
 // The layout (grid/nested.js says what one is) is worked out in the layout
 // worker, in cells, with the few routes it leaves to the router
 // (grid/router.js); every zoom frame only places them on the screen and
-// decides what is open. It is chosen with `folders = "grid"` and sits beside
-// the continuous Atlas (map.js) until it does everything that one does (T63).
+// decides what is open. The model, the settings and the lens panel are map.js.
 
 import * as d3 from "d3";
+import { isStudyNote } from "@rdstudio/core/learning";
 import { learner, store } from "../data.svelte.ts";
+import { prerequisites } from "../learn.ts";
 import { conceptHref, trustState, TRUST_LABEL } from "../format.ts";
 import { measure, timed } from "../perf.ts";
 import { h } from "./dom.js";
 import { actions } from "../actions.svelte.ts";
 import { editing } from "../edit.svelte.ts";
-import { understanding } from "../understanding.svelte.ts";
+import { understanding, STATE_LABEL } from "../understanding.svelte.ts";
 import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { plainModel, gridKey, cachedGrid, computeGrid, computeGridRoutes } from "./layout.js";
 import { buildCells, reachedCells, maskPaths } from "./grid/cells.js";
-import { mapView, effective, buildModel, controls, heightLens, lensValue, SYMBOLS, M } from "./map.js";
+import { effective, buildModel, controls, heightLens, lensValue, SYMBOLS, M } from "./map.js";
 
 const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
 const MIN_CELL = 1.6; // folders stay closed while a cell is smaller than this on screen
 const LABELS_AT = 7; // notes carry their titles from this cell size up
 const DOTS_AT = 8; // the dot at each grid corner is drawn from this cell size up
-
-/** The Atlas: on the grid when that is chosen, else the continuous one. */
-export function atlasView(focusRef = "") {
-  return effective().folders === "grid" ? gridView(focusRef) : mapView(focusRef);
-}
 
 // A rectangle on grid lines with its corners cut by `c`, drawn `inset` inside its cells.
 function cut(x0, y0, x1, y1, c, inset = 0) {
@@ -101,9 +97,23 @@ function gridKeyItems(lens, terrain) {
   ];
 }
 
-/** @param {string} [focusRef] a folder to open on */
-export function gridView(focusRef = "") {
-  document.title = `Map · ${store.site.title}`;
+/**
+ * @param {string} [focusRef] a folder to open on
+ * @param {{ path?: string, tour?: any }} [opts] a study path (a note and
+ *   everything it requires, numbered in reading order), or a tour ({key,
+ *   title, stops: [{id, title, text}], start, narrate, onStep, onFinish,
+ *   back}), numbered by stop with a route from each stop to the next
+ */
+export function mapView(focusRef = "", { path = "", tour = null } = {}) {
+  document.title = `${tour ? tour.title : "Map"} · ${store.site.title}`;
+  const goal = !tour && path && store.concepts.get(path);
+  const onMap = (id) => id && store.concepts.has(id) && isStudyNote(store.concepts.get(id));
+  const trail = tour ? [...new Set(tour.stops.map((st) => st.id).filter(onMap))] : goal ? [...prerequisites(goal.id), goal].map((c) => c.id) : null;
+  const step = new Map();
+  if (tour) tour.stops.forEach((st, i) => { if (onMap(st.id) && !step.has(st.id)) step.set(st.id, i + 1); });
+  else (trail || []).forEach((id, i) => step.set(id, i + 1));
+  let atStop = tour ? Math.min(Math.max(0, tour.start || 0), tour.stops.length - 1) : -1;
+  const goalId = () => (tour ? tour.stops[atStop]?.id : path);
   let o = effective();
   const wrap = h("div", { class: "graph-wrap map-wrap gridmap-wrap" });
   const svg = d3.select(wrap).append("svg").attr("class", "gridmap").attr("role", "img").attr("aria-label", "Knowledge map, on a grid");
@@ -118,12 +128,13 @@ export function gridView(focusRef = "") {
   const create = h("div", { class: "map-create", role: "group", "aria-label": "Create here", hidden: true }, newNote, newFolder);
   void editing.known.then(() => { create.hidden = !editing.enabled; });
   const panel = controls({
-    view: () => { if (effective().folders !== "grid") return location.reload(); o = effective(); cache = null; tones = null; arrange(); schedule(); }, // the continuous Atlas is another view
-    tune: () => { o = effective(); cache = null; arrange(); schedule(); },
+    view: () => { o = effective(); cache = null; tones = null; hotFor = null; arrange(); schedule(); },
     readout, summary, key: gridKeyItems,
   });
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
-  wrap.append(panel, crumbs, create, tip, status, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
+  // The selected note: what it is, where you stand, and the way in.
+  const card = h("section", { class: "atlas-card", hidden: true, "aria-live": "polite" });
+  wrap.append(panel, crumbs, create, tip, status, card, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
 
   const back = svg.append("rect").attr("class", "g-sea");
   // One layer, moved and scaled during a gesture and redrawn when it pauses, as on the continuous Atlas.
@@ -137,6 +148,7 @@ export function gridView(focusRef = "") {
   const gTitles = world.append("g").attr("class", "g-titles");
   const gCounts = world.append("g").attr("class", "g-counts");
   const gHot = world.append("g").attr("class", "g-hot");
+  const gSteps = world.append("g").attr("class", "m-steps");
 
   let model = timed("map-model", buildModel);
   let nodes = byId(model); // the model's notes and folders, by id
@@ -148,6 +160,7 @@ export function gridView(focusRef = "") {
   let w = 800, hgt = 600;
   let focus = -1, selected = null; // a folder's index (-1: the whole map); a note's id
   let viewed = false, userMoved = false, left = false;
+  let noteAt = new Map(); // a note's place among the layout's items, by its id in the bundle
   let needsOf = [], neededBy = [], ownPath = new Map(); // each note's links, and the paths the layout drew
   let hovered = -1, hot = null, hotFor = null; // the note pointed at; its dependencies, lit; and what they were worked out for
   const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } })();
@@ -214,7 +227,8 @@ export function gridView(focusRef = "") {
     needsOf = L.items.map(() => []); neededBy = L.items.map(() => []);
     for (const l of L.links) if (l.s >= 2) { needsOf[l.a].push(l.b); neededBy[l.b].push(l.a); }
     ownPath = new Map((L.trunks || []).filter((t) => t.pts).map((t) => [t.a + "|" + t.b, t.pts]));
-    hot = null; hotFor = null;
+    hot = null; hotFor = null; lights.clear();
+    noteAt = new Map(L.items.map((n, i) => [n.ref, i]).filter(([, i]) => L.items[i].kind === "note"));
     if (viewed && (first || !userMoved)) initialView();
     schedule();
     measure("map-settled", 0);
@@ -272,6 +286,7 @@ export function gridView(focusRef = "") {
   function select(id) {
     selected = id;
     hotFor = null;
+    fillCard();
     tip.hidden = true;
     schedule();
   }
@@ -351,25 +366,33 @@ export function gridView(focusRef = "") {
   }
   function lightFor(open) {
     const at = hovered >= 0 ? hovered : selected ? L.items.findIndex((n) => n.id === selected) : -1;
-    const sig = at + "|" + key + "|" + Array.from(open).join("");
+    const sig = (at < 0 && trail ? "trail" + atStop : at) + "|" + key + "|" + Array.from(open).join("");
     if (sig === hotFor) return;
     hotFor = sig;
-    if (at < 0 || !o.showLinks) { hot = null; return; }
+    if ((at < 0 && !trail) || !o.showLinks) { hot = null; return; }
     if (lights.has(sig)) { hot = lights.get(sig); return; }
     const shownAs = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
-    const notes = new Set(), pairs = [], home = L.items[at].parent;
-    const todo = [at], seen = new Set([at]);
-    while (todo.length) {
-      const a = todo.pop();
-      for (const b of needsOf[a]) {
-        const inside = L.items[b].parent === home;
-        if (!inside && a !== at) continue;
-        pairs.push([a, b, "hot req"]);
-        notes.add(b);
-        if (inside && !seen.has(b)) { seen.add(b); todo.push(b); }
+    const notes = new Set(), pairs = [];
+    if (at < 0) {
+      // A study path: the links among its notes. A tour: from each stop to the next.
+      const on = trail.map((id) => noteAt.get(id)).filter((i) => i !== undefined), set = new Set(on);
+      for (const i of on) notes.add(i);
+      if (tour) for (let k = 1; k < on.length; k++) pairs.push([on[k], on[k - 1], "hot req"]);
+      else for (const l of L.links) if (l.s >= (model.hasRatings ? 3 : 2) && set.has(l.a) && set.has(l.b)) pairs.push([l.a, l.b, "hot req"]);
+    } else {
+      const home = L.items[at].parent, todo = [at], seen = new Set([at]);
+      while (todo.length) {
+        const a = todo.pop();
+        for (const b of needsOf[a]) {
+          const inside = L.items[b].parent === home;
+          if (!inside && a !== at) continue;
+          pairs.push([a, b, "hot req"]);
+          notes.add(b);
+          if (inside && !seen.has(b)) { seen.add(b); todo.push(b); }
+        }
       }
+      for (const a of neededBy[at]) { pairs.push([a, at, "hot dep"]); notes.add(a); }
     }
-    for (const a of neededBy[at]) { pairs.push([a, at, "hot dep"]); notes.add(a); }
     const routes = [], asks = [];
     for (const [a, b, cls] of pairs) {
       const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b);
@@ -377,7 +400,8 @@ export function gridView(focusRef = "") {
       if (own) routes.push({ a, b, cls, pts: own, lane: 0 });
       else asks.push({ a: sa, b: sb, cls });
     }
-    const mine = hot = { at, notes, routes };
+    const here = tour ? noteAt.get(goalId()) : undefined;
+    const mine = hot = { at: at >= 0 ? at : here ?? -1, notes, routes };
     if (lights.size > 400) lights.clear();
     lights.set(sig, mine);
     if (!asks.length) return;
@@ -386,6 +410,162 @@ export function gridView(focusRef = "") {
       mine.routes = [...routes, ...asks.map((m, k) => res.routes[k] && { ...m, pts: res.routes[k].pts, lane: 0 }).filter(Boolean)];
       if (hot === mine) schedule();
     });
+  }
+
+  // What you have not reached, hidden when you choose (understanding.svelte.ts):
+  // a note, unless it is reached, on the frontier or on the path being shown; a folder holding none.
+  const hiddenFromYou = (n) => understanding.hiding && !step.has(n.ref) && !(n.kind === "note" ? understanding.visible(n.ref) : understanding.folderVisible(n.ref));
+
+  // ------------------------------------------------------------ selection
+
+  const plural = (k, one, many = one + "s") => `${k} ${k === 1 ? one : many}`;
+  function fillCard() {
+    const i = selected ? L.items.findIndex((n) => n.id === selected) : -1;
+    card.hidden = i < 0;
+    if (i < 0) return;
+    const ref = L.items[i].ref, label = nodes.get(selected)?.label || ref;
+    const st = understanding.state(ref)?.state, needs = needsWork().has(ref);
+    const reqs = needsOf[i].length, builds = neededBy[i].length;
+    const where = needs ? "Needs work." : st ? `${STATE_LABEL[st]}.` : "";
+    const exercises = exerciseNotes().filter((e) => testsOf(e).includes(ref));
+    const open = h("a", { class: "toggle primary", href: conceptHref(ref) }, "Open the note");
+    open.addEventListener("click", () => persist());
+    const close = h("button", { class: "atlas-card-close", type: "button", "aria-label": "Close" }, "×");
+    close.addEventListener("click", () => select(null));
+    card.className = `atlas-card ${needs ? "card-red" : st === "understood" ? "card-green" : ""}`;
+    card.setAttribute("aria-label", label);
+    card.replaceChildren(
+      h("h3", {}, label), close,
+      h("p", {}, `${where} Requires ${plural(reqs, "note")}; ${plural(builds, "note")} ${builds === 1 ? "builds" : "build"} on it.`),
+      h("div", { class: "atlas-card-actions" }, open,
+        exercises.length ? h("a", { class: "toggle", href: conceptHref(exercises[0].id) }, exercises.length === 1 ? "Exercise" : `Exercises (${exercises.length})`) : "",
+        reqs ? h("a", { class: "toggle", href: "#/path/" + ref, title: "This note and everything it requires, in reading order" }, "Study path") : ""));
+  }
+
+  // ------------------------------------------------------------ study paths and tours
+
+  // Step numbers: on each note of the path, and on each closed folder holding
+  // some of it (as the steps inside, e.g. 3–5).
+  function drawSteps(items, shown, open, X, Y, c) {
+    const badges = [];
+    if (trail) {
+      const inside = new Map(); // closed folder -> the steps in it
+      for (const [ref, k] of step) {
+        const i = noteAt.get(ref);
+        if (i === undefined) continue;
+        if (shown[i]) { badges.push({ id: items[i].id, x: X(items[i].gx), y: Y(items[i].gy), text: String(k), last: ref === goalId() }); continue; }
+        const f = up[i].find((p) => shown[p] && !open[p]);
+        if (f !== undefined) inside.set(f, [...(inside.get(f) || []), k]);
+      }
+      const end = tour ? step.get(goalId()) : trail.length;
+      for (const [f, ks] of inside) badges.push({ id: items[f].id, x: X(items[f].gx + items[f].w) - c, y: Y(items[f].gy) + c, text: spans(ks.sort((a, b) => a - b)), last: ks.includes(end) });
+    }
+    gSteps.selectAll("g").data(badges, (b) => b.id).join((enter) => { const g = enter.append("g"); g.append("rect"); g.append("text"); return g; })
+      .attr("class", (b) => `m-step${b.last ? " goal" : ""}`)
+      .attr("transform", (b) => `translate(${b.x},${b.y})`)
+      .each(function (b) {
+        const g = d3.select(this), width = Math.max(16, b.text.length * 6.6 + 8);
+        g.select("rect").attr("x", -width / 2).attr("y", -8).attr("width", width).attr("height", 16).attr("rx", 8);
+        g.select("text").attr("y", 4).text(b.text);
+      });
+  }
+  function spans(nums) {
+    const out = [];
+    for (let i = 0; i < nums.length; i++) {
+      let j = i;
+      while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+      out.push(j > i ? `${nums[i]}–${nums[j]}` : String(nums[i]));
+      i = j;
+    }
+    return out.length > 3 ? out.slice(0, 3).join(", ") + "…" : out.join(", ");
+  }
+  // Show a note of the path: zoom to its folder and light what it depends on.
+  function show(id) {
+    const i = noteAt.get(id);
+    if (i === undefined) return;
+    zoomTo(L.items[i].parent);
+    point(i);
+  }
+
+  // The list of steps beside the map; choosing one zooms to where it is.
+  function trailCard() {
+    const narrowNow = matchMedia("(max-width: 760px), (max-height: 560px)").matches;
+    const list = h("ol", { class: "trail-steps" }, trail.map((id) => {
+      const c = store.concepts.get(id);
+      const b = h("button", { type: "button", title: "Show on the map" }, c.title);
+      b.addEventListener("click", () => show(id));
+      return h("li", { class: id === path ? "goal" : null }, b,
+        h("a", { href: conceptHref(id), "aria-label": `Open ${c.title}`, title: "Open the note" }, "open"));
+    }));
+    const close = h("a", { class: "trail-close", href: "#/map", "aria-label": "Close the study path" }, "×");
+    return h("details", { class: "trail-card", open: !narrowNow },
+      h("summary", {}, `Study path to ${goal.title}`, h("span", { class: "count" }, trail.length)),
+      h("p", { class: "section-note" }, trail.length > 1
+        ? "Read in this order: each note comes after the notes it requires."
+        : "Nothing is marked as required before this note."),
+      list, close);
+  }
+
+  // A tour's card: where you are, its narration, and the way on.
+  function tourCard() {
+    const last = tour.stops.length - 1;
+    const counter = h("p", { class: "tour-count" });
+    const title = h("h3", { class: "tour-stop" });
+    const narration = h("div", { class: "tour-narration" });
+    const prev = h("button", { class: "toggle", type: "button" }, "Previous");
+    const next = h("button", { class: "toggle", type: "button" }, "Next");
+    const open = h("a", { class: "tour-open", title: "Open the note (Back returns to the tour)" }, "Open the note");
+    const stops = tour.stops.map((st, i) => {
+      const b = h("button", { type: "button" }, st.title);
+      b.addEventListener("click", () => go(i));
+      return h("li", {}, b);
+    });
+    const all = h("details", { class: "tour-all" }, h("summary", {}, "All stops"), h("ol", { class: "trail-steps" }, stops));
+    const close = h("a", { class: "trail-close", href: tour.back || "#/learn", "aria-label": "Leave the tour" }, "×");
+    prev.addEventListener("click", () => go(atStop - 1));
+    next.addEventListener("click", () => (atStop === last ? tour.onFinish?.() : go(atStop + 1)));
+    const tell = () => {
+      const st = tour.stops[atStop];
+      counter.textContent = `Stop ${atStop + 1} of ${tour.stops.length}`;
+      title.textContent = st.title;
+      narration.innerHTML = st.text ? tour.narrate(st.text) : "";
+      prev.disabled = atStop === 0;
+      next.textContent = atStop === last ? "Finish" : "Next";
+      open.hidden = !st.id;
+      if (st.id) open.href = conceptHref(st.id);
+      stops.forEach((li, i) => li.classList.toggle("goal", i === atStop));
+    };
+    function go(i) {
+      if (i < 0 || i > last) return;
+      atStop = i;
+      tell();
+      tour.onStep?.(i);
+      const at = onMap(goalId()) ? noteAt.get(goalId()) : undefined;
+      if (at !== undefined && L) zoomTo(L.items[at].parent);
+      hotFor = null;
+      schedule();
+    }
+    const el = h("section", { class: "trail-card tour-card", "aria-label": `Tour: ${tour.title}`, tabindex: "-1" },
+      h("p", { class: "tour-name" }, tour.title), counter, title, narration, h("div", { class: "tour-nav" }, prev, next, open), all, close);
+    el.addEventListener("keydown", (e) => {
+      if (e.target.closest?.("summary, a")) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); next.click(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); prev.click(); }
+    });
+    tell();
+    queueMicrotask(() => tour.onStep?.(atStop));
+    return el;
+  }
+  if (trail) wrap.append(tour ? tourCard() : trailCard());
+
+  // A view that holds every note on the path.
+  function trailFit() {
+    const on = trail.map((id) => noteAt.get(id)).filter((i) => i !== undefined).map((i) => L.items[i]);
+    if (!on.length) return null;
+    const x0 = Math.min(...on.map((n) => n.gx)) - 2, x1 = Math.max(...on.map((n) => n.gx + n.w)) + 2;
+    const y0 = Math.min(...on.map((n) => n.gy)) - 2, y1 = Math.max(...on.map((n) => n.gy + n.h)) + 2, left = inset();
+    const k = Math.min(1.6, (w - left) / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
+    return d3.zoomIdentity.translate(left + (w - left) / 2 - (k * (x0 + x1) * CELL) / 2, hgt / 2 - (k * (y0 + y1) * CELL) / 2).scale(k);
   }
 
   function render() {
@@ -403,7 +583,7 @@ export function gridView(focusRef = "") {
     // layout lists parents before their children.
     const open = new Uint8Array(items.length), shown = new Uint8Array(items.length);
     items.forEach((n, i) => {
-      shown[i] = n.parent < 0 || open[n.parent] ? 1 : 0;
+      shown[i] = (n.parent < 0 || open[n.parent]) && !hiddenFromYou(n) ? 1 : 0;
       if (n.kind === "folder" && shown[i] && c >= MIN_CELL && Math.max(n.w, n.h) * c >= o.detail) open[i] = 1;
     });
     // Focus: the deepest open folder that fills the view: most of its area,
@@ -440,9 +620,10 @@ export function gridView(focusRef = "") {
     // one is drawn over an earlier one with a gap, so a crossing reads as over and under.
     routesFor(open, shown);
     lightFor(open);
-    svg.classed("lit", !!hot);
-    const step = Math.max(2.2, Math.min(5, c / 4.2));
-    const line = (m) => cutPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * step), c * 0.9);
+    svg.classed("lit", !!hot).classed("trail", !!trail);
+    drawSteps(items, shown, open, X, Y, c);
+    const laneStep = Math.max(2.2, Math.min(5, c / 4.2));
+    const line = (m) => cutPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * laneStep), c * 0.9);
     const width = (m) => 1 + Math.log2(m.count) * 0.8;
     gRoutes.selectAll("g").data(drawn, (m) => m.cls[0] + m.a + "|" + m.b).join((el) => { const g = el.append("g"); g.append("path").attr("class", "g-halo"); g.append("path").attr("class", "g-rt"); return g; })
       .attr("class", (m) => m.cls)
@@ -461,7 +642,7 @@ export function gridView(focusRef = "") {
     const notes = items.map((n, i) => i).filter((i) => items[i].kind === "note" && shown[i] && onScreen(items[i]));
     const labels = c >= LABELS_AT;
     gNotes.selectAll("g").data(notes, (i) => items[i].id).join("g")
-      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? " dep" : ""}${hot?.at === i ? " at" : ""}`)
+      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? " dep" : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}`)
       .attr("tabindex", 0).attr("role", "link").attr("aria-label", (i) => nodes.get(items[i].id)?.label || items[i].ref)
       .on("click", (event, i) => { event.stopPropagation(); if (selected === items[i].id) openNote(i); else select(items[i].id); })
       .on("dblclick", (event, i) => { event.stopPropagation(); openNote(i); })
@@ -568,7 +749,9 @@ export function gridView(focusRef = "") {
   function initialView() {
     if (!L) return;
     const target = focusRef ? L.items.findIndex((n) => n.id === "d:" + focusRef) : -1;
-    if (target >= 0) svg.call(zoom.transform, fit(target));
+    const onTrail = trail && trailFit();
+    if (onTrail) svg.call(zoom.transform, onTrail);
+    else if (target >= 0) svg.call(zoom.transform, fit(target));
     else if (saved?.key === key && !T) svg.call(zoom.transform, d3.zoomIdentity.translate(saved.x, saved.y).scale(saved.k));
     else svg.call(zoom.transform, fit(-1));
   }
