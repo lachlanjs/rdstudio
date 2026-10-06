@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "rdstudio": {
+      "type": "local",
+      "command": [
+        "uv",
+        "run",
+        "rdstudio",
+        "mcp",
+        "--agent",
+        "opencode/unknown"
+      ],
+      "enabled": true
+    }
+  }
+}

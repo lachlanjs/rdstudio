@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "rdstudio": {
+      "command": "uv",
+      "args": [
+        "run",
+        "rdstudio",
+        "mcp"
+      ]
+    }
+  }
+}
