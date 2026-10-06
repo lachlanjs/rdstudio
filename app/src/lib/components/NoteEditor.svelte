@@ -6,8 +6,14 @@
   import type { EditorView } from "@codemirror/view";
   import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
-  import { applyFormat, createEditor, setSource, setText, type Format } from "$lib/editor/codemirror.ts";
+  import { askAssist, streamingFill, type Mode, type Reply } from "$lib/assist.ts";
+  import { acceptSuggestion, applyFormat, createEditor, rejectSuggestion, selectionOf, setSource, setText, suggest, type Format } from "$lib/editor/codemirror.ts";
+  import { codeHref } from "$lib/code.ts";
+  import { conceptHref } from "$lib/format.ts";
+  import { render } from "$lib/markdown.ts";
+  import { ai, money } from "$lib/teacher.svelte.ts";
   import FormatBar from "./FormatBar.svelte";
+  import Prose from "./Prose.svelte";
 
   let { session, onDone }: { session: EditSession; onDone: () => void } = $props();
 
@@ -46,6 +52,12 @@
           onSave: () => void session.save(),
           notes,
           source,
+          onSelect: (text) => { selected = text.trim().length > 0; },
+          onSuggestion: (what, sg) => {
+            waiting = false;
+            if (what === "accepted") session.assisted.add(sg.model);
+            outcome = what === "accepted" ? "Accepted into the note. It is yours to edit, and is saved when you save." : "Rejected: the note is as it was.";
+          },
         });
         view.focus();
       } else if (revision && view.state.doc.toString() !== session.body) {
@@ -56,6 +68,7 @@
 
   onMount(() => {
     void session.load();
+    void ai.state().then((st) => { connected = st ? st.connected : null; });
     // Leaving the page with unsaved changes asks first (the draft is kept anyway).
     const leave = (e: BeforeUnloadEvent) => { if (session.dirty) e.preventDefault(); };
     addEventListener("beforeunload", leave);
@@ -63,6 +76,50 @@
   });
 
   const format = (what: Format) => { if (view) applyFormat(view, what); };
+
+  // An agent in the editor (T74): ask the connected model about the selection, or for text to go at the
+  // caret (or in place of the selection). An answer is shown below the bar and changes nothing; proposed
+  // text is a suggestion in the note to accept or reject.
+  let connected = $state<boolean | null>(null); // a model account is connected (null: no server to ask, or not known yet)
+  let prompt = $state("");
+  let selected = $state(false);
+  let busy = $state<Mode | null>(null);
+  let streaming = $state("");
+  let reply = $state<Reply | null>(null);
+  let waiting = $state(false); // a suggestion is in the note, neither accepted nor rejected
+  let outcome = $state("");
+  let failed = $state("");
+  let stop: AbortController | null = null;
+  const dir = $derived(session.id.includes("/") ? session.id.slice(0, session.id.lastIndexOf("/")) : "");
+
+  async function ask(mode: Mode) {
+    if (!view || busy) return;
+    if (waiting) rejectSuggestion(view); // one suggestion at a time
+    const { from, to } = selectionOf(view);
+    busy = mode; streaming = ""; reply = null; outcome = ""; failed = "";
+    stop = new AbortController();
+    try {
+      const r = await askAssist(session.id, { mode, body: view.state.doc.toString(), from, to, prompt: prompt.trim() || undefined, title: session.fields.title || undefined },
+        (soFar) => { streaming = mode === "fill" ? streamingFill(soFar) : soFar; }, stop.signal);
+      reply = r;
+      if (mode === "fill" && r.insert !== null) {
+        // The note may have been typed in since: the place is where the selection is now if it has not moved, else where it was asked.
+        suggest(view, { from: Math.min(r.from, view.state.doc.length), to: Math.min(r.to, view.state.doc.length), insert: r.insert, model: r.model });
+        waiting = true;
+        prompt = "";
+        view.focus(); // so that Ctrl+Enter accepts and Esc rejects
+      } else if (mode === "ask") prompt = "";
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") failed = (err as Error).message;
+    } finally {
+      busy = null; stop = null;
+    }
+  }
+  const sourceHref = (s: Reply["sources"][number]) => (s.kind === "note" ? conceptHref(s.id) : store.code?.items.some((i) => i.id === s.id) ? codeHref(s.id) : null);
+  function closeReply() {
+    if (waiting && view) rejectSuggestion(view);
+    reply = null; streaming = ""; outcome = ""; failed = "";
+  }
 
   async function done() {
     if (session.dirty && !(await session.save())) return;
@@ -92,7 +149,61 @@
       </span>
     </div>
     <FormatBar onformat={format} hidden={!session.source || session.detailsOpen} />
+    {#if connected !== null && session.source && !session.detailsOpen}
+      {#if connected}
+        <form class="assist-bar" aria-label="Ask the model" onsubmit={(e) => { e.preventDefault(); void ask(selected && !prompt.trim() ? "ask" : "fill"); }}>
+          <input type="text" bind:value={prompt} disabled={busy !== null} aria-label="Your question, or what to write"
+            placeholder={selected ? "Ask about the selection, or say how to rewrite it" : "Say what to write at the cursor, or ask about the note"} />
+          <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void ask("ask")}
+            title="An answer beside the note; nothing in it changes">Ask</button>
+          <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void ask("fill")}
+            title={selected ? "Propose text in place of the selection, to accept or reject" : "Propose text at the cursor, to accept or reject"}>{selected ? "Rewrite" : "Write here"}</button>
+          {#if busy}<button class="toggle" type="button" onclick={() => stop?.abort()}>Stop</button>{/if}
+        </form>
+      {:else}
+        <p class="assist-off">To ask a model about this note or have it draft text, <a href="#/teacher">connect a model account</a>.</p>
+      {/if}
+    {/if}
   </div>
+
+  {#if busy || reply || failed}
+    <section class="assist-reply" aria-live="polite" aria-label="The model's reply">
+      <header>
+        <b>{busy === "fill" || reply?.mode === "fill" ? "Suggested text" : "Answer"}</b>
+        {#if busy}<span class="assist-meta">Writing…</span>
+        {:else if reply}<span class="assist-meta">{reply.model} · {money(reply.cost)}</span>{/if}
+        <button class="atlas-card-close" type="button" aria-label="Close the reply" onclick={closeReply}>×</button>
+      </header>
+      {#if failed}<p class="edit-message bad">{failed}</p>{/if}
+      {#if busy}
+        {#if streaming}<pre class="assist-stream">{streaming}</pre>{/if}
+      {:else if reply}
+        {#if reply.mode === "ask"}
+          <Prose html={render(reply.answer, { dir })} class="prose assist-answer" />
+        {:else if reply.insert === null}
+          <p class="edit-message">No text was proposed.</p>
+          {#if reply.answer}<Prose html={render(reply.answer, { dir })} class="prose assist-answer" />{/if}
+        {:else}
+          {#if reply.answer}<Prose html={render(reply.answer, { dir })} class="prose assist-answer" />{/if}
+          {#if waiting}
+            <p class="assist-actions">
+              <span>It is marked in the note.</span>
+              <button class="toggle primary" type="button" onclick={() => view && acceptSuggestion(view)}>Accept</button>
+              <button class="toggle" type="button" onclick={() => view && rejectSuggestion(view)}>Reject</button>
+            </p>
+          {:else if outcome}<p class="assist-actions"><span>{outcome}</span></p>{/if}
+        {/if}
+        {#if reply.sources.length}
+          <p class="assist-sources">Drew on:
+            {#each reply.sources as s, k (s.kind + s.id + (s.line ?? "") + k)}
+              {@const href = sourceHref(s)}
+              {#if href}<a {href} target="_blank" rel="noopener">{s.kind === "note" ? s.title : `${s.id}${s.line ? `:${s.line}` : ""}`}</a>{:else}<code>{s.id}{s.line ? `:${s.line}` : ""}</code>{/if}{k < reply.sources.length - 1 ? ", " : ""}
+            {/each}
+          </p>
+        {/if}
+      {/if}
+    </section>
+  {/if}
 
   {#if session.message && session.status !== "conflict"}
     <p class={["edit-message", session.status === "error" && "bad"]}>{session.message}</p>

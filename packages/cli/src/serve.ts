@@ -26,6 +26,7 @@ import * as learner from "./learner.ts";
 import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
+import * as assist from "./assist.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
@@ -288,6 +289,7 @@ const SaveBody = z.object({
   base: z.string().nullable().openapi({ description: "The version the edit started from; null creates the note." }),
   body: z.string().nullable().optional(),
   meta: Meta.nullable().optional().openapi({ description: "Fields to set; null removes one." }),
+  assist: z.array(z.string()).optional().openapi({ description: "Models whose proposed text was accepted into this edit: named in the note's stamp." }),
 }).openapi("NoteSave");
 const SaveReply = z.object({
   note: NoteSourceSchema, created: z.boolean(), changed: z.boolean(), significant: z.boolean(),
@@ -328,6 +330,17 @@ const getNote = createRoute({
     403: { description: "Host not allowed", content: { "application/json": { schema: ErrorBody } } },
     404: { description: "No such note", content: { "application/json": { schema: ErrorBody } } },
   },
+});
+const assistNote = createRoute({
+  method: "post", path: "/api/notes/{id}/assist",
+  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
+  request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
+    mode: z.enum(["ask", "fill"]), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+  }).openapi("NoteAssist") } }, required: true } },
+  responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
+    400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "No model account is connected", content: { "application/json": { schema: ErrorBody } } } },
 });
 const putNote = createRoute({
   method: "put", path: "/api/notes/{id}", summary: "Save an edit to a note, or create it",
@@ -581,6 +594,28 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     });
   }) as never);
 
+  // An agent in the editor (T74): the note is the editor's text, not the file's, so nothing need be saved first.
+  app.openapi(assistNote, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (Number(c.req.header("content-length") ?? 0) > MAX_NOTE_BYTES) return refuse(c, 413, "note too large");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const str = (v: unknown) => (typeof v === "string" ? v : undefined), num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0);
+    const a: assist.Ask = { note: c.req.param("id") ?? "", mode: body.mode as assist.Mode, body: str(body.body) ?? "", from: num(body.from), to: num(body.to), prompt: str(body.prompt), title: str(body.title) };
+    if (!(assist.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${assist.MODES.join(", ")}`);
+    if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Teacher page.");
+    try { assist.prepare(cfg, a); } catch (err) { return refuse(c, 400, (err as Error).message); } // what is wrong with the request, before anything is sent
+    return streamSSE(c, async (stream) => {
+      try {
+        const { reply, seen } = await assist.ask(cfg, a, (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); });
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
+      }
+    });
+  }) as never);
+
   app.openapi(listDraftsRoute, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
     return json(c, 200, learner.enabled(cfg) ? teacher.listDrafts(cfg) : []);
@@ -649,6 +684,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try {
       const saved = saveNote(cfg.knowledgeDir, c.req.param("id") ?? "", {
         actor, base: edit.base as string | null, body: edit.body as string | null | undefined, meta: edit.meta as Record<string, unknown> | null | undefined,
+        assist: Array.isArray((edit as { assist?: unknown }).assist) ? ((edit as { assist: unknown[] }).assist.filter((m) => typeof m === "string") as string[]) : null,
       });
       if (saved.changed) onWrite?.();
       return json(c, 200, saved, true);

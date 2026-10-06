@@ -143,6 +143,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T71 The Atlas: a folderless view, room for routes, a panel that folds](/tasks/T71-atlas-flat-and-room.md)
 - [x] [T72 The Atlas: feeders, where a trunk's links come from inside a folder](/tasks/T72-feeders.md)
 - [ ] [T73 Bring the browser walkthroughs up to the grid Atlas](/tasks/T73-walkthroughs-grid-atlas.md)
+- [x] [T74 An agent in the editor: ask about a passage, or have text proposed](/tasks/T74-agent-in-editor.md)
 
 # Future
 

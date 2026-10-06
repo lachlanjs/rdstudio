@@ -4,6 +4,7 @@
 
 # Design
 
+* [An agent in the editor](assist.md) - While a note is edited, the connected model can be asked about a passage, or asked for text to go at a place in it; an answer is shown beside the note and proposed text is a suggestion to accept or reject.
 * [Architecture](architecture.md) - Components, repository layout, and data flow of rdstudio.
 * [Conventions](conventions.md) - How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 * [Dashboard design](dashboard-design.md) - Visual tokens and layout rules for the dashboard, and why they were chosen.

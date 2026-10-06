@@ -1,0 +1,156 @@
+"""End to end: an agent in the editor (T74), in headless Chromium, on a fresh
+copy of the nanosim test bed, with a fake OpenRouter in place of the model.
+Run with: mise run e2e
+
+While a note is edited: ask about a selected passage (an answer beside the
+note, nothing changed); have text written at the cursor (a suggestion in the
+note, accepted or rejected); the model is given the note, the notes it links
+to and the code named; and a saved note's stamp names the model.
+"""
+import json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from playwright.sync_api import sync_playwright, expect
+
+REPO = Path(__file__).resolve().parent.parent
+OUT = REPO / ".e2e"
+OUT.mkdir(exist_ok=True)
+TMP = Path(tempfile.mkdtemp(prefix="rdstudio-e2e-assist-"))
+ROOT = TMP / "nanosim"
+subprocess.run([sys.executable, str(REPO / "bench/nanosim.py"), str(ROOT)], check=True, stdout=subprocess.DEVNULL)
+NOTE = ROOT / "knowledge/design/forces.md"
+
+CODE = "```cpp\nVec3 minimum_image(Vec3 d, double box);\n```"
+FAKE_REQUESTS = []
+class FakeOpenRouter(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        FAKE_REQUESTS.append(body)
+        said = "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
+        if "Write the text to go at the marked place" in said:
+            reply = f"<insert>\nFrom `src/nanosim/core/vec3.hpp`:\n\n{CODE}\n</insert>\n<why>\nThe declaration of `minimum_image`, copied from the header.\n</why>" if "minimum_image" in said.split("## What to do")[-1] \
+                else "<insert>softened at short range</insert>\n<why>Shorter, and says the same.</why>"
+        else:
+            reply = "It is **softened** so that close pairs do not blow up. See [The particle system](/design/particle-system.md)."
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.end_headers()
+        for i in range(0, len(reply), 9):
+            self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'content': reply[i:i + 9]}}]})}\n\n".encode())
+            self.wfile.flush()
+        self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {}}], 'usage': {'prompt_tokens': 2000, 'completion_tokens': 60, 'cost': 0.0031}})}\n\n".encode())
+        self.wfile.write(b"data: [DONE]\n\n")
+fake = ThreadingHTTPServer(("127.0.0.1", 0), FakeOpenRouter)
+threading.Thread(target=fake.serve_forever, daemon=True).start()
+
+ENV = {**os.environ, "RDSTUDIO_OPENROUTER_URL": f"http://127.0.0.1:{fake.server_address[1]}", "OPENROUTER_API_KEY": "sk-or-v1-fake0123456789",
+       "XDG_CONFIG_HOME": str(TMP / "config"), "XDG_DATA_HOME": str(TMP / "data")}
+with socket.socket() as s:
+    s.bind(("127.0.0.1", 0))
+    PORT = s.getsockname()[1]
+URL = f"http://localhost:{PORT}/"
+server = subprocess.Popen(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "serve", "--port", str(PORT)], env=ENV, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+for _ in range(200):
+    try:
+        socket.create_connection(("127.0.0.1", PORT), 0.2).close()
+        break
+    except OSError:
+        time.sleep(0.1)
+
+results = []
+def check(name, ok, detail=""):
+    results.append((name, ok))
+    print(("PASS " if ok else "FAIL ") + name + (f"  ({detail})" if detail and not ok else ""))
+def sent(body):
+    return "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
+
+errors = []
+with sync_playwright() as pw:
+    browser = pw.chromium.launch()
+    p = browser.new_page(viewport={"width": 1280, "height": 900})
+    p.on("pageerror", lambda e: errors.append(str(e)))
+    p.on("console", lambda m: m.type == "error" and errors.append(m.text))
+    before = NOTE.read_text()
+
+    p.goto(URL + "?nosw#/k/design/forces")
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    bar = p.locator(".assist-bar")
+    expect(bar).to_be_visible()
+    check("with a model account connected, the editor has a bar to ask from", bar.get_by_role("button", name="Ask").is_disabled() and bar.get_by_role("button", name="Write here").is_disabled())
+    # Source view, so that offsets on screen are the text's.
+    p.get_by_role("button", name="Source").click()
+
+    # Ask about a selected passage.
+    first = p.locator(".cm-line", has_text=re.compile(r"\w{4,}")).nth(1)
+    first.click(click_count=3)
+    expect(bar.get_by_role("button", name="Rewrite")).to_be_visible()
+    bar.get_by_role("textbox").fill("Why is this so?")
+    bar.get_by_role("button", name="Ask").click()
+    panel = p.locator(".assist-reply")
+    expect(panel.locator(".assist-answer")).to_contain_text("softened", timeout=15000)
+    check("Ask: an answer beside the note, with a link to a note, the model and the cost", panel.locator(".assist-answer a", has_text="The particle system").count() == 1 and "$" in panel.locator(".assist-meta").inner_text() or "¢" in panel.locator(".assist-meta").inner_text(), panel.inner_text())
+    check("…and what it drew on is listed", panel.locator(".assist-sources a").count() >= 1, panel.inner_text())
+    said = sent(FAKE_REQUESTS[-1])
+    check("…the model was given the note with the passage marked, and the notes it links to", "⟦" in said and "⟧" in said and "Notes this one links to" in said and "Why is this so?" in said, said[-600:])
+    check("…and nothing in the note changed", p.locator(".edit-status").inner_text() == "No changes" and p.locator(".cm-suggest").count() == 0)
+    panel.get_by_role("button", name="Close the reply").click()
+
+    # Rewrite the selection: a suggestion, rejected.
+    first.click(click_count=3)
+    old = p.evaluate("getSelection().toString()").strip()
+    bar.get_by_role("button", name="Rewrite").click()
+    sg = p.locator(".cm-suggest")
+    expect(sg).to_contain_text("softened at short range", timeout=15000)
+    check("Rewrite: the passage struck through and the proposed text beside it, to accept or reject", p.locator(".cm-suggest-old").count() >= 1 and sg.get_by_role("button", name="Accept").count() == 1)
+    p.screenshot(path=str(OUT / "assist-rewrite.png"))
+    sg.get_by_role("button", name="Reject").click()
+    check("Reject: the suggestion goes and the note is as it was", p.locator(".cm-suggest").count() == 0 and p.locator(".edit-status").inner_text() == "No changes" and old[:20] in p.inner_text(".cm-content"))
+
+    # Write at the cursor: code found by name, accepted.
+    p.locator(".cm-line").last.click()
+    p.keyboard.press("Control+End")
+    bar.get_by_role("textbox").fill("Insert the declaration of `minimum_image` here.")
+    bar.get_by_role("button", name="Write here").click()
+    expect(sg).to_contain_text("minimum_image(Vec3 d, double box)", timeout=15000)
+    said = sent(FAKE_REQUESTS[-1])
+    check("Write here: the model was given the place (⟦HERE⟧) and the code named, from the repository", "⟦HERE⟧" in said and "Code from the repository" in said and "minimum_image" in said.split("## Code from the repository")[1], said[-800:])
+    check("…the reply says why, and lists the file it drew on", "copied from the header" in panel.inner_text() and "vec3.hpp" in panel.locator(".assist-sources").inner_text(), panel.inner_text())
+    p.screenshot(path=str(OUT / "assist-write.png"))
+    p.keyboard.press("Control+Enter")
+    check("Accept (Ctrl+Enter): the text is in the note, which now has unsaved changes", p.locator(".cm-suggest").count() == 0 and "minimum_image(Vec3 d, double box)" in p.inner_text(".cm-content") and p.locator(".edit-status").inner_text() == "Unsaved changes")
+    check("…and nothing was written until it is saved", NOTE.read_text() == before)
+    p.get_by_role("button", name="Save").click()
+    expect(p.locator(".edit-status")).to_have_text("Saved")
+    after = NOTE.read_text()
+    check("Saved: the note holds the text, and its stamp names the model beside the person", "minimum_image(Vec3 d, double box)" in after and re.search(r"by: .*human:\S+ with openrouter/", after) is not None, after[:400])
+
+    # No account: the bar says how to connect one.
+    browser.close()
+
+server.terminate()
+ENV2 = {k: v for k, v in ENV.items() if k != "OPENROUTER_API_KEY"}
+server = subprocess.Popen(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "serve", "--port", str(PORT)], env=ENV2, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+for _ in range(200):
+    try:
+        socket.create_connection(("127.0.0.1", PORT), 0.2).close()
+        break
+    except OSError:
+        time.sleep(0.1)
+with sync_playwright() as pw:
+    browser = pw.chromium.launch()
+    p = browser.new_page(viewport={"width": 1280, "height": 900})
+    p.goto(URL + "?nosw#/k/design/forces")
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    expect(p.locator(".assist-off")).to_be_visible()
+    check("with no model account, the editor says how to connect one and offers nothing to ask", p.locator(".assist-bar").count() == 0 and p.locator(".assist-off a").get_attribute("href") == "#/teacher")
+    browser.close()
+
+check("no errors in the browser console", not errors, errors[:5])
+server.terminate()
+shutil.rmtree(TMP, ignore_errors=True)
+failed = [n for n, ok in results if not ok]
+print(f"\n{len(results) - len(failed)}/{len(results)} passed; screenshots in {OUT}")
+sys.exit(1 if failed else 0)

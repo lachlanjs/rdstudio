@@ -3,7 +3,7 @@ type: Idea
 title: "Project mode: watching an agent's path through the base, and an agent in the editor"
 description: "Two ideas from the developer for project mode: show which notes an agent reads and writes as it works, as a path on the Atlas; and let the person editing a note ask an agent about a passage or have it fill one in."
 tags: [idea, project-mode, agents, atlas, editor]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-07T10:00:00Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T23:50:32Z}
 ---
 
 # The ideas
@@ -57,3 +57,12 @@ Not the developer's words; what exists to build on, and what to decide.
   or a local agent through MCP); how a suggestion is marked in the note's
   `generated` field and trust, since OKF records who wrote what; and whether
   Fill may add links and files, or text only.
+
+# Where each stands
+
+- **An agent in the editor** is built ([T74](/tasks/T74-agent-in-editor.md),
+  [design](/design/assist.md)), 2026-10-07. The three things to decide were
+  decided by the developer: the tutor's OpenRouter account pays; the note's
+  stamp names the model; and proposed text is a suggestion in the note, which
+  may hold links and code.
+- **The agent's path** is not started.

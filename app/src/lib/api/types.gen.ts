@@ -166,6 +166,15 @@ export type TutorAsk = {
     confidence?: string;
 };
 
+export type NoteAssist = {
+    mode: 'ask' | 'fill';
+    body: string;
+    from: number;
+    to: number;
+    prompt?: string;
+    title?: string;
+};
+
 export type DraftSummary = {
     exercise: string;
     updated: string | null;
@@ -359,6 +368,10 @@ export type NoteSave = {
     meta?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Models whose proposed text was accepted into this edit: named in the note's stamp.
+     */
+    assist?: Array<string>;
 };
 
 export type GetApiLearnerData = {
@@ -925,6 +938,47 @@ export type PostApiTeacherTutorByIdResponses = {
 };
 
 export type PostApiTeacherTutorByIdResponse = PostApiTeacherTutorByIdResponses[keyof PostApiTeacherTutorByIdResponses];
+
+export type PostApiNotesByIdAssistData = {
+    body: NoteAssist;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}/assist';
+};
+
+export type PostApiNotesByIdAssistErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No model account is connected
+     */
+    409: Error;
+};
+
+export type PostApiNotesByIdAssistError = PostApiNotesByIdAssistErrors[keyof PostApiNotesByIdAssistErrors];
+
+export type PostApiNotesByIdAssistResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiNotesByIdAssistResponse = PostApiNotesByIdAssistResponses[keyof PostApiNotesByIdAssistResponses];
 
 export type GetApiTeacherDraftsData = {
     body?: never;

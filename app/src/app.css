@@ -672,6 +672,22 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .edit-status.error, .edit-status.conflict { color: var(--stale); font-weight: 600; }
 .edit-message { max-width: var(--measure); font-size: 14.5px; color: var(--ink-soft); margin: 10px auto; }
 .edit-message.bad { color: var(--stale); }
+/* An agent in the editor (T74): the bar to ask from, and its reply. */
+.assist-bar { display: flex; gap: 6px; align-items: center; padding: 6px 0 8px; border-bottom: 1px solid var(--rule); }
+.assist-bar input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: 14.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-bar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.assist-bar .toggle { white-space: nowrap; }
+.assist-off { margin: 0; padding: 6px 0 8px; font-size: 13.5px; color: var(--ink-faint); border-bottom: 1px solid var(--rule); }
+.assist-reply { position: relative; max-width: var(--measure); margin: 10px auto 4px; padding: 10px 14px 12px; background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); }
+.assist-reply header { display: flex; align-items: baseline; gap: 12px; margin: 0 28px 6px 0; font: 13px var(--font-ui); }
+.assist-reply header b { font-weight: 700; color: var(--ink); }
+.assist-meta { color: var(--ink-faint); }
+.assist-stream { margin: 0; white-space: pre-wrap; font: 14px/1.55 var(--font-mono); color: var(--ink-soft); max-height: 40vh; overflow: auto; }
+.assist-answer { font-size: 16px; max-height: 50vh; overflow: auto; }
+.assist-answer > :first-child { margin-top: 0; } .assist-answer > :last-child { margin-bottom: 0; }
+.assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
+.assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
+.assist-sources code { font-size: 12.5px; }
 .editor { max-width: var(--measure); min-height: 60vh; }
 
 .edit-conflict {

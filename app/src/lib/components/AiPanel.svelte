@@ -22,7 +22,7 @@
     if (back && RETURN[back]) status = RETURN[back];
     void ai.state().then((s) => { st = s; loaded = true; });
   });
-  const JOB: Record<string, string> = { hint: "Hints", feedback: "Feedback", discuss: "Discussion", marking: "Marking", check: "Checking the connection" };
+  const JOB: Record<string, string> = { hint: "Hints", feedback: "Feedback", discuss: "Discussion", marking: "Marking", write: "Writing in notes", "note-ask": "Answers in the editor", "note-fill": "Text proposed in the editor", check: "Checking the connection" };
   const sorted = (m: Record<string, number>) => Object.entries(m).sort((a, b) => b[1] - a[1]);
 
   async function act(f: () => Promise<unknown>) {

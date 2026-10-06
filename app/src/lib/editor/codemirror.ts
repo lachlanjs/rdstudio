@@ -16,8 +16,10 @@ import { format, formatKeymap, type Format } from "./commands.ts";
 import { livePreview, livePreviewTheme } from "./livePreview.ts";
 import { mathsSyntax } from "./maths.ts";
 import { pinsField, pinsTheme } from "./pins.ts";
+import { setSuggestion, suggestionHandler, suggestions, type Suggestion } from "./suggest.ts";
 
-export type { Format };
+export type { Format, Suggestion };
+export { acceptSuggestion, pendingSuggestion, rejectSuggestion } from "./suggest.ts";
 
 export interface EditorOptions {
   doc: string;
@@ -32,6 +34,8 @@ export interface EditorOptions {
   inline?: boolean;
   /** The selection changed: its text ("" when nothing is selected). */
   onSelect?: (text: string) => void;
+  /** A suggestion (suggest.ts) was accepted into the text, or rejected. */
+  onSuggestion?: (what: "accepted" | "rejected", s: Suggestion) => void;
 }
 
 const mode = new Compartment();
@@ -103,7 +107,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       markdown({ base: markdownLanguage, extensions: [mathsSyntax], completeHTMLTags: false }),
       syntaxHighlighting(highlight),
       theme,
-      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : []),
+      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : [suggestions, suggestionHandler.of((what, s) => opts.onSuggestion?.(what, s))]),
       mode.of(modeExtensions(Boolean(opts.source))),
       closeBrackets(),
       // Only brackets: closing quotes would get in the way of apostrophes in prose.
@@ -111,6 +115,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       linkCompletion(opts.notes),
       placeholder(opts.placeholder ?? "Write the note here. # for a heading, [[ to link to another note, $x$ for maths."),
       EditorView.contentAttributes.of({ "aria-label": opts.label, spellcheck: "true", autocapitalize: "sentences", autocorrect: "on" }),
+      // (The suggestion's own keys, Mod-Enter and Escape, come first: suggest.ts.)
       keymap.of([
         { key: "Mod-s", preventDefault: true, run: () => { opts.onSave(); return true; } },
         ...formatKeymap,
@@ -145,6 +150,14 @@ export function applyFormat(view: EditorView, what: Format): void {
 export function setSource(view: EditorView, source: boolean): void {
   view.dispatch({ effects: mode.reconfigure(modeExtensions(source)) });
 }
+
+/** Show a suggestion in the text, in view (null takes one away). */
+export function suggest(view: EditorView, s: Suggestion | null): void {
+  view.dispatch({ effects: s ? [setSuggestion.of(s), EditorView.scrollIntoView(s.to, { y: "center" })] : setSuggestion.of(null) });
+}
+
+/** The selection, or the caret (from === to), as offsets in the text. */
+export const selectionOf = (view: EditorView): { from: number; to: number } => { const r = view.state.selection.main; return { from: r.from, to: r.to }; };
 
 /** Replace the whole text (a restored draft, or their version after a conflict). */
 export function setText(view: EditorView, text: string): void {

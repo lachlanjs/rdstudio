@@ -3,9 +3,7 @@ type: Design
 title: Conventions
 description: How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 tags: [conventions, okf]
-generated:
-  by: claude-code/claude-opus-5-5
-  at: 2026-09-23T08:46:55Z
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T23:50:31Z}
 ---
 
 The [OKF spec](/references/okf-spec.md) is ground truth
@@ -27,6 +25,10 @@ among what OKF allows.
 - `verified` is appended to by humans (`rdstudio verify <path>`).
 - A human verification whose latest `at` precedes `generated.at` is shown as
   **stale** in the Review tab ([decision](/decisions/verification-staleness.md)).
+- When a person accepts text a model proposed in the editor
+  ([an agent in the editor](/design/assist.md)), `by` names the model beside
+  them: `human:<id> with openrouter/<model>`. The edit is otherwise theirs:
+  `at` moves only if the edit is significant.
 
 # Concept types (starting vocabulary)
 
