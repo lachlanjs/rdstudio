@@ -4,7 +4,7 @@
 // A step costs its length, more in a cell other routes use (`crowd`) or run
 // beside (`near`), plus `climb` for each change of height (a folder's wall),
 // a little for each turn, and `foreign` for each cell of a folder the route
-// has no business in. Notes and title rows are closed. A route ends on the
+// has no business in. Notes are closed. A route ends on the
 // edge of the block it joins.
 //
 // Unlike the sketch, the search's arrays are made once per layout and reused,
@@ -13,7 +13,9 @@
 
 import { foldersOf } from "./cells.js";
 
-export const ROUTER_DEFAULTS = { climb: 5, turn45: 0.35, turn90: 0.9, foreign: 2.5, crowd: 0.45, near: 0, haste: 1.6 };
+// Turns are dear (the sketch charged 0.35 and 0.9): the router draws back links and the links lit under the
+// pointer, a few at a time, and each should take few turns.
+export const ROUTER_DEFAULTS = { climb: 5, turn45: 1.5, turn90: 3, foreign: 2.5, crowd: 0.2, near: 0, haste: 3.2 };
 
 const DX = [1, 1, 0, -1, -1, -1, 0, 1], DY = [0, 1, 1, 1, 0, -1, -1, -1];
 const BUSY = 3; // routes in a cell beyond this cost no more: a full corridor is full, and the search stays short
@@ -87,8 +89,8 @@ export function makeRouter(layout, cells, opts = {}) {
     const A = items[a], B = items[b];
     const ends = new Map(ring(B).map((r) => [r[0], r]));
     // What is left at least: the steps to the block's edge, overstated by
-    // `haste`. At 1.6 a search visits a seventh of the cells it does at 1,
-    // for routes 3% longer (60 trunks on a 552 by 540 grid).
+    // `haste`. With turns as dear as they are, a search at 1.6 took 130 ms on a
+    // grid of a thousand notes (1,045 by 1,185 cells); at 3.2 it takes 9.
     const bx0 = B.gx - 1, bx1 = B.gx + B.w, by0 = B.gy - 1, by1 = B.gy + B.h;
     const guess = (x, y) => { const dx = Math.max(bx0 - x, x - bx1, 0), dy = Math.max(by0 - y, y - by1, 0); return haste * (Math.max(dx, dy) + 0.414 * Math.min(dx, dy)); };
     const starts = new Map();

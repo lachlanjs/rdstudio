@@ -308,3 +308,13 @@ Then, the same day, on the developer's word:
   row inside (`titles: "edge"` on the layout; no cells are closed for it).
   Two free rows under the edge keep a subfolder's title clear of its
   parent's.
+
+**One layout kept (2026-10-06).** On the developer's word the nested layout
+is the grid Atlas's only one. The snapped layout (T62's placeholder) and the
+shared-layer one are deleted with their settings (`gridLayout`), tests and
+the code paths that drew them; `grid/snap.js` and `grid/dag.js` are gone and
+`grid/nested.js` says what a layout is. Nothing on the grid depends on the
+continuous Atlas's layout any more, so T63 can delete that with the rest.
+The router's search is greedier (3.2, was 1.6): a link between folders on a
+grid of a thousand notes takes 9 ms, where the dearer turns had made it 130.
+The app's 38 tests pass.

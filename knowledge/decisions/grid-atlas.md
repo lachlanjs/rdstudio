@@ -21,11 +21,10 @@ Decided by the developer on 2026-10-05.
 - **The old Atlas stays switchable** until the grid does everything it does,
   and is deleted then: the circle packing and forces, contour folders,
   downhill and gates routing, and the terrain.
-- **The layout is a placeholder.** Positions come from the sketch's
-  snap-to-grid layout behind a small interface. The searched layout
-  (`design/tools/gridopt.mjs`, simulated annealing) is not ported, because
-  the layout of notes and links is to be redesigned around the directed
-  acyclic graphs found in each folder ([T64](/tasks/T64-dag-layout.md)).
+- **The layout** is each folder as a layered DAG of its items, and one item
+  in its parent's ([T64](/tasks/T64-dag-layout.md)). The sketch's snapped
+  layout was a placeholder and is gone; its searched layout
+  (`design/tools/gridopt.mjs`, simulated annealing) was never ported.
 
 # Assumption
 

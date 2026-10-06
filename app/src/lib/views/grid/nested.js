@@ -1,5 +1,5 @@
-// The grid Atlas's nested layout (T64): each folder is laid out on its own as
-// a layered DAG of its items, and is then one item in its parent's.
+// The grid Atlas's layout (T64): each folder is laid out on its own as a
+// layered DAG of its items, and is then one item in its parent's.
 //
 //   Items     A folder's notes, and its subfolders, each already laid out and
 //             now a single block. A link belongs to the lowest folder holding
@@ -24,18 +24,27 @@
 //             of the item requiring it. Trunks from one item share their way
 //             (a bus). One that passes layers keeps a free lane in each.
 //
-// The result is the plain data grid/snap.js describes, and `trunks`: for each
-// pair of items joined at their level, { a, b, count, back, implied, pts },
-// where a requires b and pts runs from b to a in cells (none for a back or
-// implied trunk, which the router finds a way for when it is wanted).
-
-import { levelled, PAD } from "./snap.js";
-import { greedyOrder } from "./dag.js";
+// The result is plain data, and nothing after it knows how it was made:
+//   { W, H, flow,                the grid, in cells, and the top level's direction
+//     items: [{ id, ref, kind,   "note" or "folder"; the root is not an item;
+//                                a parent comes before its children
+//               parent, depth,   the parent's index (-1 at the top), 1 at the top
+//               gx, gy, w, h }], a block of cells; a folder's is its whole region,
+//                                and its title sits on its top edge
+//     links: [{ a, b, s,         note to note: item indices (a links to b), the rating,
+//               level, placed }] the lowest folder holding both ends (-1: the root),
+//                                and false when the link runs against the layout
+//     trunks: [{ a, b, count,    item to item, at one level: a requires b, for
+//                back, implied,  `count` links; against the order; implied by a
+//                pts }] }        longer way; and its path from b to a in cells
+//                                (none for a back or implied trunk, which the
+//                                router finds a way for when it is wanted)
 
 export const NOTE_W = 14, NOTE_H = 4; // room for two lines of a title
 const GAP = 2, GAP_FOLDERS = 3; // clear cells between neighbours in a layer
 const CHANNEL = 3; // free cells between two layers, at least
-const HEAD = 2; // a folder's title sits on its top edge (`titles: "edge"`); these free rows keep a subfolder's title clear of it
+export const PAD = 2; // cells between a folder's wall and its contents
+const HEAD = 2; // free rows under a folder's top edge, where its title sits: they keep a subfolder's title clear of it
 const MARGIN = 3; // free cells around the whole map
 const MIN_FOLDER = 12; // a folder is at least this wide, for its title
 const SHAPE = 1.4; // a folder's contents aim to be this much wider than tall
@@ -269,5 +278,53 @@ export function nestedLayout(model, { flow = "up" } = {}) {
   const under = (i, level) => { while (items[i].parent !== level) i = items[i].parent; return i; };
   for (const l of links) l.placed = l.s >= 2 && !backward.has(under(l.a, l.level) + "|" + under(l.b, l.level));
   const root = box.get(model.root);
-  return { W: root.w + 2 * MARGIN, H: root.h + 2 * MARGIN, flow, titles: "edge", items, links, trunks };
+  return { W: root.w + 2 * MARGIN, H: root.h + 2 * MARGIN, flow, items, links, trunks };
+}
+
+// The layout's links: each with the lowest folder that holds both its ends.
+function levelled(items, edges, byRef) {
+  const up = (i) => { const out = []; for (let p = items[i].parent; p >= 0; p = items[p].parent) out.push(p); return out; };
+  const links = [];
+  for (const [from, to, s] of edges) {
+    const a = byRef.get(from), b = byRef.get(to);
+    if (a === undefined || b === undefined || a === b) continue;
+    const above = new Set(up(b));
+    links.push({ a, b, s, level: up(a).find((p) => above.has(p)) ?? -1, placed: false });
+  }
+  return links;
+}
+
+// An order of n nodes in which as much weight of arc as possible points
+// forwards (Eades, Lin and Smyth, 1993): nodes nothing points to are taken
+// first and nodes pointing to nothing last, and otherwise the node with the
+// most weight out over weight in is taken first. Ties go to the lower index,
+// so the same graph gives the same order. Returns each node's place.
+export function greedyOrder(n, arcs) {
+  const out = Array.from({ length: n }, () => new Map()), into = Array.from({ length: n }, () => new Map());
+  for (const [p, q, w] of arcs) { if (p === q) continue; out[p].set(q, (out[p].get(q) || 0) + w); into[q].set(p, (into[q].get(p) || 0) + w); }
+  const sum = (m) => { let t = 0; for (const w of m.values()) t += w; return t; };
+  const left = new Set([...Array(n).keys()]), first = [], last = [];
+  const take = (v, list) => {
+    left.delete(v);
+    list.push(v);
+    for (const q of out[v].keys()) into[q].delete(v);
+    for (const p of into[v].keys()) out[p].delete(v);
+  };
+  while (left.size) {
+    let moved = true;
+    while (moved) {
+      moved = false;
+      for (const v of [...left]) {
+        if (!into[v].size) { take(v, first); moved = true; } // nothing left to wait for: includes nodes with no arcs
+        else if (!out[v].size) { take(v, last); moved = true; }
+      }
+    }
+    if (!left.size) break;
+    let best = -1, score = -Infinity;
+    for (const v of left) { const s = sum(out[v]) - sum(into[v]); if (s > score) { score = s; best = v; } }
+    take(best, first);
+  }
+  const pos = new Array(n);
+  [...first, ...last.reverse()].forEach((v, k) => { pos[v] = k; });
+  return pos;
 }

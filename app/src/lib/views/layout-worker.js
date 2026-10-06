@@ -24,7 +24,7 @@ self.onmessage = async ({ data }) => {
       return;
     }
     if (data.grid) {
-      self.postMessage({ id: data.id, result: gridLayout(data.grid.model, data.grid.o, data.grid.prev) });
+      self.postMessage({ id: data.id, result: gridLayout(data.grid.model, data.grid.o) });
       return;
     }
     if (data.gridRoutes) {

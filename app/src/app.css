@@ -465,7 +465,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .back .g-rt { stroke-dasharray: 5 4; }
 /* The layout's own paths (T64): square runs that share a bus, so no halo cuts them where they join. */
 .g-routes .dag .g-halo { display: none; }
-.gridmap.whole .g-routes .dag .g-rt { stroke-width: .8px; }
 /* Pointing at a note lights what it depends on, in the blue pen: what it requires down its chain as a
    line, what builds on it dotted; the rest steps back. */
 .g-hot { pointer-events: none; }
@@ -475,14 +474,13 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .gridmap.lit .gn:not(.dep):not(.at) { opacity: .45; }
 .gn.dep .gn-block, .gn.at .gn-block { stroke: var(--pen-blue); stroke-width: 1.75; }
 .g-title, .g-note, .g-count { font-family: var(--font-map); fill: var(--text); }
-/* A title is wider than its row is tall when the map is small, so it keeps a rim of the ground's colour. */
 .g-title { font-weight: 600; font-variation-settings: "wdth" 88; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; stroke-linejoin: round; }
 .g-title.closed { text-anchor: middle; }
-/* On the folder's top edge (the nested layout): the title breaks the line, rimmed in the ground outside the folder. */
-.g-title.edge.open { stroke-width: 7px; }
-.g-title.edge.open.d1 { stroke: var(--surface); }
-.g-title.edge.open.d2 { stroke: var(--surface-1); }
-.g-title.edge.open.d3 { stroke: var(--surface-2); }
+/* An open folder's title sits on its top edge and breaks the line, rimmed in the ground outside the folder. */
+.g-title.open { stroke-width: 7px; }
+.g-title.open.d1 { stroke: var(--surface); }
+.g-title.open.d2 { stroke: var(--surface-1); }
+.g-title.open.d3 { stroke: var(--surface-2); }
 .g-title .g-n { font-weight: 400; fill: var(--text-soft); }
 .g-count { font-size: 12px; font-weight: 700; font-variation-settings: "wdth" 84; text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 /* A note's block: faint not reached, outlined opened, filled worked through,

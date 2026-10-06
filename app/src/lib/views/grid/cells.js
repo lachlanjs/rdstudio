@@ -1,22 +1,21 @@
 // The grid Atlas's cells (T62): what the router and the drawing know about a
-// layout (grid/snap.js describes one), cell by cell.
+// layout (grid/nested.js describes one), cell by cell.
 //
 // Height is nesting: 0 between folders, 1 inside a folder, 2 inside a
 // subfolder. The only contours are folder walls.
 
-export const FREE = 0, NOTE = 1, TITLE = 2;
+export const FREE = 0, NOTE = 1;
 
 export function buildCells(layout) {
   const { W, H, items } = layout;
   const elev = new Int8Array(W * H); // nesting depth
-  const blocked = new Uint8Array(W * H); // NOTE or TITLE: nothing is routed through either
+  const blocked = new Uint8Array(W * H); // NOTE: nothing is routed through a note
   const owner = new Int32Array(W * H).fill(-1); // the deepest folder holding the cell
   const noteAt = new Int32Array(W * H).fill(-1);
   const order = items.map((_, i) => i).filter((i) => items[i].kind === "folder").sort((a, b) => items[a].depth - items[b].depth || a - b);
   for (const i of order) {
     const f = items[i];
     for (let y = f.gy; y < f.gy + f.h; y++) for (let x = f.gx; x < f.gx + f.w; x++) { elev[y * W + x] = f.depth; owner[y * W + x] = i; }
-    if (layout.titles !== "edge") for (let x = f.gx; x < f.gx + f.w; x++) blocked[f.gy * W + x] = TITLE; // a title on the folder's edge takes no row
   }
   items.forEach((n, i) => {
     if (n.kind !== "note") return;
@@ -33,8 +32,8 @@ export function foldersOf(items, i) {
 }
 
 /**
- * Reached ground: every folder cell within one cell of a reached note (title
- * rows apart). Understanding is tone, not height.
+ * Reached ground: every folder cell within one cell of a reached note.
+ * Understanding is tone, not height.
  * @param reached (item index) => boolean
  */
 export function reachedCells(layout, cells, reached) {
@@ -42,7 +41,7 @@ export function reachedCells(layout, cells, reached) {
   layout.items.forEach((n, i) => {
     if (n.kind !== "note" || !reached(i)) return;
     for (let y = Math.max(0, n.gy - 1); y <= Math.min(H - 1, n.gy + n.h); y++) {
-      for (let x = Math.max(0, n.gx - 1); x <= Math.min(W - 1, n.gx + n.w); x++) if (elev[y * W + x] && blocked[y * W + x] !== TITLE) out[y * W + x] = 1;
+      for (let x = Math.max(0, n.gx - 1); x <= Math.min(W - 1, n.gx + n.w); x++) if (elev[y * W + x]) out[y * W + x] = 1;
     }
   });
   return out;

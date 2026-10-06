@@ -7,8 +7,8 @@ store as the rest of the app and keep the `rd:` performance measures, so the
 benchmarks compare old and new. They are plain JavaScript (not type-checked)
 until the renderer interface (platform B3) replaces the drawing code.
 
-The grid Atlas (`gridmap.js`, with `grid/snap.js`, `grid/cells.js` and
-`grid/router.js`; T62) is drawn the same way and chosen with
-`folders = "grid"`. A layout is plain data (`grid/snap.js` says what one is),
-and the cells, the router and the drawing know nothing of how it was made, so
-the layout can be replaced on its own.
+The grid Atlas (`gridmap.js`, with `grid/nested.js`, `grid/cells.js` and
+`grid/router.js`; T62, T64) is drawn the same way and chosen with
+`folders = "grid"`. A layout is plain data (`grid/nested.js` says what one
+is), and the cells, the router and the drawing know nothing of how it was
+made, so the layout can be replaced on its own.

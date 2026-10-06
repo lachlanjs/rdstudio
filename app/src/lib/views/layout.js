@@ -6,8 +6,6 @@
 import * as d3 from "d3";
 import { bake } from "./terrain.js";
 import { outlines, routingGrid, routeAll } from "./contours.js";
-import { snapLayout } from "./grid/snap.js";
-import { dagLayout } from "./grid/dag.js";
 import { nestedLayout } from "./grid/nested.js";
 import { buildCells } from "./grid/cells.js";
 import { makeRouter, routeAll as gridRouteAll } from "./grid/router.js";
@@ -68,24 +66,17 @@ export function layoutPositions(model, o, prev = null) {
   return positions(root);
 }
 
-// The grid Atlas's layout (grid/snap.js says what one is). `gridLayout` is
-// "nested" (each folder a layered DAG of its items and one item in its parent's,
-// grid/nested.js, T64), "layers" (one DAG for the whole map with folders round
-// its layers, grid/dag.js) or "snap" (the positions above snapped to cells, T62).
-export function gridLayout(model, o, prev = null) {
-  if (o.gridLayout === "layers") return dagLayout(model);
-  if (o.gridLayout !== "snap") return nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
-  const { root, byId } = start(model.root);
-  arrange(root, byId, model.edges, o, prev);
-  return snapLayout(root, model.edges);
+// The grid Atlas's layout (grid/nested.js, which says what one is): each
+// folder a layered DAG of its items, and one item in its parent's. `gridFlow`
+// is the top level's direction, "up" or "right".
+export function gridLayout(model, o) {
+  return nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
 }
 
 // Routes over a grid layout's cells (grid/router.js). The cells and the
 // router's arrays are made once per layout and kept.
 export function gridRouter(layout) {
-  // On the nested layout the router draws back links and the links lit under
-  // the pointer, a few at a time: turns cost more there, so each takes few.
-  const cells = buildCells(layout), router = makeRouter(layout, cells, layout.trunks ? { turn45: 1.5, turn90: 3, crowd: 0.2 } : {});
+  const cells = buildCells(layout), router = makeRouter(layout, cells);
   return (asks) => gridRouteAll(router, asks, cells.W, cells.H);
 }
 
@@ -315,11 +306,13 @@ export function computeRoutes(key, input, asks) {
 
 // The grid Atlas's layout, off the main thread, kept in this browser like the
 // positions above.
-// One is kept for each direction of flow, so turning a phone finds its map ready.
-const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 4; // bump whenever a grid layout changes what it returns, or browsers keep the old one
+// One is kept for each direction of flow, so turning a phone finds its map
+// ready. The key is what the map contains and the direction: none of the
+// continuous layout's settings move anything on the grid.
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 5; // bump whenever the grid layout changes what it returns, or browsers keep the old one
 const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
 export function gridKey(plain, o) {
-  return layoutKey(plain, o) + ".g" + GRID_VERSION + (o.gridLayout || "nested") + (o.gridFlow === "right" ? "r" : "u");
+  return hash(JSON.stringify([GRID_VERSION, o.gridFlow === "right" ? "right" : "up", plain]));
 }
 export function cachedGrid(key, o) {
   try {
@@ -329,9 +322,9 @@ export function cachedGrid(key, o) {
     return null;
   }
 }
-export function computeGrid(key, plain, o, prev = null) {
-  const settings = Object.fromEntries([...LAYOUT_KEYS, "gridLayout", "gridFlow"].map((k) => [k, o[k]]));
-  return ask({ grid: { model: plain, o: settings, prev } }, () => gridLayout(plain, settings, prev)).then((layout) => {
+export function computeGrid(key, plain, o) {
+  const settings = { gridFlow: o.gridFlow };
+  return ask({ grid: { model: plain, o: settings } }, () => gridLayout(plain, settings)).then((layout) => {
     try { localStorage.setItem(slot(o), JSON.stringify({ key, layout })); } catch { /* storage full or unavailable: lay out again next time */ }
     return layout;
   });

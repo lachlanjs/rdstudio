@@ -1,14 +1,15 @@
-// The grid Atlas (T62, design/project/README.md "The grid Atlas"): everything
-// on a coarse square grid. Notes are blocks of cells, folders are nested
-// rectangles with their titles in a row of their own, and links are routes
-// along the cells between them, ending on block edges. Height is nesting, so
-// the only contours are folder walls; where you stand is tone and fill.
+// The grid Atlas (T62, T64): everything on a coarse square grid. Notes are
+// blocks of cells. Each folder is laid out in layers by what requires what,
+// and is one block in its parent's layout; its title sits on its top edge.
+// Links between two items of a folder are a trunk with a count, drawn on a
+// path of the layout's own. Pointing at a note lights what it depends on.
+// Where you stand is tone and fill.
 //
-// The layout (grid/snap.js says what one is) and the routes (grid/router.js)
-// are worked out in the layout worker, in cells; every zoom frame only places
-// them on the screen and decides what is open. It is chosen with
-// `folders = "grid"` and sits beside the continuous Atlas (map.js) until it
-// does everything that one does (T63).
+// The layout (grid/nested.js says what one is) is worked out in the layout
+// worker, in cells, with the few routes it leaves to the router
+// (grid/router.js); every zoom frame only places them on the screen and
+// decides what is open. It is chosen with `folders = "grid"` and sits beside
+// the continuous Atlas (map.js) until it does everything that one does (T63).
 
 import * as d3 from "d3";
 import { learner, store } from "../data.svelte.ts";
@@ -74,20 +75,6 @@ function cutPath(P, d) {
   return out + `L${f(z[0])} ${f(z[1])}`;
 }
 
-// Straight runs with rounded bends.
-function roundPath(P, r) {
-  const Q = P.filter((p, i) => i === 0 || i === P.length - 1 || Math.abs((p[0] - P[i - 1][0]) * (P[i + 1][1] - p[1]) - (p[1] - P[i - 1][1]) * (P[i + 1][0] - p[0])) > 1e-3);
-  const f = (v) => v.toFixed(1);
-  let d = `M${f(Q[0][0])} ${f(Q[0][1])}`;
-  for (let i = 1; i < Q.length - 1; i++) {
-    const a = Q[i - 1], b = Q[i], c = Q[i + 1];
-    const l1 = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, l2 = Math.hypot(c[0] - b[0], c[1] - b[1]) || 1, rr = Math.min(r, l1 / 2, l2 / 2);
-    d += `L${f(b[0] - ((b[0] - a[0]) / l1) * rr)} ${f(b[1] - ((b[1] - a[1]) / l1) * rr)}Q${f(b[0])} ${f(b[1])} ${f(b[0] + ((c[0] - b[0]) / l2) * rr)} ${f(b[1] + ((c[1] - b[1]) / l2) * rr)}`;
-  }
-  const z = Q[Q.length - 1];
-  return d + `L${f(z[0])} ${f(z[1])}`;
-}
-
 // The key: where a note stands under the height lens, and the grid's lines.
 function gridKeyItems(lens, terrain) {
   const icon = (inner) => { const el = h("svg:svg", { width: 22, height: 22, viewBox: "0 0 22 22", class: "m-key", "aria-hidden": "true" }); el.innerHTML = inner; return el; };
@@ -107,9 +94,10 @@ function gridKeyItems(lens, terrain) {
     ...(lens === "understanding" ? [item(block("l1 bad"), "The teacher says: needs work")] : []),
     ...(terrain ? [item('<path class="g-reach" d="M2 4h18v14h-18z"/><path class="g-front" d="M2 4h18v14h-18z"/>', "Reached ground: lighter")] : []),
     item(`<path class="g-wall" d="${cut(2, 4, 20, 18, 3)}"/>`, "A folder's wall; each level in is a tone lighter"),
-    item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two folders, with their count"),
-    item('<path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/>', "One link, with a folder in focus"),
+    item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two items of a folder, with their count"),
     item('<g class="back"><path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/></g>', "Dashed: a back link, against the order of the layers"),
+    item('<g class="g-hot"><path class="g-rt hot req" d="M2 11H20"/></g>', "Under the pointer: what the note requires"),
+    item('<g class="g-hot"><path class="g-rt hot dep" d="M2 11H20"/></g>', "Under the pointer: what builds on it"),
   ];
 }
 
@@ -135,11 +123,7 @@ export function gridView(focusRef = "") {
     readout, summary, key: gridKeyItems,
   });
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
-  const north = h("div", { class: "atlas-north", "aria-hidden": "true", hidden: true },
-    d3.create("svg").attr("width", 14).attr("height", 52).attr("viewBox", "0 0 14 52")
-      .call((g) => g.append("path").attr("d", "M7 51V3M2 13L7 2L12 13").attr("class", "north-arrow")).node(),
-    h("span", {}, "N · later in the study order"));
-  wrap.append(panel, crumbs, create, tip, status, north, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
+  wrap.append(panel, crumbs, create, tip, status, h("div", { class: "graph-hint" }, "Click a note to select it, again to open it; a folder to zoom in, empty space to step out."));
 
   const back = svg.append("rect").attr("class", "g-sea");
   // One layer, moved and scaled during a gesture and redrawn when it pauses, as on the continuous Atlas.
@@ -184,7 +168,7 @@ export function gridView(focusRef = "") {
 
   // ------------------------------------------------------------ layout
 
-  // The nested layout's top level runs bottom to top, which suits a page taller
+  // The layout's top level runs bottom to top, which suits a page taller
   // than wide; on a phone turned on its side, left to right. Both are worked
   // out there, so turning it finds the other ready.
   const phone = matchMedia("(pointer: coarse)").matches;
@@ -212,7 +196,7 @@ export function gridView(focusRef = "") {
         settle(k, layout);
       });
     }
-    if (phone && o.gridFlow !== "up" && o.gridFlow !== "right" && oo.gridLayout !== "snap" && oo.gridLayout !== "layers") {
+    if (phone && o.gridFlow !== "up" && o.gridFlow !== "right") {
       const turned = { ...o, gridFlow: flowFor(!wide) }, tk = gridKey(plain, turned);
       if (!ready.has(tk)) get(tk, turned).then((layout) => { ready.set(tk, layout); });
     }
@@ -227,7 +211,6 @@ export function gridView(focusRef = "") {
     L.items.forEach((n, i) => { if (n.kind === "note") for (const p of up[i]) noteCount[p]++; });
     cache = null; drawn = []; tones = null;
     status.hidden = true;
-    north.hidden = !(model.ordered && (o.gridLayout === "layers" || (o.gridLayout === "snap" && o.north))); // the nested layout turns at every level
     needsOf = L.items.map(() => []); neededBy = L.items.map(() => []);
     for (const l of L.links) if (l.s >= 2) { needsOf[l.a].push(l.b); neededBy[l.b].push(l.a); }
     ownPath = new Map((L.trunks || []).filter((t) => t.pts).map((t) => [t.a + "|" + t.b, t.pts]));
@@ -325,59 +308,13 @@ export function gridView(focusRef = "") {
     return tones;
   }
 
-  // What links are drawn. Every requires- and uses-link counts, but one implied
-  // by a chain of others is left out (unless Hide implied is off). A link is
-  // drawn between the items that show its two ends: a note, or the outermost
-  // closed folder above it.
-  //   - Both notes shown, and the layout drew the link: its own path, at once.
-  //   - Otherwise it is merged with the others between the same two items and
-  //     routed in the worker: trunks between closed folders, links into a
-  //     closed folder, and back links, which go last and find their way round.
-  // With a folder in focus, links that do not touch it are quiet.
-  function routesFor(open, visible) {
+  // What links are drawn at rest: the layout's trunks (grid/nested.js). Each
+  // joins two items of one folder, and is drawn when both are shown. It has
+  // its own path, except a back trunk (dashed) or an implied one (hidden,
+  // unless Hide implied is off), which the router finds a way for.
+  function routesFor(open, shown) {
     if (!o.showLinks) { cache = null; drawn = []; return; }
-    if (L.trunks) return trunksFor(open, visible);
-    const within = (i, f) => i === f || up[i].includes(f);
-    const shown = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
-    const sig = `${focus}|${o.hideImplied}|${Array.from(open).join("")}`;
-    if (cache?.sig === sig) return;
-    const merged = new Map(), fixed = [];
-    let links = 0;
-    for (const l of L.links) {
-      if (l.s < 2 || (l.implied && o.hideImplied)) continue;
-      const a = shown(l.a), b = shown(l.b);
-      if (a === b) continue;
-      links++;
-      const quiet = focus >= 0 && !within(l.a, focus) && !within(l.b, focus) ? " quiet" : "";
-      if (a === l.a && b === l.b && l.path) { fixed.push({ a, b, count: 1, cls: "dag" + quiet, pts: l.path, lane: 0 }); continue; }
-      const [p, q] = a < b ? [a, b] : [b, a], id = p + "|" + q;
-      const m = merged.get(id) || { a: p, b: q, count: 0, back: true, quiet: true, trunk: L.items[p].kind === "folder" && L.items[q].kind === "folder" };
-      m.count++;
-      if (l.placed) m.back = false;
-      if (!quiet) m.quiet = false;
-      merged.set(id, m);
-    }
-    for (const m of merged.values()) m.cls = (m.trunk ? "trunk" : "solo") + (m.quiet ? " quiet" : "") + (m.back && o.gridLayout !== "snap" ? " back" : "");
-    const isBack = (m) => (m.cls.endsWith(" back") ? 1 : 0);
-    const asks = [...merged.values()].sort((m, n) => isBack(m) - isBack(n) || n.count - m.count || m.a - n.a || m.b - n.b);
-    const mine = cache = { sig, asks, fixed, links, measures: null };
-    drawn = fixed; // the layout's own paths need no waiting
-    if (!asks.length) return;
-    const t0 = performance.now();
-    computeGridRoutes(key, L, asks.map(({ a, b }) => ({ a, b }))).then((res) => {
-      if (left || cache !== mine) return;
-      measure("map-grid-routes", t0);
-      mine.measures = res.measures;
-      drawn = [...fixed, ...asks.map((m, k) => res.routes[k] && { ...m, ...res.routes[k] }).filter(Boolean)];
-      schedule();
-    });
-  }
-
-  // The nested layout's trunks (grid/nested.js): each joins two items of one
-  // folder, and is drawn when both are shown. It has its own path, except a
-  // back trunk (dashed) or an implied one, which the router finds a way for.
-  function trunksFor(open, shown) {
-    const sig = `t|${o.hideImplied}|${Array.from(open).join("")}`;
+    const sig = `${o.hideImplied}|${Array.from(open).join("")}`;
     if (cache?.sig === sig) return;
     const fixed = [], asks = [];
     let links = 0;
@@ -505,7 +442,7 @@ export function gridView(focusRef = "") {
     lightFor(open);
     svg.classed("lit", !!hot);
     const step = Math.max(2.2, Math.min(5, c / 4.2));
-    const line = (m) => (m.cls.startsWith("dag") || m.cls.startsWith("hot") ? cutPath : roundPath)(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * step), m.cls.startsWith("dag") || m.cls.startsWith("hot") ? c * 0.9 : Math.min(7, c * 0.45));
+    const line = (m) => cutPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * step), c * 0.9);
     const width = (m) => 1 + Math.log2(m.count) * 0.8;
     gRoutes.selectAll("g").data(drawn, (m) => m.cls[0] + m.a + "|" + m.b).join((el) => { const g = el.append("g"); g.append("path").attr("class", "g-halo"); g.append("path").attr("class", "g-rt"); return g; })
       .attr("class", (m) => m.cls)
@@ -516,8 +453,7 @@ export function gridView(focusRef = "") {
       });
     gHot.selectAll("path").data(hot ? hot.routes : [], (m) => m.cls + m.a + "|" + m.b).join("path").attr("class", (m) => "g-rt " + m.cls).attr("d", line);
     // A trunk's count, where it runs between its two folders.
-    const counted = drawn.filter((m) => (m.cls.startsWith("trunk") || m.cls.startsWith("dag")) && !m.cls.includes("quiet") && m.count > 1);
-    svg.classed("whole", focus < 0 && c < LABELS_AT); // the whole map at once: its own paths drawn fine
+    const counted = drawn.filter((m) => m.count > 1);
     gCounts.selectAll("text").data(counted, (m) => m.cls[0] + m.a + "|" + m.b).join("text").attr("class", "g-count")
       .attr("x", (m) => X(m.pts[m.pts.length >> 1][0])).attr("y", (m) => Y(m.pts[m.pts.length >> 1][1]) + 4).text((m) => m.count);
 
@@ -563,19 +499,18 @@ export function gridView(focusRef = "") {
         }
       });
 
-    // Titles sit in their own row, so they never collide with anything: an
-    // open folder's with how many of its notes are reached; a closed one's in the middle.
-    const size = Math.max(10, Math.min(12, c * 0.72)), edged = L.titles === "edge";
+    // Titles, each with how many of the folder's notes are reached.
+    const size = Math.max(10, Math.min(12, c * 0.72));
     const titled = folders.filter((i) => { const n = items[i]; return open[i] || (n.w * c >= 44 && n.h * c >= 16); });
     gTitles.selectAll("text").data(titled, (i) => items[i].id).join("text")
-      .attr("class", (i) => `g-title ${open[i] ? "open" : "closed"}${edged ? ` edge d${Math.min(items[i].depth, 3)}` : ""}`).style("font-size", `${size.toFixed(1)}px`)
-      .attr("x", (i) => (open[i] ? X(items[i].gx) + (edged ? c * 1.5 + 6 : 8) : X(items[i].gx + items[i].w / 2)))
-      // An open folder's title sits in its own row, or (the nested layout) on its top edge, as part of the edge.
-      .attr("y", (i) => (!open[i] ? Y(items[i].gy + items[i].h / 2) + size * 0.36 : edged ? Y(items[i].gy) + size * 0.36 : Y(items[i].gy) + Math.max(c / 2 + size * 0.36, size + 3)))
+      .attr("class", (i) => `g-title ${open[i] ? `open d${Math.min(items[i].depth, 3)}` : "closed"}`).style("font-size", `${size.toFixed(1)}px`)
+      // An open folder's title sits on its top edge, as part of the edge; a closed one's in the middle of its block.
+      .attr("x", (i) => (open[i] ? X(items[i].gx) + c * 1.5 + 6 : X(items[i].gx + items[i].w / 2)))
+      .attr("y", (i) => (open[i] ? Y(items[i].gy) : Y(items[i].gy + items[i].h / 2)) + size * 0.36)
       .each(function (i) {
         const n = items[i], el = d3.select(this);
         const count = lens === "understanding" && understanding.on ? `${reached[i]}/${noteCount[i]}` : String(noteCount[i]);
-        const most = Math.floor((n.w * c - (edged ? c * 3 + 12 : 14)) / (size * 0.64));
+        const most = Math.floor((n.w * c - (open[i] ? c * 3 + 12 : 14)) / (size * 0.64));
         let name = nodes.get(n.id)?.label || n.ref;
         if (name.length + count.length + 1 > most) name = most - count.length - 2 >= 3 ? name.slice(0, most - count.length - 2) + "…" : "";
         el.text(name);
@@ -585,11 +520,10 @@ export function gridView(focusRef = "") {
     const m = cache?.measures;
     if (!o.showLinks) summary.textContent = "Links are off.";
     else if (cache) {
-      const own = cache.fixed.length, trunks = cache.asks.filter((a) => a.cls.startsWith("trunk")).length, backs = cache.asks.filter((a) => a.cls.endsWith(" back")).length;
-      const rest = cache.asks.length - trunks - backs;
-      summary.textContent = `${cache.links} links: ` + [own && `${own} drawn by the layout`, trunks && `${trunks} trunks between closed folders`, rest && `${rest} into closed folders or routed singly`, backs && `${backs} against the layers (dashed)`].filter(Boolean).join(", ") + ".";
+      const backs = cache.asks.filter((a) => a.cls.endsWith(" back")).length;
+      summary.textContent = `${cache.links} links, as ${cache.fixed.length + cache.asks.length} trunks` + (backs ? `, ${backs} of them against the layers (dashed).` : ".") + " Point at a note for what it depends on.";
     }
-    readout.textContent = `Grid ${L.W} by ${L.H} cells.` + (cache?.fixed.length ? ` ${cache.fixed.length} links on the layout's own paths.` : "") + (m ? ` Routes ${m.routes}, crossings ${m.crossings}, cells of route ${m.length}, beside another route ${Math.round(m.beside * 100)}%${m.lost ? `, no way found for ${m.lost}` : ""}.` : "");
+    readout.textContent = `Grid ${L.W} by ${L.H} cells, flowing ${L.flow}.` + (m ? ` Routes ${m.routes}, crossings ${m.crossings}, cells of route ${m.length}, beside another route ${Math.round(m.beside * 100)}%${m.lost ? `, no way found for ${m.lost}` : ""}.` : "");
   }
 
   function openNote(i) {

@@ -46,11 +46,9 @@ export const VIEW_DEFAULTS = {
   // bundling). Positions, lenses and terrain are the same under both (T60).
   // "grid" is the grid Atlas (gridmap.js, T62), which takes this view's place.
   folders: "contour", routing: "downhill",
-  // The grid Atlas's layout (T64): "nested" (each folder a layered DAG of its
-  // items, and one item in its parent's), "layers" (one DAG for the whole map)
-  // or "snap" (the continuous layout snapped to cells, T62). And the top
-  // level's direction: "up", "right", or "auto" (up; right on a phone on its side).
-  gridLayout: "nested", gridFlow: "auto",
+  // The grid Atlas's top level runs "up", "right", or "auto" (up; right on a
+  // phone on its side); the levels inside it turn in turn (T64).
+  gridFlow: "auto",
   // How far apart a link's ends are in the folder tree, counted in bubble walls:
   // "out" is the larger of the two ends' distances out to the lowest shared
   // folder, "path" is the total crossed going out and back in.
@@ -1945,11 +1943,8 @@ export function controls({ view, tune, readout, summary, key: keyItems = null })
         h("summary", {}, "More options"),
         choice("folders", "Folders", [["contour", "Contours", "Each folder's outline follows where its contents sit."],
           ["circle", "Circles", "Each folder is the layout's own circle, its name along the arc."],
-          ["grid", "Grid", "Everything on a square grid: notes as blocks, folders as nested rectangles, routes along the cells between them."]]),
-        choice("gridLayout", "Grid layout", [["nested", "Nested", "On the grid: each folder laid out as its own layered DAG, and one block in its parent's. Links between folders join their walls."],
-          ["layers", "Shared layers", "On the grid: one set of layers for the whole map, north later, with each folder a box round its notes' layers."],
-          ["snap", "Snapped", "On the grid: the continuous Atlas's positions, snapped to cells."]]),
-        choice("gridFlow", "Grid flows", [["auto", "Auto", "The nested layout's top level runs bottom to top; left to right on a phone turned on its side."],
+          ["grid", "Grid", "Everything on a square grid: notes as blocks, each folder laid out in layers by what requires what and one block in its parent's, links between folders joining their walls."]]),
+        choice("gridFlow", "Grid flows", [["auto", "Auto", "On the grid, the top level runs bottom to top; left to right on a phone turned on its side."],
           ["up", "Up", "The top level runs from the bottom up; folders inside it left to right; and so on in turn."],
           ["right", "Right", "The top level runs from left to right; folders inside it bottom to top; and so on in turn."]]),
         choice("routing", "Routes", [["downhill", "Downhill", "Routes cross folder outlines at right angles and gather in the flats between folders."],

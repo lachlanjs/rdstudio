@@ -4,7 +4,7 @@ title: Map view
 description: Criteria and design for the Atlas, the nested map of a knowledge base, where folders are regions, links are drawn at the scale they belong to, and the terrain shows where you stand.
 status: draft
 tags: [design, dashboard, map]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T00:19:21Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T03:47:50Z}
 ---
 
 # Purpose
@@ -243,30 +243,44 @@ Interface = "diamond"
 
 # The grid Atlas
 
-Chosen with `folders = "grid"` ([T62](/tasks/T62-grid-atlas.md)); it is to
-replace everything above ([decision](/decisions/grid-atlas.md)), and until it
-does this section describes only what is built.
+Chosen with `folders = "grid"` ([T62](/tasks/T62-grid-atlas.md),
+[T64](/tasks/T64-dag-layout.md)); it is to replace everything above
+([decision](/decisions/grid-atlas.md)), and until it does this section
+describes only what is built. The code is `views/gridmap.js` and
+`views/grid/`.
 
-- **Cells:** everything sits on a square grid. A note is a block of 8 by 2
-  cells (9 wide from 6 links, 3 tall from 9). A folder is a rectangle with a
-  title row, a free row and 2 cells of margin; folders nest.
-- **Height is nesting:** 0 between folders, 1 inside one, 2 inside a
-  subfolder, each level a tone lighter. The only contours are folder walls.
+- **Cells:** everything sits on a square grid. A note is a block of 14 by 4
+  cells, room for two lines of its title. A folder is a rectangle with cut
+  corners, 2 cells of margin inside and its title on its top edge; folders
+  nest, each level a tone lighter.
+- **Each folder is laid out on its own,** as a layered DAG of its items: its
+  notes, and its subfolders, each one block. A link belongs to the lowest
+  folder holding both its ends, and there joins the two items that hold
+  them. Links between the same two items are one trunk with a count.
+- **The DAG:** an order of the items with as much weight of requires- and
+  uses-link as possible running from what is required to what requires it.
+  Trunks against the order are back trunks. See also links take no part.
+- **Layers:** an item sits one layer after the last thing it requires. A
+  layer too long for its folder wraps.
+- **Flow turns at each level:** the top level runs bottom to top, its
+  folders' contents left to right, theirs bottom to top again. On a touch
+  device wider than tall the top level runs left to right (`gridFlow`:
+  `auto`, `up` or `right`); both are worked out there and kept.
+- **Trunks** are drawn on paths the layout makes: out of the late side of
+  the item required, along a track of its own between two layers, into the
+  early side of the item requiring it. Two items in line are joined by a
+  straight run. Bends are cut at 45 degrees.
+- **Back trunks** are found a way by the router (`views/grid/router.js`:
+  shortest paths over cells in eight directions, turns dear) and drawn
+  dashed. A trunk between two notes that a longer way already joins is
+  implied, and hidden.
+- **Pointing at a note, or selecting it,** lights what it depends on, in the
+  blue pen: inside its folder, every link down its chain of requirements;
+  beyond it, only what it requires directly, drawn all the way from note to
+  note through the walls; and what builds on it directly, dotted. The rest
+  steps back.
 - **Where you stand** is tone and fill: ground within one cell of a reached
   note is lighter; a block is faint, outlined, filled, or filled with a
   double green rule; a red frame needs work.
-- **Layout:** plain data (`views/grid/snap.js` says what one is). For now the
-  positions of the layout above snapped to cells, siblings kept 2 cells
-  apart and folders 3. The layout from each folder's DAG
-  ([T64](/tasks/T64-dag-layout.md)) takes its place.
-- **Routes:** shortest paths over cells with 45 degree steps
-  (`views/grid/router.js`). A step costs its length, 5 for each wall crossed,
-  a little for each turn, 2.5 for each cell of a folder the route has no
-  business in, and 0.45 for each route already in the cell, up to 3. Notes
-  and title rows are closed. Routes sharing a cell edge run side by side in
-  lanes.
-- **Which links:** every requires- and uses-link. At overview, one trunk per
-  pair of top-level folders with its count. A folder in focus shows each of
-  its links singly and keeps the other trunks quiet.
 - **Detail:** a folder is one titled block until it is `detail` wide on
-  screen and a cell is 3px; notes carry their titles from a cell of 10px.
+  screen and a cell is 1.6px; notes carry their titles from a cell of 7px.
