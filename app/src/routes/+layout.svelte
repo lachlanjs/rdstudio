@@ -10,10 +10,11 @@
   import { store, learner } from "$lib/data.svelte.ts";
   import { editing } from "$lib/edit.svelte.ts";
   import ActionDialogs from "$lib/components/ActionDialogs.svelte";
+  import StatusLine from "$lib/components/StatusLine.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import { reviewCount } from "$lib/review.ts";
   import { setCount } from "$lib/exercises.ts";
-  import { MODES, settings } from "$lib/settings.svelte.ts";
+  import { MODES, THEMES, settings } from "$lib/settings.svelte.ts";
   import { palette, projectMode } from "$lib/shell.svelte.ts";
   import { teacher } from "$lib/teacher.svelte.ts";
 
@@ -118,6 +119,11 @@
           {/if}
           <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
           <a role="menuitem" href="#/settings">Settings</a>
+          <div class="you-row" role="group" aria-label="Theme">
+            {#each THEMES as t (t.id)}
+              <button type="button" role="menuitemradio" aria-checked={settings.theme === t.id} onclick={() => settings.setTheme(t.id)}>{t.name}</button>
+            {/each}
+          </div>
           <div class="you-row" role="group" aria-label="Light or dark">
             {#each MODES as [id, label] (id)}
               <button type="button" role="menuitemradio" aria-checked={settings.mode === id} onclick={() => settings.setMode(id)}>{label}</button>
@@ -156,5 +162,7 @@
     <span>More</span>
   </button>
 </nav>
+<StatusLine mode={exercise ? "Practice" : space[0]!.toUpperCase() + space.slice(1)}
+  items={[store.site.title, setForYou ? `${setForYou} set for you` : "", review ? `${review} to review` : ""].filter(Boolean)} />
 {#if editing.enabled}<ActionDialogs />{/if}
 <CommandPalette />

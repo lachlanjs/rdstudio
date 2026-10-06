@@ -128,7 +128,7 @@
               <div class="draft"><Prose html={render(cont.excerpt.length >= 400 ? cont.excerpt + " …" : cont.excerpt)} /></div>
             </div>
             <div class="cont-go">
-              <a class="toggle primary" href={conceptHref(c.id)}>Continue writing</a>
+              <a class="toggle primary" href={conceptHref(c.id)} data-key="c" data-key-label="continue">Continue writing</a>
               <div class="caption">Draft saved{cont.hints ? ` · ${cont.hints} of 3 hints used` : ""}</div>
             </div>
           </div>

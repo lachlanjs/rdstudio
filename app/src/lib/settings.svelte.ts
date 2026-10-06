@@ -1,9 +1,10 @@
 // Theme and light or dark mode, per browser (localStorage). The saved choice
 // is applied before first paint by a script in app.html.
 
-// One theme now (Marginalia, design/project/README.md). The terminal lean and
-// the retro-futurist option return later as settings layered on it.
-export const THEMES = [{ id: "marginalia", name: "Marginalia" }] as const;
+// Marginalia is the theme (design/project/README.md); Station restyles it as a
+// film computer's terminal (static/themes/station.css, the Station rules in
+// app.css, and the status line).
+export const THEMES = [{ id: "marginalia", name: "Marginalia" }, { id: "station", name: "Station" }] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Mode = "system" | "light" | "dark";
@@ -20,16 +21,32 @@ class Settings {
   theme = $state<ThemeId>("marginalia");
   /** Dark first: dark unless light, or following the system, was chosen. */
   mode = $state<Mode>("dark");
+  /** Station's scan lines: on unless turned off. */
+  scanlines = $state(true);
 
   constructor() {
     const m = read("rdstudio.mode", "dark");
     this.mode = m === "light" || m === "system" ? m : "dark";
+    this.theme = read("rdstudio.theme", "marginalia") === "station" ? "station" : "marginalia";
+    this.scanlines = read("rdstudio.scanlines", "on") !== "off";
   }
 
   setMode(mode: Mode): void {
     this.mode = mode;
     document.documentElement.dataset.mode = mode;
     write("rdstudio.mode", mode);
+  }
+
+  setTheme(theme: ThemeId): void {
+    this.theme = theme;
+    document.documentElement.dataset.theme = theme;
+    write("rdstudio.theme", theme);
+  }
+
+  setScanlines(on: boolean): void {
+    this.scanlines = on;
+    document.documentElement.dataset.scan = on ? "on" : "off";
+    write("rdstudio.scanlines", on ? "on" : "off");
   }
 }
 

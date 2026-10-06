@@ -14,6 +14,13 @@
           link.href = new URL("themes/marginalia.css", SCRIPT_SRC).href;
           link.onload = link.onerror = () => resolve();
           document.head.append(link);
+          if (localStorage.getItem("rdstudio.theme") === "station") { // Station restyles Marginalia: its tokens load after
+            document.documentElement.dataset.theme = "station";
+            const over = document.createElement("link");
+            over.rel = "stylesheet";
+            over.href = new URL("themes/station.css", SCRIPT_SRC).href;
+            document.head.append(over);
+          }
           return;
         }
       } catch (err) { /* storage unavailable: the default theme applies */ }

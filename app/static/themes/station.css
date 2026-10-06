@@ -1,0 +1,50 @@
+/* Station: rdstudio's second theme (design/project/README.md, "Station terminal"; knowledge/decisions/station-theme.md).
+   A late-1970s film computer: cold white phosphor on blue-black, thin cyan frames, pixel and mono type.
+   It restyles Marginalia, which loads first: only the surfaces, rules and text change, with one new token,
+   --line, for frames and map outlines. The three pens keep their colours, so the cyan line is structure
+   and never a meaning. Corners are square. Tokens from design/tools/tokens.mjs (station-*). */
+
+:root[data-theme="station"] {
+  --surface: #060a0f;
+  --surface-1: #0b1118;
+  --surface-2: #101922;
+  --surface-3: #18242f;
+  --rule: #1c2a35;
+  --rule-strong: #6f8794;
+  --text: #e6eff3;
+  --text-soft: #a9bcc6;
+  --text-faint: #8499a5;
+  --line: #8fcfdb;
+  --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius: 0px;
+  /* Prose is mono, in mixed case; reading sizes come down, since mono runs wide. Maths keeps its own letters. */
+  --font-text: var(--font-ui);
+  --text-size: 15px;
+}
+
+/* Light: cold printout paper and blue-black ink. */
+:root[data-theme="station"][data-mode="light"] {
+  --surface: #e4eaee;
+  --surface-1: #edf1f4;
+  --surface-2: #f6f8fa;
+  --surface-3: #d3dce2;
+  --rule: #c2cdd4;
+  --rule-strong: #647883;
+  --text: #101a22;
+  --text-soft: #34454f;
+  --text-faint: #4b5d68;
+  --line: #1f6373;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme="station"][data-mode="system"] {
+    --surface: #e4eaee;
+    --surface-1: #edf1f4;
+    --surface-2: #f6f8fa;
+    --surface-3: #d3dce2;
+    --rule: #c2cdd4;
+    --rule-strong: #647883;
+    --text: #101a22;
+    --text-soft: #34454f;
+    --text-faint: #4b5d68;
+    --line: #1f6373;
+  }
+}

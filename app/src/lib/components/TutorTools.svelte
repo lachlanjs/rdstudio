@@ -24,11 +24,11 @@
 </script>
 
 <div class="a-tools" role="toolbar" aria-label="Ask the teacher">
-  <button class="toggle" type="button" disabled={off} onclick={() => ask("hint")}
+  <button class="toggle" type="button" data-key="h" data-key-label="hint" disabled={off} onclick={() => ask("hint")}
     title="The smallest push towards the next step: a word, then a direction, then the step">Hint{session.hints ? ` (${nextRung} of ${HINT_RUNGS})` : ""}</button>
-  <button class="toggle" type="button" disabled={off || !text.trim()} aria-pressed={picking}
+  <button class="toggle" type="button" data-key="f" disabled={off || !text.trim()} aria-pressed={picking}
     onclick={() => { picking = !picking; discussing = false; }} title="What is right and what is not, pinned to your answer">Feedback</button>
-  <button class="toggle" type="button" disabled={off} aria-pressed={discussing}
+  <button class="toggle" type="button" data-key="d" disabled={off} aria-pressed={discussing}
     onclick={() => { discussing = !discussing; picking = false; }} title="Ask about your answer, or about a passage you highlight">Discuss</button>
 </div>
 {#if connected === false}

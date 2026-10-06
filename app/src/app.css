@@ -1449,3 +1449,84 @@ p code { overflow-wrap: anywhere; }
 .project-today a.s-tile:hover .s-label { color: var(--text); }
 .ex.needs .t { font-size: 17px; }
 .need-what { display: block; font: 12px/16px var(--font-ui); margin-top: 2px; }
+
+/* ------------------------------------------------------------ the status line (T61) */
+
+/* Station shows it along the bottom; the keys it names work in either theme, and ? lists them. */
+.status { display: none; }
+.status-keys { position: fixed; right: 12px; bottom: 44px; z-index: 45; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: var(--radius-md); font: 13px/1.5 var(--font-ui); color: var(--text-soft); }
+.status-keys p { margin: 0; }
+.status-keys kbd { color: var(--text); font-weight: 700; }
+
+/* ------------------------------------------------------------ Station (T61) */
+
+/* The second theme (design/project/README.md "Station terminal"; themes/station.css has its tokens): a
+   late-1970s film computer. Pixel type for headings and labels, upper case for short labels only, reversed
+   title bars, thin cyan frames (--line), dotted rules between rows, a status line with the keys, scan
+   lines. Prose is mono in mixed case. The pens are unchanged. Everything here restyles; nothing is built twice. */
+[data-theme="station"] body { letter-spacing: .01em; }
+[data-theme="station"] .katex { letter-spacing: 0; }
+/* Scan lines: one fixed sheet over the page that takes no pointer; off in Settings. */
+[data-theme="station"]:not([data-scan="off"]) body::after {
+  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: .3;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, var(--surface) 2px, var(--surface) 3px);
+}
+/* Pixel type: headings, labels, buttons and the spaces. */
+[data-theme="station"] :is(h1, h2, h3, .brand, .kind, .toggle, .mode-tag, .s-num, .section-h, .lens-title, .lens-label, .quiet-link, .you-button, .bar .tabs a, .tabbar a, .tabbar button, .pin-head b, .m-head b, .map-crumbs, .palette-box kbd) {
+  font-family: var(--font-pixel); font-weight: 400; letter-spacing: 0;
+}
+[data-theme="station"] :is(.kind, .toggle, .mode-tag, .brand, .section-h, .lens-title, .lens-label, .bar .tabs a, .quiet-link, .pin-head b, .m-head b) { text-transform: uppercase; }
+[data-theme="station"] :is(.kind, .toggle, .mode-tag, .section-h, .bar .tabs a, .quiet-link, .pin-head b, .m-head b) { font-size: 11px; }
+[data-theme="station"] h1 { font-size: 22px; line-height: 28px; }
+[data-theme="station"] h2 { font-size: 20px; line-height: 26px; }
+[data-theme="station"] h3 { font-size: 16px; line-height: 24px; }
+[data-theme="station"] .prose :is(h1, h2, h3) { margin-top: 1.4em; }
+[data-theme="station"] :is(em, .draft, .empty, .mblock-empty, .lede, .description, .doc-description, .pin-quote) { font-style: normal; }
+/* The bar: a cyan rule under it, the spaces numbered, the current one in reverse video. */
+[data-theme="station"] .bar { border-bottom: 1px solid var(--line); }
+[data-theme="station"] .bar .tabs { counter-reset: space; align-items: center; gap: 4px; }
+[data-theme="station"] .bar .tabs a { height: 24px; padding: 0 10px; box-shadow: none; border: 0; display: inline-flex; align-items: center; }
+[data-theme="station"] .bar .tabs a::before { counter-increment: space; content: counter(space); margin-right: 9px; color: var(--text-faint); }
+[data-theme="station"] .bar .tabs a[aria-current="page"] { background: var(--text); color: var(--surface); }
+[data-theme="station"] .bar .tabs a[aria-current="page"]::before, [data-theme="station"] .bar .tabs a[aria-current="page"] .count { color: var(--surface); }
+[data-theme="station"] .palette-box { border: 0; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; }
+[data-theme="station"] .palette-box .palette-text::before { content: "› "; color: var(--text); }
+[data-theme="station"] .palette-box .palette-icon { display: none; }
+/* Buttons: a frame in the text's colour; pressed and primary are reversed. */
+[data-theme="station"] .toggle { border: 1px solid var(--text); min-height: 30px; }
+[data-theme="station"] .toggle:is([aria-pressed="true"], [role="radio"][aria-checked="true"], .primary) { background: var(--text); color: var(--surface); border-color: var(--text); }
+[data-theme="station"] .toggle[data-key]::before { content: "[" attr(data-key) "] "; }
+/* Frames: thin, cyan; a section's label is a reversed bar. */
+[data-theme="station"] :is(.sec, .mblock, .streaks, .streak-strip, .pin, .map-panel, .map-crumbs, .atlas-card, .trail-card, .you-menu, .status-keys, .graph-tip) { border: 1px solid var(--line); }
+[data-theme="station"] :is(.sec-head .kind, .mblock > .kind-row .kind, .mblock > .kind) { background: var(--text); color: var(--surface); padding: 2px 10px; }
+[data-theme="station"] :is(.sec, .mblock, .streaks, .streak-strip) { padding: 14px 16px; }
+/* Rows: dotted rules, in the strong rule's colour. */
+[data-theme="station"] :is(.sec, .mblock) li { border-bottom-style: dotted; border-color: var(--rule-strong); }
+[data-theme="station"] a { text-decoration-thickness: 1px; }
+/* The status line: the space in a reversed block, what the page reports, then the keys with dotted leaders. */
+[data-theme="station"] .status {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: 30px; display: flex; align-items: center; white-space: nowrap; overflow: hidden;
+  background: var(--surface); border-top: 1px solid var(--line); font: 11px/16px var(--font-pixel); text-transform: uppercase; color: var(--text-soft);
+}
+[data-theme="station"] .status b { display: flex; align-items: center; height: 100%; padding: 0 12px; background: var(--text); color: var(--surface); font-weight: 400; }
+[data-theme="station"] .status span { padding: 0 12px; }
+[data-theme="station"] .status .sp { flex: 1; }
+[data-theme="station"] .status .sp ~ span::after { content: " ....."; color: var(--text-faint); }
+[data-theme="station"] .status .sp ~ span:last-child::after { content: ""; }
+[data-theme="station"] .status kbd { font: inherit; background: var(--text); color: var(--surface); padding: 1px 5px; margin-right: 4px; }
+[data-theme="station"] #view { padding-bottom: 30px; }
+[data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h) - 30px); }
+[data-theme="station"] .status-keys { bottom: 40px; font-family: var(--font-pixel); font-size: 11px; text-transform: uppercase; }
+/* The Atlas as a deck plan: cyan walls, pixel type in the blocks. */
+[data-theme="station"] .g-wall { stroke: var(--line); }
+[data-theme="station"] :is(.g-title, .g-note, .g-count, .m-step text) { font-family: var(--font-pixel); font-variation-settings: normal; font-weight: 400; }
+[data-theme="station"] .g-title { text-transform: uppercase; }
+[data-theme="station"] .g-rt { stroke: var(--text); }
+[data-theme="station"] .g-hot .g-rt { stroke: var(--pen-blue); }
+[data-theme="station"] .gridmap-wrap.dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--line) 45%, transparent) 0 .8px, transparent 1.3px); }
+/* A phone: the tab bar is at the bottom, so the status line gives way to it. */
+@media (max-width: 760px) {
+  [data-theme="station"] .status { display: none; }
+  [data-theme="station"] #view { padding-bottom: 0; }
+  [data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h)); }
+}
