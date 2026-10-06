@@ -7,10 +7,17 @@ import { buildCells } from "./grid/cells.js";
 import { makeRouter, routeAll as gridRouteAll } from "./grid/router.js";
 
 // What the layout needs from the map model, as plain data a worker can receive.
-export function plainModel(model) {
+// `flat`: the folderless view (T71): every note an item of one folder, the root, so the whole base is one DAG.
+export function plainModel(model, flat = false) {
   const strip = (n) => (n.kind === "dir"
     ? { kind: "dir", id: n.id, ref: n.ref, children: n.children.map(strip) }
     : { kind: n.kind, id: n.id, ref: n.ref, weight: n.weight, rank: n.rank || 0 });
+  if (flat) {
+    const notes = [];
+    const walk = (n) => { if (n.kind === "dir") n.children.forEach(walk); else notes.push(strip(n)); };
+    walk(model.root);
+    return { root: { kind: "dir", id: model.root.id, ref: model.root.ref, children: notes }, edges: model.edges, code: false };
+  }
   return { root: strip(model.root), edges: model.edges, code: !!model.code };
 }
 
@@ -73,7 +80,7 @@ function getWorker() {
 // One is kept for each direction of flow, so turning a phone finds its map
 // ready. The key is what the map contains and the direction: none of the
 // continuous layout's settings move anything on the grid.
-const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 7; // bump whenever the grid layout changes what it returns, or browsers keep the old one
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 8; // bump whenever the grid layout changes what it returns, or browsers keep the old one
 const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
 export function gridKey(plain, o) {
   return hash(JSON.stringify([GRID_VERSION, o.gridFlow === "right" ? "right" : "up", plain]));

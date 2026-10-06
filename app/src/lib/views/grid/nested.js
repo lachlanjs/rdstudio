@@ -19,6 +19,8 @@
 //   Order     Within layers, by sweeps that put each item at the mean place of
 //             its neighbours in the layer before; then each is drawn level
 //             with what it is joined to.
+//   Room      Neighbours and layers stand 6 cells apart; a trunk's track or
+//             lane keeps 2 clear of every item it passes.
 //   Routes    A trunk leaves the late side of the item required, runs along a
 //             track of its own between two layers, and enters the early side
 //             of the item requiring it. Trunks from one item share their way
@@ -40,10 +42,14 @@
 //                                (none for a back or implied trunk, which the
 //                                router finds a way for when it is wanted)
 
+import { KEEP } from "./cells.js";
+
 export const NOTE_W = 18, NOTE_H = 5; // room for a whole title, on two or three lines, before the map is zoomed far in
-const GAP = 3, GAP_FOLDERS = 4; // clear cells between neighbours in a layer
-const CHANNEL = 4; // free cells between two layers, at least
-export const PAD = 3; // cells between a folder's wall and its contents
+// Room: 6 cells between neighbours and between layers, half as much again as the first grid's 4. A route
+// keeps KEEP (2) clear of what it passes, so a third of each gap is left for routes to run in.
+const GAP = 6, GAP_FOLDERS = 6; // clear cells between neighbours in a layer
+const CHANNEL = 6; // free cells between two layers, at least
+export const PAD = 5; // cells between a folder's wall and its contents
 const HEAD = 2; // free rows under a folder's top edge, where its title sits: they keep a subfolder's title clear of it
 const MARGIN = 3; // free cells around the whole map
 const MIN_FOLDER = 12; // a folder is at least this wide, for its title
@@ -161,7 +167,7 @@ export function nestedLayout(model, { flow = "up" } = {}) {
     }
 
     // Across: each row packed in order and centred, then every node drawn level with its neighbours, keeping order and gaps.
-    const space = (u, v) => (passing(u) || passing(v) ? 1 : gap);
+    const space = (u, v) => (passing(u) && passing(v) ? 1 : passing(u) || passing(v) ? KEEP : gap); // a lane keeps its clearance from an item
     const c = new Array(size.length).fill(0);
     for (const r of rows) { let x = 0; r.forEach((v, k) => { if (k) x += space(r[k - 1], v); c[v] = x; x += size[v]; }); }
     const end = (r) => (r.length ? c[r[r.length - 1]] + size[r[r.length - 1]] : 0);
@@ -230,7 +236,13 @@ export function nestedLayout(model, { flow = "up" } = {}) {
     const thick = rows.map((r) => Math.max(0, ...r.filter((v) => !passing(v)).map((v) => main[v])));
     const start = [], track0 = [];
     let m = 0;
-    rows.forEach((_, r) => { start[r] = m; m += thick[r]; track0[r] = m + 1; if (r < rows.length - 1) m += Math.max(CHANNEL, tracks[r] + 2); });
+    // The tracks sit in the middle of their channel, never nearer a row than the clearance.
+    rows.forEach((_, r) => {
+      start[r] = m; m += thick[r];
+      const channel = Math.max(CHANNEL, tracks[r] + 2 * KEEP);
+      track0[r] = m + Math.max(KEEP, Math.floor((channel - tracks[r]) / 2));
+      if (r < rows.length - 1) m += channel;
+    });
     const along = m;
     const m0 = (v) => start[row[v]] + Math.floor((thick[row[v]] - main[v]) / 2); // an item's early side
 

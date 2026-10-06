@@ -5,6 +5,9 @@
 // subfolder. The only contours are folder walls.
 
 export const FREE = 0, NOTE = 1;
+// Clearance: the cells a route keeps clear of a note or a folder's wall when it passes one. Notes and
+// folders stand 6 cells apart (grid/nested.js), so each keeps 2 and a third of the gap is left to run in.
+export const KEEP = 2;
 
 export function buildCells(layout) {
   const { W, H, items } = layout;
@@ -21,7 +24,16 @@ export function buildCells(layout) {
     if (n.kind !== "note") return;
     for (let y = n.gy; y < n.gy + n.h; y++) for (let x = n.gx; x < n.gx + n.w; x++) { blocked[y * W + x] = NOTE; noteAt[y * W + x] = i; }
   });
-  return { W, H, elev, blocked, owner, noteAt };
+  // Close: the free cells within KEEP of a note, or of a folder's wall on either side of it. A route may
+  // cross them (it must, to reach a note or go through a wall) but pays for each (grid/router.js).
+  const close = new Uint8Array(W * H);
+  const band = (x0, y0, x1, y1) => { for (let y = Math.max(0, y0); y < Math.min(H, y1); y++) for (let x = Math.max(0, x0); x < Math.min(W, x1); x++) close[y * W + x] = 1; };
+  for (const n of items) {
+    if (n.kind === "note") { band(n.gx - KEEP, n.gy - KEEP, n.gx + n.w + KEEP, n.gy + n.h + KEEP); continue; }
+    band(n.gx - KEEP, n.gy - KEEP, n.gx + n.w + KEEP, n.gy + KEEP); band(n.gx - KEEP, n.gy + n.h - KEEP, n.gx + n.w + KEEP, n.gy + n.h + KEEP);
+    band(n.gx - KEEP, n.gy - KEEP, n.gx + KEEP, n.gy + n.h + KEEP); band(n.gx + n.w - KEEP, n.gy - KEEP, n.gx + n.w + KEEP, n.gy + n.h + KEEP);
+  }
+  return { W, H, elev, blocked, owner, noteAt, close };
 }
 
 /** An item's folders from the inside out, itself first if it is a folder. */

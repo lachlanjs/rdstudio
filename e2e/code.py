@@ -45,14 +45,30 @@ with sync_playwright() as pw:
     p.on("pageerror", lambda e: errors.append(str(e)))
     p.on("console", lambda m: m.type == "error" and errors.append(m.text))
 
-    # The Atlas, in project mode, maps the code.
+    # The Atlas maps the knowledge base; the code when asked for (Map: Code), which this browser then keeps.
     p.goto(URL + "?nosw#/map")
     p.wait_for_selector(".g-title", timeout=20000)
-    p.wait_for_timeout(1500)
+    p.wait_for_timeout(1200)
     names = p.locator(".g-title").evaluate_all("els => els.map(e => e.textContent.trim().toLowerCase())")
-    check("in project mode the Atlas maps the code: its directories", any(n.startswith("src") for n in names) and any(n.startswith("python") for n in names), names[:20])
+    check("the Atlas maps the notes by default, in project mode too", any(n.startswith("design") or n.startswith("decisions") for n in names), names[:20])
+    p.locator(".map-more > summary").click()
+    p.get_by_role("group", name="Map").get_by_role("button", name="Code").click()
+    p.wait_for_timeout(2500)
+    names = p.locator(".g-title").evaluate_all("els => els.map(e => e.textContent.trim().toLowerCase())")
+    check("Code from the panel: the Atlas maps the code, its directories", any(n.startswith("src") for n in names) and any(n.startswith("python") for n in names), names[:20])
     check("…each folder a layered DAG, with trunks between them", len(p.evaluate("() => document.querySelector('.map-wrap').routes()")) >= 3)
     check("…and says so: Map, Code", p.locator(".map-more").evaluate("d => { d.open = true; return d.querySelector('[aria-label=Map] [aria-pressed=true]')?.textContent }") == "Code")
+    # Folderless (T71): the whole map as one layout, each item with its folder's colour.
+    p.get_by_role("group", name="Folders").get_by_role("button", name="None").click()
+    p.wait_for_function("() => document.querySelectorAll('svg.gridmap .gn-folder').length > 20 && !document.querySelector('svg.gridmap .g-wall')", timeout=15000)
+    check("Folders: None: one layout with no folders, a colour on each item for its folder, and the folders named", p.locator(".map-crumbs .chip").count() >= 4, p.locator(".map-crumbs .chip").count())
+    p.screenshot(path=str(OUT / "code-atlas-flat.png"))
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Shown").click()
+    p.wait_for_selector("svg.gridmap .g-wall", timeout=15000)
+    # The panel folds to a bar.
+    p.locator(".graph-options > summary").click()
+    check("the Atlas's settings fold away, and come back", not p.locator(".map-legend.kinds").is_visible())
+    p.locator(".graph-options > summary").click()
     check("…with code's kinds in the key", "Class" in p.locator(".map-legend.kinds").inner_text() and "Method" in p.locator(".map-legend.kinds").inner_text())
     p.screenshot(path=str(OUT / "code-atlas.png"))
 

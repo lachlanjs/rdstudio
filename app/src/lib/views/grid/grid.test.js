@@ -1,7 +1,8 @@
 // The grid Atlas's layout, cells and routes (T62, T64) on generated folder trees.
 import { describe, expect, it } from "vitest";
 import { gridLayout, gridRouter } from "../layout.js";
-import { buildCells, reachedCells, maskPaths, NOTE } from "./cells.js";
+import { buildCells, reachedCells, maskPaths, NOTE, KEEP } from "./cells.js";
+import { plainModel } from "../layout.js";
 import { greedyOrder, NOTE_W, NOTE_H } from "./nested.js";
 
 const GAP = 2; // clear cells between siblings, at least
@@ -182,4 +183,47 @@ describe("the routes", () => {
     expect(out.measures.lost).toBe(0);
     expect(ms).toBeLessThan(15000);
   }, 20000);
+});
+
+describe("room for routes (T71)", () => {
+  for (const flow of ["up", "right"]) {
+    const L = gridLayout(model(6, 9), { gridFlow: flow });
+    it(`flowing ${flow}: siblings stand 6 cells apart, and a trunk keeps ${KEEP} clear of every note it passes`, () => {
+      L.items.forEach((a, i) => L.items.forEach((b, j) => { if (j > i && a.parent === b.parent) expect(overlap(a, b, 5)).toBe(false); }));
+      const notes = L.items.map((n, i) => i).filter((i) => L.items[i].kind === "note");
+      const inside = (i, f) => { for (let p = i; p >= 0; p = L.items[p].parent) if (p === f) return true; return false; };
+      let near = 0, run = 0;
+      for (const t of L.trunks.filter((t) => t.pts)) {
+        for (let k = 1; k < t.pts.length; k++) {
+          const [x0, y0] = t.pts[k - 1], [x1, y1] = t.pts[k], steps = Math.max(1, Math.round(Math.abs(x1 - x0) + Math.abs(y1 - y0)));
+          for (let s = 0; s <= steps; s++) {
+            const x = x0 + ((x1 - x0) * s) / steps, y = y0 + ((y1 - y0) * s) / steps;
+            run++;
+            for (const i of notes) {
+              if (inside(i, t.a) || inside(i, t.b)) continue; // its own ends, and what is in them
+              const n = L.items[i], dx = Math.max(n.gx - x, x - (n.gx + n.w), 0), dy = Math.max(n.gy - y, y - (n.gy + n.h), 0);
+              if (Math.max(dx, dy) < KEEP - 0.5) near++;
+            }
+          }
+        }
+      }
+      expect(run).toBeGreaterThan(200);
+      expect(near).toBe(0);
+    });
+  }
+});
+
+describe("the folderless view (T71)", () => {
+  const m = model(6, 9), flat = plainModel(m, true), L = gridLayout(flat, { gridFlow: "up" });
+  it("every note is an item of one layout, with no folders, none overlapping", () => {
+    expect(L.items.every((n) => n.kind === "note" && n.parent === -1)).toBe(true);
+    expect(L.items).toHaveLength(6 * 9 + 2 * 4 + 1);
+    L.items.forEach((a, i) => L.items.forEach((b, j) => { if (j > i) expect(overlap(a, b, 5)).toBe(false); }));
+  });
+  it("links that fit the order are drawn as trunks, and each of the rest is a back trunk or implied by a longer way", () => {
+    const strong = m.edges.filter(([, , s]) => s >= 2).length;
+    expect(L.trunks.filter((t) => t.pts).length).toBeGreaterThan(strong * 0.5);
+    expect(L.trunks.filter((t) => !t.pts).every((t) => t.back || t.implied)).toBe(true);
+    expect(L.trunks.filter((t) => t.back).length).toBeLessThan(strong * 0.2);
+  });
 });

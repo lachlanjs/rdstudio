@@ -53,8 +53,16 @@ model, settings and lens panel) and `views/grid/`.
 
 - **Cells:** everything sits on a square grid. A note is a block of 18 by 5
   cells, room for its whole title on two or three lines. A folder is a rectangle with cut
-  corners, 3 cells of margin inside and its title on its top edge; folders
+  corners, 5 cells of margin inside and its title on its top edge; folders
   nest, each level a tone lighter.
+- **Room and clearance ([T71](/tasks/T71-atlas-flat-and-room.md)):**
+  neighbours, layers and folders stand 6 cells apart. A route keeps 2 cells
+  clear of any note or wall it passes (tracks sit mid-channel, lanes stand
+  off the items beside them, and the router pays for each close cell), so a
+  third of each gap is left for routes.
+- **Folderless (optional):** the same layout over the whole base as one
+  folder, so every note is in one DAG; a note's top-level folder is a strip
+  of colour on its edge, and the folders are named with their colours.
 - **Each folder is laid out on its own,** as a layered DAG of its items: its
   notes, and its subfolders, each one block. A link belongs to the lowest
   folder holding both its ends, and there joins the two items that hold
@@ -114,7 +122,9 @@ project's `[map]` table in `rdstudio.toml`, and choices made in the browser
 | `showLinks` | true | The Links lens: the trunks between the items of each open folder |
 | `terrain` | true | Tone the ground and the notes by the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
-| `source` | (by mode) | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md); the default in project mode when the code is indexed) |
+| `source` | `notes` | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md), when the code is indexed) |
+| `folderless` | false | The whole base as one layered DAG with no folders; each note carries its top-level folder's colour ([T71](/tasks/T71-atlas-flat-and-room.md)) |
+| `panelOpen` | (by room) | The lens panel open, or folded to its bar |
 | `hideImplied` | true | Leave out a link between two notes that a longer way already joins |
 | `gridFlow` | `"auto"` | The top level's direction: `up`, `right`, or `auto` (up; right on a touch device wider than tall) |
 

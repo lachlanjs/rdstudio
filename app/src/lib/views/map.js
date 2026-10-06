@@ -23,7 +23,9 @@ export const VIEW_DEFAULTS = {
   terrain: true, // tone the ground and the notes by the height lens
   height: null, // the height lens: "understanding", "activity" or "health"; by default understanding, or activity in project mode
   hideImplied: true, // leave out a link that a longer way already makes
-  source: null, // what is mapped: "notes", or "code" (T66); by default code in project mode when the code is indexed
+  source: null, // what is mapped: "notes" (the default), or "code" (T66) when the code is indexed
+  folderless: false, // the whole base as one DAG, with no folders; each note carries its folder's colour (T71)
+  panelOpen: null, // the lens panel: open, or folded to its bar; by default open where there is room
   // The top level runs "up", "right", or "auto" (up; right on a phone on its
   // side); the levels inside it turn in turn (T64).
   gridFlow: "auto",
@@ -73,7 +75,7 @@ const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
 /** What the Atlas maps: the notes, or the code (T66). */
 export function sourceOf(o) {
   if (!store.code) return "notes";
-  return o.source === "code" || o.source === "notes" ? o.source : projectMode() === "Project" ? "code" : "notes";
+  return o.source === "code" ? "code" : "notes"; // the Atlas is the knowledge base's map; the code is there when asked for
 }
 export function heightLens(o) {
   const lens = LENSES[o.height] ? o.height : projectMode() === "Project" ? "activity" : "understanding";
@@ -347,10 +349,12 @@ export function controls({ view, readout, summary, key: keyItems }) {
   const pressHeights = () => { const e = effective(); for (const [value, b] of heights) b.setAttribute("aria-pressed", String(!!e.terrain && heightLens(e) === value)); };
   pressHeights();
 
-  return h("div", { class: "graph-panel map-panel" },
-    h("details", { class: "graph-options", open: !narrow },
-      h("summary", {}, h("span", { class: "lens-label" }, "Lenses"), lensNames, h("span", { class: "lens-change" }, "Change")),
-      h("h2", { class: "lens-title" }, "Lenses"),
+  // The panel folds to one bar, here as on a phone, and stays as it was left.
+  const change = h("span", { class: "lens-change" });
+  let fold = null;
+  const panel = h("div", { class: "graph-panel map-panel" },
+    fold = h("details", { class: "graph-options", open: o.panelOpen ?? !narrow },
+      h("summary", { title: "Show or hide the Atlas's settings" }, h("span", { class: "lens-label" }, "Lenses"), lensNames, change),
       h("div", { class: "row lenses" },
         toggle("showLinks", "Links", "The trunks between the items of each open folder, with their counts. Pointing at a note lights what it depends on."),
         ...heights.map(([, b]) => b)),
@@ -365,6 +369,8 @@ export function controls({ view, readout, summary, key: keyItems }) {
       summary,
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
+        choice("folderless", "Folders", [[false, "Shown", "Each folder a region, laid out on its own."],
+          [true, "None", "The whole base as one graph: every note in one layout, with its folder as a colour on its edge."]], () => M.resource?.()),
         store.code ? choice("source", "Map", [["code", "Code", "The code itself: directories, files, classes, functions; imports, calls and bindings as links."],
           ["notes", "Notes", "The knowledge base's notes and the links between them."]], () => M.resource?.(), () => sourceOf(effective())) : "",
         choice("gridFlow", "Flows", [["auto", "Auto", "The top level runs bottom to top; left to right on a phone turned on its side."],
@@ -376,4 +382,8 @@ export function controls({ view, readout, summary, key: keyItems }) {
         h("div", { class: "row" },
           button("Show everything", () => M.reset?.()),
           button("Default view", () => { for (const k of Object.keys(VIEW_DEFAULTS)) delete M.user[k]; persist(); location.reload(); })))));
+  const folded = () => { change.textContent = fold.open ? "Hide" : "Show"; panel.classList.toggle("folded", !fold.open); };
+  fold.addEventListener("toggle", () => { M.user.panelOpen = fold.open; persist(); folded(); });
+  folded();
+  return panel;
 }

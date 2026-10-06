@@ -130,10 +130,11 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   newFolder.addEventListener("click", () => actions.open({ kind: "new-folder", folder: focusRefNow(), from: "map" }));
   const create = h("div", { class: "map-create", role: "group", "aria-label": "Create here", hidden: true }, newNote, newFolder);
   void editing.known.then(() => { create.hidden = !editing.enabled; });
-  const panel = controls({
+  const makePanel = () => controls({
     view: () => { o = effective(); cache = null; tones = null; hotFor = null; arrange(); schedule(); },
     readout, summary, key: gridKeyItems,
   });
+  let panel = makePanel();
   const status = h("p", { class: "map-status", role: "status", hidden: true }, "Arranging the map…");
   // The selected note: what it is, where you stand, and the way in.
   const card = h("section", { class: "atlas-card", hidden: true, "aria-live": "polite" });
@@ -157,6 +158,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   let nodes = byId(model); // the model's notes and folders, by id
   let L = null, key = null, wanted = null; // the layout shown, its key, and the key asked for
   let cells = null, up = [], noteCount = [];
+  let flat = false, folderOf = new Map(), folderList = []; // the folderless view: each note's top-level folder (a number, for its colour), and the folders
   let cache = null; // the routes for the folder in focus and what is open in it
   let drawn = []; // the routes on screen: the last that arrived
   let tones = null; // where each note stands under the lens, and the reached ground
@@ -192,7 +194,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const ready = new Map(); // layouts by key, this visit
   function arrange() {
     const wide = window.innerWidth > window.innerHeight;
-    const oo = { ...o, gridFlow: flowFor(wide) }, plain = plainModel(model), k = gridKey(plain, oo);
+    const oo = { ...o, gridFlow: flowFor(wide) }, plain = plainModel(model, !!o.folderless), k = gridKey(plain, oo);
     if (k === wanted) return;
     wanted = k;
     if (k === key) { status.hidden = true; return; }
@@ -224,6 +226,18 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     cells = buildCells(L);
     up = L.items.map((n) => { const out = []; for (let p = n.parent; p >= 0; p = L.items[p].parent) out.push(p); return out; });
     noteCount = L.items.map(() => 0);
+    // Folderless: a layout with no folders in it. Each note keeps its top-level folder, as a colour on its edge.
+    flat = !!o.folderless && !L.items.some((n) => n.kind === "folder");
+    folderOf = new Map(); folderList = [];
+    if (flat) {
+      const tops = model.root.children.filter((n) => n.kind === "dir").sort((a, b) => (a.ref < b.ref ? -1 : 1));
+      tops.forEach((d, k) => {
+        let count = 0;
+        const walk = (n) => { if (n.kind === "dir") n.children.forEach(walk); else { folderOf.set(n.id, k); count++; } };
+        walk(d);
+        folderList.push({ label: d.label, count, k });
+      });
+    }
     L.items.forEach((n, i) => { if (n.kind === "note") for (const p of up[i]) noteCount[p]++; });
     cache = null; drawn = []; tones = null;
     status.hidden = true;
@@ -704,6 +718,10 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         g.selectAll("*").remove();
         const frame = cut(x0, y0, x0 + bw, y0 + bh, Math.min(8, c * 0.7), Math.min(1.5, c * 0.15));
         g.append("path").attr("class", "gn-block").attr("d", frame);
+        if (flat && folderOf.has(n.id)) { // its folder, as a strip of colour down its first edge
+          const sw = Math.max(2.5, Math.min(6, c * 0.6)), inset = Math.min(8, c * 0.7) * 0.6;
+          g.append("path").attr("class", `gn-folder f${folderOf.get(n.id) % 8}`).attr("d", `M${(x0 + 1).toFixed(1)} ${(y0 + inset).toFixed(1)}h${sw.toFixed(1)}V${(y0 + bh - inset).toFixed(1)}h${(-sw).toFixed(1)}z`);
+        }
         if (hot && (hot.notes.has(i) || hot.at === i)) {
           // Lit: a frame in the blue pen, drawn round the note once the link to it has arrived.
           const ring = g.append("path").attr("class", "gn-ring").attr("d", frame).node(), due = hot.since + ((hot.far.get(i) ?? 0) * STEP_MS + (hot.at === i ? 0 : DRAW_MS));
@@ -748,7 +766,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         if (fit) {
           const step = fit.size * 1.2, top = y0 + (bh - foot - fit.lines.length * step) / 2 + fit.size * 0.95; // the lines centred in the block
           const text = g.append("text").attr("class", "g-note").style("font-size", `${fit.size}px`);
-          fit.lines.forEach((line, k) => text.append("tspan").attr("x", (x0 + 8).toFixed(1)).attr("y", (top + k * step).toFixed(1)).text(line));
+          fit.lines.forEach((line, k) => text.append("tspan").attr("x", (x0 + (flat ? 11 : 8)).toFixed(1)).attr("y", (top + k * step).toFixed(1)).text(line));
         }
       });
 
@@ -794,6 +812,12 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       b.addEventListener("click", () => zoomTo(i));
       return b;
     };
+    if (flat) { // no folders to stand in: the folders are named by their colours
+      crumbs.classList.add("folders");
+      crumbs.replaceChildren(button(-1, model.root.label), ...folderList.map((f) => h("span", { class: "chip" }, h("i", { class: `f${f.k % 8}` }), `${f.label} ${f.count}`)));
+      return;
+    }
+    crumbs.classList.remove("folders");
     crumbs.replaceChildren(button(-1, model.root.label), ...path.flatMap((i) => [h("span", { "aria-hidden": "true" }, "/"), button(i, nodes.get(L.items[i].id)?.label || L.items[i].ref)]));
   }
 
@@ -803,6 +827,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const lines = [h("strong", {}, d.label)];
     if (n.kind === "note") {
       lines.push(h("span", {}, d.code ? `${d.c.type} in ${d.code.path}` : `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
+      if (flat && d.c.directory) lines.push(h("div", {}, `In ${d.c.directory}`));
       if (d.c.description) lines.push(h("div", {}, d.c.description));
     } else lines.push(h("span", {}, `${d.code ? KIND_LABEL[d.code.kind] : "Folder"} · ${noteCount[i]} ${model.code ? "item" : "note"}${noteCount[i] === 1 ? "" : "s"}`));
     tip.replaceChildren(...lines);
@@ -839,7 +864,16 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
   wrap.refresh = () => { model = timed("map-model", buildModel); nodes = byId(model); o = effective(); arrange(); tones = null; schedule(); };
   M.reset = () => zoomTo(-1);
-  M.resource = () => { userMoved = false; wrap.refresh(); }; // the panel's Notes or Code: another map, so shown whole
+  // The panel's Notes or Code, or folders or none: another map, so shown whole, with a panel made for it
+  // (the kinds in its key and the lenses it offers depend on what is mapped).
+  M.resource = () => {
+    userMoved = false;
+    wrap.refresh();
+    const next = makePanel(), more = next.querySelector(".map-more");
+    if (more) more.open = !!panel.querySelector(".map-more")?.open;
+    panel.replaceWith(next);
+    panel = next;
+  };
   wrap.routes = () => drawn; // for tests and inspection
   wrap.layout = () => L;
   wrap.model = () => model;

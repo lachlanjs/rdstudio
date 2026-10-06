@@ -4,8 +4,9 @@
 // A step costs its length, more in a cell other routes use (`crowd`) or run
 // beside (`near`), plus `climb` for each change of height (a folder's wall),
 // a little for each turn, and `foreign` for each cell of a folder the route
-// has no business in. Notes are closed. A route ends on the
-// edge of the block it joins.
+// has no business in, and `hug` for each cell within the clearance of a note
+// or a wall (cells.js `close`), so a route going round something stands off
+// it. Notes are closed. A route ends on the edge of the block it joins.
 //
 // Unlike the sketch, the search's arrays are made once per layout and reused,
 // and each search is held to a window around its two ends, so a map of a
@@ -15,15 +16,15 @@ import { foldersOf } from "./cells.js";
 
 // Turns are dear (the sketch charged 0.35 and 0.9): the router draws back links and the links lit under the
 // pointer, a few at a time, and each should take few turns.
-export const ROUTER_DEFAULTS = { climb: 5, turn45: 1.5, turn90: 3, foreign: 2.5, crowd: 0.2, near: 0, haste: 3.2 };
+export const ROUTER_DEFAULTS = { climb: 5, turn45: 1.5, turn90: 3, foreign: 2.5, crowd: 0.2, near: 0, hug: 2.5, haste: 3.2 };
 
 const DX = [1, 1, 0, -1, -1, -1, 0, 1], DY = [0, 1, 1, 1, 0, -1, -1, -1];
 const BUSY = 3; // routes in a cell beyond this cost no more: a full corridor is full, and the search stays short
 const START = 8; // the direction of a search's first cell: none yet
 
 export function makeRouter(layout, cells, opts = {}) {
-  const { climb, turn45, turn90, foreign, crowd, near, haste } = { ...ROUTER_DEFAULTS, ...opts };
-  const { W, H, elev, blocked, owner } = cells, N = W * H, items = layout.items;
+  const { climb, turn45, turn90, foreign, crowd, near, hug, haste } = { ...ROUTER_DEFAULTS, ...opts };
+  const { W, H, elev, blocked, owner } = cells, close = cells.close || new Uint8Array(W * H), N = W * H, items = layout.items;
   const use = new Uint16Array(N), beside = new Uint16Array(N); // routes in each cell, and in the eight around it
   // A search's state is a cell and the direction it was entered by. `seen`
   // says which entries belong to the current search, so nothing is cleared.
@@ -124,6 +125,7 @@ export function makeRouter(layout, cells, opts = {}) {
           cost += turn === 1 ? turn45 : turn90 * (turn >= 3 ? 2 : 1);
         }
         if (owner[nc] >= 0 && allow[owner[nc]] !== gen) cost += foreign;
+        if (close[nc]) cost += hug;
         const ns = nc * 9 + k, ng = Math.fround(g + cost);
         if (seen[ns] === gen && dist[ns] <= ng) continue;
         seen[ns] = gen; dist[ns] = ng; prev[ns] = s;

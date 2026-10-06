@@ -66,5 +66,5 @@ imports a file, a test tests a class); `grid/nested.js` takes those ends on
 the code map only. Links for tests and builds are rated like "see also", so
 they are shown but do not shape the layout. A directory holding only one
 directory is folded into it. Activity is each file's last commit. Health is
-tested, documented and reviewed. The panel's Map choice switches between
-Code and Notes (`source` in [the settings](/design/map-view.md)).
+tested, documented and reviewed. The Atlas maps the notes by default, in project mode too; the panel's Map
+choice switches between Code and Notes (`source` in [the settings](/design/map-view.md)).
