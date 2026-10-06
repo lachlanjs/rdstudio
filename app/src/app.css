@@ -1532,7 +1532,7 @@ p code { overflow-wrap: anywhere; }
 [data-theme="station"] :is(.g-title, .g-count, .m-step text) { font-family: var(--font-map); font-variation-settings: "wdth" 100; font-weight: 400; }
 [data-theme="station"] .g-title { text-transform: uppercase; font-weight: 300; letter-spacing: .04em; fill: var(--line); }
 [data-theme="station"] .g-title .g-n { fill: var(--text-soft); }
-[data-theme="station"] .g-note { font-family: var(--font-map); font-variation-settings: "wdth" 88; text-transform: uppercase; font-size: 10px; letter-spacing: .02em; }
+[data-theme="station"] .g-note { font-family: var(--font-map); font-variation-settings: "wdth" 88; text-transform: uppercase; letter-spacing: .02em; }
 [data-theme="station"] .gn-block { fill: var(--surface-2); stroke: color-mix(in srgb, var(--line) 45%, transparent); }
 [data-theme="station"] .gn.l1 .gn-block { fill: var(--surface-2); stroke: var(--line); }
 [data-theme="station"] .gn:is(.l2, .l3) .gn-block { fill: var(--surface-3); stroke: var(--text); }

@@ -29,6 +29,7 @@ const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
 const MIN_CELL = 1.6; // folders stay closed while a cell is smaller than this on screen
 const LABELS_AT = 6; // notes carry their titles from this cell size up
+const LABEL_MIN = 10; // a title's smallest size on a note; it grows with the block as far as the whole title still fits
 const STEP_MS = 170, DRAW_MS = 280; // lighting what a note depends on: each link starts this long after the one before, and takes this long (as in app.css) before the note's frame follows
 const DOTS_AT = 8; // the dot at each grid corner is drawn from this cell size up
 
@@ -663,6 +664,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Notes: a block with the glyph for its kind, and its title once there is room.
     const notes = items.map((n, i) => i).filter((i) => items[i].kind === "note" && shown[i] && onScreen(items[i]));
     const labels = c >= LABELS_AT;
+    const station = document.documentElement.dataset.theme === "station";
     gNotes.selectAll("g").data(notes, (i) => items[i].id).join("g")
       .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? " dep" : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}`)
       .attr("tabindex", 0).attr("role", "link").attr("aria-label", (i) => nodes.get(items[i].id)?.label || items[i].ref)
@@ -686,29 +688,41 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
           }
         }
         if (l === 3 && lens !== "activity" && bw > 14) g.append("path").attr("class", "gn-ok").attr("d", `M${(x0 + 5).toFixed(1)} ${(y0 + bh - 5.5).toFixed(1)}h${(bw - 10).toFixed(1)}M${(x0 + 5).toFixed(1)} ${(y0 + bh - 8.5).toFixed(1)}h${(bw - 10).toFixed(1)}`);
-        if (c >= 4) {
-          const shape = d?.marker || "circle", r = labels ? 3.8 : Math.min(3.6, c * 0.42);
-          const kx = labels ? x0 + bw - 11 : x0 + bw / 2, ky = y0 + bh / 2 - (l === 3 ? 2 : 0);
-          g.append("path").attr("class", "g-kind").attr("transform", `translate(${kx.toFixed(1)},${ky.toFixed(1)})`).attr("d", d3.symbol(SYMBOLS[shape], r * r * 3)());
-          if (shape === "ring") g.append("path").attr("class", "g-kind").attr("d", `M${(kx - r).toFixed(1)} ${ky.toFixed(1)}h${(2 * r).toFixed(1)}`);
-        }
+        // The title fills the block: the largest size at which it fits, wrapped
+        // to the block's width with room left for the glyph of its kind; at the
+        // smallest size it is cut short where it does not fit.
+        const foot = l === 3 && lens !== "activity" ? 9 : 0; // the double green rule
+        let fit = null;
         if (labels && d) {
-          // The title, wrapped to the block and cut short where it does not fit.
-          const per = Math.floor((bw - 28) / 6.9), most = Math.max(1, Math.floor((bh - (l === 3 ? 16 : 8)) / 13));
-          if (per >= 4) {
+          const words = String(d.label).split(/\s+/), wide = station ? 0.7 : 0.62; // a letter's width over the size (Station sets capitals)
+          const wrap = (size) => {
+            const mark = size * 0.9 + 10, per = Math.floor((bw - 14 - mark) / (size * wide)), most = Math.max(1, Math.floor((bh - 8 - foot) / (size * 1.2)));
             const lines = [];
-            let cur = "";
-            for (let word of String(d.label).split(/\s+/)) {
-              if (word.length > per) word = word.slice(0, per - 1) + "…";
+            let cur = "", whole = true;
+            for (let word of words) {
+              if (word.length > per) { word = word.slice(0, Math.max(1, per - 1)) + "…"; whole = false; }
               if (cur && (cur + " " + word).length > per) { lines.push(cur); cur = word; } else cur = cur ? cur + " " + word : word;
             }
             lines.push(cur);
-            const show = lines.slice(0, most);
-            if (lines.length > most) show[most - 1] = lines.slice(most - 1).join(" ").slice(0, per - 1) + "…";
-            const text = g.append("text").attr("class", "g-note");
-            show.forEach((s, k) => text.append("tspan").attr("x", (x0 + 7).toFixed(1))
-              .attr("y", (y0 + (show.length === 1 && bh < 40 ? bh / 2 + (l === 3 ? 2 : 4.5) : 15 + k * 13)).toFixed(1)).text(s));
+            return { size, per, most, lines, whole: whole && lines.length <= most };
+          };
+          for (let size = Math.min(48, Math.floor(bh * 0.42)); size >= LABEL_MIN && !fit; size--) { const t = wrap(size); if (t.whole) fit = t; }
+          if (!fit) {
+            fit = wrap(LABEL_MIN);
+            if (fit.per < 4) fit = null;
+            else if (fit.lines.length > fit.most) fit.lines = [...fit.lines.slice(0, fit.most - 1), fit.lines.slice(fit.most - 1).join(" ").slice(0, fit.per - 1) + "…"];
           }
+        }
+        if (c >= 4) {
+          const shape = d?.marker || "circle", r = fit ? Math.max(3.8, fit.size * 0.36) : Math.min(3.6, c * 0.42);
+          const kx = fit ? x0 + bw - r - 8 : x0 + bw / 2, ky = y0 + bh / 2 - (foot ? 2 : 0);
+          g.append("path").attr("class", "g-kind").attr("transform", `translate(${kx.toFixed(1)},${ky.toFixed(1)})`).attr("d", d3.symbol(SYMBOLS[shape], r * r * 3)());
+          if (shape === "ring") g.append("path").attr("class", "g-kind").attr("d", `M${(kx - r).toFixed(1)} ${ky.toFixed(1)}h${(2 * r).toFixed(1)}`);
+        }
+        if (fit) {
+          const step = fit.size * 1.2, top = y0 + (bh - foot - fit.lines.length * step) / 2 + fit.size * 0.95; // the lines centred in the block
+          const text = g.append("text").attr("class", "g-note").style("font-size", `${fit.size}px`);
+          fit.lines.forEach((line, k) => text.append("tspan").attr("x", (x0 + 8).toFixed(1)).attr("y", (top + k * step).toFixed(1)).text(line));
         }
       });
 
