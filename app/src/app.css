@@ -1468,7 +1468,7 @@ p code { overflow-wrap: anywhere; }
 [data-theme="station"] .katex { letter-spacing: 0; }
 /* Scan lines: one fixed sheet over the page that takes no pointer; off in Settings. */
 [data-theme="station"]:not([data-scan="off"]) body::after {
-  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: .3;
+  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: .13;
   background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, var(--surface) 2px, var(--surface) 3px);
 }
 /* Type, after the reference (the crafting screen of Alien: Isolation): thin, wide capitals for headings and

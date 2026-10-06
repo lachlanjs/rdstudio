@@ -28,7 +28,7 @@ import { effective, buildModel, controls, heightLens, lensValue, SYMBOLS, M } fr
 const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
 const MIN_CELL = 1.6; // folders stay closed while a cell is smaller than this on screen
-const LABELS_AT = 7; // notes carry their titles from this cell size up
+const LABELS_AT = 6; // notes carry their titles from this cell size up
 const STEP_MS = 170, DRAW_MS = 280; // lighting what a note depends on: each link starts this long after the one before, and takes this long (as in app.css) before the note's frame follows
 const DOTS_AT = 8; // the dot at each grid corner is drawn from this cell size up
 

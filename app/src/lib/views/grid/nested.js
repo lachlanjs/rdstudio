@@ -40,7 +40,7 @@
 //                                (none for a back or implied trunk, which the
 //                                router finds a way for when it is wanted)
 
-export const NOTE_W = 14, NOTE_H = 4; // room for two lines of a title
+export const NOTE_W = 18, NOTE_H = 5; // room for a whole title, on two or three lines, before the map is zoomed far in
 const GAP = 2, GAP_FOLDERS = 3; // clear cells between neighbours in a layer
 const CHANNEL = 3; // free cells between two layers, at least
 export const PAD = 2; // cells between a folder's wall and its contents

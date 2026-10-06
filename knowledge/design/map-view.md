@@ -51,8 +51,8 @@ routes and terrain ([T57](/tasks/T57-atlas.md),
 worked. The code is `views/gridmap.js` (the drawing), `views/map.js` (the
 model, settings and lens panel) and `views/grid/`.
 
-- **Cells:** everything sits on a square grid. A note is a block of 14 by 4
-  cells, room for two lines of its title. A folder is a rectangle with cut
+- **Cells:** everything sits on a square grid. A note is a block of 18 by 5
+  cells, room for its whole title on two or three lines. A folder is a rectangle with cut
   corners, 2 cells of margin inside and its title on its top edge; folders
   nest, each level a tone lighter.
 - **Each folder is laid out on its own,** as a layered DAG of its items: its
@@ -85,7 +85,7 @@ model, settings and lens panel) and `views/grid/`.
   note is lighter; a block is faint, outlined, filled, or filled with a
   double green rule; a red frame needs work.
 - **Detail:** a folder is one titled block until it is `detail` wide on
-  screen and a cell is 1.6px; notes carry their titles from a cell of 7px.
+  screen and a cell is 1.6px; notes carry their titles from a cell of 6px.
 
 - **Height lenses:** what the tones mean, one at a time. **Understanding**
   (the learning default): where you stand. **Activity** (the project

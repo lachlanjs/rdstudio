@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { gridLayout, gridRouter } from "../layout.js";
 import { buildCells, reachedCells, maskPaths, NOTE } from "./cells.js";
-import { greedyOrder } from "./nested.js";
+import { greedyOrder, NOTE_W, NOTE_H } from "./nested.js";
 
 const GAP = 2; // clear cells between siblings, at least
 
@@ -49,7 +49,7 @@ describe("the layout", () => {
       L.items.forEach((n, i) => {
         expect(n.parent).toBeLessThan(i);
         expect(n.gx >= 0 && n.gy >= 0 && n.gx + n.w <= L.W && n.gy + n.h <= L.H).toBe(true);
-        if (n.kind === "note") expect([n.w, n.h]).toEqual([14, 4]);
+        if (n.kind === "note") expect([n.w, n.h]).toEqual([NOTE_W, NOTE_H]);
         if (n.parent >= 0) { expect(inside(n, L.items[n.parent])).toBe(true); expect(n.gy).toBeGreaterThan(L.items[n.parent].gy + 1); }
       });
       L.items.forEach((a, i) => L.items.forEach((b, j) => { if (j > i && a.parent === b.parent) expect(overlap(a, b, GAP)).toBe(false); }));
