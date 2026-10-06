@@ -989,10 +989,6 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 /* Exercises and goal panels sit in the reading column, like the prose. */
 .exercise, .goal-panel { max-width: var(--measure); }
 .exercise-value .section-note { max-width: none; }
-.exercise-working { margin: 14px 0 0; }
-.exercise-working > summary { cursor: pointer; color: var(--ink-soft); font-size: 14.5px; margin-bottom: 8px; }
-.exercise-review { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14.5px; color: var(--ink-soft); }
-.exercise-review input { accent-color: var(--accent); }
 .exercise-offer { margin: 10px 0 6px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--paper); }
 .exercise-offer p { margin: 0 0 8px; font-size: 14.5px; }
 .exercise-offer .toggle { margin-top: 10px; }
@@ -1552,3 +1548,30 @@ p code { overflow-wrap: anywhere; }
   [data-theme="station"] #view { padding-bottom: 0; }
   [data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h)); }
 }
+
+/* ------------------------------------------------------------ the answer sheet */
+
+/* A number or a choice is answered on one sheet, as on paper: the working (a scratch area that grows as you
+   write), then the answer on a line of its own at its foot, with the actions on the line under it. */
+.sheet { margin-top: 6px; }
+.sheet-label { display: block; font: 700 13px/16px var(--font-ui); color: var(--text-soft); }
+.sheet-working { border-left: 2px solid var(--rule); padding: 2px 0 2px 14px; }
+.sheet-working:focus-within { border-left-color: var(--rule-strong); }
+.answer .sheet-working .answer-editor { margin-top: 4px; border: 0; background: transparent; box-shadow: none; }
+.answer .sheet-working .answer-editor .cm-content { font-size: 16px; line-height: 1.7; }
+.sheet-answer { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.sheet-answer.choices { display: block; }
+.sheet-answer.choices .exercise-choices { margin-top: 8px; }
+.sheet-answer .sheet-label { flex: none; }
+.sheet-answer.exercise-value input { flex: 1; width: auto; max-width: 420px; font-size: 18px; padding: 8px 12px; }
+.sheet-answer.exercise-value input::placeholder { font-size: 14px; color: var(--text-faint); }
+.a-foot.sheet-foot { margin-top: 14px; border-top: 0; padding-top: 0; }
+/* Station: the sheet in a bracket frame, its labels in the drawing line's cyan. */
+[data-theme="station"] .sheet {
+  padding: 14px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background-image: linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line));
+  background-size: 1px 9px; background-repeat: no-repeat; background-position: left top, right top, left bottom, right bottom;
+}
+[data-theme="station"] .sheet-label { font: 300 11px/16px var(--font-map); font-variation-settings: "wdth" 112; letter-spacing: .04em; text-transform: uppercase; color: var(--line); }
+[data-theme="station"] .sheet-working { border-left: 0; padding-left: 0; }
+[data-theme="station"] .sheet-answer { border-top-style: dotted; border-color: var(--rule-strong); }
