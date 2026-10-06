@@ -249,12 +249,13 @@ describe("feeders (T72)", () => {
         }
       });
     });
-    it(`flowing ${flow}: a feeder runs from its item's edge, inside its folder, through no note, to the trunk's foot or a branch already going there`, () => {
+    it(`flowing ${flow}: a feeder runs from its item's edge, inside its folder, through no note and no other folder, to the trunk's foot or a branch already going there`, () => {
       for (const f of L.feeders) {
         const F = L.items[f.folder], X = L.items[f.item], [x0, y0] = f.pts[0];
         expect(x0 >= X.gx && x0 <= X.gx + X.w && y0 >= X.gy && y0 <= X.gy + X.h).toBe(true);
         for (const [x, y] of f.pts) expect(x >= F.gx && x <= F.gx + F.w && y >= F.gy && y <= F.gy + F.h).toBe(true);
         for (const [x, y] of f.pts.slice(1, -1)) expect(C.blocked[Math.floor(y) * C.W + Math.floor(x)]).toBe(0);
+        for (const [x, y] of f.pts.slice(1, -1)) expect(C.owner[Math.floor(y) * C.W + Math.floor(x)]).toBe(f.folder); // on its folder's own ground: through no other folder
       }
       // The first branch to each foot ends on the wall, at the trunk's end; the rest end there or on another branch.
       const first = new Map();

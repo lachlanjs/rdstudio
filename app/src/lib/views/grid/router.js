@@ -110,6 +110,7 @@ export function makeRouter(layout, cells, opts = {}) {
       push(g + guess(c % W, (c / W) | 0), g, s);
       starts.set(c, r);
     }
+    const strict = !!goal?.strict;
     let end = -1;
     while (hn) {
       pop();
@@ -122,7 +123,7 @@ export function makeRouter(layout, cells, opts = {}) {
         const nx = cx + DX[k], ny = cy + DY[k];
         if (nx < x0 || ny < y0 || nx > x1 || ny > y1) continue;
         const nc = ny * W + nx;
-        if (blocked[nc]) continue;
+        if (blocked[nc] || (strict && owner[nc] !== goal.folder)) continue; // a feeder keeps to its folder's own ground
         if (DX[k] && DY[k]) { // no cutting the corners of walls or blocks
           const c1 = cy * W + nx, c2 = ny * W + cx;
           if (blocked[c1] || blocked[c2] || elev[c1] !== elev[c] || elev[c2] !== elev[c] || elev[nc] !== elev[c]) continue;
@@ -161,8 +162,14 @@ export function makeRouter(layout, cells, opts = {}) {
     const x1 = Math.min(W - 1, Math.max(A.gx + A.w, B.gx + B.w) + pad), y1 = Math.min(H - 1, Math.max(A.gy + A.h, B.gy + B.h) + pad);
     return search(a, b, x0, y0, x1, y1) || (x0 || y0 || x1 < W - 1 || y1 < H - 1 ? search(a, b, 0, 0, W - 1, H - 1) : null);
   }
-  /** A route from an item to one of the cells of `to` (see `search`), within the folder's own ground. */
+  /** A route from an item to one of the cells of `to` (see `search`), within the folder's own ground:
+   *  through no other folder, unless there is no way round (a folder against the wall). */
   function routeTo(a, to) {
+    const A = items[a], F = items[to.folder];
+    const strict = routeIn(a, { ...to, strict: true });
+    return strict || routeIn(a, to);
+  }
+  function routeIn(a, to) {
     const A = items[a], F = items[to.folder];
     return search(a, -1, Math.max(0, Math.min(A.gx, F.gx) - 2), Math.max(0, Math.min(A.gy, F.gy) - 2), Math.min(W - 1, Math.max(A.gx + A.w, F.gx + F.w) + 2), Math.min(H - 1, Math.max(A.gy + A.h, F.gy + F.h) + 2), to);
   }

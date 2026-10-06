@@ -47,8 +47,9 @@ import { KEEP } from "./cells.js";
 export const NOTE_W = 18, NOTE_H = 5; // room for a whole title, on two or three lines, before the map is zoomed far in
 // Room: 6 cells between neighbours and between layers, half as much again as the first grid's 4. A route
 // keeps KEEP (2) clear of what it passes, so a third of each gap is left for routes to run in.
-const GAP = 6, GAP_FOLDERS = 6; // clear cells between neighbours in a layer
-const CHANNEL = 6; // free cells between two layers, at least
+// Folders stand 8 apart, a quarter more again: feeders run between them and never through them (T72).
+const GAP = 6, GAP_FOLDERS = 8; // clear cells between neighbours in a layer
+const CHANNEL = 6, CHANNEL_FOLDERS = 8; // free cells between two layers, at least; between layers with folders in them
 export const PAD = 8; // cells between a folder's wall and its contents: room for the feeders that run inside the wall (T72)
 const HEAD = 2; // free rows under a folder's top edge, where its title sits: they keep a subfolder's title clear of it
 const MARGIN = 3; // free cells around the whole map
@@ -239,7 +240,7 @@ export function nestedLayout(model, { flow = "up" } = {}) {
     // The tracks sit in the middle of their channel, never nearer a row than the clearance.
     rows.forEach((_, r) => {
       start[r] = m; m += thick[r];
-      const channel = Math.max(CHANNEL, tracks[r] + 2 * KEEP);
+      const channel = Math.max(kids.some(isDir) ? CHANNEL_FOLDERS : CHANNEL, tracks[r] + 2 * KEEP);
       track0[r] = m + Math.max(KEEP, Math.floor((channel - tracks[r]) / 2));
       if (r < rows.length - 1) m += channel;
     });

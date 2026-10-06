@@ -51,6 +51,13 @@ On `feat/atlas-flat`.
   - A folder's wall is 8 cells from its contents (it was 5), half as much
     again, for the feeders that run inside it.
 
+- **Follow-up, 2026-10-07** (feeders were going through other folders):
+  a feeder keeps to its folder's own ground, the cells that are in that
+  folder and in no subfolder of it, so it goes round its siblings and never
+  through one. (Only if there were no way round would it fall back to
+  crossing one; none does on the test beds.) Folders stand 8 cells apart,
+  in a layer and between layers (they stood 6), to leave room for that.
+
 # Checks
 
 Unit tests, both flows: every drawn trunk ending on a folder is fed, its

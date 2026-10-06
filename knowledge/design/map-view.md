@@ -56,7 +56,7 @@ model, settings and lens panel) and `views/grid/`.
   corners, 8 cells of margin inside and its title on its top edge; folders
   nest, each level a tone lighter.
 - **Room and clearance ([T71](/tasks/T71-atlas-flat-and-room.md)):**
-  neighbours, layers and folders stand 6 cells apart. A route keeps 2 cells
+  notes and layers stand 6 cells apart, folders 8. A route keeps 2 cells
   clear of any note or wall it passes (tracks sit mid-channel, lanes stand
   off the items beside them, and the router pays for each close cell), so a
   third of each gap is left for routes.
