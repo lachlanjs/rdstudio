@@ -4,7 +4,7 @@ title: The code map
 description: How rdstudio reads a codebase into a map, from directories down to functions and important variables, with the links between them, and how notes attach to code.
 status: draft
 tags: [design, code, atlas, project-mode]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-05T20:00:00Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T22:35:02Z}
 ---
 
 # Why
@@ -68,3 +68,33 @@ they are shown but do not shape the layout. A directory holding only one
 directory is folded into it. Activity is each file's last commit. Health is
 tested, documented and reviewed. The Atlas maps the notes by default, in project mode too; the panel's Map
 choice switches between Code and Notes (`source` in [the settings](/design/map-view.md)).
+
+# Limits
+
+As of 2026-10-07 (asked by the developer: how general is it, and is it
+LLM-based, LSP-based or both?).
+
+- **Neither.** The index is static parsing with tree-sitter; no language
+  model and no language server is involved. It is about 400 lines
+  (`packages/cli/src/code.ts`).
+- **Two languages.** Python and C++ are read down to classes, functions,
+  methods, fields and constants. CMake targets and CI jobs are read line by
+  line. Any other language appears as files in directories, with nothing
+  inside them.
+- **Links are by name, not by meaning.** A call to `step` links to whatever
+  known item is called `step`: no types, overloads, inheritance, macros or
+  templates are resolved. A language server resolves all of these.
+- **The bridge between languages is a special case:** nanobind and pybind11
+  binding calls are recognised; ctypes, Cython, SWIG and other bridges are
+  not.
+- **Tried on one codebase,** [nanosim](/tasks/T69-codebase-testbed.md),
+  which was generated to suit it. Not yet on a real one.
+
+How it could generalise: another language with tree-sitter is a grammar
+package and some 60 to 100 lines saying what a class, a function and an
+import look like, with the by-name weakness unchanged; a language server
+would correct the links where one is available; and what a module is for
+belongs in notes, not the index. See
+[measuring the map](/ideas/measuring-the-map.md) and the
+[scope of project mode](/decisions/project-mode-scope.md), under which the
+code map is an option, not the Atlas's default.

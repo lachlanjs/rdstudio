@@ -1,5 +1,6 @@
 # Idea
 
+* [A half-way student on the differential geometry bundle](halfway-student.md) - Give the differential geometry test bed the record of a student half-way through it, so the learning and project workflows can be compared on the same project; scoped with four questions open, not built.
 * [Alpha trials](alpha-trials.md) - Four trials the developer will run once an alpha of the understanding layer exists, each chosen to test a different part of the model.
 * [Autoethnography of learning with the tool](autoethnography.md) - The developer studies their own learning with the tool as a more rigorous test of it, using single-case designs and measures the tool did not set, with its bias acknowledged.
 * [Discovery states and hiding what is undiscovered](discovery.md) - Each note is undiscovered, discovered, processed or understood by you; views can hide or grey out what you have not reached, and one outline style shows the state everywhere.

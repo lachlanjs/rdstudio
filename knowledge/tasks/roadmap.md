@@ -142,6 +142,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md) (dropped: the layered layout needs no baking)
 - [x] [T71 The Atlas: a folderless view, room for routes, a panel that folds](/tasks/T71-atlas-flat-and-room.md)
 - [x] [T72 The Atlas: feeders, where a trunk's links come from inside a folder](/tasks/T72-feeders.md)
+- [ ] [T73 Bring the browser walkthroughs up to the grid Atlas](/tasks/T73-walkthroughs-grid-atlas.md)
 
 # Future
 

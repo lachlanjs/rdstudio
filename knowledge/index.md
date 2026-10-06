@@ -12,5 +12,6 @@ okf_version: "0.2"
 * [design](design/) - What rdstudio is, who it is for, and the principles it serves.
 * [ideas](ideas/)
 * [procedures](procedures/)
+* [questions](questions/)
 * [references](references/)
 * [tasks](tasks/)
