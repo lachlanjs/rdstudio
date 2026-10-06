@@ -234,6 +234,9 @@ describe("feeders (T72)", () => {
     const inside = (i, f) => { for (let p = L.items[i].parent; p >= 0; p = L.items[p].parent) if (p === f) return true; return false; };
     it(`flowing ${flow}: every drawn trunk that ends on a folder is fed from the items in it that hold its links, and the counts add up`, () => {
       expect(L.feeders.length).toBeGreaterThan(10);
+      // Those from subfolders are drawn; those from notes are kept for tracing a link, and no subfolder's joins one.
+      expect(L.feeders.some((f) => !f.leaf) && L.feeders.some((f) => f.leaf)).toBe(true);
+      for (const f of L.feeders) { expect(f.leaf).toBe(L.items[f.item].kind === "note"); if (!f.leaf && f.via >= 0) expect(L.feeders[f.via].leaf).toBe(false); if (f.via >= 0) expect(L.feeders[f.via].folder).toBe(f.folder); }
       expect(feeders(L)).toEqual(L.feeders); // the same layout, the same feeders
       L.trunks.forEach((t, k) => {
         if (!t.pts) return;

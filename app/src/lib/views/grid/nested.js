@@ -49,7 +49,7 @@ export const NOTE_W = 18, NOTE_H = 5; // room for a whole title, on two or three
 // keeps KEEP (2) clear of what it passes, so a third of each gap is left for routes to run in.
 const GAP = 6, GAP_FOLDERS = 6; // clear cells between neighbours in a layer
 const CHANNEL = 6; // free cells between two layers, at least
-export const PAD = 5; // cells between a folder's wall and its contents
+export const PAD = 8; // cells between a folder's wall and its contents: room for the feeders that run inside the wall (T72)
 const HEAD = 2; // free rows under a folder's top edge, where its title sits: they keep a subfolder's title clear of it
 const MARGIN = 3; // free cells around the whole map
 const MIN_FOLDER = 12; // a folder is at least this wide, for its title

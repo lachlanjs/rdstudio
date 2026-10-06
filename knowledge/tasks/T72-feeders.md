@@ -37,6 +37,20 @@ On `feat/atlas-flat`.
 - **Drawn** inside a folder that is open, a little quieter than trunks, with
   smaller counts. Feeders in More options turns them off (`feeders`).
 
+- **Follow-up, 2026-10-07** ("way too messy" with a branch from every
+  note):
+  - Only the branches from subfolders are drawn. Those from notes are
+    still worked out (after the subfolders', which never join one) and kept
+    in the layout as `leaf`, each with the branch it joins (`via`).
+  - **Trace along trunks (`traceTrunks`, More options, off by default):** a
+    link to another folder, lit when a note is pointed at, is drawn the long
+    way: out from the note required along its feeders to the trunk, along
+    the trunk, and in along the feeders at the other end, with the same
+    animation. Off, it runs the short way through the walls, as before.
+    Where part of the way is not drawn (a back trunk), the short way is used.
+  - A folder's wall is 8 cells from its contents (it was 5), half as much
+    again, for the feeders that run inside it.
+
 # Checks
 
 Unit tests, both flows: every drawn trunk ending on a folder is fed, its

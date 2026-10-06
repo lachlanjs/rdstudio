@@ -23,7 +23,8 @@ export const VIEW_DEFAULTS = {
   terrain: true, // tone the ground and the notes by the height lens
   height: null, // the height lens: "understanding", "activity" or "health"; by default understanding, or activity in project mode
   hideImplied: true, // leave out a link that a longer way already makes
-  feeders: true, // inside a folder, branches from its items to the foot of each trunk that ends on it (T72)
+  feeders: true, // inside a folder, branches from its subfolders to the foot of each trunk that ends on it (T72)
+  traceTrunks: false, // a link lit under the pointer runs along its trunk and feeders, not straight through the walls (T72)
   source: null, // what is mapped: "notes" (the default), or "code" (T66) when the code is indexed
   folderless: false, // the whole base as one DAG, with no folders; each note carries its folder's colour (T71)
   panelOpen: null, // the lens panel: open, or folded to its bar; by default open where there is room
@@ -384,7 +385,8 @@ export function controls({ view, readout, summary, key: keyItems }) {
         choice("gridFlow", "Flows", [["auto", "Auto", "The top level runs bottom to top; left to right on a phone turned on its side."],
           ["up", "Up", "The top level runs from the bottom up; folders inside it left to right; and so on in turn."],
           ["right", "Right", "The top level runs from left to right; folders inside it bottom to top; and so on in turn."]]),
-        h("div", { class: "row" }, toggle("feeders", "Feeders", "Inside a folder, show which of its items each trunk's links come from: a branch from each to where the trunk meets the wall.")),
+        h("div", { class: "row" }, toggle("feeders", "Feeders", "Inside a folder, show which of its subfolders each trunk's links come from: a branch from each to where the trunk meets the wall."),
+          toggle("traceTrunks", "Trace along trunks", "A link to another folder, lit when you point at a note, is drawn along its trunk and feeders, from note to note. Off: it runs the short way, through the walls.")),
         rated ? h("div", { class: "row" }, toggle("hideImplied", "Hide implied", "Hide a link between two notes when a longer way already joins them.")) : "",
         h("div", { class: "sliders" }, slider("detail", "Open folders at", 40, 400, 10, "A folder opens when it is this many pixels wide on screen.")),
         readout,

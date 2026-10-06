@@ -53,7 +53,7 @@ model, settings and lens panel) and `views/grid/`.
 
 - **Cells:** everything sits on a square grid. A note is a block of 18 by 5
   cells, room for its whole title on two or three lines. A folder is a rectangle with cut
-  corners, 5 cells of margin inside and its title on its top edge; folders
+  corners, 8 cells of margin inside and its title on its top edge; folders
   nest, each level a tone lighter.
 - **Room and clearance ([T71](/tasks/T71-atlas-flat-and-room.md)):**
   neighbours, layers and folders stand 6 cells apart. A route keeps 2 cells
@@ -61,9 +61,10 @@ model, settings and lens panel) and `views/grid/`.
   off the items beside them, and the router pays for each close cell), so a
   third of each gap is left for routes.
 - **Feeders ([T72](/tasks/T72-feeders.md)):** where a trunk ends on a
-  folder, branches run inside it from each item holding some of the trunk's
-  links to the trunk's foot on the wall, joining on the way, and on into
-  subfolders down to the notes. Each carries its count.
+  folder, branches run inside it from each subfolder holding some of the
+  trunk's links to the trunk's foot on the wall, joining on the way, and on
+  into the subfolders' own. Each carries its count. With Trace along trunks
+  on, a link lit under the pointer follows them from note to note.
 - **Folderless (optional):** the same layout over the whole base as one
   folder, so every note is in one DAG; a note's top-level folder is a strip
   of colour on its edge, and the folders are listed with their colours
@@ -131,7 +132,8 @@ project's `[map]` table in `rdstudio.toml`, and choices made in the browser
 | `terrain` | true | Tone the ground and the notes by the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
 | `source` | `notes` | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md), when the code is indexed) |
-| `feeders` | true | Inside a folder, branches from its items to the foot of each trunk that ends on it |
+| `feeders` | true | Inside a folder, branches from its subfolders to the foot of each trunk that ends on it |
+| `traceTrunks` | false | A link to another folder, lit under the pointer, runs along its trunk and feeders, not through the walls |
 | `folderless` | false | The whole base as one layered DAG with no folders; each note carries its top-level folder's colour ([T71](/tasks/T71-atlas-flat-and-room.md)) |
 | `panelOpen` | (by room) | The lens panel open, or folded to its bar |
 | `foldersOpen` | true | The folderless view's list of folders open, or folded to its heading |

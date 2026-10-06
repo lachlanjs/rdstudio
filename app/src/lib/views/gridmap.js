@@ -94,7 +94,7 @@ function gridKeyItems(lens, terrain) {
     ...(terrain ? [item('<path class="g-reach" d="M2 4h18v14h-18z"/><path class="g-front" d="M2 4h18v14h-18z"/>', "Reached ground: lighter")] : []),
     item(`<path class="g-wall" d="${cut(2, 4, 20, 18, 3)}"/>`, "A folder's wall; each level in is a tone lighter"),
     item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two items of a folder, with their count"),
-    item('<g class="feed"><path class="g-rt" d="M2 15H8L12 11H20M2 6H8L12 10" stroke-width="1"/></g>', "Feeder: inside a folder, where a trunk's links come from"),
+    item('<g class="feed"><path class="g-rt" d="M2 15H8L12 11H20M2 6H8L12 10" stroke-width="1"/></g>', "Feeder: inside a folder, the subfolders a trunk's links come from"),
     item('<g class="back"><path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/></g>', "Dashed: a back link, against the order of the layers"),
     item('<g class="g-hot"><path class="g-rt hot req" d="M2 11H20"/></g>', "Under the pointer: what the note requires"),
     item('<g class="g-hot"><path class="g-rt hot req far" d="M2 11H20"/></g>', "Fainter: what those require in turn, all the way back"),
@@ -176,6 +176,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   let focus = -1, selected = null; // a folder's index (-1: the whole map); a note's id
   let viewed = false, userMoved = false, left = false;
   let noteAt = new Map(); // a note's place among the layout's items, by its id in the bundle
+  let trunkAt = new Map(), feederAt = new Map(); // a trunk by its two items, a feeder by its trunk, folder and item
   let needsOf = [], neededBy = [], ownPath = new Map(); // each note's links, and the paths the layout drew
   let hovered = -1, hot = null, hotFor = null; // the note pointed at; its dependencies, lit; and what they were worked out for
   const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } })();
@@ -256,6 +257,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     needsOf = L.items.map(() => []); neededBy = L.items.map(() => []);
     for (const l of L.links) if (l.s >= 2) { needsOf[l.a].push(l.b); neededBy[l.b].push(l.a); }
     ownPath = new Map((L.trunks || []).filter((t) => t.pts).map((t) => [t.a + "|" + t.b, t.pts]));
+    trunkAt = new Map((L.trunks || []).map((t, k) => [t.a + "|" + t.b, k]));
+    feederAt = new Map((L.feeders || []).map((f, k) => [f.trunk + "|" + f.folder + "|" + f.item, k]));
     hot = null; hotFor = null; lights.clear();
     // A new layout numbers its items afresh: what is drawn is keyed by those numbers, so it is drawn again from
     // nothing, and what was pointed at or selected in the last one may not be in this one (Notes to Code).
@@ -377,7 +380,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Feeders: inside an open folder, where a trunk's links come from (layout.js `feeders`).
     if (o.feeders) (L.feeders || []).forEach((f, k) => {
       const t = L.trunks[f.trunk];
-      if (open[f.folder] && shown[f.item] && shown[t.a] && shown[t.b]) fixed.push({ key: "f" + k, a: f.item, b: f.folder, count: f.count, cls: "dag feed", pts: f.pts, lane: f.lane });
+      if (!f.leaf && open[f.folder] && shown[f.item] && shown[t.a] && shown[t.b]) fixed.push({ key: "f" + k, a: f.item, b: f.folder, count: f.count, cls: "dag feed", pts: f.pts, lane: f.lane });
     });
     const mine = cache = { sig, asks, fixed, links, trunks: trunkCount + asks.length, measures: null };
     drawn = fixed;
@@ -406,7 +409,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   }
   function lightFor(open) {
     const at = hovered >= 0 ? hovered : selected ? L.items.findIndex((n) => n.id === selected) : -1;
-    const sig = (at < 0 && trail ? "trail" + atStop : at) + "|" + key + "|" + Array.from(open).join("");
+    const sig = (at < 0 && trail ? "trail" + atStop : at) + "|" + key + "|" + (o.traceTrunks ? "t" : "") + "|" + Array.from(open).join("");
     if (sig === hotFor) return;
     hotFor = sig;
     if ((at < 0 && !trail) || !o.showLinks) { hot = null; return; }
@@ -438,7 +441,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // Each is drawn away from the note pointed at. The layout's own path runs
     // from what is required to what requires it; the router's, the other way.
     for (const [a, b, cls, depth = 0] of pairs) {
-      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b), req = cls.startsWith("hot req");
+      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && (ownPath.get(a + "|" + b) || (o.traceTrunks && tracePath(a, b))), req = cls.startsWith("hot req");
       if (sa === sb) continue;
       const key = `${at}:${cls}${a}|${b}`; // one drawing of this link for this note, so it is drawn afresh for another
       if (own) routes.push({ key, a, b, cls, depth, rev: req, pts: own, lane: 0 });
@@ -455,6 +458,36 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       mine.routes = [...routes, ...asks.map((m, k) => res.routes[k] && { ...m, pts: res.routes[k].pts, lane: 0 }).filter(Boolean)];
       if (hot === mine) schedule();
     });
+  }
+
+  // A link between notes in different folders, the long way (T72): from the note required, out along the
+  // feeders to its trunk, along the trunk, and in along the feeders at the other end. Null where some part
+  // of the way is not drawn (a back trunk): the router then finds the short way.
+  function tracePath(a, b) {
+    const above = new Set(up[b]), level = up[a].find((p) => above.has(p)) ?? -1;
+    const chain = (n) => { const out = [n]; for (const p of up[n]) { if (p === level) break; out.push(p); } return out; }; // the note, its folder, and so on up to the item at the shared level
+    const ca = chain(a), cb = chain(b), t = trunkAt.get(ca[ca.length - 1] + "|" + cb[cb.length - 1]);
+    if (t === undefined || !L.trunks[t].pts || (ca.length < 2 && cb.length < 2)) return null;
+    const same = (p, q) => Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6;
+    const whole = (k, depth = 0) => { // a feeder's path on to the foot: its own, then the branch it joins, from where it joins it
+      const f = L.feeders[k];
+      if (f.via < 0 || depth > 40) return f.pts;
+      const on = whole(f.via, depth + 1), j = on.findIndex((p) => same(p, f.pts[f.pts.length - 1]));
+      return j < 0 ? f.pts : [...f.pts, ...on.slice(j + 1)];
+    };
+    const out = (c) => { // from the note's edge to the trunk's end on the wall of the item at the shared level
+      let pts = [];
+      for (let k = 0; k + 1 < c.length; k++) {
+        const f = feederAt.get(t + "|" + c[k + 1] + "|" + c[k]);
+        if (f === undefined) return null;
+        pts = pts.concat(whole(f));
+      }
+      return pts;
+    };
+    const from = out(cb), to = out(ca);
+    if (!from || !to) return null;
+    const pts = [...from, ...L.trunks[t].pts, ...to.reverse()];
+    return pts.filter((p, k) => !k || !same(p, pts[k - 1]));
   }
 
   // What you have not reached, hidden when you choose (understanding.svelte.ts):
