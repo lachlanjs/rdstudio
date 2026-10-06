@@ -94,6 +94,7 @@ function gridKeyItems(lens, terrain) {
     ...(terrain ? [item('<path class="g-reach" d="M2 4h18v14h-18z"/><path class="g-front" d="M2 4h18v14h-18z"/>', "Reached ground: lighter")] : []),
     item(`<path class="g-wall" d="${cut(2, 4, 20, 18, 3)}"/>`, "A folder's wall; each level in is a tone lighter"),
     item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two items of a folder, with their count"),
+    item('<g class="feed"><path class="g-rt" d="M2 15H8L12 11H20M2 6H8L12 10" stroke-width="1"/></g>', "Feeder: inside a folder, where a trunk's links come from"),
     item('<g class="back"><path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/></g>', "Dashed: a back link, against the order of the layers"),
     item('<g class="g-hot"><path class="g-rt hot req" d="M2 11H20"/></g>', "Under the pointer: what the note requires"),
     item('<g class="g-hot"><path class="g-rt hot req far" d="M2 11H20"/></g>', "Fainter: what those require in turn, all the way back"),
@@ -362,7 +363,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // unless Hide implied is off), which the router finds a way for.
   function routesFor(open, shown) {
     if (!o.showLinks) { cache = null; drawn = []; return; }
-    const sig = `${o.hideImplied}|${Array.from(open).join("")}`;
+    const sig = `${o.hideImplied}|${o.feeders}|${Array.from(open).join("")}`;
     if (cache?.sig === sig) return;
     const fixed = [], asks = [];
     let links = 0;
@@ -372,7 +373,13 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       if (t.pts) fixed.push({ a: t.a, b: t.b, count: t.count, cls: "dag", pts: t.pts, lane: 0 });
       else asks.push({ a: t.a, b: t.b, count: t.count, cls: "solo" + (t.back ? " back" : "") });
     }
-    const mine = cache = { sig, asks, fixed, links, measures: null };
+    const trunkCount = fixed.length;
+    // Feeders: inside an open folder, where a trunk's links come from (layout.js `feeders`).
+    if (o.feeders) (L.feeders || []).forEach((f, k) => {
+      const t = L.trunks[f.trunk];
+      if (open[f.folder] && shown[f.item] && shown[t.a] && shown[t.b]) fixed.push({ key: "f" + k, a: f.item, b: f.folder, count: f.count, cls: "dag feed", pts: f.pts, lane: f.lane });
+    });
+    const mine = cache = { sig, asks, fixed, links, trunks: trunkCount + asks.length, measures: null };
     drawn = fixed;
     if (!asks.length) return;
     const t0 = performance.now();
@@ -683,7 +690,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const laneStep = Math.max(2.2, Math.min(5, c / 4.2));
     const line = (m) => cutPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * laneStep), c * 0.9);
     const width = (m) => 1 + Math.log2(m.count) * 0.8;
-    gRoutes.selectAll("g").data(drawn, (m) => m.cls[0] + m.a + "|" + m.b).join((el) => { const g = el.append("g"); g.append("path").attr("class", "g-halo"); g.append("path").attr("class", "g-rt"); return g; })
+    gRoutes.selectAll("g").data(drawn, (m) => m.key || m.cls[0] + m.a + "|" + m.b).join((el) => { const g = el.append("g"); g.append("path").attr("class", "g-halo"); g.append("path").attr("class", "g-rt"); return g; })
       .attr("class", (m) => m.cls)
       .each(function (m) {
         const d = line(m), g = d3.select(this);
@@ -709,7 +716,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       });
     // A trunk's count, where it runs between its two folders.
     const counted = drawn.filter((m) => m.count > 1);
-    gCounts.selectAll("text").data(counted, (m) => m.cls[0] + m.a + "|" + m.b).join("text").attr("class", "g-count")
+    gCounts.selectAll("text").data(counted, (m) => m.key || m.cls[0] + m.a + "|" + m.b).join("text").attr("class", (m) => (m.cls.includes("feed") ? "g-count feed" : "g-count"))
       .attr("x", (m) => X(m.pts[m.pts.length >> 1][0])).attr("y", (m) => Y(m.pts[m.pts.length >> 1][1]) + 4).text((m) => m.count);
 
     // Notes: a block with the glyph for its kind, and its title once there is room.
@@ -805,7 +812,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (!o.showLinks) summary.textContent = "Links are off.";
     else if (cache) {
       const backs = cache.asks.filter((a) => a.cls.endsWith(" back")).length;
-      summary.textContent = `${cache.links} links, as ${cache.fixed.length + cache.asks.length} trunks` + (backs ? `, ${backs} of them against the layers (dashed).` : ".") + " Point at a note for what it depends on.";
+      summary.textContent = `${cache.links} links, as ${cache.trunks} trunks` + (backs ? `, ${backs} of them against the layers (dashed).` : ".") + " Point at a note for what it depends on.";
     }
     readout.textContent = `Grid ${L.W} by ${L.H} cells, flowing ${L.flow}.` + (m ? ` Routes ${m.routes}, crossings ${m.crossings}, cells of route ${m.length}, beside another route ${Math.round(m.beside * 100)}%${m.lost ? `, no way found for ${m.lost}` : ""}.` : "");
   }

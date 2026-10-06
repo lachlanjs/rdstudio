@@ -383,6 +383,9 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .back .g-rt { stroke-dasharray: 5 4; }
 /* The layout's own paths (T64): square runs that share a bus, so no halo cuts them where they join. */
 .g-routes .dag .g-halo { display: none; }
+/* A feeder (T72): where a trunk's links come from inside a folder; a little quieter than the trunk it feeds. */
+.feed .g-rt { opacity: .7; }
+.g-count.feed { font-size: 10px; font-weight: 500; fill: var(--text-soft); }
 /* Pointing at a note lights what it depends on, in the blue pen: what it requires down its chain as a
    line, what builds on it dotted; the rest steps back. */
 .g-hot { pointer-events: none; }

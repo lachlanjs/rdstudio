@@ -82,17 +82,25 @@ export function makeRouter(layout, cells, opts = {}) {
     return out;
   };
 
-  function search(a, b, x0, y0, x1, y1) {
+  // `goal`: in place of an item b, the cells a route may end on, each with the point it is drawn to
+  // ({ ends: Map(cell -> [cell, x, y]), folder }): a feeder ends on a trunk's foot inside `folder`,
+  // or on a feeder already running to it.
+  function search(a, b, x0, y0, x1, y1, goal = null) {
     gen++;
     hn = 0;
     for (const f of foldersOf(items, a)) allow[f] = gen;
-    for (const f of foldersOf(items, b)) allow[f] = gen;
-    const A = items[a], B = items[b];
-    const ends = new Map(ring(B).map((r) => [r[0], r]));
+    if (goal) { allow[goal.folder] = gen; for (const f of foldersOf(items, goal.folder)) allow[f] = gen; }
+    else for (const f of foldersOf(items, b)) allow[f] = gen;
+    const A = items[a], B = goal ? null : items[b];
+    const ends = goal ? goal.ends : new Map(ring(B).map((r) => [r[0], r]));
     // What is left at least: the steps to the block's edge, overstated by
     // `haste`. With turns as dear as they are, a search at 1.6 took 130 ms on a
     // grid of a thousand notes (1,045 by 1,185 cells); at 3.2 it takes 9.
-    const bx0 = B.gx - 1, bx1 = B.gx + B.w, by0 = B.gy - 1, by1 = B.gy + B.h;
+    let bx0, bx1, by0, by1;
+    if (goal) {
+      bx0 = by0 = Infinity; bx1 = by1 = -Infinity;
+      for (const c of ends.keys()) { const x = c % W, y = (c / W) | 0; bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); by0 = Math.min(by0, y); by1 = Math.max(by1, y); }
+    } else { bx0 = B.gx - 1; bx1 = B.gx + B.w; by0 = B.gy - 1; by1 = B.gy + B.h; }
     const guess = (x, y) => { const dx = Math.max(bx0 - x, x - bx1, 0), dy = Math.max(by0 - y, y - by1, 0); return haste * (Math.max(dx, dy) + 0.414 * Math.min(dx, dy)); };
     const starts = new Map();
     for (const r of ring(A)) {
@@ -153,9 +161,27 @@ export function makeRouter(layout, cells, opts = {}) {
     const x1 = Math.min(W - 1, Math.max(A.gx + A.w, B.gx + B.w) + pad), y1 = Math.min(H - 1, Math.max(A.gy + A.h, B.gy + B.h) + pad);
     return search(a, b, x0, y0, x1, y1) || (x0 || y0 || x1 < W - 1 || y1 < H - 1 ? search(a, b, 0, 0, W - 1, H - 1) : null);
   }
+  /** A route from an item to one of the cells of `to` (see `search`), within the folder's own ground. */
+  function routeTo(a, to) {
+    const A = items[a], F = items[to.folder];
+    return search(a, -1, Math.max(0, Math.min(A.gx, F.gx) - 2), Math.max(0, Math.min(A.gy, F.gy) - 2), Math.min(W - 1, Math.max(A.gx + A.w, F.gx + F.w) + 2), Math.min(H - 1, Math.max(A.gy + A.h, F.gy + F.h) + 2), to);
+  }
+  /** Count a path that was not found here (a trunk the layout drew) as in use, so routes keep off it. */
+  function occupy(pts) {
+    const seen = new Set();
+    for (let k = 1; k < pts.length; k++) {
+      const [x0, y0] = pts[k - 1], [x1, y1] = pts[k], n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2));
+      for (let s = 0; s <= n; s++) {
+        const x = Math.floor(x0 + ((x1 - x0) * s) / n), y = Math.floor(y0 + ((y1 - y0) * s) / n);
+        if (x < 0 || y < 0 || x >= W || y >= H || blocked[y * W + x] || seen.has(y * W + x)) continue;
+        seen.add(y * W + x);
+        mark(y * W + x, 1);
+      }
+    }
+  }
   const release = (r) => { for (const c of r.cells) mark(c, -1); };
   const hold = (r) => { for (const c of r.cells) mark(c, 1); }; // put back a route that was released
-  return { route, release, hold };
+  return { route, routeTo, occupy, release, hold };
 }
 
 // Lanes: routes that share a cell edge take different offsets, so they run

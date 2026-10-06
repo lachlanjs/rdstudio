@@ -101,6 +101,7 @@ with sync_playwright() as pw:
     p.wait_for_selector("svg.gridmap g.gn", timeout=20000)
     p.wait_for_timeout(1200)
     check("…a link may end on a file or a class: trunks inside src/nanosim/core", len(p.evaluate("() => document.querySelector('.map-wrap').routes()")) >= 3)
+    check("…and feeders: inside a folder, branches from its items to the foot of each trunk", p.locator("svg.gridmap .g-routes g.feed").count() >= 5, p.locator("svg.gridmap .g-routes g.feed").count())
     p.locator("svg.gridmap g.gn").first.click()
     card = p.locator(".atlas-card")
     expect(card).to_be_visible()

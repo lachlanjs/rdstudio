@@ -4,7 +4,7 @@
 
 import { nestedLayout } from "./grid/nested.js";
 import { buildCells } from "./grid/cells.js";
-import { makeRouter, routeAll as gridRouteAll } from "./grid/router.js";
+import { makeRouter, lanes, routeAll as gridRouteAll } from "./grid/router.js";
 
 // What the layout needs from the map model, as plain data a worker can receive.
 // `flat`: the folderless view (T71): every note an item of one folder, the root, so the whole base is one DAG.
@@ -25,7 +25,54 @@ export function plainModel(model, flat = false) {
 // folder a layered DAG of its items, and one item in its parent's. `gridFlow`
 // is the top level's direction, "up" or "right".
 export function gridLayout(model, o) {
-  return nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
+  const layout = nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
+  layout.feeders = feeders(layout);
+  return layout;
+}
+
+// Feeders (T72): where a trunk ends on a folder, what is in the folder that the trunk's links come from.
+// From each of the folder's items holding an end of one of those links, a branch runs to the trunk's foot,
+// the cell just inside the wall where the trunk arrives, with the number of links it carries. Branches to
+// one foot join: the item with the most links is routed first, and each one after may stop on a branch
+// already there. A branch from a subfolder is itself fed, from inside it, in the same way.
+//   [{ item, folder, trunk, count, pts, lane }]: the item fed from, the folder it is in, the trunk fed
+//   (an index into `trunks`), the links carried, and the path in cells from the item's edge.
+export function feeders(layout) {
+  const { items, links, trunks, W } = layout;
+  if (!trunks.some((t) => t.pts && (items[t.a].kind === "folder" || items[t.b].kind === "folder"))) return [];
+  const cells = buildCells(layout), router = makeRouter(layout, cells, { crowd: 1 });
+  for (const t of trunks) if (t.pts) router.occupy(t.pts);
+  const childIn = (i, f) => { while (items[i].parent !== f) i = items[i].parent; return i; }; // the item of folder f that holds i
+  const foot = (f, [x, y]) => { // the cell just inside f's wall at a point on the wall
+    const F = items[f], near = (p, q) => Math.abs(p - q) < 1e-6;
+    return near(x, F.gx) ? [F.gx, Math.floor(y)] : near(x, F.gx + F.w) ? [F.gx + F.w - 1, Math.floor(y)] : near(y, F.gy) ? [Math.floor(x), F.gy] : [Math.floor(x), F.gy + F.h - 1];
+  };
+  // Each end of a drawn trunk that is a folder is a stem to feed: the notes in the folder that its links end on.
+  const stems = [];
+  trunks.forEach((t, k) => {
+    if (!t.pts) return;
+    const level = items[t.a].parent, mine = links.filter((l) => l.s >= 2 && l.level === level && childIn(l.a, level) === t.a && childIn(l.b, level) === t.b);
+    if (items[t.a].kind === "folder") stems.push({ folder: t.a, at: t.pts[t.pts.length - 1], notes: mine.map((l) => l.a), trunk: k });
+    if (items[t.b].kind === "folder") stems.push({ folder: t.b, at: t.pts[0], notes: mine.map((l) => l.b), trunk: k });
+  });
+  const out = [];
+  for (let s = 0; s < stems.length; s++) {
+    const { folder, at, notes, trunk } = stems[s];
+    const [fx, fy] = foot(folder, at);
+    if (fx < 0 || fy < 0 || fx >= W || cells.blocked[fy * W + fx]) continue;
+    const by = new Map();
+    for (const n of notes) { const c = childIn(n, folder); by.set(c, [...(by.get(c) || []), n]); }
+    const ends = new Map([[fy * W + fx, [fy * W + fx, at[0], at[1]]]]);
+    for (const [item, held] of [...by].sort((a, b) => b[1].length - a[1].length || a[0] - b[0])) {
+      const r = router.routeTo(item, { ends, folder });
+      if (!r) continue;
+      out.push({ item, folder, trunk, count: held.length, pts: r.pts, cells: r.cells });
+      for (const c of r.cells) if (!ends.has(c)) ends.set(c, [c, (c % W) + 0.5, Math.floor(c / W) + 0.5]);
+      if (items[item].kind === "folder") stems.push({ folder: item, at: r.pts[0], notes: held, trunk });
+    }
+  }
+  lanes(out, cells.W * cells.H);
+  return out.map(({ item, folder, trunk, count, pts, lane }) => ({ item, folder, trunk, count, pts, lane }));
 }
 
 // Routes over a grid layout's cells (grid/router.js). The cells and the
@@ -80,7 +127,7 @@ function getWorker() {
 // One is kept for each direction of flow, so turning a phone finds its map
 // ready. The key is what the map contains and the direction: none of the
 // continuous layout's settings move anything on the grid.
-const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 8; // bump whenever the grid layout changes what it returns, or browsers keep the old one
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 9; // bump whenever the grid layout changes what it returns, or browsers keep the old one
 const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
 export function gridKey(plain, o) {
   return hash(JSON.stringify([GRID_VERSION, o.gridFlow === "right" ? "right" : "up", plain]));

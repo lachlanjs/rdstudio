@@ -60,6 +60,10 @@ model, settings and lens panel) and `views/grid/`.
   clear of any note or wall it passes (tracks sit mid-channel, lanes stand
   off the items beside them, and the router pays for each close cell), so a
   third of each gap is left for routes.
+- **Feeders ([T72](/tasks/T72-feeders.md)):** where a trunk ends on a
+  folder, branches run inside it from each item holding some of the trunk's
+  links to the trunk's foot on the wall, joining on the way, and on into
+  subfolders down to the notes. Each carries its count.
 - **Folderless (optional):** the same layout over the whole base as one
   folder, so every note is in one DAG; a note's top-level folder is a strip
   of colour on its edge, and the folders are listed with their colours
@@ -127,6 +131,7 @@ project's `[map]` table in `rdstudio.toml`, and choices made in the browser
 | `terrain` | true | Tone the ground and the notes by the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
 | `source` | `notes` | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md), when the code is indexed) |
+| `feeders` | true | Inside a folder, branches from its items to the foot of each trunk that ends on it |
 | `folderless` | false | The whole base as one layered DAG with no folders; each note carries its top-level folder's colour ([T71](/tasks/T71-atlas-flat-and-room.md)) |
 | `panelOpen` | (by room) | The lens panel open, or folded to its bar |
 | `foldersOpen` | true | The folderless view's list of folders open, or folded to its heading |

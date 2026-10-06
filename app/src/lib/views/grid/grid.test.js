@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { gridLayout, gridRouter } from "../layout.js";
 import { buildCells, reachedCells, maskPaths, NOTE, KEEP } from "./cells.js";
-import { plainModel } from "../layout.js";
+import { plainModel, feeders } from "../layout.js";
 import { greedyOrder, NOTE_W, NOTE_H } from "./nested.js";
 
 const GAP = 2; // clear cells between siblings, at least
@@ -226,4 +226,39 @@ describe("the folderless view (T71)", () => {
     expect(L.trunks.filter((t) => !t.pts).every((t) => t.back || t.implied)).toBe(true);
     expect(L.trunks.filter((t) => t.back).length).toBeLessThan(strong * 0.2);
   });
+});
+
+describe("feeders (T72)", () => {
+  for (const flow of ["up", "right"]) {
+    const L = gridLayout(model(6, 9), { gridFlow: flow }), C = buildCells(L);
+    const inside = (i, f) => { for (let p = L.items[i].parent; p >= 0; p = L.items[p].parent) if (p === f) return true; return false; };
+    it(`flowing ${flow}: every drawn trunk that ends on a folder is fed from the items in it that hold its links, and the counts add up`, () => {
+      expect(L.feeders.length).toBeGreaterThan(10);
+      expect(feeders(L)).toEqual(L.feeders); // the same layout, the same feeders
+      L.trunks.forEach((t, k) => {
+        if (!t.pts) return;
+        for (const end of [t.a, t.b]) {
+          if (L.items[end].kind !== "folder") continue;
+          const fed = L.feeders.filter((f) => f.trunk === k && f.folder === end);
+          expect(fed.length).toBeGreaterThan(0);
+          expect(fed.reduce((n, f) => n + f.count, 0)).toBe(t.count);
+          for (const f of fed) expect(L.items[f.item].parent).toBe(end);
+        }
+      });
+    });
+    it(`flowing ${flow}: a feeder runs from its item's edge, inside its folder, through no note, to the trunk's foot or a branch already going there`, () => {
+      for (const f of L.feeders) {
+        const F = L.items[f.folder], X = L.items[f.item], [x0, y0] = f.pts[0];
+        expect(x0 >= X.gx && x0 <= X.gx + X.w && y0 >= X.gy && y0 <= X.gy + X.h).toBe(true);
+        for (const [x, y] of f.pts) expect(x >= F.gx && x <= F.gx + F.w && y >= F.gy && y <= F.gy + F.h).toBe(true);
+        for (const [x, y] of f.pts.slice(1, -1)) expect(C.blocked[Math.floor(y) * C.W + Math.floor(x)]).toBe(0);
+      }
+      // The first branch to each foot ends on the wall, at the trunk's end; the rest end there or on another branch.
+      const first = new Map();
+      for (const f of L.feeders) {
+        const key = f.trunk + "|" + f.folder, t = L.trunks[f.trunk], foot = f.folder === t.a && inside(f.item, t.a) && L.items[f.item].parent === t.a ? t.pts[t.pts.length - 1] : t.pts[0];
+        if (!first.has(key) && L.items[f.folder].parent === L.items[t.a].parent) { first.set(key, f); expect(f.pts[f.pts.length - 1]).toEqual(foot); }
+      }
+    });
+  }
 });
