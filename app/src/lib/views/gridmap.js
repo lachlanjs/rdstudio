@@ -401,8 +401,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     for (const [a, b, cls, depth = 0] of pairs) {
       const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b), req = cls === "hot req";
       if (sa === sb) continue;
-      if (own) routes.push({ a, b, cls, depth, rev: req, pts: own, lane: 0 });
-      else asks.push({ a: sa, b: sb, cls, depth, rev: !req });
+      const key = `${at}:${cls}${a}|${b}`; // one drawing of this link for this note, so it is drawn afresh for another
+      if (own) routes.push({ key, a, b, cls, depth, rev: req, pts: own, lane: 0 });
+      else asks.push({ key, a: sa, b: sb, cls, depth, rev: !req });
     }
     const here = tour ? noteAt.get(goalId()) : undefined;
     const mine = hot = { at: at >= 0 ? at : here ?? -1, notes, far, routes, drawn: at >= 0 };
@@ -640,7 +641,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     // What the note pointed at depends on is drawn out from it: each link in
     // turn, nearest first, then (below) the frame of the note it reaches.
     const animate = !!hot?.drawn && !reduceMotion;
-    gHot.selectAll("path").data(hot ? hot.routes : [], (m) => `${hot.at}:${m.cls}${m.a}|${m.b}`)
+    // (Keyed by the route's own key: d3 also asks the key of what is being taken away, when nothing is lit.)
+    gHot.selectAll("path").data(hot ? hot.routes : [], (m) => m.key)
       .join((enter) => enter.append("path").attr("class", (m) => "g-rt " + m.cls).property("fresh", true))
       .attr("d", line)
       .each(function (m) {
