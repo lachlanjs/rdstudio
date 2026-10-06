@@ -318,3 +318,11 @@ continuous Atlas's layout any more, so T63 can delete that with the rest.
 The router's search is greedier (3.2, was 1.6): a link between folders on a
 grid of a thousand notes takes 9 ms, where the dearer turns had made it 130.
 The app's 38 tests pass.
+
+**The animation (2026-10-06).** Pointing at a note, or selecting it, draws
+what it depends on out from it: each link from the note's end to the other,
+a link further down the chain starting 170 ms after the one before, and when
+a link arrives the frame of the note it reaches is drawn round it in the
+blue pen. What builds on the note is drawn the same way and then dotted.
+Nothing moves with reduced motion set, or for a study path or a tour, which
+are lit at once.

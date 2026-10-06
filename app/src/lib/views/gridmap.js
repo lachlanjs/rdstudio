@@ -29,6 +29,7 @@ const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
 const MIN_CELL = 1.6; // folders stay closed while a cell is smaller than this on screen
 const LABELS_AT = 7; // notes carry their titles from this cell size up
+const STEP_MS = 170, DRAW_MS = 280; // lighting what a note depends on: each link starts this long after the one before, and takes this long (as in app.css) before the note's frame follows
 const DOTS_AT = 8; // the dot at each grid corner is drawn from this cell size up
 
 // A rectangle on grid lines with its corners cut by `c`, drawn `inset` inside its cells.
@@ -370,9 +371,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (sig === hotFor) return;
     hotFor = sig;
     if ((at < 0 && !trail) || !o.showLinks) { hot = null; return; }
-    if (lights.has(sig)) { hot = lights.get(sig); return; }
+    if (lights.has(sig)) { hot = lights.get(sig); hot.since = performance.now(); return; }
     const shownAs = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
-    const notes = new Set(), pairs = [];
+    const notes = new Set(), pairs = [], far = new Map(); // far: how many links from the note pointed at
     if (at < 0) {
       // A study path: the links among its notes. A tour: from each stop to the next.
       const on = trail.map((id) => noteAt.get(id)).filter((i) => i !== undefined), set = new Set(on);
@@ -380,28 +381,32 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       if (tour) for (let k = 1; k < on.length; k++) pairs.push([on[k], on[k - 1], "hot req"]);
       else for (const l of L.links) if (l.s >= (model.hasRatings ? 3 : 2) && set.has(l.a) && set.has(l.b)) pairs.push([l.a, l.b, "hot req"]);
     } else {
-      const home = L.items[at].parent, todo = [at], seen = new Set([at]);
-      while (todo.length) {
-        const a = todo.pop();
+      const home = L.items[at].parent, todo = [at];
+      far.set(at, 0);
+      for (let k = 0; k < todo.length; k++) { // nearest first, so each note's distance is its least
+        const a = todo[k];
         for (const b of needsOf[a]) {
           const inside = L.items[b].parent === home;
           if (!inside && a !== at) continue;
-          pairs.push([a, b, "hot req"]);
+          pairs.push([a, b, "hot req", far.get(a)]);
           notes.add(b);
-          if (inside && !seen.has(b)) { seen.add(b); todo.push(b); }
+          if (!far.has(b)) { far.set(b, far.get(a) + 1); if (inside) todo.push(b); }
         }
       }
-      for (const a of neededBy[at]) { pairs.push([a, at, "hot dep"]); notes.add(a); }
+      for (const a of neededBy[at]) { pairs.push([a, at, "hot dep", 0]); notes.add(a); if (!far.has(a)) far.set(a, 1); }
     }
     const routes = [], asks = [];
-    for (const [a, b, cls] of pairs) {
-      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b);
+    // Each is drawn away from the note pointed at. The layout's own path runs
+    // from what is required to what requires it; the router's, the other way.
+    for (const [a, b, cls, depth = 0] of pairs) {
+      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && ownPath.get(a + "|" + b), req = cls === "hot req";
       if (sa === sb) continue;
-      if (own) routes.push({ a, b, cls, pts: own, lane: 0 });
-      else asks.push({ a: sa, b: sb, cls });
+      if (own) routes.push({ a, b, cls, depth, rev: req, pts: own, lane: 0 });
+      else asks.push({ a: sa, b: sb, cls, depth, rev: !req });
     }
     const here = tour ? noteAt.get(goalId()) : undefined;
-    const mine = hot = { at: at >= 0 ? at : here ?? -1, notes, routes };
+    const mine = hot = { at: at >= 0 ? at : here ?? -1, notes, far, routes, drawn: at >= 0 };
+    mine.since = performance.now();
     if (lights.size > 400) lights.clear();
     lights.set(sig, mine);
     if (!asks.length) return;
@@ -632,7 +637,22 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         g.select(".g-halo").attr("d", d).attr("stroke-width", width(m) + 3.5);
         g.select(".g-rt").attr("d", d).attr("stroke-width", width(m));
       });
-    gHot.selectAll("path").data(hot ? hot.routes : [], (m) => m.cls + m.a + "|" + m.b).join("path").attr("class", (m) => "g-rt " + m.cls).attr("d", line);
+    // What the note pointed at depends on is drawn out from it: each link in
+    // turn, nearest first, then (below) the frame of the note it reaches.
+    const animate = !!hot?.drawn && !reduceMotion;
+    gHot.selectAll("path").data(hot ? hot.routes : [], (m) => `${hot.at}:${m.cls}${m.a}|${m.b}`)
+      .join((enter) => enter.append("path").attr("class", (m) => "g-rt " + m.cls).property("fresh", true))
+      .attr("d", line)
+      .each(function (m) {
+        if (!this.fresh) return;
+        this.fresh = false;
+        if (!animate) return;
+        this.style.setProperty("--len", this.getTotalLength().toFixed(1));
+        this.style.setProperty("--delay", `${m.depth * STEP_MS}ms`);
+        this.classList.add("draw");
+        if (m.rev) this.classList.add("rev");
+        this.addEventListener("animationend", () => this.classList.remove("draw", "rev"), { once: true });
+      });
     // A trunk's count, where it runs between its two folders.
     const counted = drawn.filter((m) => m.count > 1);
     gCounts.selectAll("text").data(counted, (m) => m.cls[0] + m.a + "|" + m.b).join("text").attr("class", "g-count")
@@ -652,7 +672,17 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         const n = items[i], d = nodes.get(n.id), g = d3.select(this), l = level[i];
         const x0 = X(n.gx), y0 = Y(n.gy), bw = n.w * c, bh = n.h * c;
         g.selectAll("*").remove();
-        g.append("path").attr("class", "gn-block").attr("d", cut(x0, y0, x0 + bw, y0 + bh, Math.min(8, c * 0.7), Math.min(1.5, c * 0.15)));
+        const frame = cut(x0, y0, x0 + bw, y0 + bh, Math.min(8, c * 0.7), Math.min(1.5, c * 0.15));
+        g.append("path").attr("class", "gn-block").attr("d", frame);
+        if (hot && (hot.notes.has(i) || hot.at === i)) {
+          // Lit: a frame in the blue pen, drawn round the note once the link to it has arrived.
+          const ring = g.append("path").attr("class", "gn-ring").attr("d", frame).node(), due = hot.since + ((hot.far.get(i) ?? 0) * STEP_MS + (hot.at === i ? 0 : DRAW_MS));
+          if (animate && hot.at !== i && performance.now() < due) { // one already under way is shown whole, not begun again
+            ring.style.setProperty("--len", ring.getTotalLength().toFixed(1));
+            ring.style.setProperty("--delay", `${Math.max(0, due - performance.now())}ms`);
+            ring.classList.add("draw");
+          }
+        }
         if (l === 3 && lens !== "activity" && bw > 14) g.append("path").attr("class", "gn-ok").attr("d", `M${(x0 + 5).toFixed(1)} ${(y0 + bh - 5.5).toFixed(1)}h${(bw - 10).toFixed(1)}M${(x0 + 5).toFixed(1)} ${(y0 + bh - 8.5).toFixed(1)}h${(bw - 10).toFixed(1)}`);
         if (c >= 4) {
           const shape = d?.marker || "circle", r = labels ? 3.8 : Math.min(3.6, c * 0.42);

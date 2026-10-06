@@ -388,7 +388,13 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .g-hot .g-rt.dep { stroke-width: 1.6px; stroke-dasharray: .1 4.6; }
 .gridmap.lit .g-routes, .gridmap.lit .g-counts { opacity: .22; }
 .gridmap.lit .gn:not(.dep):not(.at) { opacity: .45; }
-.gn.dep .gn-block, .gn.at .gn-block { stroke: var(--pen-blue); stroke-width: 1.75; }
+/* Lit: a frame in the blue pen. Pointing at a note draws each link out from it in turn, then the frame of
+   the note the link reaches (the delays are set in gridmap.js). */
+.gn-ring { fill: none; stroke: var(--pen-blue); stroke-width: 1.75; pointer-events: none; }
+@keyframes g-draw { to { stroke-dashoffset: 0; } }
+.g-hot .g-rt.draw, .gn-ring.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: g-draw .28s ease-out var(--delay, 0ms) forwards; }
+.g-hot .g-rt.draw.rev { stroke-dashoffset: calc(var(--len) * -1); }
+.gn-ring.draw { animation-duration: .32s; }
 .g-title, .g-note, .g-count { font-family: var(--font-map); fill: var(--text); }
 .g-title { font-weight: 600; font-variation-settings: "wdth" 88; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; stroke-linejoin: round; }
 .g-title.closed { text-anchor: middle; }
