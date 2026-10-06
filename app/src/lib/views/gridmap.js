@@ -92,7 +92,7 @@ function gridKeyItems(lens, terrain) {
     item(block("l0"), words[3]),
     ...(lens === "understanding" ? [item(block("l1 bad"), "The teacher says: needs work")] : []),
     ...(terrain ? [item('<path class="g-reach" d="M2 4h18v14h-18z"/><path class="g-front" d="M2 4h18v14h-18z"/>', "Reached ground: lighter")] : []),
-    item(`<path class="g-wall" d="${cut(2, 4, 20, 18, 3)}"/>`, "A folder's wall; each level in is a tone lighter"),
+    item(`<path class="g-floor d2" d="${cut(2, 4, 20, 18, 3)}"/><path class="g-wall d2" d="${cut(2, 4, 20, 18, 3)}"/>`, "A folder: a lighter area, each level in a tone lighter"),
     item('<path class="g-rt" d="M2 11H20" stroke-width="2.2"/>', "Trunk: the links between two items of a folder, with their count"),
     item('<g class="feed"><path class="g-rt" d="M2 15H8L12 11H20M2 6H8L12 10" stroke-width="1"/></g>', "Feeder: inside a folder, the subfolders a trunk's links come from"),
     item('<g class="back"><path class="g-rt" d="M2 11H9L13 7H20" stroke-width="1"/></g>', "Dashed: a back link, against the order of the layers"),

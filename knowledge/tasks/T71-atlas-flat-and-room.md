@@ -3,7 +3,7 @@ type: Task
 title: "T71 — The Atlas: a folderless view, room for routes, a panel that folds"
 description: "An optional view of the whole base as one layered DAG with each note's folder as a colour on its edge; half as much room again between notes and folders, with routes kept clear of what they pass; the lens panel folds to a bar; and the Atlas maps the notes by default in project mode too."
 tags: [task, m13, atlas, done]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-07T10:00:00Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T22:44:35Z}
 ---
 
 # Prompt
@@ -68,7 +68,26 @@ On the branch `feat/atlas-flat`, off `grid-dag-view`.
 
 Unit tests for the clearance (no trunk within 2 cells of a note it passes,
 both flows) and the folderless layout; the code walkthrough covers the
-default, Folders: None, and folding the panel (19 checks).
+default, Folders: None, and folding the panel.
+
+# Folders as areas (2026-10-07)
+
+The developer: "The boundaries of the folders are not distinct enough from
+the routing lines." A wall and a route were both thin, solid, grey lines.
+Chosen from five suggestions (areas, a soft band, a structural colour,
+weight, halos on routes): the first two together.
+
+- A folder's floor is a clear tone lighter than what it lies in (`--floor-1`
+  to `--floor-3`: 5, 10 and 15 per cent of the text colour over the
+  surface), where it was the nearly equal surface tones.
+- Its edge is a soft band 5 pixels wide (4 for subfolders) at 13 per cent
+  (`--wall`), not a hairline, so the only thin lines on the map are routes.
+- The edge of reached ground is fainter, for the same reason.
+- Station keeps its thin cyan frames and the floors it had.
+- Dashes were not used for walls: they already mean a back link.
+
+Looked at on the differential geometry bundle in Marginalia, dark and light,
+and in Station.
 
 # Not done
 

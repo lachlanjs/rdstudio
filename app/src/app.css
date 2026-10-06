@@ -366,16 +366,20 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .gridmap .g-sea { fill: transparent; }
 .gridmap-wrap.dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--rule-strong) 55%, transparent) 0 .8px, transparent 1.3px); }
 .g-floor { cursor: zoom-in; }
-.g-floor.d1 { fill: var(--surface-1); } .g-floor.d2 { fill: var(--surface-2); } .g-floor.d3 { fill: var(--surface-3); }
+/* A folder is an area, not an outline: its floor is a clear tone lighter than what it lies in, and its edge
+   is a soft band, so the only thin lines on the map are routes. */
+:root { --floor-1: color-mix(in srgb, var(--text) 5%, var(--surface)); --floor-2: color-mix(in srgb, var(--text) 10%, var(--surface)); --floor-3: color-mix(in srgb, var(--text) 15%, var(--surface)); --wall: color-mix(in srgb, var(--text) 13%, transparent); }
+.g-floor.d1 { fill: var(--floor-1); } .g-floor.d2 { fill: var(--floor-2); } .g-floor.d3 { fill: var(--floor-3); }
 .g-ground { pointer-events: none; }
 .g-reach { fill: var(--text); fill-opacity: .06; }
 /* The edge of reached ground is a plain line. The sketch dots it, but thousands of
    dots repaint at 12 frames a second against 55 (the bench, 63 notes). */
-.g-front { fill: none; stroke: var(--rule-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.g-wall { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; cursor: zoom-in; }
-.g-wall.d2, .g-wall.d3 { stroke-width: 1; }
-.g-wall.closed { fill: var(--surface-2); }
-.g-wall.closed:hover { fill: var(--surface-3); }
+.g-front { fill: none; stroke: var(--rule-strong); stroke-opacity: .45; stroke-width: 1; vector-effect: non-scaling-stroke; } /* faint: the edge of reached ground is not a route either */
+.g-wall { fill: none; stroke: var(--wall); stroke-width: 5px; stroke-linejoin: round; cursor: zoom-in; }
+.g-wall.d2, .g-wall.d3 { stroke-width: 4px; }
+.g-wall.closed { fill: var(--floor-2); }
+.g-wall.closed.d2 { fill: var(--floor-3); }
+.g-wall.closed:hover { fill: color-mix(in srgb, var(--text) 19%, var(--surface)); }
 .g-routes, .g-titles, .g-counts { pointer-events: none; }
 .g-rt { fill: none; stroke: var(--text-soft); stroke-linecap: round; stroke-linejoin: round; }
 .g-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; }
@@ -411,8 +415,8 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 /* An open folder's title sits on its top edge and breaks the line, rimmed in the ground outside the folder. */
 .g-title.open { stroke-width: 7px; }
 .g-title.open.d1 { stroke: var(--surface); }
-.g-title.open.d2 { stroke: var(--surface-1); }
-.g-title.open.d3 { stroke: var(--surface-2); }
+.g-title.open.d2 { stroke: var(--floor-1); }
+.g-title.open.d3 { stroke: var(--floor-2); }
 .g-title .g-n { font-weight: 400; fill: var(--text-soft); }
 .g-count { font-size: 12px; font-weight: 700; font-variation-settings: "wdth" 84; text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 /* A note's block: faint not reached, outlined opened, filled worked through,
@@ -1555,7 +1559,10 @@ p code { overflow-wrap: anywhere; }
 [data-theme="station"] .status-keys kbd { color: var(--line); }
 /* The Atlas as a schematic: cyan outlines, each note a small dark tile with a thin cyan edge, bright when
    reached and a dim outline when not; capitals in the titles. */
-[data-theme="station"] .g-wall { stroke: var(--line); }
+/* Station keeps its frames: thin cyan lines round the floors it had. */
+[data-theme="station"] { --floor-1: var(--surface-1); --floor-2: var(--surface-2); --floor-3: var(--surface-3); }
+[data-theme="station"] .g-wall { stroke: var(--line); stroke-width: 1.25px; }
+[data-theme="station"] .g-wall:is(.d2, .d3) { stroke-width: 1px; }
 [data-theme="station"] :is(.g-title, .g-count, .m-step text) { font-family: var(--font-map); font-variation-settings: "wdth" 100; font-weight: 400; }
 [data-theme="station"] .g-title { text-transform: uppercase; font-weight: 300; letter-spacing: .04em; fill: var(--line); }
 [data-theme="station"] .g-title .g-n { fill: var(--text-soft); }
