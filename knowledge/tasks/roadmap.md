@@ -130,6 +130,17 @@ acyclic graphs in each folder is T64. In working order:
 - [x] [T63 The grid Atlas: parity, the Station skin and retiring the old Atlas](/tasks/T63-grid-atlas-parity.md)
 - [ ] [T61 The Station theme](/tasks/T61-station-theme.md)
 
+Merged in from `main` on 2026-10-06, where a second line of M13 work had been
+done on the continuous Atlas: a codebase test bed and the code map, which the
+grid Atlas now draws (Map: Code in the panel), and two tasks the grid Atlas
+supersedes. Their numbers clashed with the ones above, so three were renumbered.
+
+- [x] [T69 A codebase test bed: a nanobind simulation](/tasks/T69-codebase-testbed.md) (was T64 on main)
+- [x] [T66 The code map: an index of the code, and notes attached to it](/tasks/T66-code-map.md)
+- [x] [T67 A calmer Atlas](/tasks/T67-calmer-atlas.md) (was T62 on main; superseded)
+- [x] [T68 The searched grid Atlas](/tasks/T68-searched-grid-atlas.md) (was T63 on main; superseded)
+- [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md) (dropped: the layered layout needs no baking)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)

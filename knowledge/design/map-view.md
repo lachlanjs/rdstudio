@@ -114,6 +114,7 @@ project's `[map]` table in `rdstudio.toml`, and choices made in the browser
 | `showLinks` | true | The Links lens: the trunks between the items of each open folder |
 | `terrain` | true | Tone the ground and the notes by the height lens |
 | `height` | (by mode) | The height lens: `understanding` (learning, needs the learner record), `activity` (project mode) or `health` |
+| `source` | (by mode) | What is mapped: `notes`, or `code` ([the code map](/design/code-map.md); the default in project mode when the code is indexed) |
 | `hideImplied` | true | Leave out a link between two notes that a longer way already joins |
 | `gridFlow` | `"auto"` | The top level's direction: `up`, `right`, or `auto` (up; right on a touch device wider than tall) |
 

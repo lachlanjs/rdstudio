@@ -61,13 +61,17 @@ export function nestedLayout(model, { flow = "up" } = {}) {
   const joins = new Map(dirs.map((d) => [d, new Map()]));
   const number = new Map(); // a number for every note and folder, for keys
   for (const d of dirs) { number.set(d, number.size); for (const c of d.children || []) if (!isDir(c)) number.set(c, number.size); }
+  // On the code map a link may end on a folder (a file imports a file, a test tests a class).
+  const ends = new Map(byRef);
+  if (model.code) for (const d of dirs) if (d !== model.root && !ends.has(d.ref)) ends.set(d.ref, d);
   for (const [from, to, s] of model.edges) {
     if (s < 2) continue;
-    const a = byRef.get(from), b = byRef.get(to);
+    const a = ends.get(from), b = ends.get(to);
     if (!a || !b || a === b) continue;
     const pa = pathTo(a), pb = pathTo(b);
     let k = 0;
     while (pa[k + 1] && pa[k + 1] === pb[k + 1]) k++;
+    if (!pa[k + 1] || !pb[k + 1]) continue; // one end holds the other
     const at = joins.get(pa[k]), p = pb[k + 1], q = pa[k + 1], key = number.get(p) + "|" + number.get(q);
     const j = at.get(key) || { p, q, weight: 0, count: 0 };
     j.weight += s; j.count++;

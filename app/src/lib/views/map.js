@@ -12,6 +12,7 @@ import { h } from "./dom.js";
 import { understanding } from "../understanding.svelte.ts";
 import { exerciseNotes, testsOf } from "../exercises.ts";
 import { projectMode } from "../shell.svelte.ts";
+import { codeMap, healthOf, KIND_LABEL } from "../code.ts";
 
 const KEY = "rdstudio.map";
 
@@ -22,6 +23,7 @@ export const VIEW_DEFAULTS = {
   terrain: true, // tone the ground and the notes by the height lens
   height: null, // the height lens: "understanding", "activity" or "health"; by default understanding, or activity in project mode
   hideImplied: true, // leave out a link that a longer way already makes
+  source: null, // what is mapped: "notes", or "code" (T66); by default code in project mode when the code is indexed
   // The top level runs "up", "right", or "auto" (up; right on a phone on its
   // side); the levels inside it turn in turn (T64).
   gridFlow: "auto",
@@ -35,6 +37,8 @@ export const MARKERS = {
   definition: "circle", theorem: "diamond", lemma: "diamond", proposition: "diamond", corollary: "diamond",
   example: "triangle", trick: "square", reference: "ring", overview: "star",
   decision: "square", task: "triangle", question: "cross", idea: "wye", procedure: "star",
+  // The code map's items (T66).
+  function: "circle", method: "circle", class: "square", field: "triangle", constant: "diamond", target: "star", job: "star", file: "ring", dir: "ring",
 };
 export const SYMBOLS = {
   circle: d3.symbolCircle, diamond: d3.symbolDiamond, triangle: d3.symbolTriangle, square: d3.symbolSquare,
@@ -66,9 +70,14 @@ export function effective() {
 // exercise, and current, neither its checks nor its content stale).
 export const LENSES = { understanding: "Understanding", activity: "Activity", health: "Health" };
 const LEVEL = { undiscovered: 0, discovered: 1, processed: 2, understood: 3 };
+/** What the Atlas maps: the notes, or the code (T66). */
+export function sourceOf(o) {
+  if (!store.code) return "notes";
+  return o.source === "code" || o.source === "notes" ? o.source : projectMode() === "Project" ? "code" : "notes";
+}
 export function heightLens(o) {
   const lens = LENSES[o.height] ? o.height : projectMode() === "Project" ? "activity" : "understanding";
-  return lens === "understanding" && !understanding.on ? "activity" : lens;
+  return lens === "understanding" && (!understanding.on || sourceOf(o) === "code") ? "activity" : lens;
 }
 let changesSeen = null, changedAt = new Map();
 function lastChanged() {
@@ -90,8 +99,9 @@ function tested() {
 }
 export function lensValue(lens, c) {
   if (lens === "understanding") return LEVEL[understanding.state(c.id)?.state] ?? 0;
+  if (c.code && lens === "health") { const map = codeMap(); return map ? healthOf(map, c.code) : 0; }
   if (lens === "activity") {
-    const t = lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
+    const t = c.code ? lastChanged().get(c.code.path) ?? 0 : lastChanged().get(store.site.knowledge + "/" + c.path) ?? c.mtime * 1000;
     const days = (Date.now() - t) / 86400000;
     return days <= 7 ? 3 : days <= 30 ? 2 : days <= 90 ? 1 : 0;
   }
@@ -149,6 +159,7 @@ function chainOrder(leaves, adjacent) {
 }
 
 export function buildModel() {
+  if (sourceOf(effective()) === "code") return buildCodeModel();
   // Tours are walks through the map, not places on it (understanding-layer.md).
   const concepts = [...store.concepts.values()].filter(isStudyNote);
   const ids = concepts.map((c) => c.id);
@@ -216,6 +227,50 @@ export function buildModel() {
   return { root: dirs.get(""), edges, hasRatings };
 }
 
+// The code map as the Atlas's model (T66): directories, files and classes are
+// folders; functions, methods, fields, constants, targets and jobs (and files
+// or classes with nothing in them) are places. A link may end on a folder (a
+// file imports a file). Every link counts but tests and builds, which are
+// drawn like "see also" and do not shape the layout.
+function buildCodeModel() {
+  const map = codeMap();
+  const root = { kind: "dir", id: "d:", ref: "", label: store.site.title || "Code", children: [] };
+  const nodes = new Map();
+  const container = (i) => i.kind === "dir" || (map.children.get(i.id)?.length ?? 0) > 0;
+  const degree = new Map();
+  for (const [a, b] of map.index.links) { degree.set(a, (degree.get(a) || 0) + 1); degree.set(b, (degree.get(b) || 0) + 1); }
+  for (const i of map.index.items) {
+    if (container(i)) nodes.set(i.id, { kind: "dir", id: "d:" + i.id, ref: i.id, label: i.name, code: i, children: [] });
+    else nodes.set(i.id, {
+      kind: "concept", id: "c:" + i.id, ref: i.id, label: i.name, code: i, landmark: false, marker: markerFor(i.kind), rank: 0,
+      weight: 1 + Math.log2(1 + (degree.get(i.id) || 0)),
+      c: { id: i.id, title: i.name, type: KIND_LABEL[i.kind], description: i.doc, trust: "unverified", verification_stale: false, content_stale: false, path: i.path, mtime: 0, links: [], backlinks: [], meta: {}, directory: i.parent ?? "", code: i },
+    });
+  }
+  for (const i of map.index.items) (i.parent ? nodes.get(i.parent) : root).children.push(nodes.get(i.id));
+  // A directory holding nothing but one directory is folded into it
+  // (src/ and src/nanosim/ become src/nanosim): one wall, not two.
+  const fold = (n) => {
+    if (n.kind !== "dir") return n;
+    while (n.code?.kind === "dir" && n.children.length === 1 && n.children[0].kind === "dir" && n.children[0].code?.kind === "dir") {
+      const only = n.children[0];
+      only.label = n.label + "/" + only.label;
+      n = only;
+    }
+    n.children = n.children.map(fold);
+    return n;
+  };
+  root.children = root.children.map(fold);
+  const size = (n) => (n.kind === "dir" ? n.children.reduce((t, c) => t + size(c), 0) : 1);
+  const order = (n) => { if (n.kind !== "dir") return; n.children.sort((a, b) => (b.kind === "dir") - (a.kind === "dir") || size(b) - size(a)); n.children.forEach(order); };
+  order(root);
+  const STR = { tests: 1, builds: 1 };
+  const strongest = new Map();
+  for (const [a, b, kind] of map.index.links) { const k = a + "\n" + b; strongest.set(k, Math.max(strongest.get(k) || 0, STR[kind] ?? 2)); }
+  const edges = [...strongest].map(([k, s]) => [...k.split("\n"), s]);
+  return { root, edges, hasRatings: false, code: true };
+}
+
 // --------------------------------------------------------------- panel
 
 // The lens panel. `view` is called when a choice changes; `readout` and
@@ -246,13 +301,14 @@ export function controls({ view, readout, summary, key: keyItems }) {
   const rated = [...store.concepts.values()].some((c) => c.links.some((l) => l.rel));
   const button = (text, fn) => { const b = h("button", { class: "toggle", type: "button" }, text); b.addEventListener("click", fn); return b; };
   // One of a few values, as pressed buttons.
-  const choice = (key, text, options) => {
+  // `current`: the value in use, when it can be chosen automatically (the source).
+  const choice = (key, text, options, after = null, current = () => effective()[key]) => {
     const buttons = options.map(([value, label, help]) => {
-      const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(effective()[key] === value), title: help }, label);
+      const b = h("button", { class: "toggle", type: "button", "aria-pressed": String(current() === value), title: help }, label);
       b.addEventListener("click", () => {
         M.user[key] = value;
         buttons.forEach((x, i) => x.setAttribute("aria-pressed", String(options[i][0] === value)));
-        persist(); view();
+        persist(); if (after) after(); else view();
       });
       return b;
     });
@@ -262,7 +318,9 @@ export function controls({ view, readout, summary, key: keyItems }) {
   // The key: the kinds of note on this map, where you stand, and the lines.
   const kinds = h("div", { class: "legend map-legend kinds" });
   const types = new Map();
-  for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+  const code = sourceOf(o) === "code";
+  if (code) { for (const i of store.code.items) if (i.kind !== "dir" && !types.has(KIND_LABEL[i.kind])) types.set(KIND_LABEL[i.kind], markerFor(i.kind)); }
+  else for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
   for (const [type, shape] of [...types].sort()) {
     const icon = h("svg:svg", { width: 22, height: 22, viewBox: "-7 -7 14 14", class: "m-key", "aria-hidden": "true" });
     icon.innerHTML = `<path d="${d3.symbol(SYMBOLS[shape], 30)()}" class="key-shape"/>${shape === "ring" ? '<path d="M-3.1 0H3.1" class="key-shape bar"/>' : ""}`;
@@ -272,7 +330,7 @@ export function controls({ view, readout, summary, key: keyItems }) {
   const drawKey = () => { const e = effective(); key.replaceChildren(...keyItems(heightLens(e), !!e.terrain)); };
   drawKey();
   // The height lenses: one at a time; choosing the one shown again puts the tones away.
-  const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || understanding.on).map(([value, label]) => {
+  const heights = Object.entries(LENSES).filter(([k]) => k !== "understanding" || (understanding.on && !code)).map(([value, label]) => {
     const b = h("button", { class: "toggle", type: "button", title: {
       understanding: "Where you stand: reached ground is lighter, and each note is faint, outlined or filled.",
       activity: "Recent work: changed this week, this month, this quarter; 90 days untouched is faint.",
@@ -296,7 +354,7 @@ export function controls({ view, readout, summary, key: keyItems }) {
       h("div", { class: "row lenses" },
         toggle("showLinks", "Links", "The trunks between the items of each open folder, with their counts. Pointing at a note lights what it depends on."),
         ...heights.map(([, b]) => b)),
-      understanding.on ? h("label", { class: "hide-undiscovered" }, (() => {
+      understanding.on && !code ? h("label", { class: "hide-undiscovered" }, (() => {
         const box = h("input", { type: "checkbox" });
         box.checked = understanding.hiding;
         box.addEventListener("change", () => { understanding.setHiding(box.checked); view(); });
@@ -307,6 +365,8 @@ export function controls({ view, readout, summary, key: keyItems }) {
       summary,
       h("details", { class: "map-more" },
         h("summary", {}, "More options"),
+        store.code ? choice("source", "Map", [["code", "Code", "The code itself: directories, files, classes, functions; imports, calls and bindings as links."],
+          ["notes", "Notes", "The knowledge base's notes and the links between them."]], () => M.resource?.(), () => sourceOf(effective())) : "",
         choice("gridFlow", "Flows", [["auto", "Auto", "The top level runs bottom to top; left to right on a phone turned on its side."],
           ["up", "Up", "The top level runs from the bottom up; folders inside it left to right; and so on in turn."],
           ["right", "Right", "The top level runs from left to right; folders inside it bottom to top; and so on in turn."]]),

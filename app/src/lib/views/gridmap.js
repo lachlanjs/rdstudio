@@ -24,6 +24,7 @@ import { exerciseNotes, statusOf, testsOf, tried } from "../exercises.ts";
 import { plainModel, gridKey, cachedGrid, computeGrid, computeGridRoutes } from "./layout.js";
 import { buildCells, reachedCells, maskPaths } from "./grid/cells.js";
 import { effective, buildModel, controls, heightLens, lensValue, SYMBOLS, M } from "./map.js";
+import { codeMap, codeHref, KIND_LABEL, LINK_LABEL } from "../code.ts";
 
 const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
@@ -230,6 +231,11 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     for (const l of L.links) if (l.s >= 2) { needsOf[l.a].push(l.b); neededBy[l.b].push(l.a); }
     ownPath = new Map((L.trunks || []).filter((t) => t.pts).map((t) => [t.a + "|" + t.b, t.pts]));
     hot = null; hotFor = null; lights.clear();
+    // A new layout numbers its items afresh: what is drawn is keyed by those numbers, so it is drawn again from
+    // nothing, and what was pointed at or selected in the last one may not be in this one (Notes to Code).
+    if (!first) for (const g of [gFloor, gWalls, gRoutes, gHot, gCounts, gNotes, gTitles]) g.selectAll("*").remove();
+    hovered = -1;
+    if (selected && !L.items.some((n) => n.id === selected)) { selected = null; fillCard(); }
     noteAt = new Map(L.items.map((n, i) => [n.ref, i]).filter(([, i]) => L.items[i].kind === "note"));
     if (viewed && (first || !userMoved)) initialView();
     schedule();
@@ -421,7 +427,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   // What you have not reached, hidden when you choose (understanding.svelte.ts):
   // a note, unless it is reached, on the frontier or on the path being shown; a folder holding none.
-  const hiddenFromYou = (n) => understanding.hiding && !step.has(n.ref) && !(n.kind === "note" ? understanding.visible(n.ref) : understanding.folderVisible(n.ref));
+  const hiddenFromYou = (n) => !model.code && understanding.hiding && !step.has(n.ref) && !(n.kind === "note" ? understanding.visible(n.ref) : understanding.folderVisible(n.ref));
 
   // ------------------------------------------------------------ selection
 
@@ -431,6 +437,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     card.hidden = i < 0;
     if (i < 0) return;
     const ref = L.items[i].ref, label = nodes.get(selected)?.label || ref;
+    if (nodes.get(selected)?.code) return fillCodeCard(nodes.get(selected).code);
     const st = understanding.state(ref)?.state, needs = needsWork().has(ref);
     const reqs = needsOf[i].length, builds = neededBy[i].length;
     const where = needs ? "Needs work." : st ? `${STATE_LABEL[st]}.` : "";
@@ -447,6 +454,25 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       h("div", { class: "atlas-card-actions" }, open,
         exercises.length ? h("a", { class: "toggle", href: conceptHref(exercises[0].id) }, exercises.length === 1 ? "Exercise" : `Exercises (${exercises.length})`) : "",
         reqs ? h("a", { class: "toggle", href: "#/path/" + ref, title: "This note and everything it requires, in reading order" }, "Study path") : ""));
+  }
+
+  // A code item's card (T66): what it is, where, and its links by kind.
+  function fillCodeCard(i) {
+    const map = codeMap();
+    const count = (list) => { const k = {}; for (const [, , kind] of list ?? []) k[kind] = (k[kind] || 0) + 1; return k; };
+    const outs = count(map.out.get(i.id)), ins = count(map.into.get(i.id));
+    const words = [...Object.entries(outs).map(([k, v]) => `${LINK_LABEL[k][0].toLowerCase()} ${v}`), ...Object.entries(ins).map(([k, v]) => `${LINK_LABEL[k][1].toLowerCase()} ${v}`)];
+    const notes = map.notes.get(i.id) ?? [];
+    const open = h("a", { class: "toggle primary", href: codeHref(i.id) }, "Open");
+    open.addEventListener("click", () => persist());
+    const close = h("button", { class: "atlas-card-close", type: "button", "aria-label": "Close" }, "×");
+    close.addEventListener("click", () => select(null));
+    card.className = "atlas-card";
+    card.setAttribute("aria-label", i.name);
+    card.replaceChildren(
+      h("h3", {}, i.name), close,
+      h("p", {}, `${KIND_LABEL[i.kind]} in ${i.path}${i.line ? `:${i.line}` : ""}.${words.length ? " " + words.join(", ").replace(/^./, (c) => c.toUpperCase()) + "." : ""}`),
+      h("div", { class: "atlas-card-actions" }, open, ...notes.slice(0, 2).map((c) => h("a", { class: "toggle", href: conceptHref(c.id) }, c.title))));
   }
 
   // ------------------------------------------------------------ study paths and tours
@@ -755,7 +781,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   function openNote(i) {
     persist();
-    location.hash = conceptHref(L.items[i].ref);
+    location.hash = model.code ? codeHref(L.items[i].ref) : conceptHref(L.items[i].ref);
   }
 
   function drawCrumbs() {
@@ -776,9 +802,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (!d) return;
     const lines = [h("strong", {}, d.label)];
     if (n.kind === "note") {
-      lines.push(h("span", {}, `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
+      lines.push(h("span", {}, d.code ? `${d.c.type} in ${d.code.path}` : `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
       if (d.c.description) lines.push(h("div", {}, d.c.description));
-    } else lines.push(h("span", {}, `Folder · ${noteCount[i]} note${noteCount[i] === 1 ? "" : "s"}`));
+    } else lines.push(h("span", {}, `${d.code ? KIND_LABEL[d.code.kind] : "Folder"} · ${noteCount[i]} ${model.code ? "item" : "note"}${noteCount[i] === 1 ? "" : "s"}`));
     tip.replaceChildren(...lines);
     const box = wrap.getBoundingClientRect();
     tip.style.left = `${Math.min(event.clientX - box.left + 14, box.width - 290)}px`;
@@ -813,6 +839,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
   wrap.refresh = () => { model = timed("map-model", buildModel); nodes = byId(model); o = effective(); arrange(); tones = null; schedule(); };
   M.reset = () => zoomTo(-1);
+  M.resource = () => { userMoved = false; wrap.refresh(); }; // the panel's Notes or Code: another map, so shown whole
   wrap.routes = () => drawn; // for tests and inspection
   wrap.layout = () => L;
   wrap.model = () => model;

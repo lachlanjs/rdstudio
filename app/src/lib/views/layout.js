@@ -11,7 +11,7 @@ export function plainModel(model) {
   const strip = (n) => (n.kind === "dir"
     ? { kind: "dir", id: n.id, ref: n.ref, children: n.children.map(strip) }
     : { kind: n.kind, id: n.id, ref: n.ref, weight: n.weight, rank: n.rank || 0 });
-  return { root: strip(model.root), edges: model.edges };
+  return { root: strip(model.root), edges: model.edges, code: !!model.code };
 }
 
 // The grid Atlas's layout (grid/nested.js, which says what one is): each
