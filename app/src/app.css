@@ -706,6 +706,9 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
 .assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
 .assist-sources code { font-size: 12.5px; }
+.assist-figure { margin: 4px 0 10px; }
+.assist-figure .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-problems { margin: 4px 0 0 18px; padding: 0; font-size: 14px; color: var(--ink-soft); }
 .editor { max-width: var(--measure); min-height: 60vh; }
 
 .edit-conflict {

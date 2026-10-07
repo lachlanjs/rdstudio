@@ -175,7 +175,11 @@ export type TutorAsk = {
 };
 
 export type NoteAssist = {
-    mode: 'ask' | 'fill';
+    mode: 'ask' | 'fill' | 'figure';
+    fix?: {
+        html: string;
+        problems: Array<string>;
+    };
     body: string;
     from: number;
     to: number;
@@ -380,6 +384,26 @@ export type NoteSave = {
      * Models whose proposed text was accepted into this edit: named in the note's stamp.
      */
     assist?: Array<string>;
+};
+
+export type ArtifactPreviewed = {
+    url: string;
+};
+
+export type ArtifactPreview = {
+    path: string;
+    html: string;
+};
+
+export type ArtifactSaved = {
+    path: string;
+    bytes: number;
+};
+
+export type ArtifactSave = {
+    html: string;
+    replace?: boolean;
+    author?: string;
 };
 
 export type GetApiLearnerData = {
@@ -1584,3 +1608,76 @@ export type DeleteApiFoldersByPathResponses = {
 };
 
 export type DeleteApiFoldersByPathResponse = DeleteApiFoldersByPathResponses[keyof DeleteApiFoldersByPathResponses];
+
+export type PostApiArtifactsPreviewData = {
+    body: ArtifactPreview;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/artifacts/preview';
+};
+
+export type PostApiArtifactsPreviewErrors = {
+    /**
+     * Not an artifact's path
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type PostApiArtifactsPreviewError = PostApiArtifactsPreviewErrors[keyof PostApiArtifactsPreviewErrors];
+
+export type PostApiArtifactsPreviewResponses = {
+    /**
+     * Held
+     */
+    200: ArtifactPreviewed;
+};
+
+export type PostApiArtifactsPreviewResponse = PostApiArtifactsPreviewResponses[keyof PostApiArtifactsPreviewResponses];
+
+export type PutApiArtifactsByPathData = {
+    body: ArtifactSave;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The artifact's path in the knowledge base, URL-encoded: design%2Ffigure.html
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/artifacts/{path}';
+};
+
+export type PutApiArtifactsByPathErrors = {
+    /**
+     * Not an artifact's path
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * A file is already there
+     */
+    409: Error;
+};
+
+export type PutApiArtifactsByPathError = PutApiArtifactsByPathErrors[keyof PutApiArtifactsByPathErrors];
+
+export type PutApiArtifactsByPathResponses = {
+    /**
+     * Written
+     */
+    200: ArtifactSaved;
+};
+
+export type PutApiArtifactsByPathResponse = PutApiArtifactsByPathResponses[keyof PutApiArtifactsByPathResponses];

@@ -27,7 +27,7 @@ import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
-import { SANDBOX } from "./artifacts.ts";
+import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
@@ -267,6 +267,22 @@ const askTutor = createRoute({
   }).openapi("TutorAsk") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } }, ...teacherErrors },
 });
+const ArtifactPath = z.object({ path: z.string().openapi({ param: { name: "path", in: "path" }, description: "The artifact's path in the knowledge base, URL-encoded: design%2Ffigure.html" }) });
+const putArtifact = createRoute({
+  method: "put", path: "/api/artifacts/{path}", summary: "Write an artifact made in the app (an HTML file beside the notes); refused where a file is already there unless `replace`",
+  request: { params: ArtifactPath, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ html: z.string(), replace: z.boolean().optional(), author: z.string().optional() }).openapi("ArtifactSave") } }, required: true } },
+  responses: { 200: { description: "Written", content: { "application/json": { schema: z.object({ path: z.string(), bytes: z.number() }).openapi("ArtifactSaved") } } },
+    400: { description: "Not an artifact's path", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "A file is already there", content: { "application/json": { schema: ErrorBody } } } },
+});
+const previewArtifact = createRoute({
+  method: "post", path: "/api/artifacts/preview", summary: "Hold an artifact that is not saved yet, to be looked at and checked: it is served like a saved one from the address returned, for a while",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ path: z.string(), html: z.string() }).openapi("ArtifactPreview") } }, required: true } },
+  responses: { 200: { description: "Held", content: { "application/json": { schema: z.object({ url: z.string() }).openapi("ArtifactPreviewed") } } },
+    400: { description: "Not an artifact's path", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } } },
+});
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
   request: { params: SkillName, headers: z.object({ "x-rdstudio-token": z.string() }) },
@@ -345,7 +361,7 @@ const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
   summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
-    mode: z.enum(["ask", "fill"]), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+    mode: z.enum(["ask", "fill", "figure"]), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
   }).openapi("NoteAssist") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
@@ -624,6 +640,8 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
     const str = (v: unknown) => (typeof v === "string" ? v : undefined), num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0);
     const a: assist.Ask = { note: c.req.param("id") ?? "", mode: body.mode as assist.Mode, body: str(body.body) ?? "", from: num(body.from), to: num(body.to), prompt: str(body.prompt), title: str(body.title) };
+    const fix = body.fix as { html?: unknown; problems?: unknown } | undefined;
+    if (fix && typeof fix.html === "string" && Array.isArray(fix.problems)) a.fix = { html: fix.html, problems: fix.problems.filter((x) => typeof x === "string").slice(0, 12) as string[] };
     if (!(assist.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${assist.MODES.join(", ")}`);
     if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Teacher page.");
     try { assist.prepare(cfg, a); } catch (err) { return refuse(c, 400, (err as Error).message); } // what is wrong with the request, before anything is sent
@@ -717,6 +735,40 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   }) as never);
 
   app.doc31("/api/openapi.json", { openapi: "3.1.0", info: { title: "rdstudio serve", version: "0.1.0" } });
+  // Artifacts made in the app (T78): held to be checked, then written beside the notes.
+  app.openapi(previewArtifact, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    let body: { path?: unknown; html?: unknown };
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    if (typeof body.path !== "string" || typeof body.html !== "string") return refuse(c, 400, "expected {path, html}");
+    try { artifactPath(cfg.knowledgeDir, body.path); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const path = body.path.replace(/^\/+/, "");
+    return json(c, 200, { url: `p/${keepPreview(path, body.html)}/${path.split("/").map(encodeURIComponent).join("/")}` }, true);
+  }) as never);
+  app.openapi(putArtifact, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: { html?: unknown; replace?: unknown; author?: unknown };
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    if (typeof body.html !== "string") return refuse(c, 400, "expected {html}");
+    try {
+      const made = typeof body.author === "string" && /^[\w./:@ -]{1,160}$/.test(body.author) ? body.author : actor;
+      const saved = saveArtifact(cfg.knowledgeDir, c.req.param("path") ?? "", body.html, { author: made, replace: body.replace === true });
+      onWrite?.();
+      return json(c, 200, saved, true);
+    } catch (err) {
+      if (err instanceof ArtifactError) return refuse(c, err.status, err.message);
+      throw err;
+    }
+  }) as never);
+  app.get("/p/:id/*", (c) => {
+    if (!hostOk(c)) return c.text("Host not allowed", 403);
+    const html = preview(c.req.param("id"));
+    return html === null ? c.text("Not found", 404) : c.body(html, 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": SANDBOX, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+  });
+
   app.all("/api/*", (c) => json(c, 404, { error: "not found" }));
   app.on(["GET", "HEAD"], "*", (c) => staticFile(c, site));
   return app;

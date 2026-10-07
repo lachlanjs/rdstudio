@@ -7,6 +7,9 @@
   import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
   import { askAssist, streamingFill, type Mode, type Reply } from "$lib/assist.ts";
+  import { mountArtifact } from "$lib/artifactFrame.ts";
+  import { slug } from "$lib/edit.svelte.ts";
+  import { check as checkFigure, save as saveFigure } from "$lib/figure.ts";
   import { acceptSuggestion, applyFormat, createEditor, rejectSuggestion, selectionOf, setSource, setText, suggest, type Format } from "$lib/editor/codemirror.ts";
   import { codeHref } from "$lib/code.ts";
   import { conceptHref } from "$lib/format.ts";
@@ -116,10 +119,63 @@
       busy = null; stop = null;
     }
   }
+  // Make a figure (T78): the model writes an artifact; it is loaded out of sight and checked (no errors, light,
+  // quick, idle until touched), sent back to be put right up to twice, and only then shown. Nothing is
+  // written until it is accepted: then the file is saved beside the note and its embed put below the passage.
+  let figure = $state<{ title: string; caption: string; html: string; url: string; model: string; at: number } | null>(null);
+  let stage = $state("");
+  let problems = $state<string[]>([]);
+  async function makeFigure() {
+    if (!view || busy) return;
+    if (waiting) rejectSuggestion(view);
+    const { from, to } = selectionOf(view), body = view.state.doc.toString(), asked = prompt.trim() || undefined;
+    busy = "figure"; streaming = ""; reply = null; outcome = ""; failed = ""; figure = null; problems = []; stage = "Writing the figure…";
+    stop = new AbortController();
+    try {
+      let fix: { html: string; problems: string[] } | undefined;
+      for (let round = 0; round < 3; round++) {
+        const r = await askAssist(session.id, { mode: "figure", body, from, to, prompt: asked, title: session.fields.title || undefined, fix }, () => {}, stop.signal);
+        reply = r;
+        if (!r.artifact) { failed = "No figure was written."; break; }
+        stage = "Checking that it loads, raises no error and stays light…";
+        const name = slug(r.artifact.title) || "figure";
+        const c = await checkFigure(`${dir ? dir + "/" : ""}${name}.html`, r.artifact.title, r.artifact.html);
+        if (!c.problems.length) { figure = { ...r.artifact, url: c.url, model: r.model, at: Math.max(from, to) }; prompt = ""; break; }
+        problems = c.problems;
+        if (round === 2) { failed = "The figure was not good enough to offer, after two tries at putting it right:"; break; }
+        stage = `Putting it right (${round + 1} of 2): ${c.problems[0]}`;
+        fix = { html: r.artifact.html, problems: c.problems };
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") failed = (err as Error).message;
+    } finally {
+      busy = null; stop = null; stage = "";
+    }
+  }
+  function showFigure(host: HTMLElement) {
+    const f = figure;
+    if (!f) return;
+    const m = mountArtifact(host, "preview", { fit: "content", eager: true, caption: f.caption, held: { src: f.url, title: f.title } });
+    return () => m.destroy();
+  }
+  async function acceptFigure() {
+    const f = figure;
+    if (!f || !view) return;
+    try {
+      const path = await saveFigure(dir, slug(f.title) || "figure", f.html, `openrouter/${f.model.replace(/^openrouter\//, "")}`);
+      await store.refresh(); // the new artifact, so the preview in the note can show it
+      const line = view.state.doc.lineAt(Math.min(f.at, view.state.doc.length));
+      const caption = (f.caption || f.title).replace(/[\[\]\n]/g, " ").trim();
+      suggest(view, { from: line.to, to: line.to, insert: `![${caption}](${path.split("/").pop()})`, model: f.model });
+      acceptSuggestion(view);
+      outcome = `Saved as ${path} and put in the note. The note is saved when you save.`;
+      figure = null;
+    } catch (err) { failed = (err as Error).message; }
+  }
   const sourceHref = (s: Reply["sources"][number]) => (s.kind === "note" ? conceptHref(s.id) : store.code?.items.some((i) => i.id === s.id) ? codeHref(s.id) : null);
   function closeReply() {
     if (waiting && view) rejectSuggestion(view);
-    reply = null; streaming = ""; outcome = ""; failed = "";
+    reply = null; streaming = ""; outcome = ""; failed = ""; figure = null; problems = [];
   }
 
   async function done() {
@@ -159,6 +215,8 @@
             title="An answer beside the note; nothing in it changes">Ask</button>
           <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void ask("fill")}
             title={selected ? "Propose text in place of the selection, to accept or reject" : "Propose text at the cursor, to accept or reject"}>{selected ? "Rewrite" : "Write here"}</button>
+          <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void makeFigure()}
+            title="Have an interactive figure made for the selection, checked, and shown to accept or discard">Figure</button>
           {#if busy}<button class="toggle" type="button" onclick={() => stop?.abort()}>Stop</button>{/if}
         </form>
       {:else}
@@ -170,16 +228,28 @@
   {#if busy || reply || failed}
     <section class="assist-reply" aria-live="polite" aria-label="The model's reply">
       <header>
-        <b>{busy === "fill" || reply?.mode === "fill" ? "Suggested text" : "Answer"}</b>
+        <b>{busy === "figure" || reply?.mode === "figure" ? "Figure" : busy === "fill" || reply?.mode === "fill" ? "Suggested text" : "Answer"}</b>
         {#if busy}<span class="assist-meta">Writing…</span>
         {:else if reply}<span class="assist-meta">{reply.model} · {money(reply.cost)}</span>{/if}
         <button class="atlas-card-close" type="button" aria-label="Close the reply" onclick={closeReply}>×</button>
       </header>
       {#if failed}<p class="edit-message bad">{failed}</p>{/if}
       {#if busy}
+        {#if stage}<p class="assist-actions"><span>{stage}</span></p>{/if}
         {#if streaming}<pre class="assist-stream">{streaming}</pre>{/if}
       {:else if reply}
-        {#if reply.mode === "ask"}
+        {#if reply.mode === "figure"}
+          {#if problems.length && !figure}<ul class="assist-problems">{#each problems as pr (pr)}<li>{pr}</li>{/each}</ul>{/if}
+          {#if figure}
+            {#key figure.url}<div class="assist-figure" {@attach showFigure}></div>{/key}
+            {#if reply.answer}<Prose html={render(reply.answer, { dir })} class="prose assist-answer" />{/if}
+            <p class="assist-actions">
+              <span>Checked: it loads without error, is light and stays idle. Nothing is saved yet.</span>
+              <button class="toggle primary" type="button" onclick={() => void acceptFigure()}>Put it in the note</button>
+              <button class="toggle" type="button" onclick={closeReply}>Discard</button>
+            </p>
+          {:else if outcome}<p class="assist-actions"><span>{outcome}</span></p>{/if}
+        {:else if reply.mode === "ask"}
           <Prose html={render(reply.answer, { dir })} class="prose assist-answer" />
         {:else if reply.insert === null}
           <p class="edit-message">No text was proposed.</p>

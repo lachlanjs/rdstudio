@@ -137,5 +137,6 @@ describe("a suggestion as it goes into the note (T74)", () => {
     expect(at("Before.\n\n\n\nAfter.", 9, 9, code)).toBe(code);
     expect(at("Before.\n", 8, 8, "Line one.\nLine two.\n")).toBe("\nLine one.\nLine two.");
     expect(at("", 0, 0, code)).toBe(code);
+    expect(at("A sentence.", 11, 11, "![A figure](fig.html)")).toBe("\n\n![A figure](fig.html)"); // an embed is a block of its own
   });
 });

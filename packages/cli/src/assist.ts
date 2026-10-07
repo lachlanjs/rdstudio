@@ -18,7 +18,7 @@ import { assemble, type Seen } from "./context.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
-export const MODES = ["ask", "fill"] as const;
+export const MODES = ["ask", "fill", "figure"] as const;
 export type Mode = (typeof MODES)[number];
 
 /** The marks put round the place in the note that the request is about. */
@@ -32,6 +32,8 @@ export interface Ask {
   from: number; // the selection, or the caret (from === to), as offsets in body
   to: number;
   prompt?: string;
+  /** figure: the artifact it wrote before, and what the check found wrong with it, to put right. */
+  fix?: { html: string; problems: string[] };
 }
 
 /** Something the model was given, shown under its reply. */
@@ -47,6 +49,8 @@ export interface Reply {
   reply: string; // as the model wrote it
   answer: string; // what to show: the answer, or why the text was written as it was
   insert: string | null; // fill: the text proposed, for from..to
+  /** figure: the artifact written (T78), to be checked and shown before anything is saved. */
+  artifact?: { title: string; caption: string; html: string } | null;
   from: number;
   to: number;
   sources: Source[];
@@ -91,7 +95,54 @@ as given, not rewritten.
 One or two sentences: what you wrote and what you took it from, and anything
 you were unsure of.
 </why>`,
+  figure: `# Your reply
+
+Reply in exactly this form and nothing else:
+
+<title>A short title for the artifact</title>
+<caption>One line to go under it in the note: what it shows and how to use it.</caption>
+<artifact>
+<!doctype html>
+…the whole file…
+</artifact>
+<why>
+One or two sentences: what you made and what you took it from, and anything
+you were unsure of.
+</why>`,
 };
+
+const FIGURE_HOW = `# The artifact
+
+You are writing an artifact: one self-contained HTML file that will be shown
+inside the note, in a frame, where Markdown is not enough. It should make the
+marked passage easier to understand by letting the reader see or try
+something: a plot to hover, sliders that recompute, an animation to play and
+step, a table to sort.
+
+It must keep these rules. It is loaded and checked before it is offered, and
+is not offered if it breaks one.
+
+- One file: all script, style and data inside it. It cannot read other files.
+- No network. It is served with a policy that blocks every address but
+  these, rdstudio's own libraries, which you may use exactly as written:
+  vendor/katex/katex.min.js, vendor/katex/auto-render.min.js,
+  vendor/katex/katex.min.css (maths); vendor/vega/vega.min.js,
+  vendor/vega/vega-lite.min.js, vendor/vega/vega-embed.min.js (charts).
+  Plain canvas, SVG and DOM need no library and are usually enough.
+- No errors: nothing uncaught, nothing written with console.error.
+- Light: well under 200 kB, ready at once. Do no work until asked: an
+  animation starts when the reader presses play, never on load, and stops.
+- The app's colours, through these CSS variables, each with a fallback:
+  --surface, --surface-1, --surface-2, --text, --text-soft, --text-faint,
+  --rule, --rule-strong, --pen-red, --pen-green, --pen-blue, --font-ui,
+  --font-text, --font-mono. A transparent or var(--surface) background.
+- Sized by its content: no fixed page height, no inner scroll bars, a width
+  that works from 320 to 800 pixels. Modest height (under about 480 pixels).
+- Controls a keyboard can reach, each with a label.
+- A <title>, and <meta name="description" content="one sentence">.
+- Only what the note, the notes given and the code given support. Do not
+  invent data: if a figure needs numbers you were not given, compute them
+  from the formula in the passage, and say so in the caption.`;
 
 // ------------------------------------------------------------------ the note, marked
 
@@ -218,6 +269,7 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   const selection = ask.body.slice(from, to);
   if (ask.mode === "ask" && !prompt && !selection.trim()) throw new StoreError("ask something, or select a passage to ask about");
   if (ask.mode === "fill" && !prompt && !selection.trim()) throw new StoreError("say what to write here, or select a passage to rewrite");
+  if (ask.mode === "figure" && !prompt && !selection.trim()) throw new StoreError("select the passage the figure should be about, or say what it should show");
   const b = loadBundle(cfg.knowledgeDir);
   const known = b.concepts.get(ask.note);
   const title = ask.title?.trim() || known?.title || ask.note;
@@ -243,15 +295,21 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
 
   const what = ask.mode === "ask"
     ? (prompt ? `Their question about the marked place:\n\n${prompt}` : "They ask: what should I know about the marked passage? Is it right, and what does it leave out?")
-    : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
+    : ask.mode === "figure"
+      ? (ask.fix
+        ? `The artifact you wrote was loaded and checked, and is not good enough to offer. What was wrong:\n\n${ask.fix.problems.map((p) => "- " + p).join("\n")}\n\nWrite it again, whole, with that put right and nothing else changed.${prompt ? `\n\nWhat they asked for:\n\n${prompt}` : ""}`
+        : (prompt ? `What they want the artifact to show, for the marked place:\n\n${prompt}` : "They want an artifact that makes the marked passage easier to understand."))
+      : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
   const { messages, seen } = assemble([
     { name: "How to help", text: HOW.replace(/^# How to help\n\n/, ""), tokens: 600, cache: true },
+    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900, cache: true },
     { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
     { name: "Notes this one links to", text: linked.map((id) => noteText(b, id, 2400)).join("\n\n"), tokens: 3600 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
     { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to) || HERE, tokens: 4000, role: "user" },
-    { name: "What to do", text: what, tokens: 600, role: "user" },
+    { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
+    { name: "What to do", text: what, tokens: 900, role: "user" },
   ]);
   return { messages, seen, sources, job: ask.mode === "ask" ? "discuss" : "write" };
 }
@@ -265,14 +323,27 @@ export function parseFill(reply: string): { insert: string | null; why: string }
   return { insert: text.trim() ? text : null, why: (why?.[1] ?? "").trim() };
 }
 
+/** Read a figure's reply: the artifact, its title and caption, and why. */
+export function parseFigure(reply: string): { artifact: { title: string; caption: string; html: string } | null; why: string } {
+  const part = (tag: string) => new RegExp(`<${tag}>\\n?([\\s\\S]*?)\\n?<\\/${tag}>`, "i").exec(reply)?.[1]?.trim() ?? "";
+  // The file holds its own <title>: the first one in the reply is ours, before <artifact>.
+  const lead = reply.split(/<artifact>/i)[0] ?? "";
+  const title = /<title>\n?([\s\S]*?)\n?<\/title>/i.exec(lead)?.[1]?.trim() ?? "";
+  const body = /<artifact>\n?([\s\S]*)\n?<\/artifact>/i.exec(reply)?.[1]?.trim() ?? "";
+  const html = body.replace(/^```(?:html)?\n/, "").replace(/\n```$/, "");
+  if (!/<(html|body|script|svg|canvas|div|p)\b/i.test(html)) return { artifact: null, why: part("why") || reply.trim() };
+  return { artifact: { title: title || /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "Figure", caption: part("caption"), html }, why: part("why") };
+}
+
 /** Ask, streaming the reply's text. Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {
   const p = prepare(cfg, a);
-  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : "note-fill", messages: p.messages, onText,
-    maxTokens: a.mode === "ask" ? 900 : 2000 });
+  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill", messages: p.messages, onText,
+    maxTokens: a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : 2000 });
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
   const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, cost: r.usage.cost };
   if (a.mode === "ask") return { reply: { ...base, answer: r.text.trim(), insert: null }, seen: p.seen };
+  if (a.mode === "figure") { const f = parseFigure(r.text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
   const { insert, why } = parseFill(r.text);
   return { reply: { ...base, answer: why, insert }, seen: p.seen };
 }

@@ -28,7 +28,14 @@ class FakeOpenRouter(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FAKE_REQUESTS.append(body)
         said = "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
-        if "Write the text to go at the marked place" in said:
+        if "You are writing an artifact" in said:
+            good = "<!doctype html><html><head><title>Softening</title><meta name='description' content='The softened force.'></head><body style='margin:0;padding:8px;color:var(--text,#000)'><input id='e' type='range' min='1' max='9' value='3' aria-label='Softening'><canvas id='c' width='300' height='120' style='display:block'></canvas><script>const c=document.getElementById('c').getContext('2d'),e=document.getElementById('e');function d(){c.clearRect(0,0,300,120);c.beginPath();for(let x=1;x<300;x++)c.lineTo(x,110-900/(x*x/90+e.value*e.value));c.stroke();window.__drawn=+e.value}e.oninput=d;d();</scr" + "ipt></body></html>"
+            wrong = good.replace("d();</scr", "d();undefinedHelper();</scr")
+            spins = good.replace("d();</scr", "d();(function f(){requestAnimationFrame(f)})();</scr")
+            ask = said.split("## What to do")[-1]
+            html = spins if "spin" in ask else good if "is not good enough to offer" in ask else wrong
+            reply = f"<title>Softened gravity</title>\n<caption>Move the slider to change the softening.</caption>\n<artifact>\n{html}\n</artifact>\n<why>\nDrawn from the formula in the note.\n</why>"
+        elif "Write the text to go at the marked place" in said:
             reply = f"<insert>\nFrom `src/nanosim/core/vec3.hpp`:\n\n{CODE}\n</insert>\n<why>\nThe declaration of `minimum_image`, copied from the header.\n</why>" if "minimum_image" in said.split("## What to do")[-1] \
                 else "<insert>softened at short range</insert>\n<why>Shorter, and says the same.</why>"
         else:
@@ -126,6 +133,45 @@ with sync_playwright() as pw:
     after = NOTE.read_text()
     check("Saved: the note holds the text, and its stamp names the model beside the person", "minimum_image(Vec3 d, double box)" in after and re.search(r"by: .*human:\S+ with openrouter/", after) is not None, after[:400])
 
+    # Make a figure (T78): written, checked out of sight, put right once, shown, and saved only when accepted.
+    p.get_by_role("button", name="Edit").click() if p.locator(".cm-content").count() == 0 else None
+    p.wait_for_selector(".cm-content")
+    before_n = len(FAKE_REQUESTS)
+    first = p.locator(".cm-line", has_text=re.compile(r"Gravity")).first
+    first.click(click_count=3)
+    bar.get_by_role("button", name="Figure").click()
+    fig = p.locator(".assist-figure iframe")
+    expect(fig).to_be_visible(timeout=40000)
+    asked = [sent(r) for r in FAKE_REQUESTS[before_n:]]
+    check("Figure: the first try raised an error when loaded out of sight, so it went back to the model with what was wrong",
+          len(asked) == 2 and "undefinedHelper" in asked[1].split("## What to do")[-1] and "The artifact you wrote before" in asked[1], [a[-300:] for a in asked])
+    check("…the one put right is shown, checked, with nothing saved yet", "Checked: it loads without error" in panel.inner_text() and not (ROOT / "knowledge/design/softened-gravity.html").exists())
+    inner = next(f for f in p.frames if "/p/" in f.url)
+    inner.locator("#e").fill("7")
+    check("…and it works in the preview: the slider redraws it", inner.evaluate("window.__drawn") == 7)
+    p.screenshot(path=str(OUT / "assist-figure.png"))
+    panel.get_by_role("button", name="Put it in the note").click()
+    expect(panel).to_contain_text("Saved as design/softened-gravity.html", timeout=15000)
+    made = (ROOT / "knowledge/design/softened-gravity.html").read_text()
+    check("Put it in the note: the file is written beside the note, stamped with the model and the date",
+          "<canvas" in made and 'rdstudio:author" content="openrouter/' in made and 'rdstudio:date"' in made, made[:300])
+    p.get_by_role("button", name="Source").click()  # back to the live preview
+    expect(p.locator(".cm-lp-figure iframe")).to_have_count(1, timeout=15000)
+    check("…and its embed is in the note below the passage, shown in the preview", True)
+    p.get_by_role("button", name="Source").click()
+    p.get_by_role("button", name="Save").click()
+    expect(p.locator(".edit-status")).to_have_text("Saved")
+    check("…saved with the note", "(softened-gravity.html)" in NOTE.read_text())
+
+    # One that cannot be put right is not offered.
+    p.locator(".cm-line", has_text=re.compile(r"Lennard")).first.click(click_count=3)
+    bar.get_by_role("textbox").fill("Make it spin.")
+    before_n = len(FAKE_REQUESTS)
+    bar.get_by_role("button", name="Figure").click()
+    expect(panel).to_contain_text("not good enough to offer", timeout=60000)
+    check("a figure that keeps animating while untouched is sent back twice, then not offered, and why is said",
+          len(FAKE_REQUESTS) - before_n == 3 and "kept animating" in panel.inner_text() and p.locator(".assist-figure").count() == 0 and not (ROOT / "knowledge/design/softened-gravity-2.html").exists(), panel.inner_text())
+
     # No account: the bar says how to connect one.
     browser.close()
 
@@ -148,7 +194,8 @@ with sync_playwright() as pw:
     check("with no model account, the editor says how to connect one and offers nothing to ask", p.locator(".assist-bar").count() == 0 and p.locator(".assist-off a").get_attribute("href") == "#/teacher")
     browser.close()
 
-check("no errors in the browser console", not errors, errors[:5])
+own = [e for e in errors if "undefinedHelper" not in e]  # the first figure's own error, inside the frame it was checked in
+check("no errors in the browser console", not own, own[:5])
 server.terminate()
 shutil.rmtree(TMP, ignore_errors=True)
 failed = [n for n, ok in results if not ok]

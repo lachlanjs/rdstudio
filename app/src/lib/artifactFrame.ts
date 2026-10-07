@@ -34,20 +34,22 @@ export interface FrameOptions {
   onReport?: (m: { type: "ready" | "error" | "size" | "idle"; ms?: number; message?: string; height?: number; frames?: number }) => void;
   /** Load at once, not when it nears the screen. */
   eager?: boolean;
+  /** An artifact not saved yet (T78): where it is held, and what to call it. `path` is then only a name. */
+  held?: { src: string; title: string };
 }
 
 const READY_WITHIN = 8000;
 
 /** Put an artifact in `host`. Returns what takes it away again, and a way to ask whether it is idle. */
 export function mountArtifact(host: HTMLElement, path: string, opts: FrameOptions): { destroy: () => void; probe: (ms: number) => void } {
-  const record = store.artifacts.find((a) => a.path === path);
+  const record = opts.held ? { path, title: opts.held.title, aspect: null, network: false } : store.artifacts.find((a) => a.path === path);
   host.classList.add("artifact");
   host.replaceChildren();
   const note = (text: string, withLink = true) => {
     const p = document.createElement("span");
     p.className = "artifact-note";
     p.textContent = text + " ";
-    if (withLink) { const a = document.createElement("a"); a.href = artifactHref(path); a.textContent = record?.title ?? path; p.append(a); }
+    if (withLink && !opts.held) { const a = document.createElement("a"); a.href = artifactHref(path); a.textContent = record?.title ?? path; p.append(a); }
     return p;
   };
   if (!record) { host.append(note(`No artifact at ${path}.`, false)); return { destroy: () => host.replaceChildren(), probe: () => {} }; }
@@ -83,7 +85,7 @@ export function mountArtifact(host: HTMLElement, path: string, opts: FrameOption
   const load = () => {
     if (done || frame.src) return;
     frame.addEventListener("load", send);
-    frame.src = artifactSrc(path);
+    frame.src = opts.held ? opts.held.src : artifactSrc(path);
     host.append(frame);
     if (opts.caption) { const c = document.createElement("span"); c.className = "artifact-caption"; c.textContent = opts.caption; host.append(c); }
     timer = window.setTimeout(() => {

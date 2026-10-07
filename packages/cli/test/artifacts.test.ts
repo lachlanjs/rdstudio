@@ -62,3 +62,31 @@ test("the copy that is served: the policy and the bridge come first, and vendor/
   // No head, no html: still first.
   expect(prepared("<p>hi</p>", "x.html", false).startsWith("<meta http-equiv")).toBe(true);
 });
+
+test("made in the app: the reply is read, the file is stamped and written beside the notes, and a preview is held", async () => {
+  const { parseFigure } = await import("../src/assist.ts");
+  const { artifactPath, keepPreview, preview, saveArtifact, stamped, ArtifactError } = await import("../src/artifacts.ts");
+  const { readFileSync } = await import("node:fs");
+  const file = "<!doctype html>\n<html><head><title>Inner title</title></head><body><canvas></canvas><script>1</script></body></html>";
+  const r = parseFigure(`<title>A wave</title>\n<caption>Move the slider.</caption>\n<artifact>\n${file}\n</artifact>\n<why>\nFrom the passage.\n</why>`);
+  expect(r).toEqual({ artifact: { title: "A wave", caption: "Move the slider.", html: file }, why: "From the passage." });
+  expect(parseFigure("<artifact>\n```html\n<p>hi</p>\n```\n</artifact>").artifact).toMatchObject({ title: "Figure", html: "<p>hi</p>" });
+  expect(parseFigure("I cannot draw that.")).toEqual({ artifact: null, why: "I cannot draw that." });
+
+  expect(stamped(file, "openrouter/a/b", "2026-10-07")).toContain('</title>\n<meta name="rdstudio:date" content="2026-10-07"><meta name="rdstudio:author" content="openrouter/a/b">');
+  expect(stamped('<title>T</title><meta name="rdstudio:date" content="2020-01-01"><meta name="rdstudio:author" content="x">', "y", "2026-10-07")).not.toContain("2026");
+
+  const k = join(mkdtempSync(join(tmpdir(), "rdstudio-artifacts-")), "knowledge");
+  put(k, "a/n.md", note("x"));
+  expect(saveArtifact(k, "a/wave.html", file, { author: "openrouter/a/b" })).toMatchObject({ path: "a/wave.html" });
+  expect(readFileSync(join(k, "a/wave.html"), "utf8")).toContain('rdstudio:author" content="openrouter/a/b"');
+  expect(() => saveArtifact(k, "a/wave.html", file, { author: "x" })).toThrow(/already there/);
+  expect(() => saveArtifact(k, "a/wave.html", file, { author: "x", replace: true })).not.toThrow();
+  for (const bad of ["../out.html", "a/n.md", "a/_draft.html", "a/.hidden.html", "a//x.html", ""]) expect(() => artifactPath(k, bad)).toThrow(ArtifactError);
+  expect(scan(k, loadBundle(k)).map((a) => a.path)).toEqual(["a/wave.html"]);
+
+  const id = keepPreview("a/deep/new.html", '<title>N</title><script src="vendor/vega/vega.min.js"></script>');
+  expect(preview(id)).toContain('src="../../../../vendor/vega/vega.min.js"'); // from p/<id>/a/deep/new.html
+  expect(preview(id)).toContain(POLICY);
+  expect(preview("nope")).toBeNull();
+});

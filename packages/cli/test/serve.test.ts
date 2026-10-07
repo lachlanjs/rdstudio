@@ -90,7 +90,7 @@ test("text is compressed and vendored files are cached", async () => {
 
 test("the API is described as OpenAPI", async () => {
   const doc = JSON.parse((await call("GET", "/api/openapi.json")).body.toString());
-  expect(Object.keys(doc.paths).sort()).toEqual(["/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/assist", "/api/notes/{id}/move", "/api/teacher", "/api/teacher/ai", "/api/teacher/ai/check", "/api/teacher/ai/connect", "/api/teacher/drafts", "/api/teacher/drafts/{id}", "/api/teacher/drafts/{id}/restore", "/api/teacher/drafts/{id}/submitted", "/api/teacher/drafts/{id}/versions", "/api/teacher/files/{name}", "/api/teacher/profile", "/api/teacher/skills/{name}", "/api/teacher/tutor/{id}"]);
+  expect(Object.keys(doc.paths).sort()).toEqual(["/api/artifacts/preview", "/api/artifacts/{path}", "/api/edit", "/api/folders/move", "/api/folders/{path}", "/api/history/{id}", "/api/learner", "/api/learner/tours", "/api/learner/tours/{name}", "/api/notes/{id}", "/api/notes/{id}/assist", "/api/notes/{id}/move", "/api/teacher", "/api/teacher/ai", "/api/teacher/ai/check", "/api/teacher/ai/connect", "/api/teacher/drafts", "/api/teacher/drafts/{id}", "/api/teacher/drafts/{id}/restore", "/api/teacher/drafts/{id}/submitted", "/api/teacher/drafts/{id}/versions", "/api/teacher/files/{name}", "/api/teacher/profile", "/api/teacher/skills/{name}", "/api/teacher/tutor/{id}"]);
   expect(Object.keys(doc.paths["/api/learner"]).sort()).toEqual(["get", "post"]);
   expect(Object.keys(doc.paths["/api/notes/{id}"]).sort()).toEqual(["delete", "get", "put"]);
 });

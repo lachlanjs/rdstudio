@@ -5,8 +5,8 @@
 // which carries a policy that allows no network and a small bridge to the
 // page that frames it. See knowledge/design/artifacts.md.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { cmp, cmpTuple, strip, type ArtifactRecord, type Bundle } from "@rdstudio/core";
 import { decodeHTML } from "entities";
 import { walkFiles } from "./files.ts";
@@ -133,4 +133,55 @@ export function prepared(text: string, path: string, network: boolean): string {
   else if (/<html[^>]*>/i.test(out)) out = out.replace(/<html[^>]*>/i, (m) => m + "<head>" + lead + "</head>");
   else out = lead + out;
   return out;
+}
+
+// ------------------------------------------------------------------ made in the app (T78)
+
+/** The artifact with who made it and when in its head, where it does not say. */
+export function stamped(html: string, author: string, date: string): string {
+  const has = (name: string) => new RegExp(`<meta\\s[^>]*name\\s*=\\s*["']rdstudio:${name}["']`, "i").test(html);
+  const add = [has("date") ? "" : `<meta name="rdstudio:date" content="${date}">`, has("author") || !author ? "" : `<meta name="rdstudio:author" content="${author.replace(/"/g, "")}">`].join("");
+  if (!add) return html;
+  if (/<\/title>/i.test(html)) return html.replace(/<\/title>/i, (m) => m + "\n" + add);
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => m + add);
+  return add + html;
+}
+
+export class ArtifactError extends Error {
+  readonly status: number;
+  constructor(message: string, status = 400) { super(message); this.status = status; }
+}
+
+/** Where an artifact would be written: a path in the bundle ending .html, or an error. */
+export function artifactPath(knowledgeDir: string, path: string): string {
+  const clean = path.replace(/^\/+/, "");
+  if (!clean || clean.split("/").some((part) => !part || part === "." || part === ".." || part.startsWith(".")) || !isArtifact(clean)) {
+    throw new ArtifactError("an artifact is an .html file in a folder of the knowledge base (its name not starting with _ or .)");
+  }
+  return join(knowledgeDir, clean);
+}
+
+/** Write an artifact made in the app. Refused where a file is already there, unless it may be replaced. */
+export function saveArtifact(knowledgeDir: string, path: string, html: string, opts: { author: string; replace?: boolean }): { path: string; bytes: number } {
+  const file = artifactPath(knowledgeDir, path);
+  if (Buffer.byteLength(html, "utf8") > 2_000_000) throw new ArtifactError("too large", 413);
+  if (existsSync(file) && !opts.replace) throw new ArtifactError(`${path} is already there`, 409);
+  const text = stamped(html.replace(/\r\n?/g, "\n").replace(/\n*$/, "\n"), opts.author, new Date().toISOString().slice(0, 10));
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, text, "utf8");
+  return { path: path.replace(/^\/+/, ""), bytes: Buffer.byteLength(text, "utf8") };
+}
+
+// An artifact not saved yet, held to be looked at and checked: served like a saved one, for a while.
+const previews = new Map<string, { path: string; html: string; at: number }>();
+export function keepPreview(path: string, html: string): string {
+  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  previews.set(id, { path, html, at: Date.now() });
+  for (const [k, v] of previews) if (previews.size > 12 || Date.now() - v.at > 30 * 60_000) { if (k !== id) previews.delete(k); }
+  return id;
+}
+export function preview(id: string): string | null {
+  const p = previews.get(id);
+  // Served from p/<id>/<its path>, so vendor/ addresses resolve as they will once it is saved to a/<its path>.
+  return p ? prepared(p.html, "x/" + p.path, false) : null;
 }

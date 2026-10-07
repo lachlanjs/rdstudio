@@ -474,7 +474,26 @@
             "type": "string",
             "enum": [
               "ask",
-              "fill"
+              "fill",
+              "figure"
+            ]
+          },
+          "fix": {
+            "type": "object",
+            "properties": {
+              "html": {
+                "type": "string"
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "html",
+              "problems"
             ]
           },
           "body": {
@@ -1005,6 +1024,64 @@
         },
         "required": [
           "base"
+        ]
+      },
+      "ArtifactPreviewed": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ArtifactPreview": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "html"
+        ]
+      },
+      "ArtifactSaved": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "path",
+          "bytes"
+        ]
+      },
+      "ArtifactSave": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string"
+          },
+          "replace": {
+            "type": "boolean"
+          },
+          "author": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "html"
         ]
       }
     },
@@ -3050,6 +3127,140 @@
           },
           "415": {
             "description": "Not JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/preview": {
+      "post": {
+        "summary": "Hold an artifact that is not saved yet, to be looked at and checked: it is served like a saved one from the address returned, for a while",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtifactPreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Held",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactPreviewed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not an artifact's path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/{path}": {
+      "put": {
+        "summary": "Write an artifact made in the app (an HTML file beside the notes); refused where a file is already there unless `replace`",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The artifact's path in the knowledge base, URL-encoded: design%2Ffigure.html"
+            },
+            "required": true,
+            "description": "The artifact's path in the knowledge base, URL-encoded: design%2Ffigure.html",
+            "name": "path",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtifactSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactSaved"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not an artifact's path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A file is already there",
             "content": {
               "application/json": {
                 "schema": {
