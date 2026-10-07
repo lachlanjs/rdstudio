@@ -157,7 +157,8 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 
 # M14 — Axis finds things
 
-In the order agreed on 2026-10-07.
+In the order agreed on 2026-10-07. Written up in
+[M14: Axis finds things](m14-axis-finds-things.html).
 
 - [x] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
 - [x] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
