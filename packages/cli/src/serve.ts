@@ -28,6 +28,7 @@ import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
 import * as atlasask from "./atlasask.ts";
+import * as embed from "./embed.ts";
 import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
@@ -919,7 +920,9 @@ export function serve(cfg: Config, { host = "127.0.0.1", port = 8000, watch = tr
   const onWrite = () => {
     try { build(cfg); } catch (err) { console.error(`[${clock()}] build failed: ${(err as Error).message}`); }
     last = fingerprint(cfg);
+    embed.refreshInBackground(cfg); // the sections that changed, for search by meaning (T89); the save does not wait
   };
+  embed.refreshInBackground(cfg); // and whatever changed while this was not running
   const app = createApp({ cfg, site, token: randomBytes(24).toString("base64url"), loopback: LOOPBACK.has(host), allowHosts, readOnly, onWrite });
   const server = nodeServe({ fetch: app.fetch, hostname: host, port });
   if (watch) {

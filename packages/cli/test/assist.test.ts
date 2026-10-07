@@ -342,3 +342,22 @@ test("where the code is indexed, it is found by what it is for and outlined; whe
   const off = new Lookup(again(root), b, "design/integrator");
   for (const [name, args] of [["search_symbols", '{"query":"energy"}'], ["outline_code", "{}"]] as const) expect(off.run(name, args)).toMatch(/not indexed.*Use search_code/);
 });
+
+test("without git the code is still searched and read: a walk of the files, leaving out what is hidden, installed or built (T89)", async () => {
+  const tmp = mkdtempSync(join(tmpdir(), "rdstudio-nogit-")), root = join(tmp, "project");
+  put(root, "rdstudio.toml", "[project]\ntitle = 'T'\n");
+  put(root, "knowledge/index.md", "---\nokf_version: \"0.2\"\n---\n");
+  put(root, "knowledge/design/forces.md", note("The forces", "leapfrog_step is mentioned here."));
+  put(root, "src/step.rs", "pub fn leapfrog_step(dt: f64) -> f64 {\n    dt * 2.0\n}\n");
+  put(root, "node_modules/x/index.js", "function leapfrog_step() {}\n");
+  put(root, ".env", "leapfrog_step=1\n");
+  process.env.GIT_CEILING_DIRECTORIES = tmp; // so that no repository above the temporary folder is found
+  try {
+    const cfg = loadConfig(root);
+    const { Lookup } = await import("../src/lookup.ts");
+    const look = new Lookup(cfg, (await import("@rdstudio/core/node")).loadBundle(cfg.knowledgeDir), "design/forces");
+    expect(look.run("search_code", '{"text":"leapfrog_step"}')).toBe("src/step.rs:1:pub fn leapfrog_step(dt: f64) -> f64 {");
+    expect(look.run("read_code", '{"path":"src/step.rs"}')).toContain("dt * 2.0");
+    for (const path of [".env", "node_modules/x/index.js", "../x"]) expect(look.run("read_code", JSON.stringify({ path }))).toMatch(/is not a file of this repository/);
+  } finally { delete process.env.GIT_CEILING_DIRECTORIES; }
+});

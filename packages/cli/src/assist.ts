@@ -15,7 +15,8 @@ import { loadBundle } from "@rdstudio/core/node";
 import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
-import { Lookup, TOOLS, type Step } from "./lookup.ts";
+import * as embed from "./embed.ts";
+import { Lookup, toolsFor, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
@@ -79,7 +80,13 @@ const USE = { looked: `- Work from the note below and from what you look up with
 /** How many times it may look things up before it must reply, by tier. */
 export const ROUNDS: Record<models.Tier, number> = { low: 3, mid: 6, max: 8 };
 
-const LOOKUP = (rounds: number) => `# Looking things up
+/** Said only where notes can be searched by meaning (T89). */
+export const BY_MEANING = `
+- find_similar finds notes by meaning, in other words than theirs. It is
+  second: use it when search_notes and the links of the notes in hand have
+  not found what you need.`;
+
+const LOOKUP = (rounds: number, meaning: boolean) => `# Looking things up
 
 Before you reply you may look things up in the project's knowledge base and
 in the repository's code, with the tools. Nothing has been looked up for you:
@@ -92,7 +99,7 @@ below there is only the note, and the titles of the notes it links to.
   look first. search_notes finds notes by their words; outline_note shows a
   note's headings and what it links to; read_note reads one section. Prefer
   one section to a whole note. Follow a note's links when what you need is
-  one step on from it.
+  one step on from it.${meaning ? BY_MEANING : ""}
 - For code: search_symbols finds functions and classes by what they are
   for, when you do not know the name; outline_code lists what a folder or a
   file holds; search_code finds exact text; read_code reads lines. Quote
@@ -394,7 +401,7 @@ export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}):
   const { messages, seen } = assemble([
     { name: "How to help", text: (gather ? HOW : HOW_TEXT(USE.looked)).replace(/^# How to help\n\n/, ""), tokens: 600 },
     { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700 },
-    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]]).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
+    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]], embed.available()).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
     { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900 },
     { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
     { name: "Notes this one links to", text: gather ? linked.map((id) => noteText(b, id, 2400)).join("\n\n")
@@ -455,12 +462,12 @@ export interface Hooks {
  *  in place of the request for a model that cannot call tools. */
 export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" | "toolChoice">; messages: models.Message[]; look: Lookup; tier: models.Tier;
   onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string }> {
-  const messages = [...o.messages], most = ROUNDS[o.tier];
+  const messages = [...o.messages], most = ROUNDS[o.tier], tools = toolsFor();
   let text = "", cost = 0, used = o.call.model ?? "";
   for (let round = 0; ; round++) {
     let r: models.Reply;
     try {
-      r = await models.complete({ ...o.call, messages, tools: TOOLS, toolChoice: round < most ? "auto" : "none" });
+      r = await models.complete({ ...o.call, messages, tools, toolChoice: round < most ? "auto" : "none" });
     } catch (err) {
       if (round > 0 || !noTools(err)) throw err;
       r = await models.complete({ ...o.call, messages: o.gathered() });
@@ -470,7 +477,7 @@ export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" |
     if (!r.calls.length || round >= most) break;
     messages.push({ role: "assistant", content: r.text, calls: r.calls });
     for (const c of r.calls) {
-      const out = o.look.run(c.name, c.arguments);
+      const out = await o.look.runAsync(c.name, c.arguments);
       messages.push({ role: "tool", callId: c.id, content: out });
       o.onStep?.(o.look.steps.at(-1)!);
     }

@@ -35,3 +35,6 @@ src/rdstudio/web/
 
 # End-to-end screenshots (mise run e2e)
 .e2e/
+
+# The embedding model for search by meaning (T89): fetched, not kept in git (mise run embed:model)
+packages/cli/models/

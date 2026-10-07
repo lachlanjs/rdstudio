@@ -10,6 +10,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { indexCode } from "./code.ts";
+import * as embed from "./embed.ts";
 import * as artifacts from "./artifacts.ts";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
@@ -341,6 +342,14 @@ const COMMANDS: Record<string, Command> = {
         console.error(err.message);
         return 1;
       }
+      return 0;
+    },
+  },
+
+  "__embed": {
+    help: "(internal) make the vectors for search by meaning that are missing",
+    run(cfg) {
+      void embed.refreshAll(cfg).then((r) => { process.stdout.write(`${r.made} of ${r.pieces}\n`); });
       return 0;
     },
   },

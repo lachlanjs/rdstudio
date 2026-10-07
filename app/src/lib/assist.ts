@@ -8,7 +8,7 @@ export type Mode = "ask" | "fill" | "figure";
 export interface Source { kind: "note" | "code"; id: string; title: string; line?: number }
 /** One thing the model looked up for itself (T84): a search, or a note or a file opened, and how it was reached. */
 export interface Step {
-  tool: string; said: string; how: "search" | "read" | "link" | "code"; notes: string[];
+  tool: string; said: string; how: "search" | "read" | "link" | "code" | "meaning"; notes: string[];
   opened?: string; section?: string; from?: string; code?: { path: string; line: number }; excerpt?: string; failed?: boolean;
 }
 export interface Reply {
@@ -60,7 +60,7 @@ export const askAssist = async (note: string, body: Asking, onText: (soFar: stri
 // Ask Atlas (T85): a question asked on the map, answered from the notes; what it looked up is what the map draws.
 
 /** A note the answer rests on: a sentence of it, and how the note was reached. */
-export interface Used { note: string; title: string; section?: string; quote: string; checked: boolean; how: "search" | "link"; from?: string }
+export interface Used { note: string; title: string; section?: string; quote: string; checked: boolean; how: "search" | "link" | "meaning"; from?: string }
 export interface AtlasAnswer { question: string; answer: string; used: Used[]; steps: Step[]; code: Source[]; model: string; tier: Tier; cost: number }
 
 export const askAtlas = async (body: { question: string; start?: string; tier?: Tier }, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<AtlasAnswer> =>

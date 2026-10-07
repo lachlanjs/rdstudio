@@ -6,7 +6,7 @@ node = "24"  # LTS; the TypeScript packages (npm workspaces)
 
 [tasks.setup]
 description = "Install every dependency group and the benchmark browser"
-run = ["mise install", "uv sync --all-groups", "npm install", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
+run = ["mise install", "uv sync --all-groups", "npm install", "node packages/cli/scripts/embed-model.ts", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
 description = "Run every test: Python, then the TypeScript packages"
@@ -105,6 +105,14 @@ run = "npm run build --workspace @rdstudio/app"
 [tasks."app:check"]
 description = "Type-check the Svelte dashboard (svelte-check)"
 run = "npm run check --workspace @rdstudio/app"
+
+[tasks."embed:model"]
+description = "Fetch the model for search by meaning (34 MB, checked against its SHA-256) into packages/cli/models/; the release packs it, so only a checkout needs this"
+run = "node packages/cli/scripts/embed-model.ts"
+
+[tasks."bench:retrieval"]
+description = "Score keyword search and search by meaning on questions with known answers (bench/retrieval/)"
+run = "node bench/retrieval/measure.ts"
 
 [tasks.generate]
 description = "Regenerate the dashboard's typed API client from rdstudio serve's schemas (OpenAPI, HeyAPI)"

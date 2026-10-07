@@ -7,7 +7,8 @@
 
 import { loadBundle } from "@rdstudio/core/node";
 import type { Bundle } from "@rdstudio/core";
-import { ROUNDS, rounds, type Source } from "./assist.ts";
+import { BY_MEANING, ROUNDS, rounds, type Source } from "./assist.ts";
+import * as embed from "./embed.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
 import { Lookup, noteId, type How, type Step } from "./lookup.ts";
@@ -63,13 +64,13 @@ where the answer comes from.
 - Plain words. No preamble, no closing remarks.
 - Maths goes between dollar signs, as LaTeX.`;
 
-const LOOKUP = (rounds: number) => `Nothing has been looked up for you. Look first, then answer.
+const LOOKUP = (rounds: number, meaning: boolean) => `Nothing has been looked up for you. Look first, then answer.
 
 - search_notes finds notes by their words; outline_note shows a note's
   headings and what it links to; read_note reads one section. Prefer one
   section to a whole note.
 - When what you need is one step on from a note you have open, follow its
-  link: open the linked note, do not search for it again.
+  link: open the linked note, do not search for it again.${meaning ? BY_MEANING : ""}
 - Read a note before you rest a claim on it: a search's one line is not
   enough.
 - For code: search_symbols finds functions and classes by what they are
@@ -126,7 +127,7 @@ export function prepare(cfg: Config, q: Question, b: Bundle = loadBundle(cfg.kno
   const where = place(b, q.start);
   const { messages, seen } = assemble([
     { name: "How to help", text: HOW, tokens: 500 },
-    { name: "Looking things up", text: given ? GIVEN : LOOKUP(ROUNDS[q.tier ?? "mid"]), tokens: 500 },
+    { name: "Looking things up", text: given ? GIVEN : LOOKUP(ROUNDS[q.tier ?? "mid"], embed.available()), tokens: 500 },
     { name: "Your reply", text: FORM, tokens: 400, cache: true },
     { name: "Where they are on the map", text: where.text, tokens: 1500, role: "user" },
     { name: "Looked up for you", text: given, tokens: 6000, role: "user" },
@@ -146,6 +147,9 @@ export function parseAnswer(reply: string, b: Bundle, steps: Step[]): { answer: 
   const answer = (inAnswer ?? reply.replace(/<used>[\s\S]*$/i, "").replace(/<\/?answer>/gi, "")).trim();
   const good = steps.filter((s) => !s.failed);
   const seenNotes = new Set(good.flatMap((s) => s.notes));
+  // Named by a search by meaning before any search of words named it.
+  const byMeaning = new Set<string>(), byWords = new Set<string>();
+  for (const s of good) for (const id of s.opened ? [] : s.notes) { if (s.how === "meaning" && !byWords.has(id)) byMeaning.add(id); else if (s.how === "search") byWords.add(id); }
   const used: Used[] = [];
   const add = (raw: string, section: string, quote: string) => {
     const id = noteId(b, raw);
@@ -158,7 +162,7 @@ export function parseAnswer(reply: string, b: Bundle, steps: Step[]): { answer: 
     const fallback = (read.find((s) => section && s.section?.toLowerCase() === section.toLowerCase()) ?? read.at(-1))?.excerpt || c.description || "";
     const heading = section.replace(/^#+\s*/, "").trim();
     used.push({ note: id, title: c.title, ...(heading ? { section: heading } : {}), quote: checked ? plain(said) : fallback, checked,
-      how: first ? (first.how === "link" ? "link" : "search") : "search", ...(first?.from ? { from: first.from } : {}) });
+      how: first ? (first.how === "link" ? "link" : first.how === "meaning" ? "meaning" : "search") : byMeaning.has(id) ? "meaning" : "search", ...(first?.from ? { from: first.from } : {}) });
   };
   const block = /<used>\n?([\s\S]*?)(?:<\/used>|$)/i.exec(reply)?.[1] ?? "";
   for (const line of block.split("\n")) {
