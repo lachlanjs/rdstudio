@@ -8,6 +8,7 @@
 * [Architecture](architecture.md) - Components, repository layout, and data flow of rdstudio.
 * [Conventions](conventions.md) - How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 * [Dashboard design](dashboard-design.md) - Visual tokens and layout rules for the dashboard, and why they were chosen.
+* [How an agent uses the knowledge base, compared with RAG](okf-and-rag.md) - Both put knowledge a model lacks in front of it; RAG retrieves chunks of existing documents by similarity before the model sees anything, while here the agent navigates notes written as knowledge, by search and links, and writes back.
 * [Map view](map-view.md) - Criteria and design for the Atlas, the nested map of a knowledge base, where folders are regions, links are drawn at the scale they belong to, and the terrain shows where you stand.
 * [Platform, performance and deployment](platform.md) - Scope for making rdstudio fast on every device: local-first data, a GPU map renderer, a Tauri app, and one TypeScript core shared by the web, desktop, mobile, command line and MCP server.
 * [Projects, accounts and sync](projects-and-sync.md) - How the app manages several projects across devices: plain git for content, GitHub as the first-class sign-in and host, a private learner repository for everything about you, and self-hosted servers paired by QR code or found on the local network.
