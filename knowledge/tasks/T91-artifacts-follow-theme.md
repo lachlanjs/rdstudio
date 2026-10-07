@@ -4,7 +4,7 @@ title: T91 — Artifacts follow the chosen theme
 description: An artifact is shown in the app's theme and in light or dark, with its type and its
   charts, from its first paint and when the setting changes.
 tags: [task, m14, artifacts, theme, done]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T04:51:08Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T05:00:23Z}
 ---
 
 # Prompt
@@ -64,3 +64,25 @@ gets the colours as variables.
 - Mermaid diagrams in an artifact are not drawn again when the theme
   changes while it is open.
 - The exported static site was not checked.
+
+# A second cause, the same day
+
+The developer sent a snapshot of the M14 write-up shown bare: no page
+style, no chart, the browser's default type. It could not be reproduced in
+Chromium or Firefox (Firefox was installed to try), where it is themed.
+
+The likely cause, not confirmed: WebKit. An artifact is sandboxed, and its
+content policy allowed rdstudio's own files as `'self'`. To WebKit a
+sandboxed page's `'self'` is no origin, so the stylesheet, the theme files
+and the libraries were all refused. WebKit could not be run on this machine
+(it needs system libraries), so this rests on its known behaviour and on
+the snapshot matching it.
+
+Changed: the policy now also names the server the artifact came from. Only
+the page knows that address (it may be a tunnel's), so its first script
+writes the policy; a short policy that needs no address is in the file as
+well. Checked in Chromium and Firefox: the write-up is styled, its chart is
+drawn, and a fetch and an image from elsewhere are still refused.
+
+If the snapshot was not WebKit, or it still shows bare there, this is not
+fixed and needs looking at on that device.

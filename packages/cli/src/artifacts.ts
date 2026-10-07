@@ -133,7 +133,14 @@ addEventListener("message",function(e){var m=e.data||{};
  *  `report.js` pointed at rdstudio's own copies from wherever it sits. */
 export function prepared(text: string, path: string, network: boolean): string {
   const up = "../".repeat(path.split("/").length); // served at a/<path>
-  const lead = (network ? "" : `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`) + BRIDGE;
+  // The policy names the server it came from as well as 'self'. An artifact is sandboxed, and to some browsers
+  // (WebKit: Safari, and every browser on an iPhone) a sandboxed page's 'self' is no origin at all, so that
+  // rdstudio's own stylesheet, themes and libraries were refused and the artifact was shown bare. Only the page
+  // knows the address it was reached at (a tunnel's, say), so its first script writes the policy; a short one
+  // that needs no address stands in case that script does not run.
+  const policy = `<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'; base-uri 'none'">`
+    + `<script>document.write('<meta http-equiv="Content-Security-Policy" content="'+${JSON.stringify(POLICY)}.replace(/'self'/g,"'self' "+location.protocol+"//"+location.host)+'">')</script>`;
+  const lead = (network ? "" : policy) + BRIDGE;
   let out = text.replace(/((?:src|href)\s*=\s*["'])(vendor\/|report\.(?:css|js)["'])/gi, `$1${up}$2`);
   if (/<head[^>]*>/i.test(out)) out = out.replace(/<head[^>]*>/i, (m) => m + lead);
   else if (/<html[^>]*>/i.test(out)) out = out.replace(/<html[^>]*>/i, (m) => m + "<head>" + lead + "</head>");
