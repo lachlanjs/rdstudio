@@ -13,7 +13,7 @@ import texmath from "markdown-it-texmath";
 import { format } from "./commands.ts";
 import { formula, mathsSyntax } from "./maths.ts";
 import { placed } from "./suggest.ts";
-import { choices, kindOf, labelOf, linkAt, ratingOf, setEmbed, setTitle, sideOf } from "./linkControl.ts";
+import { choices, choicesFor, kindOf, labelFor, labelOf, linkAt, linksIn, ratingOf, setEmbed, setTitle, setTitles, sideOf } from "./linkControl.ts";
 
 // The note page's renderer, as markdown.ts sets it up.
 const page = new MarkdownIt({ html: true }).use(texmath, { engine: katex, delimiters: ["dollars", "brackets"], katexOptions: { throwOnError: false } });
@@ -190,5 +190,22 @@ describe("the link control (T79)", () => {
     expect(names("![p]")).toEqual(["*Shown here", "Link", "*Centre", "Left"]);
     expect(names("[q]")).toEqual(["Shown here", "*Link"]);
     expect(["[n]", "[f]", "![g]", "![p]", "[q]"].map((n) => labelOf(at(doc, n).l!))).toEqual(["Uses", "Link", "Shown here", "Shown, centre", "Link"]);
+  });
+  test("several links selected are rated together: only the titles change, and only links wholly selected (T82)", () => {
+    const doc = '# M1\n\n- [x] [T01 One](/tasks/T01.md)\n- [ ] [T02 Two](/tasks/T02.md "requires")\n- [x] [web](https://x.org) and ![fig](f.html) and [art](f.html)\n- [T03](/tasks/T03.md "see also")\n';
+    const st = stateOf(doc);
+    const all = linksIn(st, 0, doc.length);
+    expect(all.map((l) => l.url)).toEqual(["/tasks/T01.md", "/tasks/T02.md", "f.html", "/tasks/T03.md"]); // not the web, not what is shown in place
+    expect(labelFor(all)).toBe("4 links, mixed");
+    expect(after(st, setTitles(all, "see also"))).toBe('# M1\n\n- [x] [T01 One](/tasks/T01.md "see also")\n- [ ] [T02 Two](/tasks/T02.md "see also")\n- [x] [web](https://x.org) and ![fig](f.html) and [art](f.html "see also")\n- [T03](/tasks/T03.md "see also")\n');
+    expect(setTitles(all, "see also")).toHaveLength(3); // the one already so is left
+    expect(after(st, setTitles(all, null))).not.toContain('"');
+    const rated = stateOf(after(st, setTitles(all, "see also")));
+    const now = linksIn(rated, 0, rated.doc.length);
+    expect(labelFor(now)).toBe("4 links, see also");
+    expect(choicesFor(now).map((c) => (c.on ? "*" : "") + c.label)).toEqual(["Requires", "Uses", "*See also", "Unrated"]);
+    // A selection that cuts a link in two leaves it out.
+    const cut = doc.indexOf("/tasks/T02.md");
+    expect(linksIn(st, 0, cut).map((l) => l.url)).toEqual(["/tasks/T01.md"]);
   });
 });

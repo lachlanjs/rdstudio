@@ -6,6 +6,10 @@
 // shown in place, and a picture's side. By click, or by keyboard: Alt-L
 // opens it; Alt-1, 2, 3 and 0 set a rating at once; Alt-E turns a link into
 // an embed and back. It writes only the link's title, or the "!" before it.
+//
+// With several links selected (T82) the control is for all of them: it says
+// how many, and a rating chosen there, or with Alt-1, 2, 3 or 0, is given to
+// each. So "rate every link of this list see also" needs no model.
 
 import { syntaxTree } from "@codemirror/language";
 import type { ChangeSpec, EditorState } from "@codemirror/state";
@@ -51,6 +55,25 @@ export function linkAt(state: EditorState, pos: number): LinkAt | null {
   return null;
 }
 
+/** A link that can carry a rating: to a note, or to an artifact that is not shown in place. */
+export const rateable = (l: LinkAt): boolean => l.kind === "note" || (l.kind === "artifact" && !l.embed);
+
+/** The links in a range that can carry a rating, in order. */
+export function linksIn(state: EditorState, from: number, to: number): LinkAt[] {
+  const out: LinkAt[] = [];
+  syntaxTree(state).iterate({ from, to, enter: (n) => {
+    if (n.name !== "Link" && n.name !== "Image") return;
+    if (n.from < from || n.to > to) return false; // only links wholly selected
+    const l = linkAt(state, n.from + 1);
+    if (l && l.from === n.from && rateable(l)) out.push(l);
+    return false;
+  } });
+  return out;
+}
+
+/** Give every link the rating (null takes it away). Only titles change. */
+export const setTitles = (links: LinkAt[], title: Rating | null): ChangeSpec[] => links.filter((l) => ratingOf(l) !== title).map((l) => setTitle(l, title));
+
 const norm = (t: string | null) => (t ?? "").trim().toLowerCase().replace(/[-_]/g, " ");
 /** A link's rating, from its title. */
 export const ratingOf = (l: LinkAt): Rating | null => (RATINGS.includes(norm(l.title) as Rating) ? (norm(l.title) as Rating) : norm(l.title) === "seealso" ? "see also" : null);
@@ -93,6 +116,22 @@ export function choices(l: LinkAt): Choice[] {
   return l.embed ? how : [...how, ...rate];
 }
 
+/** What can be chosen for several links at once: a rating for all of them. */
+export function choicesFor(links: LinkAt[]): Choice[] {
+  const all = (r: Rating | null) => links.every((l) => ratingOf(l) === r);
+  const n = links.length;
+  return [
+    ...RATINGS.map((r): Choice => ({ label: r[0]!.toUpperCase() + r.slice(1), on: all(r), run: (v) => apply(v, setTitles(linksIn(v.state, v.state.selection.main.from, v.state.selection.main.to), r)),
+      hint: `Rate all ${n} links ${r}` })),
+    { label: "Unrated", on: all(null), run: (v) => apply(v, setTitles(linksIn(v.state, v.state.selection.main.from, v.state.selection.main.to), null)), hint: `Take the rating from all ${n} links` },
+  ];
+}
+/** The control's label for several links: how many, and their rating where they share one. */
+export function labelFor(links: LinkAt[]): string {
+  const first = ratingOf(links[0]!), shared = links.every((l) => ratingOf(l) === first);
+  return `${links.length} links, ${shared ? (first ?? "unrated") : "mixed"}`;
+}
+
 /** The control's label: what the link is now. */
 export function labelOf(l: LinkAt): string {
   if (l.kind === "note") return ratingOf(l) ? ratingOf(l)![0]!.toUpperCase() + ratingOf(l)!.slice(1) : "Unrated";
@@ -110,6 +149,7 @@ class Control {
   private path: SVGPathElement;
   private link: LinkAt | null = null;
   private hover: LinkAt | null = null;
+  private many: LinkAt[] = []; // several links selected: the control is for all of them
   private open = false;
   private at = 0; // the choice the keyboard is on
 
@@ -151,9 +191,19 @@ class Control {
     if (this.hover) { this.hover = null; this.view.requestMeasure(this.measure); }
   };
 
-  /** The link in play: the cursor's, else the pointer's. */
+  /** The links selected, when there are two or more. */
+  selected(): LinkAt[] {
+    const r = this.view.state.selection.main;
+    if (r.empty) return [];
+    const ls = linksIn(this.view.state, r.from, r.to);
+    return ls.length >= 2 ? ls : [];
+  }
+
+  /** The link in play: the first of several selected, else the cursor's, else the pointer's. */
   current(): LinkAt | null {
     const r = this.view.state.selection.main;
+    const many = this.selected();
+    if (many.length) return many[0]!;
     return linkAt(this.view.state, r.head) ?? (r.empty ? this.hover : null);
   }
 
@@ -167,19 +217,32 @@ class Control {
     read: (view: EditorView) => {
       const l = this.current();
       if (!l) return null;
-      const end = view.coordsAtPos(Math.max(l.from, l.to - 1), 1) ?? view.coordsAtPos(l.to, -1);
-      if (!end) return null;
+      const many = this.selected();
       const box = view.dom.getBoundingClientRect(), text = view.contentDOM.getBoundingClientRect();
-      return { l, x: end.right - box.left, y: (end.top + end.bottom) / 2 - box.top, right: text.right - box.left, width: box.width };
+      let end = view.coordsAtPos(Math.max(l.from, l.to - 1), 1) ?? view.coordsAtPos(l.to, -1);
+      if (many.length) {
+        // Beside the last selected link that is in sight: a whole note may be selected.
+        const top = Math.max(box.top, 0), bottom = Math.min(box.bottom, window.innerHeight);
+        end = null;
+        for (let k = many.length - 1; k >= 0 && !end; k--) {
+          const c = view.coordsAtPos(Math.max(many[k]!.from, many[k]!.to - 1), 1);
+          if (c && c.top >= top && c.bottom <= bottom - 34) end = c;
+        }
+        end ??= view.coordsAtPos(Math.max(many[0]!.from, many[0]!.to - 1), 1);
+      }
+      if (!end) return null;
+      return { l, many, x: end.right - box.left, y: (end.top + end.bottom) / 2 - box.top, right: text.right - box.left, width: box.width };
     },
-    write: (m: { l: LinkAt; x: number; y: number; right: number; width: number } | null) => {
-      if (!m) { this.link = null; this.layer.hidden = true; this.toggle(false, false); return; }
-      const changed = !same(m.l, this.link);
+    write: (m: { l: LinkAt; many: LinkAt[]; x: number; y: number; right: number; width: number } | null) => {
+      if (!m) { this.link = null; this.many = []; this.layer.hidden = true; this.toggle(false, false); return; }
+      const label = m.many.length ? labelFor(m.many) : labelOf(m.l);
+      const changed = !same(m.l, this.link) || m.many.length !== this.many.length || label !== this.button.textContent;
       this.link = m.l;
+      this.many = m.many;
       this.layer.hidden = false;
-      this.button.textContent = labelOf(m.l);
-      this.button.title = "What this link is (Alt+L)";
-      this.button.setAttribute("aria-label", `This link: ${labelOf(m.l)}. Change it`);
+      this.button.textContent = label;
+      this.button.title = m.many.length ? "Rate all the selected links (Alt+L)" : "What this link is (Alt+L)";
+      this.button.setAttribute("aria-label", m.many.length ? `${label}. Rate them all` : `This link: ${label}. Change it`);
       const bw = this.button.offsetWidth || 90;
       // In the margin at the right of the text where there is one; else at the text's right edge, a line below.
       const room = m.width - m.right >= bw + 20;
@@ -197,7 +260,7 @@ class Control {
   private fill(): void {
     const l = this.link;
     if (!l) return;
-    this.menu.replaceChildren(...choices(l).map((c, k) => {
+    this.menu.replaceChildren(...(this.many.length ? choicesFor(this.many) : choices(l)).map((c, k) => {
       const b = document.createElement("button");
       b.type = "button";
       b.tabIndex = -1;
@@ -216,7 +279,7 @@ class Control {
   }
 
   toggle(open: boolean, focusEditor: boolean): void {
-    if (open) this.link = this.current() ?? this.link; // as it is now, not as last measured
+    if (open) { this.link = this.current() ?? this.link; this.many = this.selected(); } // as it is now, not as last measured
     if (open && !this.link) return;
     this.open = open;
     this.menu.hidden = !open;
@@ -268,7 +331,11 @@ const withLink = (run: (view: EditorView, l: LinkAt) => void) => (view: EditorVi
   run(view, l);
   return true;
 };
-const rate = (r: Rating | null) => withLink((view, l) => { if (l.kind === "note" || (l.kind === "artifact" && !l.embed)) apply(view, setTitle(l, r)); });
+const rate = (r: Rating | null) => (view: EditorView): boolean => {
+  const sel = view.state.selection.main, many = sel.empty ? [] : linksIn(view.state, sel.from, sel.to);
+  if (many.length >= 2) { apply(view, setTitles(many, r)); return true; }
+  return withLink((v, l) => { if (rateable(l)) apply(v, setTitle(l, r)); })(view);
+};
 
 export const linkKeymap = [
   { key: "Alt-l", run: (view: EditorView) => { const c = view.plugin(plugin); if (!c || !c.current()) return false; c.toggle(true, false); return true; } },
