@@ -398,9 +398,10 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .g-rt { fill: none; stroke: var(--text-soft); stroke-linecap: round; stroke-linejoin: round; }
 .g-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; }
 /* Ask Atlas (T85): a question asked on the map, the answer beside it, and where the answer came from drawn on
-   the map. Two ways a note is reached, each a colour and a line of its own, neither of them a pen's: found by
-   a search (dashed), reached by a link from a note in hand (solid, with the link drawn). */
-:root { --ask-search: var(--f0); --ask-link: var(--f3); }
+   the map. Three ways a note is reached, each a colour and a line of its own, none of them a pen's: found by
+   a search of words (dashed), found by meaning (dotted; T90), reached by a link from a note in hand (solid,
+   with the link drawn). */
+:root { --ask-search: var(--f0); --ask-link: var(--f3); --ask-meaning: var(--f1); }
 .atlas-ask { position: absolute; top: 52px; right: 12px; width: 340px; display: flex; gap: 6px; align-items: center; }
 .atlas-ask[hidden], .atlas-ask [hidden] { display: none; }
 .atlas-ask input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; font: 14px var(--font-ui); color: var(--text); background: var(--surface-1); border: 1px solid var(--rule-strong); border-radius: var(--radius); }
@@ -426,6 +427,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-used li::marker { font-weight: 700; color: var(--text); }
 .aq-used li.search::marker { color: var(--ask-search); }
 .aq-used li.link::marker { color: var(--ask-link); }
+.aq-used li.meaning::marker { color: var(--ask-meaning); }
 .aq-used blockquote { margin: 3px 0 0; padding-left: 8px; border-left: 2px solid var(--rule-strong); font: 14px/1.4 var(--font-text); color: var(--text); }
 .aq-used blockquote.unchecked, .aq-quote.unchecked { color: var(--text-soft); font-style: italic; }
 .aq-section, .aq-open, .aq-also, .aq-meta, .aq-from { color: var(--text-faint); }
@@ -435,6 +437,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-key li { display: inline-flex; align-items: center; gap: 6px; }
 .aq-key i { width: 18px; height: 11px; border: 2px solid var(--ask-link); }
 .aq-key i.search { border: 2px dashed var(--ask-search); }
+.aq-key i.meaning { border: 2px dotted var(--ask-meaning); }
 .aq-key i.cited { border-color: var(--text-soft); background: color-mix(in srgb, var(--text) 22%, var(--surface)); }
 .aq-show { display: block; margin: 0 0 6px; font-size: 12px; }
 .aq-meta { margin: 0; font-size: 12px; }
@@ -448,9 +451,12 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-ring.open { stroke-width: 2.75; opacity: 1; }
 .aq-ring.search { stroke: var(--ask-search); stroke-dasharray: 5 3.5; }
 .aq-ring.link { stroke: var(--ask-link); }
+.aq-ring.meaning { stroke: var(--ask-meaning); stroke-dasharray: .1 4.4; stroke-linecap: round; }
+.aq-ring.meaning.open { stroke-width: 3.25; }
 .aq-ring.start { stroke: none; }
 .gn.aq-cited.aq-search .gn-block { fill: color-mix(in srgb, var(--ask-search) 26%, var(--surface)); }
 .gn.aq-cited.aq-link .gn-block { fill: color-mix(in srgb, var(--ask-link) 26%, var(--surface)); }
+.gn.aq-cited.aq-meaning .gn-block { fill: color-mix(in srgb, var(--ask-meaning) 26%, var(--surface)); }
 .g-wall.aq-in { stroke: var(--ask-search); stroke-width: 2; stroke-dasharray: 5 3.5; }
 .aq-rt { fill: none; stroke: var(--ask-link); stroke-width: 2.75; stroke-linejoin: round; }
 .aq-rt.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: g-draw .45s ease-out forwards; }
@@ -460,6 +466,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-preview { position: absolute; width: 228px; padding: 7px 10px 8px; pointer-events: auto; text-decoration: none; background: var(--surface-1); color: var(--text);
   border: 1px solid var(--rule-strong); border-left: 3px solid var(--ask-link); border-radius: var(--radius); font: 12px/1.35 var(--font-ui); box-shadow: 0 3px 12px rgb(0 0 0 / .1); }
 .aq-preview.search { border-left: 3px dashed var(--ask-search); }
+.aq-preview.meaning { border-left: 3px dotted var(--ask-meaning); }
 .aq-preview[hidden] { display: none; }
 .aq-preview b { display: block; margin-bottom: 3px; font-weight: 700; }
 .aq-preview .aq-n { display: inline-block; min-width: 16px; margin-right: 6px; padding: 0 4px; text-align: center; border: 1px solid var(--text-soft); border-radius: 8px; font-size: 11px; }

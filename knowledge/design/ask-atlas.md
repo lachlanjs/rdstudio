@@ -5,7 +5,7 @@ description: "A question asked on the Atlas is answered beside the map from the 
   and the map shows where the answer came from: the notes found, the links followed, and a passage
   beside each note the answer rests on."
 tags: [design, atlas, assist, retrieval]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T03:59:38Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T04:24:15Z}
 ---
 
 # What it is
@@ -46,14 +46,16 @@ on, each with the heading read and one sentence copied from the note.
 
 | Mark | Meaning |
 |---|---|
-| Dashed amber frame | Found by a search; heavier once opened |
+| Dashed amber frame | Found by a search of words; heavier once opened |
+| Dotted teal frame | Found by [meaning](/design/search-by-meaning.md "uses") ([T90](/tasks/T90-ask-atlas-by-meaning.md "see also")); heavier once opened |
 | Solid violet frame, and a violet line along the route | Reached by a link from a note already in hand |
 | Tinted fill and a number | The answer rests on it; the number is its place in the answer's list |
 | Fainter | Opened and not used |
 | Dashed amber wall | A closed folder holding some of these |
 
-- The colours are two of the folder colours, not a pen's: red, green and
-  blue keep their meanings.
+- The colours are three of the folder colours, not a pen's: red, green and
+  blue keep their meanings. Each also has a line style of its own, so the
+  three can be told apart without colour.
 - The first four notes the answer rests on each get a passage beside them,
   joined by a dotted line. They are placed as a note's tip is: clear of the
   marked notes, the panels and each other, and off other notes where there

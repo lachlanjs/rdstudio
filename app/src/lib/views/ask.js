@@ -1,7 +1,7 @@
 // Ask Atlas (T85): a question asked on the map. The box to ask from, the
 // answer beside the map, and what the map is to draw for it: the notes each
-// lookup named or opened, how each was reached, the links followed from one
-// to the next, and the notes the answer rests on, each with a sentence of
+// lookup named or opened, how each was reached (by a search of words, by a
+// search of meaning, or by a link), the links followed from one to the next, and the notes the answer rests on, each with a sentence of
 // it. gridmap.js draws the marks; nothing here knows where a note is.
 
 import { h } from "./dom.js";
@@ -110,9 +110,10 @@ export function askBox(map) {
     if (from?.kind === "note") mark(from.ref, "start");
     for (const s of steps) {
       if (s.failed) continue;
-      if (!s.opened) { for (const id of s.notes) mark(id, "search"); continue; }
-      const m = mark(s.opened, s.how === "link" ? "link" : "search");
-      if (!m.opened && m.how !== "start") m.how = s.how === "link" ? "link" : "search"; // how it was first opened, not how it was first named
+      const how = s.how === "link" ? "link" : s.how === "meaning" ? "meaning" : "search";
+      if (!s.opened) { for (const id of s.notes) mark(id, how); continue; }
+      const m = mark(s.opened, how);
+      if (!m.opened && m.how !== "start") m.how = how; // how it was first opened, not how it was first named
       m.opened = true;
       if (s.from && !chain.some((c) => c.from === s.from && c.to === s.opened)) { mark(s.from, "search"); chain.push({ from: s.from, to: s.opened }); }
     }
@@ -155,7 +156,9 @@ export function askBox(map) {
       const show = h("input", { type: "checkbox", checked: previewsOn });
       show.addEventListener("change", () => { previewsOn = show.checked; fillPreviews(); map.changed("step"); });
       parts.push(h("ul", { class: "aq-key", "aria-label": "How to read the map" },
-        h("li", {}, h("i", { class: "search" }), "Found by a search"), h("li", {}, h("i", { class: "link" }), "Reached by a link"), h("li", {}, h("i", { class: "cited" }), "The answer rests on it")),
+        h("li", {}, h("i", { class: "search" }), "Found by a search"),
+        [...m.notes.values()].some((q) => q.how === "meaning") ? h("li", {}, h("i", { class: "meaning" }), "Found by meaning") : "", // only where it was used (T90)
+        h("li", {}, h("i", { class: "link" }), "Reached by a link"), h("li", {}, h("i", { class: "cited" }), "The answer rests on it")),
       answer.used.length ? h("label", { class: "aq-show" }, show, " Passages on the map") : "",
       h("p", { class: "aq-meta" }, `${answer.tier} · ${answer.model} · ${money(answer.cost)}`));
     }

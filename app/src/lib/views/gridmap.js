@@ -529,7 +529,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const sig = on.join(",");
     if (!on.length || sig === askFit) return;
     askFit = sig;
-    const to = fitItems(on.map((i) => L.items[i]));
+    const to = fitItems(on.map((i) => L.items[i]), 1); // not so close that one note fills the view
     if (reduceMotion) svg.call(zoom.transform, to);
     else svg.transition().duration(450).call(zoom.transform, to);
   }
@@ -785,11 +785,11 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     return on.length ? fitItems(on) : null;
   }
   // A view that holds these items, between the lens panel and, where one is shown, the answer at the other side.
-  function fitItems(on) {
+  function fitItems(on, most = 1.6) {
     const x0 = Math.min(...on.map((n) => n.gx)) - 2, x1 = Math.max(...on.map((n) => n.gx + n.w)) + 2;
     const y0 = Math.min(...on.map((n) => n.gy)) - 2, y1 = Math.max(...on.map((n) => n.gy + n.h)) + 2, left = inset();
     const wide = w - left - (ask && w >= 900 && !ask.card.hidden ? ask.card.offsetWidth + 24 : 0);
-    const k = Math.min(1.6, wide / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
+    const k = Math.min(most, wide / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
     return d3.zoomIdentity.translate(left + wide / 2 - (k * (x0 + x1) * CELL) / 2, hgt / 2 - (k * (y0 + y1) * CELL) / 2).scale(k);
   }
 

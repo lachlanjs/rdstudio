@@ -33,7 +33,10 @@ class FakeOpenRouter(BaseHTTPRequestHandler):
         said = "\n".join(part["text"] for m in body["messages"] if m["role"] != "tool" for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"] or ""}]))
         question = said.split("## Their question")[-1]
         done = sum(1 for m in body["messages"] if m["role"] == "assistant")
-        if "nearest image" in question:  # code, found by what it is for and not by its name (T86)
+        if "in other words" in question:  # found by meaning, where the model for it is installed (T89, T90)
+            turns = [[("find_similar", {"text": "how are near collisions between two bodies kept from giving huge forces?"})], [("read_note", {"id": "/concepts/softening.md"})],
+                     "<answer>\nBy [Gravitational softening](/concepts/softening.md).\n</answer>"]
+        elif "nearest image" in question:  # code, found by what it is for and not by its name (T86)
             turns = [[("search_symbols", {"query": "nearest periodic image displacement"}), ("outline_code", {"path": "src/nanosim/core"})], "<answer>\nIn `minimum_image`.\n</answer>"]
         elif "from here" in question:  # asked from a selected note: one link followed, then the answer
             turns = [[("read_note", {"id": "/concepts/softening.md"})], "<answer>\nOn [Gravitational softening](/concepts/softening.md).\n</answer>"]
@@ -73,6 +76,10 @@ def serve(env):
         except OSError:
             time.sleep(0.1)
     return proc
+# Search by meaning (T89) is offered where its model is installed; the notes are embedded first, so that it is ready.
+MEANING = (REPO / "packages/cli/models/bge-small-en-v1.5/model.onnx").exists()
+if MEANING:
+    subprocess.run(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "__embed"], env=ENV, check=True, stdout=subprocess.DEVNULL)
 server = serve(ENV)
 status = lambda: subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout
 STATUS = status()
@@ -137,7 +144,7 @@ with sync_playwright() as pw:
     # The request: where the asker was, the tools, and nothing looked up beforehand.
     first = FAKE_REQUESTS[0]
     check("the model is told where the asker is and given the lookup tools; nothing is looked up for it",
-          "They are looking at the whole map" in sent(first) and [t["function"]["name"] for t in first["tools"]][:3] == ["search_notes", "outline_note", "read_note"] and "It biases forces" not in sent(first), sent(first)[-600:])
+          "They are looking at the whole map" in sent(first) and {"search_notes", "outline_note", "read_note", "search_symbols"} <= {t["function"]["name"] for t in first["tools"]} and "It biases forces" not in sent(first), sent(first)[-600:])
 
     # From the answer to the map and back.
     used.nth(1).get_by_role("button", name="Forces").click()
@@ -169,6 +176,24 @@ with sync_playwright() as pw:
     tools = [m["content"] for m in FAKE_REQUESTS[-1]["messages"] if m["role"] == "tool"]
     check("code is found by what it is for, from the index, and a folder is outlined", "Searched the code's symbols" in looked and "nothing found" not in looked and "Looked at what is in src/nanosim/core/" in looked
           and "minimum_image" in tools[0] and "vec3.hpp" in tools[1], looked + " | " + "\n".join(tools)[:600])
+
+    # Found by meaning (T89), and its own mark on the map (T90).
+    if MEANING:
+        p.locator(".atlas-card .atlas-card-close").click()  # nothing selected, so that no link from a note in hand comes first
+        box.fill("What stops close passes blowing up, in other words?")
+        form.get_by_role("button", name="Ask").click()
+        expect(card.locator(".aq-used li")).to_have_count(1, timeout=30000)
+        tools = [m["content"] for m in FAKE_REQUESTS[-1]["messages"] if m["role"] == "tool"]
+        check("a search by meaning is offered beside the keyword search, said to be second, and finds the note in other words than its own",
+              "find_similar" in [t["function"]["name"] for t in FAKE_REQUESTS[-1]["tools"]] and "It is\n  second" in sent(FAKE_REQUESTS[-1]) and "Gravitational softening (/concepts/softening.md)" in tools[0], tools[0][:500])
+        p.wait_for_timeout(700)
+        check("a note found by meaning has a mark of its own on the map and in the key, apart from a search of words and a link",
+              "aq-meaning" in cls("Gravitational softening") and "aq-cited" in cls("Gravitational softening") and p.locator(".aq-ring.meaning").count() >= 1
+              and "Found by meaning" in card.locator(".aq-key").inner_text() and card.locator(".aq-used li.meaning").count() == 1, cls("Gravitational softening"))
+        check("nothing left the machine for it: the only requests were the model's own", (ROOT / ".rdstudio/embeddings.json").exists())
+        p.screenshot(path=str(OUT / "ask-meaning.png"))
+    else:
+        print("SKIP search by meaning: its model is not installed (mise run embed:model)")
 
     card.get_by_role("button", name="Close the answer").click()
     expect(p.locator(".aq-ring")).to_have_count(0)
