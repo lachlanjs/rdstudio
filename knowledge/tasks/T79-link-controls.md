@@ -61,3 +61,17 @@ On `feat/artifacts` (`app/src/lib/editor/linkControl.ts`).
   control shows at a time; there is no pass over all of a note's links.
 - Alt+L and Alt+digit may be taken by the browser or the system on some
   machines; they are not yet settable.
+
+# Found after
+
+The walkthrough failed one run in three. Opening the menu straight after an
+edit (Alt+1, then Alt+L) found the control still holding the link as last
+measured; the measurement that followed saw a changed link and rebuilt the
+menu, which lost the keyboard's place (and, as first built, the focus).
+Now the menu holds the focus itself and keeps which choice is current, a
+rebuild keeps that place, and opening reads the link as it is. Six runs in
+a row pass.
+
+`e2e/signin.py` also fails about one run in three, with or without this
+work: it waits ten seconds for the app to notice a sign-in wall. Not looked
+into.

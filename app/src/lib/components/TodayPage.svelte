@@ -136,7 +136,7 @@
       {/if}
 
       {#if !sets.length && !cont && !due.due.length}
-        <p class="empty">Nothing is waiting for you. Ask the teacher what is next, or open the <a href="#/practice">Practice</a> space.</p>
+        <p class="empty">Nothing is waiting for you. Ask Axis what is next, or open the <a href="#/practice">Practice</a> space.</p>
       {/if}
     {/if}
   </div>
@@ -165,7 +165,7 @@
       </div>
       {#if next}
         <aside class={["pin", "pin-" + next.pen, "today-pin", next.about && sets.some((x) => x.exercises.includes(next!.about!)) && "has-inline"]} bind:this={pin} style:margin-top="{pinTop}px">
-          <div class="pin-head"><b>The teacher’s next step</b></div>
+          <div class="pin-head"><b>Axis’s next step</b></div>
           {#if next.about && store.concepts.has(next.about)}<div class="pin-quote"><span>{store.concepts.get(next.about)?.type === "Exercise" ? stateOf(next.about) : title(next.about)}</span></div>{/if}
           <Prose html={render(next.text)} />
         </aside>

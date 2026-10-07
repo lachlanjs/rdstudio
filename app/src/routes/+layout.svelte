@@ -129,7 +129,7 @@
           {:else}
             <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, artifacts, procedures, skills</span></a>
           {/if}
-          <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
+          <a role="menuitem" href="#/teacher">Axis<span>the agent: how it teaches and helps, and what it knows of you</span></a>
           <a role="menuitem" href="#/settings">Settings</a>
           <div class="you-row" role="group" aria-label="Theme">
             {#each THEMES as t (t.id)}

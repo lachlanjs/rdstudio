@@ -160,7 +160,7 @@
     {/if}
     {#if next}
       <aside class={["pin", "pin-" + next.pen, "today-pin", next.about && sets.some((x) => x.exercises.includes(next!.about!)) && "has-inline"]}>
-        <div class="pin-head"><b>The teacher’s next step</b></div>
+        <div class="pin-head"><b>Axis’s next step</b></div>
         {#if next.about && store.concepts.has(next.about)}<div class="pin-quote"><span>{title(next.about)}</span></div>{/if}
         <Prose html={render(next.text)} />
       </aside>

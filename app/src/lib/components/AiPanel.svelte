@@ -41,7 +41,7 @@
   {#if st.connected}
     <p>Connected to <strong>OpenRouter</strong>{st.from === "environment" ? " (the key is in OPENROUTER_API_KEY)" : ""}.</p>
   {:else}
-    <p class="section-note">Working with the teacher in the dashboard (hints, feedback, discussion) calls a model. Connect an OpenRouter account: you sign in there, and rdstudio keeps the key it is given beside your user config, never in a project.</p>
+    <p class="section-note">Working with Axis in the dashboard (hints, feedback, discussion) calls a model. Connect an OpenRouter account: you sign in there, and rdstudio keeps the key it is given beside your user config, never in a project.</p>
   {/if}
   <div class="teacher-actions">
     {#if !st.connected}

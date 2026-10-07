@@ -111,6 +111,7 @@ class Control {
   private link: LinkAt | null = null;
   private hover: LinkAt | null = null;
   private open = false;
+  private at = 0; // the choice the keyboard is on
 
   constructor(readonly view: EditorView) {
     this.layer = document.createElement("div");
@@ -131,6 +132,7 @@ class Control {
     this.menu.className = "cm-link-menu";
     this.menu.setAttribute("role", "menu");
     this.menu.hidden = true;
+    this.menu.tabIndex = -1; // the menu holds the focus; which choice is current is kept here, not by moving the focus
     this.menu.addEventListener("keydown", (e) => this.keys(e));
     this.layer.append(this.leader, this.button, this.menu);
     view.dom.append(this.layer);
@@ -186,16 +188,22 @@ class Control {
       this.menu.style.transform = `translate(${Math.round(Math.min(bx, m.width - 250))}px, ${Math.round(by + 30)}px)`;
       const ex = bx, ey = by + 13;
       this.path.setAttribute("d", room ? `M${m.x + 3} ${m.y} H${Math.max(m.x + 3, ex - 3)}` : `M${m.x + 3} ${m.y} V${ey} H${ex - 3}`);
-      if (changed && this.open) this.fill();
+      // The link changed under an open menu (an edit just made, measured only now): the choices are made
+      // again, and the keyboard keeps its place.
+      if (changed && this.open) { this.fill(); this.mark(this.at); }
     },
   };
 
   private fill(): void {
     const l = this.link;
     if (!l) return;
-    this.menu.replaceChildren(...choices(l).map((c) => {
+    this.menu.replaceChildren(...choices(l).map((c, k) => {
       const b = document.createElement("button");
       b.type = "button";
+      b.tabIndex = -1;
+      b.id = `cm-link-choice-${k}`;
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("mousemove", () => this.mark(k));
       b.setAttribute("role", "menuitemradio");
       b.setAttribute("aria-checked", String(c.on));
       b.title = c.hint;
@@ -208,21 +216,41 @@ class Control {
   }
 
   toggle(open: boolean, focusEditor: boolean): void {
+    if (open) this.link = this.current() ?? this.link; // as it is now, not as last measured
     if (open && !this.link) return;
     this.open = open;
     this.menu.hidden = !open;
     this.layer.classList.toggle("open", open);
     this.button.setAttribute("aria-expanded", String(open));
-    if (open) { this.fill(); (this.menu.querySelector('[aria-checked="true"]') as HTMLElement | null ?? this.menu.firstElementChild as HTMLElement | null)?.focus(); }
+    if (open) {
+      this.fill();
+      const items = [...this.menu.querySelectorAll("button")];
+      this.mark(Math.max(0, items.findIndex((b) => b.getAttribute("aria-checked") === "true")));
+      this.menu.focus();
+    }
     else if (focusEditor) this.view.focus();
   }
 
+  private mark(k: number): void {
+    const items = [...this.menu.querySelectorAll("button")];
+    this.at = items.length ? (k + items.length) % items.length : 0;
+    items.forEach((b, i) => b.classList.toggle("on", i === this.at));
+    this.menu.setAttribute("aria-activedescendant", items[this.at]?.id ?? "");
+  }
+
   private keys(e: KeyboardEvent): void {
-    const items = [...this.menu.querySelectorAll<HTMLElement>("button")], at = items.indexOf(document.activeElement as HTMLElement);
-    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this.toggle(false, true); }
-    else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(at + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus(); }
-    else if (e.key === "Home" || e.key === "End") { e.preventDefault(); items[e.key === "Home" ? 0 : items.length - 1]?.focus(); }
-    else if (e.key.length === 1) { const hit = items.find((b) => b.textContent!.toLowerCase().startsWith(e.key.toLowerCase())); if (hit) { e.preventDefault(); hit.focus(); } }
+    const items = [...this.menu.querySelectorAll<HTMLElement>("button")];
+    let handled = true;
+    if (e.key === "Escape") this.toggle(false, true);
+    else if (e.key === "Enter" || e.key === " ") items[this.at]?.click();
+    else if (e.key === "ArrowDown") this.mark(this.at + 1);
+    else if (e.key === "ArrowUp") this.mark(this.at - 1);
+    else if (e.key === "Home") this.mark(0);
+    else if (e.key === "End") this.mark(items.length - 1);
+    else if (e.key === "Tab") this.toggle(false, true);
+    else if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) { const hit = items.findIndex((b) => b.textContent!.toLowerCase().startsWith(e.key.toLowerCase())); if (hit >= 0) this.mark(hit); else handled = false; }
+    else handled = false;
+    if (handled) { e.preventDefault(); e.stopPropagation(); }
   }
 
   destroy(): void {
@@ -269,7 +297,9 @@ const theme = EditorView.baseTheme({
   ".cm-link-menu button b": { fontWeight: "600" },
   ".cm-link-menu button span": { fontSize: "12px", color: "var(--ink-faint)", lineHeight: "1.3" },
   ".cm-link-menu button[aria-checked=true]::before": { content: '"●"', position: "absolute", left: "8px", top: "7px", fontSize: "10px", color: "var(--pen-blue)" },
-  ".cm-link-menu button:hover, .cm-link-menu button:focus-visible": { background: "var(--accent-soft)", outline: "none" },
+  ".cm-link-menu:focus": { outline: "none" },
+  ".cm-link-menu button.on": { background: "var(--accent-soft)" },
+  ".cm-link-menu:focus-visible button.on": { outline: "2px solid var(--focus-ring)", outlineOffset: "-2px" },
 });
 
 export const linkControl = [plugin, theme, keymap.of(linkKeymap)];

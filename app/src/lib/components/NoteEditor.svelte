@@ -208,7 +208,7 @@
     <FormatBar onformat={format} hidden={!session.source || session.detailsOpen} />
     {#if connected !== null && session.source && !session.detailsOpen}
       {#if connected}
-        <form class="assist-bar" aria-label="Ask the model" onsubmit={(e) => { e.preventDefault(); void ask(selected && !prompt.trim() ? "ask" : "fill"); }}>
+        <form class="assist-bar" aria-label="Ask Axis" onsubmit={(e) => { e.preventDefault(); void ask(selected && !prompt.trim() ? "ask" : "fill"); }}>
           <input type="text" bind:value={prompt} disabled={busy !== null} aria-label="Your question, or what to write"
             placeholder={selected ? "Ask about the selection, or say how to rewrite it" : "Say what to write at the cursor, or ask about the note"} />
           <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void ask("ask")}
@@ -220,7 +220,7 @@
           {#if busy}<button class="toggle" type="button" onclick={() => stop?.abort()}>Stop</button>{/if}
         </form>
       {:else}
-        <p class="assist-off">To ask a model about this note or have it draft text, <a href="#/teacher">connect a model account</a>.</p>
+        <p class="assist-off">To ask a model about this note or have it draft text, <a href="#/teacher">connect a model account for Axis</a>.</p>
       {/if}
     {/if}
   </div>
