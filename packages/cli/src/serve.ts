@@ -234,7 +234,9 @@ const fileDraftRoute = createRoute({
 const Money = z.record(z.string(), z.number());
 const AiState = z.object({
   connected: z.boolean(),
-  from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
+  from: z.enum(["environment", "file", "command", "none"]).nullable().openapi({ description: "Where the key comes from." }),
+  provider: z.object({ name: z.string(), host: z.string(), custom: z.boolean().openapi({ description: "True for a gateway set in the user config ([teacher.provider]); false for OpenRouter." }),
+    priced: z.boolean().openapi({ description: "Whether spending can be known: OpenRouter reports it; a gateway needs prices set." }) }),
   models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
   tiers: z.object({ low: z.string(), mid: z.string(), max: z.string() }).openapi({ description: "The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config)." }),
   spending: z.object({
@@ -586,13 +588,18 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   // ---------------------------------------------------------------- models (OpenRouter)
   const aiState = () => {
     const k = models.apiKey();
-    return { connected: !!k, from: k?.from ?? null, models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
+    const p = models.provider();
+    let host = p.url;
+    try { host = new URL(p.url).host; } catch { /* as written */ }
+    return { connected: !!k, from: k?.from ?? null, provider: { name: p.custom ? p.name : "OpenRouter", host, custom: p.custom, priced: !p.custom || Object.keys(p.prices).length > 0 },
+      models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
   };
   app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
   // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
   const pending = new Map<string, { verifier: string; until: number }>();
   const b64url = (b: Buffer) => b.toString("base64url");
   app.openapi(connectAi, ((c: Context) => tourChange(c, () => {
+    if (models.provider().custom) throw new StoreError(`models come from ${models.provider().name}, set in the user config ([teacher.provider]): there is no account to connect here`);
     for (const [k, v] of pending) if (v.until < Date.now()) pending.delete(k);
     const verifier = b64url(randomBytes(32)), state = b64url(randomBytes(16));
     pending.set(state, { verifier, until: Date.now() + 10 * 60_000 });
@@ -618,7 +625,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
       return back("failed");
     }
   });
-  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { if (!models.provider().custom) models.forgetKey(); return aiState(); }, false)) as never);
   app.openapi(putTiers, (async (c: Context) => {
     const refused = writeRefused(c);
     if (refused) return refused;

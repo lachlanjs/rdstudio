@@ -330,9 +330,36 @@
             "enum": [
               "environment",
               "file",
+              "command",
+              "none",
               null
             ],
             "description": "Where the key comes from."
+          },
+          "provider": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "custom": {
+                "type": "boolean",
+                "description": "True for a gateway set in the user config ([teacher.provider]); false for OpenRouter."
+              },
+              "priced": {
+                "type": "boolean",
+                "description": "Whether spending can be known: OpenRouter reports it; a gateway needs prices set."
+              }
+            },
+            "required": [
+              "name",
+              "host",
+              "custom",
+              "priced"
+            ]
           },
           "models": {
             "type": "object",
@@ -421,6 +448,7 @@
         "required": [
           "connected",
           "from",
+          "provider",
           "models",
           "tiers",
           "spending"

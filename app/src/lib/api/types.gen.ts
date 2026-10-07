@@ -128,7 +128,19 @@ export type AiState = {
     /**
      * Where the key comes from.
      */
-    from: 'environment' | 'file' | null;
+    from: 'environment' | 'file' | 'command' | 'none' | null;
+    provider: {
+        name: string;
+        host: string;
+        /**
+         * True for a gateway set in the user config ([teacher.provider]); false for OpenRouter.
+         */
+        custom: boolean;
+        /**
+         * Whether spending can be known: OpenRouter reports it; a gateway needs prices set.
+         */
+        priced: boolean;
+    };
     /**
      * The model for each job ([teacher.models] in the user config).
      */

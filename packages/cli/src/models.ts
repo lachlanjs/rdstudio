@@ -1,4 +1,5 @@
-// Calling models for the teacher (T50), through OpenRouter: the key, the
+// Calling models for the teacher (T50), through OpenRouter or, where the user
+// config names one, an organisation's own gateway (provider.ts): the key, the
 // model for each job, a usage log of every call by feature, and a weekly
 // budget. Only `rdstudio serve` and the command line call these; the key never
 // reaches the browser. See knowledge/design/tutor.md.
@@ -19,6 +20,9 @@ import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, unlinkS
 import { dirname, join } from "node:path";
 import { readToml, userConfigPath, type Config, type Table } from "./config.ts";
 import * as learner from "./learner.ts";
+import { authHeaders, endpoint, explain, forgetToken, ownTransport, priced, provider, providerKey, request, type KeyFrom, type Provider } from "./provider.ts";
+
+export { provider } from "./provider.ts";
 
 /** OpenRouter's API (RDSTUDIO_OPENROUTER_URL points it elsewhere, for tests). */
 export const OPENROUTER = process.env.RDSTUDIO_OPENROUTER_URL || "https://openrouter.ai/api/v1";
@@ -52,8 +56,10 @@ export class ModelError extends Error {
 }
 
 // Tests swap the network out.
-let fetcher: typeof fetch = (...a) => fetch(...a);
-export function setFetch(f: typeof fetch): void { fetcher = f; }
+const plainFetch: typeof fetch = (...a) => fetch(...a);
+let fetcher: typeof fetch = plainFetch, swapped = false;
+/** Put another fetch in the network's place (tests); null puts the network back. */
+export function setFetch(f: typeof fetch | null): void { fetcher = f ?? plainFetch; swapped = f !== null; }
 
 // ------------------------------------------------------------------ settings and the key
 
@@ -77,7 +83,10 @@ export function setTiers(next: Partial<Record<Tier, string>>): Record<Tier, stri
     const m = next[t];
     if (m === undefined) continue;
     const id = String(m).trim();
-    if (!/^[\w.-]+\/[\w.:-]+$/.test(id)) throw new ModelError(`"${id}" is not a model's id: it is written as OpenRouter lists it, like ${DEFAULT_TIERS[t]}`, 400);
+    // OpenRouter's ids are vendor/model. A gateway names its models as it likes: anything without spaces or quotes.
+    const p = provider();
+    if (p.custom ? !/^[^\s"'\\]{1,200}$/.test(id) : !/^[\w.-]+\/[\w.:-]+$/.test(id))
+      throw new ModelError(p.custom ? `"${id}" is not a model's id: write it as ${p.name} names the model, with no spaces or quotes` : `"${id}" is not a model's id: it is written as OpenRouter lists it, like ${DEFAULT_TIERS[t]}`, 400);
     now[t] = id;
   }
   const path = userConfigPath();
@@ -106,7 +115,10 @@ export function weeklyBudget(): number {
 
 export const keyFile = (): string => join(dirname(userConfigPath()), "openrouter.key");
 
-export function apiKey(): { key: string; from: "environment" | "file" } | null {
+/** The key requests are made with, and where it comes from: the provider's own (provider.ts), or OpenRouter's. Null when there is none. */
+export function apiKey(): { key: string; from: KeyFrom } | null {
+  const p = provider();
+  if (p.custom) { try { return providerKey(p); } catch { return null; } }
   const env = process.env.OPENROUTER_API_KEY;
   if (env) return { key: env.trim(), from: "environment" };
   try {
@@ -244,72 +256,111 @@ export interface Reply {
 }
 
 const plain = (m: Message) => (typeof m.content === "string" ? m.content : m.content.map((p) => p.text).join("\n\n"));
-const wire = (m: Message) => m.role === "tool" ? { role: "tool", tool_call_id: m.callId ?? "", content: plain(m) }
+/** A message as it is sent. Cache marks are Anthropic's, passed on by OpenRouter; a provider that does not take them is sent plain text. */
+const wire = (marks: boolean) => (m: Message) => m.role === "tool" ? { role: "tool", tool_call_id: m.callId ?? "", content: plain(m) }
   : m.role === "assistant" && m.calls?.length ? { role: "assistant", content: plain(m) || null, tool_calls: m.calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.arguments || "{}" } })) }
   : {
     role: m.role,
-    content: typeof m.content === "string" ? m.content
+    content: typeof m.content === "string" || !marks ? plain(m)
       : m.content.map((p) => ({ type: "text", text: p.text, ...(p.cache ? { cache_control: { type: "ephemeral" } } : {}) })),
   };
 
+/** What the provider is called in a message to the person. */
+const called = (p: Provider) => (p.custom ? p.name : "OpenRouter");
+
 /** Call the model for a job, streaming; the usage is logged and the budget kept. */
 export async function complete(call: Call): Promise<Reply> {
-  const k = apiKey();
-  if (!k) throw new ModelError("No OpenRouter key: connect an account on the Teacher page, or set OPENROUTER_API_KEY.", 409);
+  const p = provider();
+  let k: { key: string } | null;
+  try { k = p.custom ? providerKey(p) : apiKey(); } catch (err) { throw new ModelError((err as Error).message, 409); }
+  if (!k) throw new ModelError(p.custom ? `No key for ${p.name}: set ${p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY"}, or key_file or key_command under [teacher.provider] in the user config.`
+    : "No OpenRouter key: connect an account on the Teacher page, or set OPENROUTER_API_KEY.", 409);
   const s = spending(call.cfg);
   if (s.stopped) throw new ModelError(`This week's budget ($${s.budget.toFixed(2)}) is spent. It renews on Monday; [teacher] weekly_budget in the user config changes it.`, 402);
   const model = call.model || models()[call.job];
-  const res = await fetcher(`${OPENROUTER}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${k.key}`, "Content-Type": "application/json",
-      "HTTP-Referer": "https://github.com/lachlanjs/rdstudio", "X-Title": "rdstudio",
-    },
-    body: JSON.stringify({ model, messages: call.messages.map(wire), stream: true, ...(call.maxTokens ? { max_tokens: call.maxTokens } : {}),
-      ...(call.tools?.length ? { tools: call.tools, tool_choice: call.toolChoice ?? "auto" } : {}) }),
-    signal: call.signal,
-  });
+  const body = JSON.stringify({ model, messages: call.messages.map(wire(p.cacheMarks)), stream: p.stream, ...(p.stream && p.streamUsage ? { stream_options: { include_usage: true } } : {}),
+    ...(call.maxTokens ? { [p.maxTokensField]: call.maxTokens } : {}),
+    ...(call.tools?.length && p.tools ? { tools: call.tools, tool_choice: call.toolChoice ?? "auto" } : {}) });
+  const send = async (key: string): Promise<Response> => {
+    const init = { method: "POST", headers: authHeaders(p, key), body, signal: call.signal };
+    try {
+      // Authorities, a client certificate or a proxy of the provider's own need more than fetch takes (tests put their own fetch in its place).
+      return await (ownTransport(p) && !swapped ? request(p, endpoint(p), init) : fetcher(endpoint(p), init));
+    } catch (err) {
+      if ((err as Error).name === "AbortError") throw err;
+      throw new ModelError(explain(err, p), 502);
+    }
+  };
+  let res = await send(k.key);
+  // A token a command gave may have run out: ask the command once more.
+  if (res.status === 401 && p.custom && p.keyCommand) {
+    forgetToken();
+    let again: { key: string } | null = null;
+    try { again = providerKey(p); } catch { /* the first refusal is reported */ }
+    if (again && again.key !== k.key) res = await send(again.key);
+  }
   if (!res.ok || !res.body) {
     let detail = "";
-    try { detail = ((await res.json()) as { error?: { message?: string } }).error?.message ?? ""; } catch { /* none */ }
-    throw new ModelError(`OpenRouter said ${res.status}${detail ? `: ${detail}` : ""}`, res.status === 401 ? 409 : 502);
+    try {
+      const said = await res.text();
+      try { const j = JSON.parse(said) as { error?: { message?: string } | string; message?: string }; detail = (typeof j.error === "string" ? j.error : j.error?.message) ?? j.message ?? ""; } catch { detail = said.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300); }
+    } catch { /* none */ }
+    throw new ModelError(`${called(p)} said ${res.status}${detail ? `: ${detail}` : ""}`, res.status === 401 || res.status === 403 ? 409 : 502);
   }
-  // Server-sent events: data lines of JSON chunks, the last carrying the usage.
-  let text = "", usage: Record<string, unknown> | null = null, buffer = "";
+  let text = "", usage: Record<string, unknown> | null = null;
   const calls: ToolCall[] = []; // a call arrives in pieces, by its index
-  const decoder = new TextDecoder();
-  const reader = res.body.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let nl: number;
-    while ((nl = buffer.indexOf("\n")) >= 0) {
-      const line = buffer.slice(0, nl).trim();
-      buffer = buffer.slice(nl + 1);
-      if (!line.startsWith("data:")) continue;
-      const data = line.slice(5).trim();
-      if (data === "[DONE]") continue;
-      let chunk: { choices?: { delta?: { content?: string; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
-      try { chunk = JSON.parse(data); } catch { continue; }
-      if (chunk.error) throw new ModelError(`OpenRouter: ${chunk.error.message ?? "an error"}`);
-      const piece = chunk.choices?.[0]?.delta?.content;
-      if (piece) { text += piece; call.onText?.(piece); }
-      for (const t of chunk.choices?.[0]?.delta?.tool_calls ?? []) {
-        const c = (calls[t.index ?? 0] ??= { id: "", name: "", arguments: "" });
-        if (t.id) c.id = t.id;
-        if (t.function?.name) c.name += t.function.name;
-        if (t.function?.arguments) c.arguments += t.function.arguments;
+  type Called = { index?: number; id?: string; function?: { name?: string; arguments?: string } };
+  const take = (list: Called[] | undefined) => {
+    for (const t of list ?? []) {
+      const c = (calls[t.index ?? 0] ??= { id: "", name: "", arguments: "" });
+      if (t.id) c.id = t.id;
+      if (t.function?.name) c.name += t.function.name;
+      if (t.function?.arguments) c.arguments += t.function.arguments;
+    }
+  };
+  if (!p.stream || (res.headers.get("content-type") ?? "").includes("application/json")) {
+    // One reply, whole: asked for (stream = false), or what a gateway that does not stream sent anyway.
+    let whole: { choices?: { message?: { content?: string | null; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
+    try { whole = JSON.parse(await res.text()); } catch { throw new ModelError(`${called(p)} sent a reply that could not be read`); }
+    if (whole.error) throw new ModelError(`${called(p)}: ${whole.error.message ?? "an error"}`);
+    text = whole.choices?.[0]?.message?.content ?? "";
+    if (text) call.onText?.(text);
+    take(whole.choices?.[0]?.message?.tool_calls?.map((t, index) => ({ ...t, index })));
+    usage = whole.usage ?? null;
+  } else {
+    // Server-sent events: data lines of JSON chunks, the last carrying the usage.
+    let buffer = "";
+    const decoder = new TextDecoder();
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (data === "[DONE]") continue;
+        let chunk: { choices?: { delta?: { content?: string; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
+        try { chunk = JSON.parse(data); } catch { continue; }
+        if (chunk.error) throw new ModelError(`${called(p)}: ${chunk.error.message ?? "an error"}`);
+        const piece = chunk.choices?.[0]?.delta?.content;
+        if (piece) { text += piece; call.onText?.(piece); }
+        take(chunk.choices?.[0]?.delta?.tool_calls);
+        if (chunk.usage) usage = chunk.usage;
       }
-      if (chunk.usage) usage = chunk.usage;
     }
   }
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
   const details = table(usage?.prompt_tokens_details);
+  const promptTokens = num(usage?.prompt_tokens), completionTokens = num(usage?.completion_tokens);
   const u: Usage = {
     at: new Date().toISOString(), project: learner.projectId(call.cfg.root), feature: call.feature ?? call.job, model,
-    prompt_tokens: num(usage?.prompt_tokens), completion_tokens: num(usage?.completion_tokens), cached_tokens: num(details.cached_tokens),
-    cost: num(usage?.cost), ...(call.exercise ? { exercise: call.exercise } : {}),
+    prompt_tokens: promptTokens, completion_tokens: completionTokens, cached_tokens: num(details.cached_tokens),
+    // What the provider says it cost (OpenRouter does); else worked out from the prices set for it; else nothing is known.
+    cost: typeof usage?.cost === "number" ? num(usage.cost) : priced(p, model, promptTokens, completionTokens) ?? 0, ...(call.exercise ? { exercise: call.exercise } : {}),
   };
   logUsage(u);
   return { text, usage: u, calls: calls.filter((c) => c && c.name).map((c, k) => ({ ...c, id: c.id || `call_${k}` })) };

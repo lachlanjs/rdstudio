@@ -95,3 +95,4 @@
 * [T89 — Search by meaning: the cache, the tool, and edits](T89-find-similar.md) - Embed each note's sections locally into a cache, give Axis and outside agents a find_similar tool, and embed again only what an edit changed.
 * [T90 — Ask Atlas shows notes found by meaning](T90-ask-atlas-by-meaning.md) - On the Atlas, a note found by meaning is shown apart from one found by keyword search or reached by a link.
 * [T91 — Artifacts follow the chosen theme](T91-artifacts-follow-theme.md) - An artifact is shown in the app's theme and in light or dark, with its type and its charts, from its first paint and when the setting changes.
+* [T92 — An organisation's own model gateway in OpenRouter's place](T92-enterprise-provider.md) - A provider set in the user config: its address, key, headers, certificates and proxy, with spending from set prices, a command that diagnoses a failure, and a procedure that says where to patch what is not covered.

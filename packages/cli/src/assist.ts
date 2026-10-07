@@ -447,7 +447,7 @@ export const fillTokens = (passage: number): number => Math.max(2000, passage + 
 const featureOf = (m: Mode) => (m === "ask" ? "note-ask" : m === "figure" ? "note-figure" : "note-fill");
 const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)));
 /** A model, or the provider it is routed to, that cannot call tools says so; then it is given what it would have looked up. */
-const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|function call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized/i.test(err.message);
+const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|tool_choice|function.?call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized|not allowed|not permitted|unexpected|extra|disabled/i.test(err.message);
 
 export interface Hooks {
   /** Each piece of the reply's text as it is written. */
@@ -464,6 +464,8 @@ export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" |
   onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string }> {
   const messages = [...o.messages], most = ROUNDS[o.tier], tools = toolsFor();
   let text = "", cost = 0, used = o.call.model ?? "";
+  // A provider set not to offer tools (provider.ts, tools = false): one call, with the context gathered for it.
+  if (!models.provider().tools) { const r = await models.complete({ ...o.call, messages: o.gathered() }); return { text: r.text, cost: r.usage.cost, model: r.usage.model }; }
   for (let round = 0; ; round++) {
     let r: models.Reply;
     try {
