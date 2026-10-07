@@ -1,6 +1,9 @@
 /* Shared stylesheet for agent reports. Matches the dashboard palette and type. */
 @import url("fonts.css");
-@import url("themes/studio.css"); /* report.js swaps in the chosen theme */
+/* Both themes, as the app loads them: Station restyles Marginalia where the page says data-theme="station".
+   Which theme and whether light or dark are set on the page by the frame's bridge (packages/cli/src/artifacts.ts). */
+@import url("themes/marginalia.css");
+@import url("themes/station.css");
 
 html { background: var(--paper); color: var(--ink); }
 body { margin: 0; font: var(--text-size)/1.65 var(--font-text); font-variation-settings: "opsz" 18; }

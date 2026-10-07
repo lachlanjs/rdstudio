@@ -15,15 +15,15 @@ export const artifactHref = (path: string): string => "#/a/" + segments(path);
 export const artifactSrc = (path: string): string => "a/" + segments(path);
 
 const VARS = ["--surface", "--surface-1", "--surface-2", "--surface-3", "--rule", "--rule-strong", "--text", "--text-soft", "--text-faint",
-  "--pen-red", "--pen-green", "--pen-blue", "--font-text", "--font-ui", "--font-mono"];
-function theme(): { rdstudio: "theme"; vars: Record<string, string>; mode: string } {
+  "--pen-red", "--pen-green", "--pen-blue", "--pen-red-soft", "--pen-green-soft", "--pen-blue-soft", "--line", "--radius", "--text-size", "--font-text", "--font-ui", "--font-mono", "--font-map"];
+function theme(): { rdstudio: "theme"; vars: Record<string, string>; mode: string; theme: string } {
   const style = getComputedStyle(document.documentElement), vars: Record<string, string> = {};
-  for (const v of VARS) vars[v] = style.getPropertyValue(v).trim();
+  for (const v of VARS) { const value = style.getPropertyValue(v).trim(); if (value) vars[v] = value; }
   const bg = style.getPropertyValue("--surface").trim();
   // Light or dark as it is shown now, whatever chose it: from the surface's own lightness.
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(bg);
   const light = m ? (parseInt(m[1]!, 16) * 299 + parseInt(m[2]!, 16) * 587 + parseInt(m[3]!, 16) * 114) / 1000 > 140 : false;
-  return { rdstudio: "theme", vars, mode: light ? "light" : "dark" };
+  return { rdstudio: "theme", vars, mode: light ? "light" : "dark", theme: document.documentElement.dataset.theme === "station" ? "station" : "marginalia" };
 }
 
 export interface FrameOptions {
@@ -85,7 +85,9 @@ export function mountArtifact(host: HTMLElement, path: string, opts: FrameOption
   const load = () => {
     if (done || frame.src) return;
     frame.addEventListener("load", send);
-    frame.src = opts.held ? opts.held.src : artifactSrc(path);
+    // The theme goes with the address too, so the artifact is in it from its first paint.
+    const src = opts.held ? opts.held.src : artifactSrc(path), now = theme();
+    frame.src = `${src}${src.includes("?") ? "&" : "?"}theme=${now.theme}&mode=${now.mode}`;
     host.append(frame);
     if (opts.caption) { const c = document.createElement("span"); c.className = "artifact-caption"; c.textContent = opts.caption; host.append(c); }
     timer = window.setTimeout(() => {

@@ -854,6 +854,9 @@ function staticFile(c: Context, site: string): Response {
   const headers: Record<string, string> = {};
   const cc = cacheControl(url.pathname);
   if (cc) headers["Cache-Control"] = cc;
+  // An artifact is sandboxed, so to it the app's fonts are another origin's: without this it could not load
+  // the theme's type. Fonts only: they are rdstudio's own files and say nothing of the project.
+  if (/\.(woff2?|ttf|otf)$/i.test(url.pathname)) headers["Access-Control-Allow-Origin"] = "*";
   let st;
   try { st = statSync(file); } catch { return c.body("File not found", 404, headers); }
   if (st.isDirectory()) {
