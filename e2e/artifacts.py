@@ -150,6 +150,15 @@ with sync_playwright() as pw:
     p.wait_for_timeout(400)
     rows = p.locator(".rows .title").all_inner_texts()
     check("the Artifacts page lists them, where reports were", set(rows) == {"A standing wave", "Broken", "Tiles", "From a CDN"} or len(rows) == 4, rows)
+    # In the editor's live preview, a line that is one embed or one picture is shown as on the page.
+    p.goto(URL + "?nosw#/k/design/waves")
+    p.get_by_role("button", name="Edit").click()
+    p.wait_for_selector(".cm-content")
+    expect(p.locator(".cm-lp-figure iframe").first).to_be_visible(timeout=15000)
+    check("the editor's preview shows an embedded artifact and a picture in place; the cursor on the line shows its Markdown",
+          p.locator(".cm-lp-figure .artifact-embed iframe").count() >= 1 and p.locator(".cm-lp-figure .pic img").count() == 2, (p.locator(".cm-lp-figure").count(),))
+    p.get_by_role("button", name="Cancel").click()
+
     # On the Atlas (T77): an item of its folder, after the notes that cite it.
     p.goto(URL + "?nosw#/map/design")
     art = p.locator('svg.gridmap g.gn.art[aria-label="A standing wave"]')

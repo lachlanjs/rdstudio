@@ -51,6 +51,7 @@
           onChange: (text) => { session.body = text; session.changed(); },
           onSave: () => void session.save(),
           notes,
+          dir: session.id.includes("/") ? session.id.slice(0, session.id.lastIndexOf("/")) : "",
           source,
           onSelect: (text) => { selected = text.trim().length > 0; },
           onSuggestion: (what, sg) => {
