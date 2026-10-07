@@ -127,3 +127,38 @@ test("a note says a model wrote part of it: the stamp names it, and a small edit
   r = saveNote(k, "design/stamped", { actor: "human:me", base: src.version, body: "# Rewritten again\n\nA third account, typed by hand this time and saved as any other edit would be.\n" });
   expect((r.note.meta.generated as { by: string }).by).toBe("human:me");
 });
+
+test("the model is told how notes work here: a rating is a link's title, and a change of form changes only that (T81)", () => {
+  const { cfg } = project();
+  const body = "- [x] [The forces](/design/forces.md)\n- [ ] [Units](/design/units.md)\n";
+  const p = assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: 0, to: body.length, prompt: "make these see also links" });
+  const text = said(p);
+  expect(text).toContain("## How notes work here");
+  expect(text).toContain('(/tasks/T01.md "see also")');
+  for (const r of ["requires", "uses", "see also"]) expect(assist.FORMAT).toContain(`"${r}"`);
+  expect(text).toContain("change only that");
+  // In every mode, and before the note, where it is cached.
+  for (const mode of ["ask", "figure"] as const) expect(said(assist.prepare(cfg, { note: "design/integrator", mode, body, from: 0, to: body.length, prompt: "x" }))).toContain("## How notes work here");
+  expect(text.indexOf("## How notes work here")).toBeLessThan(text.indexOf("## The note being written"));
+});
+
+test("a long passage is sent whole with room for it to come back; one too long is refused; a reply cut short proposes nothing (T81)", () => {
+  const { cfg } = project();
+  const line = (i: number) => `- [x] [T${i} A task with a fairly long title](/tasks/T${i}-a-task.md)\n`;
+  const body = "# Start\n\n" + Array.from({ length: 400 }, (_, i) => line(i)).join("") + "\n# End\n";
+  expect(body.length).toBeGreaterThan(20_000);
+  const p = assist.prepare(cfg, { note: "tasks/roadmap", mode: "fill", body, from: 0, to: body.length, prompt: "rate them see also" });
+  const sent = p.seen.find((s) => s.name.startsWith("The note being written"))!;
+  expect(sent.shortened).toBe(false);
+  expect(sent.text).toContain("T0 A task");
+  expect(sent.text).toContain("T399 A task");
+  expect(sent.text).toContain("# End");
+  expect(assist.fillTokens(body.length) * 3).toBeGreaterThan(body.length * 1.3);
+  expect(assist.fillTokens(10)).toBe(2000);
+  const huge = "x ".repeat(assist.MAX_PASSAGE);
+  expect(() => assist.prepare(cfg, { note: "a", mode: "fill", body: huge, from: 0, to: huge.length, prompt: "tidy" })).toThrow(/too long to rewrite at once/);
+  expect(assist.prepare(cfg, { note: "a", mode: "ask", body: huge, from: 0, to: huge.length, prompt: "what is this" }).job).toBe("discuss");
+  const cut = assist.parseFill("<insert>\n- [x] [T0](/tasks/T0.md \"see also\")\n- [x] [T1");
+  expect(cut.insert).toBeNull();
+  expect(cut.why).toMatch(/cut short/);
+});

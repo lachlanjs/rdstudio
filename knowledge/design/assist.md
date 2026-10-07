@@ -5,7 +5,7 @@ description: While a note is edited, the connected model can be asked about a pa
   text to go at a place in it; an answer is shown beside the note and proposed text is a suggestion
   to accept or reject.
 tags: [design, editor, agents, models]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T23:50:16Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T01:53:31Z}
 ---
 
 # Why
@@ -57,9 +57,18 @@ buttons.
 Worked out by `rdstudio serve` for each request (`packages/cli/src/assist.ts`
 `prepare`); no tools are handed to the model, so a request is one call.
 
+- **How notes work here** (`FORMAT`,
+  [T81](/tasks/T81-assist-knows-the-format.md "see also")): the forms the
+  app reads in a note and what it makes of them. A link's rating is its
+  title (`"requires"`, `"uses"`, `"see also"`), with a worked example and
+  what the Atlas does with each; artifacts and pictures, linked or shown in
+  place; checklists, maths, diagrams, footnotes. And a rule: asked to change
+  the form of something, change only that. Without it the model read "make
+  this a see also link" as words to write in the text.
 - **The note as it is in the editor**, saved or not, with the place marked:
   a passage between ⟦ and ⟧, or the point ⟦HERE⟧. A long note is cut to a
-  window round the place.
+  window round the place; the marked passage itself is never cut, and one
+  over 40 000 characters is refused for a rewrite.
 - **The notes it links to** (up to six), by bundle-absolute or relative
   link, with or without a rating.
 - **Notes found by searching the base** (up to five) for the request, the
@@ -75,6 +84,8 @@ Worked out by `rdstudio serve` for each request (`packages/cli/src/assist.ts`
   when the request is about code.
 - How to help, and the form of the reply. A fill replies with the text
   between `<insert>` tags and a sentence or two on why between `<why>` tags.
+  Its room grows with the passage, so a whole note can come back; a reply
+  cut short proposes nothing.
 
 Each section has a budget of tokens and is shortened to fit
 ([context](/design/tutor.md)). The model for an answer is the `discuss`

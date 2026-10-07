@@ -75,6 +75,46 @@ passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.
   words. No preamble, no closing remarks.
 - Maths goes between dollar signs, as LaTeX.`;
 
+// What a note may hold here beyond plain Markdown, and what the app makes of
+// it. Without this the model does not know, for one, that "see also" is a
+// rating written as a link's title. The ratings are core's RATINGS; the
+// wording follows the record-okf skill, which tells agents outside the app
+// the same.
+export const FORMAT = `# How notes work here
+
+The app reads these forms in a note. When a request names one of them, it
+means the form as written here.
+
+- A link to a note: [its title](/its/path.md). A link may carry a rating,
+  written as the link's title, in double quotes after the path:
+  [its title](/its/path.md "requires"). The ratings are:
+  "requires": this note cannot be understood without that one;
+  "uses": relies on it for a fact, an example or a proof, but not to define it;
+  "see also": a pointer onward, a tangent, or a list entry (an index, a
+  roadmap, a list of tasks).
+  A link with no rating counts as "uses". So "make this a see also link"
+  means: add "see also" as the link's title and change nothing else:
+  [T01 Skeleton](/tasks/T01.md) becomes [T01 Skeleton](/tasks/T01.md "see also").
+  It does not mean writing the words "see also" in the text.
+- The Atlas, the app's map of the notes, draws each link as a route and
+  places a note after the ones it requires or uses. "see also" links are the
+  weakest: they do not decide where notes are placed and can be hidden. A
+  note with many unrated links clutters the map.
+- An artifact (an HTML file beside the notes) or a picture is linked the
+  same way, [title](figure.html), or shown in place with image syntax,
+  ![caption](figure.html), ![alt](pic.png). A picture's title sets its side:
+  ![alt](pic.png "left") or "center".
+- A checklist item is "- [ ] text", or "- [x] text" when done.
+- Maths between dollar signs, as LaTeX. Diagrams in a \`\`\`mermaid fence.
+- A claim from an outside source carries a footnote, [^source-id].
+
+When asked to change the form of something (a link's rating, a list's
+marks, a heading's level), change only that. Give back everything else in
+the passage exactly as it is: every line, in the same order, the same words.`;
+
+/** The longest passage that can be rewritten at once, in characters: what comes back must fit one reply. */
+export const MAX_PASSAGE = 40_000;
+
 const FORM: Record<Mode, string> = {
   ask: `# Your reply
 
@@ -269,6 +309,8 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   const selection = ask.body.slice(from, to);
   if (ask.mode === "ask" && !prompt && !selection.trim()) throw new StoreError("ask something, or select a passage to ask about");
   if (ask.mode === "fill" && !prompt && !selection.trim()) throw new StoreError("say what to write here, or select a passage to rewrite");
+  // A passage cut to fit would come back with part of it missing, and accepting that would delete the rest.
+  if (ask.mode === "fill" && selection.length > MAX_PASSAGE) throw new StoreError(`that passage is too long to rewrite at once (${selection.length} characters; ${MAX_PASSAGE} at most): select less of it`);
   if (ask.mode === "figure" && !prompt && !selection.trim()) throw new StoreError("select the passage the figure should be about, or say what it should show");
   const b = loadBundle(cfg.knowledgeDir);
   const known = b.concepts.get(ask.note);
@@ -300,14 +342,17 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
         ? `The artifact you wrote was loaded and checked, and is not good enough to offer. What was wrong:\n\n${ask.fix.problems.map((p) => "- " + p).join("\n")}\n\nWrite it again, whole, with that put right and nothing else changed.${prompt ? `\n\nWhat they asked for:\n\n${prompt}` : ""}`
         : (prompt ? `What they want the artifact to show, for the marked place:\n\n${prompt}` : "They want an artifact that makes the marked passage easier to understand."))
       : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
+  // The whole of the marked passage is always sent, with the note round it.
+  const room = Math.max(14000, selection.length + 6000);
   const { messages, seen } = assemble([
     { name: "How to help", text: HOW.replace(/^# How to help\n\n/, ""), tokens: 600, cache: true },
+    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700, cache: true },
     { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900, cache: true },
     { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
     { name: "Notes this one links to", text: linked.map((id) => noteText(b, id, 2400)).join("\n\n"), tokens: 3600 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
-    { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to) || HERE, tokens: 4000, role: "user" },
+    { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to, room) || HERE, tokens: Math.ceil(room / 4) + 100, role: "user" },
     { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
     { name: "What to do", text: what, tokens: 900, role: "user" },
   ]);
@@ -318,6 +363,8 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
 export function parseFill(reply: string): { insert: string | null; why: string } {
   const ins = /<insert>\n?([\s\S]*?)\n?<\/insert>/i.exec(reply);
   const why = /<why>\n?([\s\S]*?)\n?<\/why>/i.exec(reply);
+  // Opened and never closed: the reply ran out of room. Part of a passage is never offered.
+  if (!ins && /<insert>/i.test(reply)) return { insert: null, why: "The reply was cut short before the text was finished, so nothing is proposed. Select less of the note and ask again." };
   if (!ins) return { insert: null, why: reply.trim() };
   const text = ins[1]!.replace(new RegExp(`${OPEN}HERE${CLOSE}|${OPEN}|${CLOSE}`, "g"), "");
   return { insert: text.trim() ? text : null, why: (why?.[1] ?? "").trim() };
@@ -335,11 +382,14 @@ export function parseFigure(reply: string): { artifact: { title: string; caption
   return { artifact: { title: title || /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "Figure", caption: part("caption"), html }, why: part("why") };
 }
 
+/** Room for a fill's reply: a rewritten passage comes back whole, a little longer than it went. */
+export const fillTokens = (passage: number): number => Math.max(2000, Math.ceil((passage * 1.4) / 3) + 600);
+
 /** Ask, streaming the reply's text. Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {
   const p = prepare(cfg, a);
   const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill", messages: p.messages, onText,
-    maxTokens: a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : 2000 });
+    maxTokens: a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)) });
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
   const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, cost: r.usage.cost };
   if (a.mode === "ask") return { reply: { ...base, answer: r.text.trim(), insert: null }, seen: p.seen };
