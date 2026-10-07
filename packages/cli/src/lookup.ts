@@ -1,13 +1,16 @@
 // What Axis may look up for itself while it works in the editor (T84): the
 // knowledge base, by the same search, outline and section reads the MCP server
-// gives an outside agent, and the repository's code. Read-only, the project's
+// gives an outside agent, and the repository's code: by exact text and by
+// line, and, where the code is indexed (T66), by outline and by a search of
+// its symbols' names and comments (T86). Read-only, the project's
 // own base only, and code only from files git tracks. Each call is kept as a
 // step, so that what was looked at, and how it was reached, can be shown.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { join, posix, relative } from "node:path";
-import { SearchIndex, headings, section, type Bundle } from "@rdstudio/core";
+import { SearchIndex, headings, section, tokenize, type Bundle, type CodeIndex, type CodeItem } from "@rdstudio/core";
+import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
 import type { ToolDef } from "./models.ts";
 
@@ -43,6 +46,9 @@ export const TOOLS: ToolDef[] = [
     { query: str, under: { ...str, description: "Only notes in this folder, such as design or decisions." }, type: { ...str, description: "Only notes of this type, such as Decision, Design, Task, Question." }, limit: { type: "integer", description: "How many, 8 unless said, 15 at most." } }, ["query"]),
   fn("outline_note", "A note's description, its headings, the notes it links to and the notes that link to it, without its body. Use it to choose a section to read.", { id: { ...str, description: "The note's id or path: design/model or /design/model.md." } }, ["id"]),
   fn("read_note", "Read one section of a note, by its heading, or the whole note when no section is named. Prefer a section.", { id: str, section: { ...str, description: "A heading's text, as outline_note gives it." } }, ["id"]),
+  fn("search_symbols", "Find functions, classes, methods and constants by what they are for: a keyword search over their names, signatures and comments, in the languages the code index reads. Use it when you do not know the name. Returns each with its file, line, signature and the first line of its comment.",
+    { query: str, kind: { ...str, description: "Only this kind: class, function, method, field or constant." }, path: { ...str, description: "Only under this folder or in this file." }, limit: { type: "integer", description: "How many, 8 unless said, 20 at most." } }, ["query"]),
+  fn("outline_code", "What a folder or a file of the repository holds, from the code index: a folder's files and folders; a file's classes, functions and constants, each with its line, signature and the first line of its comment, and what the file imports. Leave the path empty for the top.", { path: str }, []),
   fn("search_code", "Find a name or a phrase in the repository's files (exact text, whole lines returned with path and line number). The knowledge base is not searched: use search_notes for that.",
     { text: str, path: { ...str, description: "Only under this folder or in this file." } }, ["text"]),
   fn("read_code", "Read lines of one file of the repository.", { path: str, from: { type: "integer", description: "The first line, 1 unless said." }, to: { type: "integer", description: "The last line; 120 lines are read unless said, 200 at most." } }, ["path"]),
@@ -86,6 +92,7 @@ export class Lookup {
     let out: string;
     try {
       out = name === "search_notes" ? this.search(args, step) : name === "outline_note" ? this.outline(args, step) : name === "read_note" ? this.read(args, step)
+        : name === "search_symbols" ? this.symbols(args, step) : name === "outline_code" ? this.codeOutline(args, step)
         : name === "search_code" ? this.grep(args, step) : name === "read_code" ? this.file(args, step) : this.fail(step, `There is no tool ${name}.`);
     } catch (err) { out = this.fail(step, `That could not be looked up: ${(err as Error).message}`); }
     this.steps.push(step);
@@ -162,6 +169,69 @@ export class Lookup {
       catch { this.tracked = new Set(); }
     }
     return this.tracked.has(p) ? p : null;
+  }
+
+  // The code index (T66), where the project has one: read once for a request.
+  private idx: CodeIndex | null | undefined;
+  private codeIndex(): CodeIndex | null { return this.idx === undefined ? (this.idx = codeIndexSync(this.cfg)) : this.idx; }
+  private static readonly NO_INDEX = "This project's code is not indexed (the code map is off, or holds nothing), so there are no outlines or symbols. Use search_code to find text, and read_code to read a file.";
+  /** One item on a line: where it is, what it is, and the first line of its comment. */
+  private static line(i: CodeItem): string {
+    const doc = i.doc.split("\n")[0]!.trim();
+    const sig = i.signature.split("\n")[0]!.trim() || i.qual;
+    return `${i.path}:${i.line} ${/^(class|struct)\b/.test(sig) ? "" : i.kind + " "}${sig}${doc ? ` — ${doc.length > 140 ? doc.slice(0, 140) + "…" : doc}` : ""}`;
+  }
+
+  /** Symbols by their words (T86): names split at capitals and underscores, signatures and comments, scored as a keyword search is. */
+  private symbols(a: Record<string, unknown>, step: Step): string {
+    step.how = "code";
+    const query = String(a.query ?? "").trim();
+    if (!query) return this.fail(step, "search_symbols needs a query.");
+    const index = this.codeIndex();
+    if (!index) return this.fail(step, Lookup.NO_INDEX);
+    const words = (t: string) => tokenize(t.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[_.:/]+/g, " "));
+    const kind = typeof a.kind === "string" ? a.kind.trim().toLowerCase() : "", under = typeof a.path === "string" ? a.path.trim().replace(/^\.?\/+/, "") : "";
+    const pool = index.items.filter((i) => i.kind !== "dir" && i.kind !== "file" && (!kind || i.kind === kind) && (!under || i.path === under || i.path.startsWith(under.replace(/\/?$/, "/"))));
+    const docs = pool.map((i) => { const tf = new Map<string, number>(); for (const [text, wgt] of [[i.name, 3], [i.qual, 1], [i.doc, 2], [i.signature, 1]] as const) for (const t of words(text)) tf.set(t, (tf.get(t) ?? 0) + wgt); return tf; });
+    const terms = [...new Set(words(query))];
+    const scored = pool.map((i, k) => {
+      let score = 0;
+      for (const t of terms) { const f = docs[k]!.get(t); if (f) { const df = docs.reduce((n, d) => n + (d.has(t) ? 1 : 0), 0); score += Math.log(1 + (pool.length - df + 0.5) / (df + 0.5)) * (f / (f + 1.5)); } }
+      return { i, score };
+    }).filter((x) => x.score > 0).sort((x, y) => y.score - x.score || (x.i.id < y.i.id ? -1 : 1));
+    const hits = scored.slice(0, Math.max(1, Math.min(Number(a.limit) || 8, 20))).map((x) => x.i);
+    step.said = `Searched the code's symbols for "${query}": ${hits.length ? `${hits.length} found` : "nothing found"}`;
+    if (!hits.length) return "No function, class or constant matches those words. Try other words, or search_code for exact text. Only the languages the index reads are covered.";
+    step.code = { path: hits[0]!.path, line: hits[0]!.line };
+    return hits.map((i) => Lookup.line(i)).join("\n");
+  }
+
+  /** What a folder or a file holds (T86). */
+  private codeOutline(a: Record<string, unknown>, step: Step): string {
+    step.how = "code";
+    const index = this.codeIndex();
+    if (!index) return this.fail(step, Lookup.NO_INDEX);
+    const raw = posix.normalize(String(a.path ?? "").trim().replace(/\\/g, "/").replace(/^\.?\/+/, "") || ".").replace(/\/+$/, "");
+    if (raw.startsWith("..")) return this.fail(step, "That path is outside the repository.");
+    const byId = new Map(index.items.map((i) => [i.id, i]));
+    const kids = (id: string | null) => index.items.filter((i) => i.parent === id).sort((x, y) => x.line - y.line || (x.id < y.id ? -1 : 1));
+    const top = raw === "." || raw === "";
+    const item = top ? null : byId.get(raw) ?? byId.get(raw + "/");
+    if (!top && (!item || (item.kind !== "dir" && item.kind !== "file"))) return this.fail(step, `${raw} is not a folder or a file in the code index. outline_code with no path lists the top.`);
+    if (top || item!.kind === "dir") {
+      const inside = top ? index.items.filter((i) => i.parent === null || !byId.has(i.parent)) : kids(item!.id);
+      step.said = `Looked at what is in ${top ? "the repository" : raw + "/"}`;
+      const count = (id: string) => index.items.filter((i) => i.id.startsWith(id) && i.kind !== "dir" && i.kind !== "file").length;
+      return `${top ? "The repository" : raw + "/"}:\n` + (inside.map((i) => i.kind === "dir" ? `- ${i.id} (folder, ${count(i.id)} symbols)` : `- ${i.path} (${i.lang}, ${kids(i.id).length} at its top)`).join("\n") || "nothing indexed");
+    }
+    step.code = { path: item!.path, line: 1 };
+    step.said = `Looked at the outline of ${item!.path}`;
+    const lines: string[] = [];
+    const walk = (id: string, depth: number) => { for (const k of kids(id)) { if (lines.length >= 150) return; lines.push(`${"  ".repeat(depth)}- ${Lookup.line(k).slice(k.path.length + 1)}`); walk(k.id, depth + 1); } };
+    walk(item!.id, 0);
+    const uses = [...new Set(index.links.filter(([from, , kind]) => from === item!.id && (kind === "imports" || kind === "includes")).map(([, to]) => byId.get(to)?.path ?? to))];
+    return [`${item!.path} (${item!.lang})${item!.doc ? `: ${item!.doc.split("\n")[0]}` : ""}`, lines.join("\n") || "No classes, functions or constants were found in it.", lines.length >= 150 ? "[…more: read the file for the rest]" : "",
+      uses.length ? `Imports: ${uses.slice(0, 30).join(", ")}` : ""].filter(Boolean).join("\n\n");
   }
 
   private grep(a: Record<string, unknown>, step: Step): string {

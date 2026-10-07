@@ -72,8 +72,10 @@ const LOOKUP = (rounds: number) => `Nothing has been looked up for you. Look fir
   link: open the linked note, do not search for it again.
 - Read a note before you rest a claim on it: a search's one line is not
   enough.
-- For code, search_code finds a name; read_code reads the lines round it.
-  Quote code only as you read it.
+- For code: search_symbols finds functions and classes by what they are
+  for, when you do not know the name; outline_code lists what a folder or a
+  file holds; search_code finds exact text; read_code reads lines. Quote
+  code only as you read it.
 - You may call several tools at once. You have ${rounds} rounds of looking
   up at most; then reply in the form asked, with what you have.
 - Say nothing between lookups: no "let me check". Only the reply is shown.`;

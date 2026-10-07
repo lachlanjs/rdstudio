@@ -244,7 +244,7 @@ test("the model looks things up in rounds: each call is run and answered, the st
   const { reply: r } = await assist.ask(cfg, { note: "design/integrator", mode: "ask", body, from: 0, to: 5, prompt: "How is temperature held?" }, { onText: (t) => { streamed += t; }, onStep: (s) => steps.push(s.said) });
   expect(bodies).toHaveLength(3);
   // Tools are offered each round, and the conversation carries the calls and their results.
-  expect(bodies[0]!.tools.map((t: any) => t.function.name)).toEqual(["search_notes", "outline_note", "read_note", "search_code", "read_code"]);
+  expect(bodies[0]!.tools.map((t: any) => t.function.name)).toEqual(["search_notes", "outline_note", "read_note", "search_symbols", "outline_code", "search_code", "read_code"]);
   expect(bodies[0]!.tool_choice).toBe("auto");
   const last = bodies[2]!.messages;
   expect(last.filter((m: any) => m.role === "tool")).toHaveLength(5);
@@ -316,4 +316,29 @@ test("a model that cannot call tools is given what it would have looked up, in o
   expect(seen.map((s) => s.text).join("\n")).toContain("Gravity is softened");
   expect(r).toMatchObject({ answer: "Softened.", steps: [] });
   expect(r.sources[0]).toMatchObject({ kind: "note", id: "design/forces" });
+});
+
+test("where the code is indexed, it is found by what it is for and outlined; where it is not, the tools say so (T86)", async () => {
+  const { cfg, root } = project();
+  const b = (await import("@rdstudio/core/node")).loadBundle(cfg.knowledgeDir);
+  const { Lookup } = await import("../src/lookup.ts");
+  const look = new Lookup(cfg, b, "design/integrator");
+  // No name given: found by the words of its comment, and by the parts of its name.
+  const byDoc = look.run("search_symbols", '{"query":"half the sum of squared velocity"}');
+  expect(byDoc.split("\n")[0]).toMatch(/^src\/sim\.py:4 function .*kinetic_energy.* — Half the sum of m v squared\.$/);
+  expect(look.run("search_symbols", '{"query":"energy","kind":"class"}')).toMatch(/No function, class or constant matches/);
+  expect(look.run("search_symbols", '{"query":"rescale thermostat","path":"src"}')).toMatch(/src\/sim\.py:10 method/);
+  expect(look.steps[0]).toMatchObject({ how: "code", code: { path: "src/sim.py", line: 4 }, said: 'Searched the code\'s symbols for "half the sum of squared velocity": 2 found' });
+  const top = look.run("outline_code", "{}");
+  expect(top).toContain("- src/ (folder,");
+  expect(look.run("outline_code", '{"path":"src/"}')).toContain("- src/sim.py (python, 2 at its top)");
+  const file = look.run("outline_code", '{"path":"./src/sim.py"}');
+  expect(file).toMatch(/- 4 function .*kinetic_energy.*\n- 9 class Thermostat.*\n  - 10 method .*rescale/);
+  expect(look.run("outline_code", '{"path":"src/step.rs"}')).toMatch(/No classes, functions or constants|is not a folder or a file in the code index/); // a language the index does not read
+  expect(look.run("outline_code", '{"path":"../x"}')).toMatch(/outside the repository/);
+  // The code map off: both say so and point to the text search.
+  put(root, "rdstudio.toml", "[project]\ntitle = 'T'\n\n[code]\nenabled = false\n");
+  const { loadConfig: again } = await import("../src/config.ts");
+  const off = new Lookup(again(root), b, "design/integrator");
+  for (const [name, args] of [["search_symbols", '{"query":"energy"}'], ["outline_code", "{}"]] as const) expect(off.run(name, args)).toMatch(/not indexed.*Use search_code/);
 });

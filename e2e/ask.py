@@ -33,7 +33,9 @@ class FakeOpenRouter(BaseHTTPRequestHandler):
         said = "\n".join(part["text"] for m in body["messages"] if m["role"] != "tool" for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"] or ""}]))
         question = said.split("## Their question")[-1]
         done = sum(1 for m in body["messages"] if m["role"] == "assistant")
-        if "from here" in question:  # asked from a selected note: one link followed, then the answer
+        if "nearest image" in question:  # code, found by what it is for and not by its name (T86)
+            turns = [[("search_symbols", {"query": "nearest periodic image displacement"}), ("outline_code", {"path": "src/nanosim/core"})], "<answer>\nIn `minimum_image`.\n</answer>"]
+        elif "from here" in question:  # asked from a selected note: one link followed, then the answer
             turns = [[("read_note", {"id": "/concepts/softening.md"})], "<answer>\nOn [Gravitational softening](/concepts/softening.md).\n</answer>"]
         else:
             turns = [[("search_notes", {"query": "softened gravity"})], [("read_note", {"id": "/design/forces.md"})],
@@ -157,6 +159,16 @@ with sync_playwright() as pw:
           card.inner_text())
     check("…an answer with no list of what it used rests on the notes it links to", "Gravitational softening" in card.locator(".aq-used li").inner_text())
     p.screenshot(path=str(OUT / "ask-from-note.png"))
+
+    # Code, by what it is for (T86).
+    box.fill("Where is the nearest image worked out?")
+    form.get_by_role("button", name="Ask").click()
+    expect(card.locator(".aq-looked")).to_be_visible(timeout=20000)
+    card.locator(".aq-looked summary").click()
+    looked = card.locator(".aq-looked").inner_text()
+    tools = [m["content"] for m in FAKE_REQUESTS[-1]["messages"] if m["role"] == "tool"]
+    check("code is found by what it is for, from the index, and a folder is outlined", "Searched the code's symbols" in looked and "nothing found" not in looked and "Looked at what is in src/nanosim/core/" in looked
+          and "minimum_image" in tools[0] and "vec3.hpp" in tools[1], looked + " | " + "\n".join(tools)[:600])
 
     card.get_by_role("button", name="Close the answer").click()
     expect(p.locator(".aq-ring")).to_have_count(0)

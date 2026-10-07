@@ -93,8 +93,10 @@ below there is only the note, and the titles of the notes it links to.
   note's headings and what it links to; read_note reads one section. Prefer
   one section to a whole note. Follow a note's links when what you need is
   one step on from it.
-- For code, search_code finds a name; read_code reads the lines round it.
-  Quote code only as you read it.
+- For code: search_symbols finds functions and classes by what they are
+  for, when you do not know the name; outline_code lists what a folder or a
+  file holds; search_code finds exact text; read_code reads lines. Quote
+  code only as you read it.
 - You may call several tools at once. You have ${rounds} rounds of looking
   up at most; then reply in the form asked, with what you have.
 - Say nothing between lookups: no "let me check". Only the reply is shown.`;

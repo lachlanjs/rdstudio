@@ -3,8 +3,8 @@ type: Task
 title: "T86 — Axis reads the code index: outlines and symbols"
 description: "Two more lookup tools for Axis from the code index: the outline of a directory or
   file, and a search of symbols and their comments, so code can be found without knowing its name."
-tags: [task, m14, assist, code, todo]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T03:43:33Z}
+tags: [task, m14, assist, code, done]
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T04:04:08Z}
 ---
 
 # Prompt
@@ -39,3 +39,26 @@ the fallback for models that cannot call tools.
 The index is made again whole when any code file changes
 (`codeIndexSync`), not only for the files that changed. Fine for a small
 repository; slow for a large one.
+
+# Done
+
+2026-10-07. Two more lookup tools in `packages/cli/src/lookup.ts`, offered
+in the editor and on the Atlas alike:
+
+- `search_symbols`: a keyword search over each symbol's name (split at
+  capitals and underscores), signature and comment. Takes `kind` and `path`.
+- `outline_code`: a folder's files and folders with counts; a file's
+  symbols, nested, each with its line, signature and the first line of its
+  comment, and the indexed files it imports. No path gives the top.
+- With no index, both say so and point to `search_code`.
+
+Not done: what calls an item and what it calls. The index's call links are
+by name only, and the plan marked this optional.
+
+Checks: a unit test (found by a comment's words with no name given;
+outlines; a path outside the repository; the code map off) and a step of
+`e2e/ask.py` (24 checks).
+
+Limit: only Python and C++ are indexed, so in this repository, which is
+TypeScript, the two tools find nothing useful and the text search is what
+works.
