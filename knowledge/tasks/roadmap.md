@@ -144,6 +144,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T72 The Atlas: feeders, where a trunk's links come from inside a folder](/tasks/T72-feeders.md)
 - [ ] [T73 Bring the browser walkthroughs up to the grid Atlas](/tasks/T73-walkthroughs-grid-atlas.md)
 - [x] [T74 An agent in the editor: ask about a passage, or have text proposed](/tasks/T74-agent-in-editor.md)
+- [x] [T75 Switch a project between Learning and Project from the app](/tasks/T75-mode-switch.md)
 
 # Future
 

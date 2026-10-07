@@ -38,6 +38,12 @@
   const setForYou = $derived(store.loaded ? setCount() : 0);
   const mode = $derived(projectMode());
   const project = $derived(mode === "Project");
+  let switching = $state(false);
+  async function switchMode() {
+    switching = true;
+    try { await teacher.setMode(mode === "Learning" ? "Project" : "Learning"); } catch (err) { alert((err as Error).message); }
+    switching = false;
+  }
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
   let drawer = $state(false);
@@ -79,7 +85,12 @@
   {/if}
   <a class="brand" href="#/">rdstudio</a>
   <span class="project-name" title={store.site.title}>{store.site.title}</span>
-  {#if mode}<span class="mode-tag" title={mode === "Learning" ? "A learning project: the learning layer leads" : "A project: its upkeep leads, the learning layer sits on top"}>{mode}</span>{/if}
+  {#if mode}
+    <!-- The mode, and the way to switch it (T75): it is the project's, kept in rdstudio.toml. -->
+    <button class="mode-tag" type="button" disabled={switching}
+      title={`${mode === "Learning" ? "A learning project: the learning layer leads." : "A project: its upkeep leads, the learning layer sits on top."} Click to switch to ${mode === "Learning" ? "Project" : "Learning"} mode (saved in rdstudio.toml, for everyone who opens this project).`}
+      aria-label={`Mode: ${mode}. Switch to ${mode === "Learning" ? "Project" : "Learning"} mode`} onclick={switchMode}>{mode}</button>
+  {/if}
   <nav class="tabs" aria-label="Spaces">
     {#snippet link(id: string, href: string, label: string, count?: number)}
       <a {href} data-tab={id} aria-current={space === id ? "page" : undefined}>{label}{#if count}<span class="count"> {count}</span>{/if}</a>

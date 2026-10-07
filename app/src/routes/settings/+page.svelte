@@ -1,6 +1,18 @@
 <script lang="ts">
   import { store } from "$lib/data.svelte.ts";
   import { MODES, THEMES, settings } from "$lib/settings.svelte.ts";
+  import { projectMode } from "$lib/shell.svelte.ts";
+  import { teacher } from "$lib/teacher.svelte.ts";
+
+  // The project's mode (T75): not this browser's, but the project's own, in rdstudio.toml.
+  const projectIs = $derived(projectMode());
+  let modeBusy = $state(false), modeError = $state("");
+  async function setProjectMode(to: "Learning" | "Project") {
+    if (to === projectIs || modeBusy) return;
+    modeBusy = true; modeError = "";
+    try { await teacher.setMode(to); } catch (err) { modeError = (err as Error).message; }
+    modeBusy = false;
+  }
 
   let graphReset = $state(false);
 
@@ -15,6 +27,18 @@
 <div class="page">
   <h1>Settings</h1>
   <p class="lede">Saved in this browser only. Other devices and the exported site keep their own settings.</p>
+
+  {#if projectIs}
+    <h2 class="section-h">This project's mode</h2>
+    <div class="toggles" role="radiogroup" aria-label="This project's mode">
+      <button class="toggle" type="button" role="radio" aria-checked={projectIs === "Learning"} disabled={modeBusy} onclick={() => setProjectMode("Learning")}>Learning</button>
+      <button class="toggle" type="button" role="radio" aria-checked={projectIs === "Project"} disabled={modeBusy} onclick={() => setProjectMode("Project")}>Project</button>
+    </div>
+    <p class="section-note">Learning: study leads (Practice, streaks, the Understanding lens). Project: upkeep leads (the Project space, the week's counters, the Activity lens).
+      Unlike the settings below, this is the project's, not this browser's: it is saved in <code>rdstudio.toml</code> as the teacher's profile
+      ({teacher.state?.profile}{teacher.state && !teacher.state.profileSet ? ", guessed until it is set" : ""}), for everyone who opens the project.</p>
+    {#if modeError}<p class="section-note bad">{modeError}</p>{/if}
+  {/if}
 
   <h2 class="section-h">Theme</h2>
   <div class="toggles" role="radiogroup" aria-label="Theme">

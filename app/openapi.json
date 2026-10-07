@@ -122,6 +122,15 @@
             "type": "boolean",
             "description": "False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile."
           },
+          "guessed": {
+            "type": "string",
+            "enum": [
+              "topic",
+              "codebase",
+              "project"
+            ],
+            "description": "What the profile would be if it were not set: a codebase where the repository holds code, else a topic."
+          },
           "dir": {
             "type": [
               "string",
@@ -162,6 +171,7 @@
           "enabled",
           "profile",
           "profileSet",
+          "guessed",
           "dir",
           "skills",
           "history"
@@ -195,6 +205,22 @@
           "description",
           "status",
           "defaultChanged"
+        ]
+      },
+      "ProfileSet": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "topic",
+              "codebase",
+              "project"
+            ]
+          }
+        },
+        "required": [
+          "profile"
         ]
       },
       "Skill": {
@@ -1309,6 +1335,63 @@
           },
           "403": {
             "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/profile": {
+      "put": {
+        "summary": "Set the project's profile, and so its mode: topic is Learning; codebase and project are Project. Written to rdstudio.toml ([teacher] profile), so it is the project's, for everyone who opens it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
             "content": {
               "application/json": {
                 "schema": {

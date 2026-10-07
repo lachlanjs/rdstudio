@@ -152,3 +152,24 @@ test("moving and deleting through the API: protected, checked, rebuilt", async (
   expect(del.json).toEqual({ deleted: "c/b/n", backlinks: ["a/m"] });
   expect((await call("DELETE", `/api/folders/${encodeURIComponent("a")}`, good)).status).toBe(400); // not empty
 });
+
+test("the mode is switched by setting the profile, which is written to rdstudio.toml", async () => {
+  const toml = () => readFileSync(join(tmp, "project", "rdstudio.toml"), "utf8");
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const first = (await call("GET", "/api/teacher")).json;
+  expect(first).toMatchObject({ profile: "topic", profileSet: false, guessed: "topic" }); // no code here, nothing set
+  // Refused without the token, and for something that is not a profile.
+  expect((await call("PUT", "/api/teacher/profile", { ...good, "X-Rdstudio-Token": "wrong" }, { profile: "project" })).status).toBe(403);
+  const put = (profile: string) => call("PUT", "/api/teacher/profile", good, { profile });
+  expect((await put("holiday")).status).toBe(400);
+  const before = writes;
+  const set = await put("project");
+  expect(set.status).toBe(200);
+  expect(set.json).toMatchObject({ profile: "project", profileSet: true });
+  expect(toml()).toContain('[teacher]\nprofile = "project"');
+  expect(writes).toBe(before + 1);
+  expect((await put("topic")).json).toMatchObject({ profile: "topic", profileSet: true });
+  expect(toml()).toContain('profile = "topic"');
+  expect(toml()).toContain("title = 'T'"); // the rest of the file is kept
+});

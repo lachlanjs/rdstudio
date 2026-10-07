@@ -1133,7 +1133,9 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .bar { gap: 0; }
 .bar .brand { margin-right: 18px; }
 .project-name { font: 13px/1 var(--font-ui); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
-.mode-tag { font: 12px/1 var(--font-ui); color: var(--text-soft); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); padding: 3px 6px; margin-left: 8px; white-space: nowrap; }
+.mode-tag { font: 12px/1 var(--font-ui); color: var(--text-soft); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); padding: 3px 6px; margin-left: 8px; white-space: nowrap; background: none; cursor: pointer; }
+.mode-tag:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
+.mode-tag:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .bar .tabs { margin-left: 28px; }
 .bar .tabs a { font: 13px/1 var(--font-ui); padding: 0 14px; }
 .bar-end { margin-left: auto; display: flex; align-items: center; gap: 18px; height: 100%; }

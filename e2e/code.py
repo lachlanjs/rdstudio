@@ -119,6 +119,20 @@ with sync_playwright() as pw:
     subprocess.run(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "__index-code"], check=True, stdout=subprocess.DEVNULL, env=ENV)
     check("indexing the code takes under two seconds (a child process, parsers and all)", time.time() - t0 < 2, round(time.time() - t0, 2))
 
+    # The mode is switched from the tag beside the project's name (T75), and is the project's: rdstudio.toml.
+    p.goto(URL + "?nosw#/")
+    tag = p.locator(".mode-tag")
+    expect(tag).to_have_text("Project")
+    tag.click()
+    expect(tag).to_have_text("Learning")
+    toml = (ROOT / "rdstudio.toml").read_text()
+    check("the mode tag switches the project to Learning: Practice takes the Project space's place, and rdstudio.toml says topic",
+          p.locator('nav.tabs a[data-tab="practice"]').count() == 1 and p.locator('nav.tabs a[data-tab="project"]').count() == 0 and 'profile = "topic"' in toml, toml)
+    p.goto(URL + "?nosw#/settings")
+    p.get_by_role("radiogroup", name="This project's mode").get_by_role("radio", name="Project").click()
+    expect(tag).to_have_text("Project")
+    check("…and Settings switches it back: the profile is a codebase again", 'profile = "codebase"' in (ROOT / "rdstudio.toml").read_text() and p.locator('nav.tabs a[data-tab="project"]').count() == 1)
+
     check("no errors in the browser console", not errors, errors[:5])
     browser.close()
 

@@ -52,3 +52,8 @@ learning the project.
   layer on top of a project" that Project mode already claims.
 - Try it: the half-way student on the differential geometry bundle, opened
   once as the student and once as the author.
+- Since [T75](/tasks/T75-mode-switch.md) the project's mode can be switched
+  from the app (the tag in the bar, or Settings). It is still the project's:
+  the switch writes `rdstudio.toml`. That makes trying both modes on one
+  project cheap, which may be enough, or may show that it needs to be the
+  viewer's.

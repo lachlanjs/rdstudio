@@ -146,6 +146,7 @@ const TeacherState = z.object({
   enabled: z.boolean().openapi({ description: "Whether the teacher folder can be written (the learner record is on)." }),
   profile: z.enum(["topic", "codebase", "project"]),
   profileSet: z.boolean().openapi({ description: "False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile." }),
+  guessed: z.enum(["topic", "codebase", "project"]).openapi({ description: "What the profile would be if it were not set: a codebase where the repository holds code, else a topic." }),
   dir: z.string().nullable(),
   skills: z.array(SkillInfo),
   history: z.array(z.object({ at: z.string(), message: z.string(), commit: z.string() })).openapi({ description: "The teacher folder's commits, newest first." }),
@@ -331,6 +332,14 @@ const getNote = createRoute({
     404: { description: "No such note", content: { "application/json": { schema: ErrorBody } } },
   },
 });
+const putProfile = createRoute({
+  method: "put", path: "/api/teacher/profile",
+  summary: "Set the project's profile, and so its mode: topic is Learning; codebase and project are Project. Written to rdstudio.toml ([teacher] profile), so it is the project's, for everyone who opens it.",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ profile: z.enum(["topic", "codebase", "project"]) }).openapi("ProfileSet") } }, required: true } },
+  responses: { 200: { description: "Set", content: { "application/json": { schema: TeacherState } } },
+    400: { description: "Not a profile", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } } },
+});
 const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
   summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
@@ -506,11 +515,22 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   app.openapi(putTour, ((c: Context) => tourChange(c, (b) => learner.saveTour(cfg, c.req.param("name") ?? "", b))) as never);
   app.openapi(deleteTourRoute, ((c: Context) => tourChange(c, () => learner.deleteTour(cfg, c.req.param("name") ?? ""), false)) as never);
 
-  app.openapi(getTeacher, ((c: Context) => {
-    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+  const teacherState = () => {
     const on = learner.enabled(cfg), p = teacher.profile(cfg);
-    return json(c, 200, { enabled: on, profile: p.profile, profileSet: p.set, dir: on ? teacher.teacherDir(cfg) : null,
-      skills: teacher.skills(cfg), history: on ? teacher.history(cfg) : [] });
+    return { enabled: on, profile: p.profile, profileSet: p.set, guessed: teacher.guessProfile(cfg), dir: on ? teacher.teacherDir(cfg) : null,
+      skills: teacher.skills(cfg), history: on ? teacher.history(cfg) : [] };
+  };
+  app.openapi(getTeacher, ((c: Context) => (hostOk(c) ? json(c, 200, teacherState()) : json(c, 403, { error: "host not allowed" }))) as never);
+  // The mode, switched from the app (the tag beside the project's name, or Settings): the profile in rdstudio.toml.
+  app.openapi(putProfile, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: { profile?: unknown };
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    try { teacher.setProfile(cfg, String(body.profile ?? "")); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    onWrite?.(); // whether the code is indexed follows the profile
+    return json(c, 200, teacherState(), true);
   }) as never);
   app.openapi(getSkill, ((c: Context) => {
     if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });

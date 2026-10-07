@@ -6,10 +6,11 @@
 import {
   deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect,
   deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
-  postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherSkillsByName,
+  postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherProfile, putApiTeacherSkillsByName,
 } from "./api/sdk.gen.ts";
 import type { AiState, Draft, DraftSummary, Skill, TeacherFile, TeacherState } from "./api/types.gen.ts";
 import { learner, store } from "./data.svelte.ts";
+import { editing } from "./edit.svelte.ts";
 import { RESULT_LABEL } from "./explain.ts";
 
 export const PROFILE_LABEL: Record<TeacherState["profile"], string> = {
@@ -63,6 +64,18 @@ class Teacher {
     if (!data) throw fail(error, "Not saved");
     void this.load();
     return data;
+  }
+
+  /** Switch the project's mode (T75): Learning is the topic profile; Project is codebase where the repository
+   *  holds code, else project. Written to rdstudio.toml, so it is the project's, for everyone who opens it. */
+  async setMode(mode: "Learning" | "Project"): Promise<void> {
+    const now = this.state;
+    const profile = mode === "Learning" ? "topic" : now && now.profile !== "topic" ? now.profile : now?.guessed === "codebase" ? "codebase" : "project";
+    await editing.known; // the token to write with comes with the editing state: the learner record may be off
+    const { data, error } = await putApiTeacherProfile({ body: { profile }, headers: { "x-rdstudio-token": editing.token ?? learner.writeHeaders()["x-rdstudio-token"] } });
+    if (!data) throw fail(error, "The mode was not changed");
+    this.state = data;
+    void store.refresh(); // whether the code is mapped follows the mode
   }
 
   /** Back to rdstudio's default; null when it was a skill of your own (now gone). */

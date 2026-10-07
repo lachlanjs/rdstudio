@@ -58,6 +58,10 @@ export type TeacherState = {
      * False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile.
      */
     profileSet: boolean;
+    /**
+     * What the profile would be if it were not set: a codebase where the repository holds code, else a topic.
+     */
+    guessed: 'topic' | 'codebase' | 'project';
     dir: string | null;
     skills: Array<SkillInfo>;
     /**
@@ -81,6 +85,10 @@ export type SkillInfo = {
      * Customised, and rdstudio's default has changed since.
      */
     defaultChanged: boolean;
+};
+
+export type ProfileSet = {
+    profile: 'topic' | 'codebase' | 'project';
 };
 
 export type Skill = SkillInfo & {
@@ -578,6 +586,38 @@ export type GetApiTeacherResponses = {
 };
 
 export type GetApiTeacherResponse = GetApiTeacherResponses[keyof GetApiTeacherResponses];
+
+export type PutApiTeacherProfileData = {
+    body: ProfileSet;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/profile';
+};
+
+export type PutApiTeacherProfileErrors = {
+    /**
+     * Not a profile
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+};
+
+export type PutApiTeacherProfileError = PutApiTeacherProfileErrors[keyof PutApiTeacherProfileErrors];
+
+export type PutApiTeacherProfileResponses = {
+    /**
+     * Set
+     */
+    200: TeacherState;
+};
+
+export type PutApiTeacherProfileResponse = PutApiTeacherProfileResponses[keyof PutApiTeacherProfileResponses];
 
 export type DeleteApiTeacherSkillsByNameData = {
     body?: never;
