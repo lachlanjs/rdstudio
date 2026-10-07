@@ -63,6 +63,21 @@ export function linkRefs(body: string): [string, Rating | null][] {
   return refs;
 }
 
+/** Every link and image in a body, in order: where it points, its title, and whether it is an image
+ *  (`![…](…)`, which for an artifact or a picture means "shown here", an embed). */
+export function citeRefs(body: string): { href: string; title: string | null; embed: boolean }[] {
+  const { tokens } = parse(body);
+  const out: { href: string; title: string | null; embed: boolean }[] = [];
+  for (const t of tokens) {
+    if (t.type !== "inline" || !t.children) continue;
+    for (const c of t.children) {
+      if (c.type === "link_open") out.push({ href: c.attrGet("href") ?? "", title: c.attrGet("title"), embed: false });
+      else if (c.type === "image") out.push({ href: c.attrGet("src") ?? "", title: c.attrGet("title"), embed: true });
+    }
+  }
+  return out;
+}
+
 // Python's re \w (letters, numbers, underscore) and \s.
 const NOT_SLUG = /[^\p{L}\p{N}_\s-]/gu;
 const SPACES = /[\s_]+/gu;

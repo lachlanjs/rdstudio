@@ -23,9 +23,9 @@ def test_init_is_idempotent_and_merges(tmp_path):
     assert not [i for i in b.lint() if i.level == "error"]
     assert "{title}" not in (cfg.knowledge_dir / "overview.md").read_text()
 
-    for skill in ("search-okf", "record-okf", "report", "decision", "question", "task", "handoff", "lint-okf"):
+    for skill in ("search-okf", "record-okf", "artifact", "decision", "question", "task", "handoff", "lint-okf"):
         assert (root / ".claude/skills" / skill / "SKILL.md").is_file()
-    assert (root / ".claude/skills/report/template.html").is_file()
+    assert (root / ".claude/skills/artifact/template.html").is_file()
     assert {p.stem for p in (root / ".claude/agents").glob("*.md")} == {"librarian", "critic", "searcher"}
 
     mcp = json.loads((root / ".mcp.json").read_text())

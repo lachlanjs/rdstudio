@@ -3,7 +3,7 @@ type: Design
 title: Conventions
 description: How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 tags: [conventions, okf]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T23:50:31Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T01:07:43Z}
 ---
 
 The [OKF spec](/references/okf-spec.md) is ground truth
@@ -50,16 +50,25 @@ Unknown types are always tolerated.
 
 # Reports
 
-HTML files in `reports/`, outside the bundle
-([decision](/decisions/reports-html.md)). Metadata in the document head:
+Reports are now **artifacts**
+([decision](/decisions/artifacts.md), [design](/design/artifacts.md)): HTML
+files in the knowledge folders, beside the notes. Metadata in the document
+head:
 
 ```html
-<meta name="rdstudio:type" content="Report">
-<meta name="rdstudio:date" content="2026-09-23">
+<title>A standing wave</title>
+<meta name="description" content="One sentence.">
+<meta name="rdstudio:date" content="2026-10-07">
 <meta name="rdstudio:author" content="claude-code/claude-opus-5-5">
 ```
 
-Links into knowledge use `/knowledge/<path>.md`; they become one-way graph edges.
+Optional: `rdstudio:aspect` (a fixed shape when shown in a note, `16/9`) and
+`rdstudio:network` (`required`: it cannot work offline).
+
+A note cites one as a link, `[title](figure.html)`, or shows it in place,
+`![caption](figure.html)`. A picture is the same: `![alt](pic.png)`, at 80%
+of the text's width in the centre, or `![alt](pic.png "left")`. A file whose
+name starts with `_` is a draft and is not listed.
 
 # Procedures
 

@@ -9,13 +9,12 @@ import type { IssueCode, Trust } from "./bundle.ts";
 export interface SiteInfo {
   title: string;
   knowledge: string;
-  reports: string;
   human: string;
   okf_version: string | null;
   static: boolean; // an exported snapshot: no polling, no learner record
   map: Record<string, unknown>; // [map] in rdstudio.toml
   issues: { path: string; level: "error" | "warning"; code: IssueCode; message: string }[];
-  counts: { concepts: number; reports: number; skills: number; agents: number; code?: number };
+  counts: { concepts: number; artifacts: number; skills: number; agents: number; code?: number };
 }
 
 /** One entry of data/concepts.json. */
@@ -37,6 +36,8 @@ export interface ConceptRecord {
   meta: Record<string, unknown>;
   directory: string;
   links: { target: string; kind: "concept" | "directory"; broken: boolean; rel: Rating | null }[];
+  /** Artifacts and pictures the note links to or shows (T76). */
+  cites: { target: string; kind: "artifact" | "image"; embed: boolean; broken: boolean; rel: Rating | null; align: "left" | "center" | null }[];
   backlinks: string[];
   headings: { level: number; text: string; slug: string }[];
   generated_at: string | null;
@@ -108,15 +109,20 @@ export interface Changes {
   commits: Commit[];
 }
 
-/** One entry of data/reports.json. */
-export interface ReportRecord {
-  path: string;
+/** One entry of data/artifacts.json: an HTML document in the knowledge folders (T76). */
+export interface ArtifactRecord {
+  path: string; // in the bundle, with its extension: "design/figure.html"
+  directory: string;
   title: string;
+  titled: boolean; // false when the title is only its file's name
   date: string;
   author: string;
   description: string;
-  activity: string;
-  links: string[];
+  network: boolean; // says it needs the network: not shown in a note until asked for
+  aspect: string | null; // a fixed shape when embedded, "16/9"; else as tall as its content
+  bytes: number;
+  outside: string[]; // addresses elsewhere it would load, which the policy blocks
+  citedBy: { note: string; embed: boolean; rel: Rating | null }[];
 }
 
 export interface SkillRecord {

@@ -19,7 +19,7 @@ are also slash commands.
 - **Record as you go.** Decisions (`decision`), questions (`question`),
   findings and procedures (`record-okf`), tasks (`task`). Write through the
   rdstudio MCP tools so provenance is stamped. Do not edit `index.md` files.
-- **Report substantial work** as HTML in `{reports}/` (the `report` skill).
+- **Write up substantial work** as an artifact, an HTML page beside the notes (the `artifact` skill), and cite it from a note.
 - **Close sessions** with the `handoff` skill.
 - **Learning:** when the developer asks to learn, be taught, tested or
   assessed, or what to study next, use the `teach` skill; it reads how to

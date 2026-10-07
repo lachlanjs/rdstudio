@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { artifactHref } from "$lib/artifactFrame.ts";
   import type { ChangedFile, Commit } from "@rdstudio/core";
   import { SvelteSet } from "svelte/reactivity";
   import Time from "$lib/components/Time.svelte";
   import { store } from "$lib/data.svelte.ts";
   import { conceptHref } from "$lib/format.ts";
 
-  const CATEGORY_LABEL: Record<string, string> = { knowledge: "Knowledge", code: "Code", reports: "Reports", agent: "Agent setup", other: "Other" };
+  const CATEGORY_LABEL: Record<string, string> = { knowledge: "Knowledge", code: "Code", reports: "Reports (old)", agent: "Agent setup", other: "Other" };
   const STATUS_MARK: Record<string, string> = { added: "+", deleted: "−", modified: "~", renamed: "→", copied: "+" };
 
   function saved(): string[] {
@@ -37,8 +38,7 @@
       const id = f.path.slice(k.length, -3);
       if (store.concepts.has(id)) return conceptHref(id);
     }
-    const r = store.site.reports + "/";
-    if (f.status !== "deleted" && f.path.startsWith(r) && f.path.endsWith(".html")) return "#/r/" + f.path.slice(r.length);
+    if (f.status !== "deleted" && f.path.startsWith(k) && /\.html?$/i.test(f.path) && store.artifacts.some((a) => a.path === f.path.slice(k.length))) return artifactHref(f.path.slice(k.length));
     return null;
   }
 </script>

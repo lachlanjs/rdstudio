@@ -27,6 +27,7 @@ import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
+import { SANDBOX } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
@@ -757,6 +758,9 @@ function staticFile(c: Context, site: string): Response {
     if (!Number.isNaN(t) && mtime <= t / 1000) return c.body(null, 304, headers);
   }
   headers["Content-Type"] = TYPES[extname(file).toLowerCase()] ?? "application/octet-stream";
+  // An artifact (T76) runs apart from the app, whether framed or opened on its own: no access to the
+  // app's page, its storage or the write token.
+  if (/^\/a\//.test(url.pathname)) { headers["Content-Security-Policy"] = SANDBOX; headers["X-Content-Type-Options"] = "nosniff"; }
   headers["Last-Modified"] = httpDate(mtime);
   let body: Buffer;
   if (gzip) {

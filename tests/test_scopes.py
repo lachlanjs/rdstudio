@@ -54,7 +54,7 @@ def test_promote(two_bases):
 
 def test_skill_scopes(two_bases):
     dirs = scopes.skill_dirs(two_bases)
-    assert "report" in dirs["project"] and dirs["user"] == {}
+    assert "artifact" in dirs["project"] and dirs["user"] == {}
     scopes.move_skill(two_bases, "ingest-ref", "user")
     assert "ingest-ref" in scopes.skill_dirs(two_bases)["user"]
     with pytest.raises(scopes.ScopeError):

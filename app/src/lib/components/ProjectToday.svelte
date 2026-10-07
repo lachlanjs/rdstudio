@@ -1,7 +1,7 @@
 <script lang="ts">
   // Today in project mode (T59, sketch ProjectToday): counters for the week in
   // place of streaks, then what needs you, then where you left off. The margin
-  // holds what changed, the teacher's next step, agents' reports, and Get up
+  // holds what changed, the teacher's next step, artifacts, and Get up
   // to speed: the learning layer on top of a project. There are no checks to
   // count (rdstudio sees git, not CI), so the fourth counter is notes changed.
   import { onMount } from "svelte";
@@ -32,9 +32,9 @@
   const days = $derived(Array.from({ length: 7 }, (_, i) => today - (6 - i) * DAY).map((d) => commits.some((c) => at(c.date) >= d && at(c.date) < d + DAY)));
   const knowledge = $derived(store.site.knowledge + "/");
   const notesChanged = $derived(new Set(thisWeek.flatMap((c) => c.files.filter((f) => f.path.startsWith(knowledge) && f.path.endsWith(".md")).map((f) => f.path))).size);
-  const reportsThisWeek = $derived(store.reports.filter((r) => at(r.date) >= weekStart));
-  const recentReports = $derived([...store.reports].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4));
-  const reportHref = (path: string) => "#/r/" + path.split("/").map(encodeURIComponent).join("/");
+  const reportsThisWeek = $derived(store.artifacts.filter((r) => at(r.date) >= weekStart));
+  const recentReports = $derived([...store.artifacts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 4));
+  const reportHref = (path: string) => "#/a/" + path.split("/").map(encodeURIComponent).join("/");
 
   // What needs you: the review queue, most pressing first. Red only where
   // something is wrong (errors, broken links); the rest are plain tags.
@@ -100,10 +100,10 @@
           <div class="s-state"><i class={["box", notesChanged && "on"]} aria-hidden="true"></i>in the knowledge base</div>
           <div class="s-best"></div>
         </a>
-        <a class="s-tile" href="#/reports">
-          <div class="s-label">Agent reports</div>
+        <a class="s-tile" href="#/artifacts">
+          <div class="s-label">Artifacts</div>
           <div class="s-num"><b>{reportsThisWeek.length}</b><span>this week</span></div>
-          <div class="s-state"><i class={["box", reportsThisWeek.length && "on"]} aria-hidden="true"></i>{store.reports.length} in all</div>
+          <div class="s-state"><i class={["box", reportsThisWeek.length && "on"]} aria-hidden="true"></i>{store.artifacts.length} in all</div>
           <div class="s-best"></div>
         </a>
       </div>
@@ -166,10 +166,10 @@
       </aside>
     {/if}
     <div class="mblock">
-      <div class="kind-row"><span class="kind">Agents</span><span class="caption">{store.reports.length} {plural(store.reports.length, "report")}</span></div>
+      <div class="kind-row"><span class="kind">Artifacts</span><span class="caption">{store.artifacts.length} {plural(store.artifacts.length, "artifact")}</span></div>
       {#if recentReports.length}
         <ul>{#each recentReports as r (r.path)}<li><a href={reportHref(r.path)}>{r.title}</a><span class="caption">{new Date(r.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span></li>{/each}</ul>
-      {:else}<p class="caption mblock-empty">No reports yet. Agents write them under {store.site.reports}/.</p>{/if}
+      {:else}<p class="caption mblock-empty">No artifacts yet. They are .html files beside the notes in {store.site.knowledge}/.</p>{/if}
     </div>
     {#if due.due.length}
       <div class="mblock">

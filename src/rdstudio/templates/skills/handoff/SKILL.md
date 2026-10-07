@@ -12,7 +12,7 @@ description: Close out a working session so the next session (human or agent) ca
 4. **Findings and procedures**: record anything learned the hard way with
    the `record-okf` skill. If a repeated process emerged, record or update a
    `type: Procedure` concept.
-5. **Report**: if substantial work was done, write one with the `report` skill.
+5. **Write-up**: if substantial work was done, write an artifact with the `artifact` skill.
 6. Summarise to the developer in chat: what was recorded (concept ids), what is
    waiting for their review (the rdstudio `review_queue` tool), and the suggested
    next step.

@@ -161,7 +161,9 @@ md.renderer.rules.link_open = (tokens, idx, options, env: Env, self) => {
       token.attrSet("href", dirHref(r.id));
       if (!r.exists) token.attrJoin("class", "broken");
     } else if (r?.kind === "file") {
-      token.attrSet("href", `data/k/${r.path}`);
+      // An artifact (T76) opens as its own page in the app; any other file is served as it is.
+      if (/\.html?$/i.test(r.path)) { token.attrSet("href", "#/a/" + r.path.split("/").map(encodeURIComponent).join("/")); token.attrJoin("class", "artifact-link"); token.attrSet("title", "An artifact: an interactive page"); }
+      else token.attrSet("href", `data/k/${r.path}`);
     }
   }
   return defaultLinkOpen(tokens, idx, options, env, self);
@@ -172,11 +174,20 @@ md.renderer.rules.image = (tokens, idx, options, env: Env, self) => {
   const token = tokens[idx]!;
   const src = token.attrGet("src") ?? "";
   if (!/^[a-z][a-z0-9+.-]*:/i.test(src) && !src.startsWith("data:")) {
-    const path = src.startsWith("/") ? joinPath("", src.slice(1)) : joinPath(env?.dir ?? "", src);
+    const path = src.startsWith("/") ? joinPath("", src.slice(1)) : joinPath(env?.dir ?? "", src.split("#")[0]!.split("?")[0]!);
+    // An artifact shown in the note (T76): a place for its frame, mounted once the HTML is in the page.
+    if (path !== null && /\.html?$/i.test(path)) {
+      return `<span class="artifact-embed" data-artifact="${md.utils.escapeHtml(path)}" data-caption="${md.utils.escapeHtml(token.content)}"></span>`;
+    }
     if (path !== null) token.attrSet("src", `data/k/${path}`);
   }
   token.attrSet("loading", "lazy");
-  return defaultImage(tokens, idx, options, env, self);
+  // A picture is 80% of the text's width, in the centre, or at the left when its title says so:
+  // ![a sphere](sphere.png "left"). The title is the place, not a tooltip.
+  const place = (token.attrGet("title") ?? "").trim().toLowerCase();
+  const side = place === "left" ? "left" : "center";
+  if (place === "left" || place === "center" || place === "centre") token.attrs = (token.attrs ?? []).filter(([k]) => k !== "title");
+  return `<span class="pic ${side}">${defaultImage(tokens, idx, options, env, self)}</span>`;
 };
 
 // Notes may contain HTML (and come from agents and other people), so the

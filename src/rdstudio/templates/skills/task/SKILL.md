@@ -44,8 +44,8 @@ Not started.
 3. Implement. Record decisions and findings as they arise (the `decision` skill,
    the `record-okf` skill).
 4. Write `# Outcome`: what changed, deviations from the plan and why, follow-ups,
-   and anything the developer should test. Link the report if you wrote one.
+   and anything the developer should test. Link the artifact if you wrote one.
    Set the tag to `done`.
-5. Write a report with the `report` skill for substantial tasks.
+5. Write it up as an artifact with the `artifact` skill for substantial tasks, beside the task, and link it from Outcome.
 
 Never edit the `# Prompt` section.

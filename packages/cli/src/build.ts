@@ -9,13 +9,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   Bundle, cmp, contentHash, headings, iso, splitFrontmatter, text,
-  type Changes, type Concept, type ConceptRecord, type FolderRecord, type ReportRecord, type SiteInfo, type Skills,
+  type Changes, type Concept, type ConceptRecord, type FolderRecord, type SiteInfo, type Skills,
 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { categoryGlobs, type Config } from "./config.ts";
 import { assetDir, pruneOwned, syncTree, walkFiles, writeIfChanged } from "./files.ts";
 import { history } from "./gitlog.ts";
-import { scan } from "./reports.ts";
+import { isArtifact, prepared, scan } from "./artifacts.ts";
 
 /** The built dashboard: beside a bundled release, or where the Svelte app builds
  *  it when running from source (npm run build --workspace @rdstudio/app). */
@@ -68,6 +68,7 @@ export function conceptRecord(b: Bundle, cid: string): ConceptRecord {
     meta: json(c.meta) as Record<string, unknown>,
     directory: c.directory,
     links: c.links.map((l) => ({ target: l.target, kind: l.kind, broken: l.broken, rel: l.rel })),
+    cites: c.cites.map((x) => ({ ...x })),
     backlinks: b.backlinks(cid),
     headings: headings(c.body).map((h) => ({ level: h.level, text: h.text, slug: h.slug })),
     generated_at: generated === null ? null : iso(generated),
@@ -148,7 +149,7 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
   const concepts = [...b.concepts.keys()].sort(cmp).map((cid) => conceptRecord(b, cid));
   const changes = history(cfg.root, categoryGlobs(cfg), 200, [cfg.output.replace(/^\/+|\/+$/g, "") + "/"]) as unknown as Changes;
   if (opts.export) changes.commits = changes.commits.filter((c) => !c.pending);
-  const reports = scan(cfg.reportsDir, cfg.knowledge, cfg.reports) as unknown as ReportRecord[];
+  const artifacts = scan(cfg.knowledgeDir, b);
   const skills = skillFiles(cfg.root, !opts.export);
   const issues = b.lint().map((i) => ({ path: i.path, level: i.level, code: i.code, message: i.message }));
 
@@ -156,7 +157,7 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     "concepts.json": dump(concepts),
     "tree.json": dump(treeRecord(b)),
     "changes.json": dump(changes),
-    "reports.json": dump(reports),
+    "artifacts.json": dump(artifacts),
     "skills.json": dump(skills),
   };
   // The code map (T66), when the project's code is mapped.
@@ -166,13 +167,12 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
   const info: SiteInfo = {
     title: cfg.title,
     knowledge: cfg.knowledge,
-    reports: cfg.reports,
     human: cfg.human,
     okf_version: (b.rootMeta.okf_version as string | undefined) ?? null,
     static: Boolean(opts.export),
     map: (cfg.raw.map as Record<string, unknown> | undefined) ?? {}, // project defaults for the Map tab ([map] in rdstudio.toml)
     issues,
-    counts: { concepts: concepts.length, reports: reports.length, skills: skills.skills.length, agents: skills.agents.length, ...(code ? { code: code.items.length } : {}) },
+    counts: { concepts: concepts.length, artifacts: artifacts.length, skills: skills.skills.length, agents: skills.agents.length, ...(code ? { code: code.items.length } : {}) },
   };
   payload["site.json"] = dump(info);
 
@@ -186,6 +186,7 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
   // Non-Markdown bundle files (images, data) are served beside the bodies.
   for (const rel of walkFiles(cfg.knowledgeDir)) {
     if (rel.endsWith(".md") || rel.split("/").some((p) => p.startsWith("."))) continue;
+    if (isArtifact(rel)) continue; // an artifact is served from a/, prepared (below), never as it is written
     const from = join(cfg.knowledgeDir, rel), to = join(data, "k", rel);
     if (!existsSync(to) || statSync(to).mtimeMs < statSync(from).mtimeMs) {
       mkdirSync(dirname(to), { recursive: true });
@@ -198,8 +199,15 @@ export function build(cfg: Config, opts: BuildOptions = {}): string {
     if (rel.endsWith(".md") && !bodies.has(`k/${rel}`)) unlinkSync(join(data, "k", rel));
   }
 
-  // Reports are served beside the app so relative media keeps working.
-  if (existsSync(cfg.reportsDir)) syncTree(cfg.reportsDir, join(site, "reports"));
+  // Artifacts (T76) are served from a/, each with the policy that keeps it offline and the bridge to the page
+  // that frames it (artifacts.ts). Ones that are gone are taken away.
+  const served = new Set<string>();
+  for (const a of artifacts) {
+    served.add(a.path);
+    writeIfChanged(join(site, "a", a.path), prepared(readFileSync(join(cfg.knowledgeDir, a.path), "utf8"), a.path, a.network));
+  }
+  if (existsSync(join(site, "a"))) for (const rel of walkFiles(join(site, "a"))) if (!served.has(rel)) unlinkSync(join(site, "a", rel));
+  for (const rel of walkFiles(join(data, "k"))) if (isArtifact(rel)) unlinkSync(join(data, "k", rel)); // from before artifacts
 
   for (const [name, content] of Object.entries(payload)) writeIfChanged(join(data, name), content);
   // Installable as an app (add to home screen), opening full screen.
