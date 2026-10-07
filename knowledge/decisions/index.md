@@ -2,6 +2,7 @@
 
 * [Adopt procedural graphs, without automatic self-evolution](procedural-graphs.md) - Procedures carry a small typed graph; MCP returns the 2-hop neighbourhood; edits are human-approved.
 * [Artifacts replace reports: HTML in the knowledge folders, cited from notes, never citing back](artifacts.md) - Reports are renamed artifacts and move into the knowledge folders; notes link to or embed them, and whatever an artifact links to is not read by the rest of the app. Revises the decision that reports are HTML outside the bundle.
+* [Axis in the editor looks things up for itself, with tools, and is handed nothing in advance](assist-looks-things-up.md) - The editor's agent gets the note and read-only tools over the knowledge base and the code, the same search, outline and section reads the MCP server gives; nothing is gathered for it beforehand.
 * [Dashboard is a static site built from JSON](static-build.md) - A Python build step emits JSON; the browser app is static and can be served by any file server.
 * [Distribute as a uv tool, not a template repo](uv-tool-distribution.md) - rdstudio ships as a Python package installed with uv; project content lives at the repo root.
 * [OKF v0.2 is ground truth](okf-ground-truth.md) - The knowledge format conforms to the OKF spec; conventions only choose among what OKF allows.

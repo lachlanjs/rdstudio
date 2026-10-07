@@ -87,3 +87,4 @@
 * [T81 — Axis in the editor is told how notes work here](T81-assist-knows-the-format.md) - The editor's agent is given the forms the app reads in a note (link ratings as titles, embeds, pictures, checklists) and what the Atlas makes of them; a long passage is sent whole and can come back whole.
 * [T82 — Rate several selected links at once](T82-rate-many-links.md) - With two or more links selected in the editor, the link control counts them and one choice, or Alt+1, 2, 3 or 0, rates them all; no model is needed for it.
 * [T83 — Model tiers for Axis in the editor](T83-model-tiers.md) - Three tiers of model (low, mid, max) set on the Axis page, and a choice of tier on the editor's bar for each request.
+* [T84 — Axis in the editor looks things up with tools](T84-assist-lookup.md) - The editor's agent is given read-only tools over the knowledge base and the code and calls them in rounds; what it looked up is kept as steps and shown.

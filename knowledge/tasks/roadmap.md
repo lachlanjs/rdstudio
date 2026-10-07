@@ -153,6 +153,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T81 Axis in the editor is told how notes work here](/tasks/T81-assist-knows-the-format.md)
 - [x] [T82 Rate several selected links at once](/tasks/T82-rate-many-links.md)
 - [x] [T83 Model tiers for Axis in the editor](/tasks/T83-model-tiers.md)
+- [x] [T84 Axis in the editor looks things up with tools](/tasks/T84-assist-lookup.md)
 
 # Future
 

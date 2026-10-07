@@ -6,7 +6,7 @@
   import type { EditorView } from "@codemirror/view";
   import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
-  import { askAssist, streamingFill, type Mode, type Reply, type Tier } from "$lib/assist.ts";
+  import { askAssist, streamingFill, type Mode, type Reply, type Step, type Tier } from "$lib/assist.ts";
   import { mountArtifact } from "$lib/artifactFrame.ts";
   import { slug } from "$lib/edit.svelte.ts";
   import { check as checkFigure, save as saveFigure } from "$lib/figure.ts";
@@ -96,6 +96,7 @@
   let selected = $state(false);
   let busy = $state<Mode | null>(null);
   let streaming = $state("");
+  let looked = $state<Step[]>([]); // what the model has looked up so far, while it works
   let reply = $state<Reply | null>(null);
   let waiting = $state(false); // a suggestion is in the note, neither accepted nor rejected
   let outcome = $state("");
@@ -107,11 +108,11 @@
     if (!view || busy) return;
     if (waiting) rejectSuggestion(view); // one suggestion at a time
     const { from, to } = selectionOf(view);
-    busy = mode; streaming = ""; reply = null; outcome = ""; failed = "";
+    busy = mode; streaming = ""; looked = []; reply = null; outcome = ""; failed = "";
     stop = new AbortController();
     try {
       const r = await askAssist(session.id, { mode, tier: tier || undefined, body: view.state.doc.toString(), from, to, prompt: prompt.trim() || undefined, title: session.fields.title || undefined },
-        (soFar) => { streaming = mode === "fill" ? streamingFill(soFar) : soFar; }, stop.signal);
+        (soFar) => { streaming = mode === "fill" ? streamingFill(soFar) : soFar; }, stop.signal, (s) => { looked = [...looked, s]; });
       reply = r;
       if (mode === "fill" && r.insert !== null) {
         // The note may have been typed in since: the place is where the selection is now if it has not moved, else where it was asked.
@@ -250,6 +251,7 @@
       {#if failed}<p class="edit-message bad">{failed}</p>{/if}
       {#if busy}
         {#if stage}<p class="assist-actions"><span>{stage}</span></p>{/if}
+        {#if looked.length}<ol class="assist-steps" aria-label="What it has looked up">{#each looked as s, k (k)}<li class={[s.failed && "failed"]}>{s.said}</li>{/each}</ol>{/if}
         {#if streaming}<pre class="assist-stream">{streaming}</pre>{/if}
       {:else if reply}
         {#if reply.mode === "figure"}
@@ -277,6 +279,14 @@
               <button class="toggle" type="button" onclick={() => view && rejectSuggestion(view)}>Reject</button>
             </p>
           {:else if outcome}<p class="assist-actions"><span>{outcome}</span></p>{/if}
+        {/if}
+        {#if reply.steps?.length}
+          <details class="assist-looked">
+            <summary>Looked up {reply.steps.length} {reply.steps.length === 1 ? "thing" : "things"}</summary>
+            <ol class="assist-steps">{#each reply.steps as s, k (k)}<li class={[s.failed && "failed"]}>{s.said}{#if s.from}<span> (by a link from {store.concepts.get(s.from)?.title ?? s.from})</span>{/if}</li>{/each}</ol>
+          </details>
+        {:else if !reply.sources.length}
+          <p class="assist-sources">Nothing was looked up: it worked from the note alone.</p>
         {/if}
         {#if reply.sources.length}
           <p class="assist-sources">Drew on:

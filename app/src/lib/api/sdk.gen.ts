@@ -158,7 +158,7 @@ export const postApiTeacherTutorById = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.
+ * Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill). The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply, or error. Nothing is written.
  */
 export const postApiNotesByIdAssist = <ThrowOnError extends boolean = false>(options: Options<PostApiNotesByIdAssistData, ThrowOnError, PostApiNotesByIdAssistResponse>): Promise<ServerSentEventsResult<PostApiNotesByIdAssistResponses>> => (options.client ?? client).sse.post<PostApiNotesByIdAssistResponses, PostApiNotesByIdAssistErrors, ThrowOnError>({
     url: '/api/notes/{id}/assist',

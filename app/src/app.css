@@ -697,6 +697,7 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-bar .toggle { white-space: nowrap; }
 .assist-bar select { height: 32px; max-width: 150px; padding: 0 6px; font: 13.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-bar select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+@media (max-width: 640px) { .assist-bar { flex-wrap: wrap; } .assist-bar input { flex-basis: 100%; } }
 .tiers { display: grid; grid-template-columns: max-content minmax(0, 320px) 1fr; gap: 6px 12px; align-items: center; margin: 8px 0 4px; }
 .tiers label { font-weight: 600; }
 .tiers input { height: 32px; padding: 0 10px; font: 13.5px var(--font-mono); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
@@ -714,6 +715,11 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
 .assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
 .assist-sources code { font-size: 12.5px; }
+.assist-steps { margin: 8px 0 0; padding-left: 1.4em; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+.assist-steps li.failed { color: var(--ink-faint); }
+.assist-steps span { color: var(--ink-faint); }
+.assist-looked { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
+.assist-looked summary { cursor: pointer; }
 .assist-figure { margin: 4px 0 10px; }
 .assist-figure .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-problems { margin: 4px 0 0 18px; padding: 0; font-size: 14px; color: var(--ink-soft); }

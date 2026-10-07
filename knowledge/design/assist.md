@@ -5,7 +5,7 @@ description: While a note is edited, the connected model can be asked about a pa
   text to go at a place in it; an answer is shown beside the note and proposed text is a suggestion
   to accept or reject.
 tags: [design, editor, agents, models]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T01:53:31Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T03:14:33Z}
 ---
 
 # Why
@@ -55,41 +55,56 @@ buttons.
 # What the model is given
 
 Worked out by `rdstudio serve` for each request (`packages/cli/src/assist.ts`
-`prepare`); no tools are handed to the model, so a request is one call.
+`prepare` and `ask`). The model
+[looks things up for itself](/decisions/assist-looks-things-up.md "requires")
+([T84](/tasks/T84-assist-lookup.md "see also")); nothing is gathered for it.
 
-- **How notes work here** (`FORMAT`,
+Sent at the start:
+
+- **How to help**, and **how notes work here** (`FORMAT`,
   [T81](/tasks/T81-assist-knows-the-format.md "see also")): the forms the
-  app reads in a note and what it makes of them. A link's rating is its
-  title (`"requires"`, `"uses"`, `"see also"`), with a worked example and
-  what the Atlas does with each; artifacts and pictures, linked or shown in
-  place; checklists, maths, diagrams, footnotes. And a rule: asked to change
-  the form of something, change only that. Without it the model read "make
-  this a see also link" as words to write in the text.
+  app reads in a note. A link's rating is its title (`"requires"`,
+  `"uses"`, `"see also"`), with a worked example and what the Atlas does
+  with each; artifacts and pictures; checklists, maths, diagrams,
+  footnotes. And a rule: asked to change the form of something, change only
+  that.
+- **Looking things up**: when to use the tools and when not to (a change of
+  form or wording needs nothing looked up), and how many rounds it has.
+- **The form of the reply.** A fill replies with the text between
+  `<insert>` tags and a sentence or two on why between `<why>` tags. Its
+  room grows with the passage, so a whole note can come back; a reply cut
+  short proposes nothing.
+- **The notes this one links to**, as titles and descriptions only.
 - **The note as it is in the editor**, saved or not, with the place marked:
   a passage between ⟦ and ⟧, or the point ⟦HERE⟧. A long note is cut to a
   window round the place; the marked passage itself is never cut, and one
   over 40 000 characters is refused for a rewrite.
-- **The notes it links to** (up to six), by bundle-absolute or relative
-  link, with or without a rating.
-- **Notes found by searching the base** (up to five) for the request, the
-  passage, the text round the place and the note's title.
-- **Code**, found by the names in the request and the passage (what is in
-  backticks, and words that look like identifiers or paths):
-  - from [the code index](/design/code-map.md) where there is one: the
-    item's signature, its comment and its source;
-  - and by searching the repository's files (`git grep`, outside the
-    knowledge base), with the lines round each hit, a definition first. This
-    finds code in any language, which the index does not.
-  With no name given, the index is searched by the request's words only
-  when the request is about code.
-- How to help, and the form of the reply. A fill replies with the text
-  between `<insert>` tags and a sentence or two on why between `<why>` tags.
-  Its room grows with the passage, so a whole note can come back; a reply
-  cut short proposes nothing.
 
-Each section has a budget of tokens and is shortened to fit
-([context](/design/tutor.md)). The model for an answer is the `discuss`
-job's; for proposed text, a new job, `write` (`[teacher.models]`).
+The tools (`packages/cli/src/lookup.ts`), all read-only:
+
+| Tool | Gives |
+|---|---|
+| `search_notes` | Notes by keyword: id, title, type, description, a snippet |
+| `outline_note` | A note's headings, what it links to and what links to it |
+| `read_note` | One section, or the whole note, up to 8000 characters |
+| `search_code` | Lines of the repository's files holding an exact text |
+| `read_code` | Lines of one file git tracks, 200 at most |
+
+They are the MCP server's `search`, `outline` and `read`, in the same
+process, on the project's own base. The model calls them in rounds, 3, 6 or
+8 by [tier](/decisions/model-tiers.md "uses"), and must then reply. Each
+call is kept as a step: what was looked up, the note opened, and how it was
+reached (a search, a read, or a link from a note already in hand). The
+steps stream to the editor as they happen and are listed under the reply;
+"Drew on" is what it opened.
+
+A model that cannot call tools is given, in one call, what was gathered
+before T84: the first six linked notes, five found by searching, and code
+found by the names in the request.
+
+The model is the tier's (`[teacher.tiers]`). The fixed part and the note
+are marked for the provider's cache, so a further round pays little for
+them.
 
 # Provenance
 

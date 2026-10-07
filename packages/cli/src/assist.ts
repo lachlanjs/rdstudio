@@ -15,6 +15,7 @@ import { loadBundle } from "@rdstudio/core/node";
 import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
+import { Lookup, TOOLS, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
@@ -59,27 +60,60 @@ export interface Reply {
   from: number;
   to: number;
   sources: Source[];
+  /** What it looked up for itself, in order (T84): each search, each note or file opened, and how it was reached. */
+  steps: Step[];
   model: string;
   tier: models.Tier;
   cost: number;
 }
 
-const HOW = `# How to help
+// What it works from: what it looks up for itself (T84), or, for a model that cannot call tools, what was gathered for it.
+const USE = { looked: `- Work from the note below and from what you look up with the tools. Do not
+  invent facts, names, file paths or code: if the note and what you looked
+  up do not answer, say so plainly and say what would.`,
+  given: `- Use what you are given below: the note, the notes it links to, notes
+  found by searching the base, and code from the repository. Do not invent
+  facts, names, file paths or code that are not there. If what you are given
+  does not answer, say so plainly and say what would.` };
+
+/** How many times it may look things up before it must reply, by tier. */
+export const ROUNDS: Record<models.Tier, number> = { low: 3, mid: 6, max: 8 };
+
+const LOOKUP = (rounds: number) => `# Looking things up
+
+Before you reply you may look things up in the project's knowledge base and
+in the repository's code, with the tools. Nothing has been looked up for you:
+below there is only the note, and the titles of the notes it links to.
+
+- Look up only what the request needs. A change to the form or wording of
+  the passage (re-rating links, tidying a list, mending grammar, shortening)
+  needs nothing looked up: reply at once.
+- For a question about the project, or text that states facts about it,
+  look first. search_notes finds notes by their words; outline_note shows a
+  note's headings and what it links to; read_note reads one section. Prefer
+  one section to a whole note. Follow a note's links when what you need is
+  one step on from it.
+- For code, search_code finds a name; read_code reads the lines round it.
+  Quote code only as you read it.
+- You may call several tools at once. You have ${rounds} rounds of looking
+  up at most; then reply in the form asked, with what you have.
+- Say nothing between lookups: no "let me check". Only the reply is shown.`;
+
+const HOW_TEXT = (given: string) => `# How to help
 
 You are helping someone write a note in a project's knowledge base (Open
 Knowledge Format: Markdown with links between notes). They are in the
 editor now. The place they are asking about is marked in their note: a
 passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.
 
-- Use what you are given below: the note, the notes it links to, notes
-  found by searching the base, and code from the repository. Do not invent
-  facts, names, file paths or code that are not there. If what you are given
-  does not answer, say so plainly and say what would.
-- Link to a note as [its title](/its/path.md), with the path as given.
-  Refer to code as \`path:line\`.
+${given}
+- Link to a note as [its title](/its/path.md), with the path as given, and
+  no rating unless one is asked for. Refer to code as \`path:line\`, in
+  backticks, not as a link.
 - Write as the note is written: its language, its tone, its level. Plain
   words. No preamble, no closing remarks.
 - Maths goes between dollar signs, as LaTeX.`;
+const HOW = HOW_TEXT(USE.given);
 
 // What a note may hold here beyond plain Markdown, and what the app makes of
 // it. Without this the model does not know, for one, that "see also" is a
@@ -307,8 +341,11 @@ export interface Prepared {
   job: models.Job;
 }
 
-/** Build the request: nothing is sent yet. */
-export function prepare(cfg: Config, ask: Ask): Prepared {
+/** Build the request: nothing is sent yet. As a rule the model looks things up for itself (T84) and is given
+ *  only the note and the titles of the notes it links to; with `gather`, for a model that cannot call tools,
+ *  the linked notes, a search's finds and code by name are put in for it, as they were before. */
+export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}): Prepared {
+  const gather = opts.gather === true;
   if (!(MODES as readonly string[]).includes(ask.mode)) throw new StoreError(`a mode is one of ${MODES.join(", ")}`);
   const prompt = ask.prompt?.trim() ?? "";
   const from = Math.max(0, Math.min(ask.body.length, Math.min(ask.from, ask.to))), to = Math.max(from, Math.min(ask.body.length, Math.max(ask.from, ask.to)));
@@ -323,12 +360,13 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   const title = ask.title?.trim() || known?.title || ask.note;
 
   const sources: Source[] = [];
-  const linked = linkedIds(b, ask.note, ask.body).slice(0, 6);
+  const every = linkedIds(b, ask.note, ask.body);
+  const linked = gather ? every.slice(0, 6) : [];
   for (const id of linked) sources.push({ kind: "note", id, title: b.concepts.get(id)!.title });
   // Searched for by the request, the passage, what is written round the place, and the note's title.
   const near = ask.body.slice(Math.max(0, from - 300), Math.min(ask.body.length, to + 300));
   const query = [prompt, selection.slice(0, 400), near, title].filter(Boolean).join(" ");
-  const found = new SearchIndex(b).search(query, { limit: 10 }).map((h) => h.concept.id).filter((id) => id !== ask.note && !linked.includes(id)).slice(0, 5);
+  const found = !gather ? [] : new SearchIndex(b).search(query, { limit: 10 }).map((h) => h.concept.id).filter((id) => id !== ask.note && !linked.includes(id)).slice(0, 5);
   for (const id of found) sources.push({ kind: "note", id, title: b.concepts.get(id)!.title });
 
   const about = [prompt, selection].join("\n");
@@ -336,8 +374,8 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   // With no name given, the index is searched by the request's words only when the request is about code.
   const wantsCode = /\b(code|function|class|method|implement\w*|source|snippet|definition|declaration|signature|api)\b/i.test(prompt);
   const words = wantsCode ? [...new Set((prompt + " " + title).split(/[^A-Za-z]+/).filter((w) => w.length >= 5 && !/^(function|class|method|source|snippet|insert|relevant|where|about|write|there|their|which|definition|declaration|signature)$/i.test(w)))].slice(0, 8) : [];
-  const indexed = fromIndex(codeIndexSync(cfg), names, words).slice(0, 8);
-  const inFiles = fromFiles(cfg, names, new Set(indexed.map((f) => f.path + ":" + f.line))).filter((f) => !indexed.some((i) => i.path === f.path && Math.abs(i.line - f.line) < 12));
+  const indexed = !gather ? [] : fromIndex(codeIndexSync(cfg), names, words).slice(0, 8);
+  const inFiles = !gather ? [] : fromFiles(cfg, names, new Set(indexed.map((f) => f.path + ":" + f.line))).filter((f) => !indexed.some((i) => i.path === f.path && Math.abs(i.line - f.line) < 12));
   const code = [...indexed, ...inFiles].slice(0, 10);
   for (const f of code) sources.push({ kind: "code", id: f.path, title: f.title, line: f.line });
 
@@ -350,17 +388,21 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
       : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
   // The whole of the marked passage is always sent, with the note round it.
   const room = Math.max(14000, selection.length + 6000);
+  // A provider takes few cache marks (Anthropic, four): one where the fixed part ends, one where the request does.
   const { messages, seen } = assemble([
-    { name: "How to help", text: HOW.replace(/^# How to help\n\n/, ""), tokens: 600, cache: true },
-    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700, cache: true },
-    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900, cache: true },
+    { name: "How to help", text: (gather ? HOW : HOW_TEXT(USE.looked)).replace(/^# How to help\n\n/, ""), tokens: 600 },
+    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700 },
+    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]]).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
+    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900 },
     { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
-    { name: "Notes this one links to", text: linked.map((id) => noteText(b, id, 2400)).join("\n\n"), tokens: 3600 },
+    { name: "Notes this one links to", text: gather ? linked.map((id) => noteText(b, id, 2400)).join("\n\n")
+      : every.slice(0, 60).map((id) => { const c = b.concepts.get(id)!; return `- ${c.title} (/${id}.md)${c.description ? `: ${c.description}` : ""}`; }).join("\n") + (every.length > 60 ? `\n[…and ${every.length - 60} more]` : ""), tokens: gather ? 3600 : 1500 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
     { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to, room) || HERE, tokens: Math.ceil(room / 4) + 100, role: "user" },
     { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
-    { name: "What to do", text: what, tokens: 900, role: "user" },
+    // Cached to here: when it looks things up, each further round sends all of this again.
+    { name: "What to do", text: what, tokens: 900, role: "user", cache: true },
   ]);
   return { messages, seen, sources, job: ask.mode === "ask" ? "discuss" : "write" };
 }
@@ -393,15 +435,59 @@ export function parseFigure(reply: string): { artifact: { title: string; caption
  *  (the roadmap, 8600 characters, was cut at 4500 tokens), and room not used costs nothing. */
 export const fillTokens = (passage: number): number => Math.max(2000, passage + 1000);
 
-/** Ask, streaming the reply's text. Nothing is kept but the usage. */
-export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {
-  const p = prepare(cfg, a);
-  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill", messages: p.messages, onText, model: models.tiers()[a.tier ?? USUAL[a.mode]],
-    maxTokens: a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)) });
+const featureOf = (m: Mode) => (m === "ask" ? "note-ask" : m === "figure" ? "note-figure" : "note-fill");
+const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)));
+/** A model, or the provider it is routed to, that cannot call tools says so; then it is given what it would have looked up. */
+const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|function call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized/i.test(err.message);
+
+export interface Hooks {
+  /** Each piece of the reply's text as it is written. */
+  onText?: (piece: string) => void;
+  /** Each thing it looks up, as it does. What was written before a lookup is not the reply: text starts again after one. */
+  onStep?: (step: Step) => void;
+  signal?: AbortSignal;
+}
+
+/** Ask, streaming the reply's text. The model may look things up first, in rounds: each round's calls are run
+ *  and answered, until it replies or the tier's rounds are used, when it must reply. Nothing is kept but the usage. */
+export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) => void) = {}): Promise<{ reply: Reply; seen: Seen[] }> {
+  const h: Hooks = typeof hooks === "function" ? { onText: hooks } : hooks;
+  const tier = a.tier ?? USUAL[a.mode], model = models.tiers()[tier];
+  let p = prepare(cfg, a);
+  const call = { cfg, job: p.job, feature: featureOf(a.mode), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal };
+  const look = new Lookup(cfg, loadBundle(cfg.knowledgeDir), a.note);
+  const messages = [...p.messages];
+  let text = "", cost = 0, used = model;
+  for (let round = 0; ; round++) {
+    let r: models.Reply;
+    try {
+      r = await models.complete({ ...call, messages, tools: TOOLS, toolChoice: round < ROUNDS[tier] ? "auto" : "none" });
+    } catch (err) {
+      if (round > 0 || !noTools(err)) throw err;
+      p = prepare(cfg, a, { gather: true });
+      r = await models.complete({ ...call, messages: p.messages });
+      r.calls = [];
+    }
+    cost += r.usage.cost; used = r.usage.model; text = r.text;
+    if (!r.calls.length || round >= ROUNDS[tier]) break;
+    messages.push({ role: "assistant", content: r.text, calls: r.calls });
+    for (const c of r.calls) {
+      const out = look.run(c.name, c.arguments);
+      messages.push({ role: "tool", callId: c.id, content: out });
+      h.onStep?.(look.steps.at(-1)!);
+    }
+  }
+  // What it drew on: what was gathered for it, and each note and file it opened itself.
+  const sources = [...p.sources];
+  for (const s of look.steps) {
+    if (s.failed) continue;
+    if (s.opened && !sources.some((x) => x.kind === "note" && x.id === s.opened)) sources.push({ kind: "note", id: s.opened, title: look.b.concepts.get(s.opened)?.title ?? s.opened });
+    else if (s.tool === "read_code" && s.code && !sources.some((x) => x.kind === "code" && x.id === s.code!.path && x.line === s.code!.line)) sources.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
+  }
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
-  const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, tier: a.tier ?? USUAL[a.mode], cost: r.usage.cost };
-  if (a.mode === "ask") return { reply: { ...base, answer: r.text.trim(), insert: null }, seen: p.seen };
-  if (a.mode === "figure") { const f = parseFigure(r.text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
-  const { insert, why } = parseFill(r.text);
+  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost };
+  if (a.mode === "ask") return { reply: { ...base, answer: text.trim(), insert: null }, seen: p.seen };
+  if (a.mode === "figure") { const f = parseFigure(text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
+  const { insert, why } = parseFill(text);
   return { reply: { ...base, answer: why, insert }, seen: p.seen };
 }

@@ -6,17 +6,22 @@ import { editing } from "./edit.svelte.ts";
 
 export type Mode = "ask" | "fill" | "figure";
 export interface Source { kind: "note" | "code"; id: string; title: string; line?: number }
+/** One thing the model looked up for itself (T84): a search, or a note or a file opened, and how it was reached. */
+export interface Step {
+  tool: string; said: string; how: "search" | "read" | "link" | "code"; notes: string[];
+  opened?: string; section?: string; from?: string; code?: { path: string; line: number }; excerpt?: string; failed?: boolean;
+}
 export interface Reply {
   mode: Mode; reply: string; answer: string; insert: string | null; from: number; to: number;
-  sources: Source[]; model: string; tier?: Tier; cost: number;
+  sources: Source[]; steps?: Step[]; model: string; tier?: Tier; cost: number;
   /** figure: the artifact written, to be checked and shown before anything is saved. */
   artifact?: { title: string; caption: string; html: string } | null;
 }
 export type Tier = "low" | "mid" | "max";
 export interface Asking { mode: Mode; tier?: Tier; body: string; from: number; to: number; prompt?: string; title?: string; fix?: { html: string; problems: string[] } }
 
-/** Ask; `onText` gets the reply as it is written. Resolves with the reply, or throws with the reason. */
-export async function askAssist(note: string, body: Asking, onText: (soFar: string) => void, signal?: AbortSignal): Promise<Reply> {
+/** Ask; `onText` gets the reply as it is written, and `onStep` each thing the model looks up first. Resolves with the reply, or throws with the reason. */
+export async function askAssist(note: string, body: Asking, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void): Promise<Reply> {
   const url = new URL(`api/notes/${encodeURIComponent(note)}/assist`, new URL(".", location.href));
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "x-rdstudio-token": editing.token ?? "" }, body: JSON.stringify(body), signal });
   if (!res.ok || !res.body) {
@@ -39,6 +44,8 @@ export async function askAssist(note: string, body: Asking, onText: (soFar: stri
       if (!data) continue;
       const got = JSON.parse(data);
       if (event === "text") { soFar += got as string; onText(soFar); }
+      // Something was looked up: what was written before it was not the reply.
+      else if (event === "step") { soFar = ""; onText(""); onStep?.(got as Step); }
       else if (event === "done") return (got as { reply: Reply }).reply;
       else if (event === "error") throw new Error(got as string);
     }

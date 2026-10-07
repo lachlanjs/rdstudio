@@ -368,7 +368,7 @@ const putProfile = createRoute({
 });
 const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
-  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
+  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill). The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply, or error. Nothing is written.",
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
     mode: z.enum(["ask", "fill", "figure"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
   }).openapi("NoteAssist") } }, required: true } },
@@ -668,7 +668,11 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { assist.prepare(cfg, a); } catch (err) { return refuse(c, 400, (err as Error).message); } // what is wrong with the request, before anything is sent
     return streamSSE(c, async (stream) => {
       try {
-        const { reply, seen } = await assist.ask(cfg, a, (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); });
+        const { reply, seen } = await assist.ask(cfg, a, {
+          onText: (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); },
+          // Something looked up: what was written before it was not the reply, so the text starts again.
+          onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
+        });
         await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });

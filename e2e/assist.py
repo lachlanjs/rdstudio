@@ -27,7 +27,24 @@ class FakeOpenRouter(BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FAKE_REQUESTS.append(body)
-        said = "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
+        said = "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"] or ""}]))
+        # As a model that looks things up would (T84): on the first turn of a question or of a request for code it
+        # calls tools, and replies once their results are in the conversation.
+        want = said.split("## What to do")[-1]
+        first = body.get("tools") and not any(m["role"] == "tool" for m in body["messages"])
+        calls = [("search_notes", {"query": "softened gravity close pairs"}), ("read_note", {"id": "/design/particle-system.md"})] if first and "Why is this so?" in want \
+            else [("search_code", {"text": "minimum_image"}), ("read_code", {"path": "src/nanosim/core/vec3.hpp", "from": 1, "to": 60})] if first and "minimum_image" in want else []
+        if calls:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.end_headers()
+            self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'content': 'Let me look.'}}]})}\n\n".encode())
+            for k, (name, args) in enumerate(calls):
+                self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'tool_calls': [{'index': k, 'id': f'call_{k}', 'function': {'name': name, 'arguments': ''}}]}}]})}\n\n".encode())
+                self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'tool_calls': [{'index': k, 'function': {'arguments': json.dumps(args)}}]}}]})}\n\n".encode())
+            self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {}}], 'usage': {'prompt_tokens': 900, 'completion_tokens': 30, 'cost': 0.0011}})}\n\n".encode())
+            self.wfile.write(b"data: [DONE]\n\n")
+            return
         if "You are writing an artifact" in said:
             good = "<!doctype html><html><head><title>Softening</title><meta name='description' content='The softened force.'></head><body style='margin:0;padding:8px;color:var(--text,#000)'><input id='e' type='range' min='1' max='9' value='3' aria-label='Softening'><canvas id='c' width='300' height='120' style='display:block'></canvas><script>const c=document.getElementById('c').getContext('2d'),e=document.getElementById('e');function d(){c.clearRect(0,0,300,120);c.beginPath();for(let x=1;x<300;x++)c.lineTo(x,110-900/(x*x/90+e.value*e.value));c.stroke();window.__drawn=+e.value}e.oninput=d;d();</scr" + "ipt></body></html>"
             wrong = good.replace("d();</scr", "d();undefinedHelper();</scr")
@@ -70,7 +87,7 @@ def check(name, ok, detail=""):
     results.append((name, ok))
     print(("PASS " if ok else "FAIL ") + name + (f"  ({detail})" if detail and not ok else ""))
 def sent(body):
-    return "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"]}]))
+    return "\n".join(part["text"] for m in body["messages"] for part in (m["content"] if isinstance(m["content"], list) else [{"text": m["content"] or ""}]))
 
 errors = []
 with sync_playwright() as pw:
@@ -98,9 +115,15 @@ with sync_playwright() as pw:
     panel = p.locator(".assist-reply")
     expect(panel.locator(".assist-answer")).to_contain_text("softened", timeout=15000)
     check("Ask: an answer beside the note, with a link to a note, the model and the cost", panel.locator(".assist-answer a", has_text="The particle system").count() == 1 and "$" in panel.locator(".assist-meta").inner_text() or "¢" in panel.locator(".assist-meta").inner_text(), panel.inner_text())
-    check("…and what it drew on is listed", panel.locator(".assist-sources a").count() >= 1, panel.inner_text())
+    check("…and what it drew on is what it opened itself: the one note it read", panel.locator(".assist-sources a").all_inner_texts() == ["The particle system"], panel.inner_text())
+    panel.locator(".assist-looked summary").click()
+    steps = panel.locator(".assist-looked li").all_inner_texts()
+    check("…what it looked up is listed in order: a search, then a note read", len(steps) == 2 and steps[0].startswith('Searched the notes for "softened gravity close pairs"') and steps[1].startswith("Read The particle system"), steps)
     said = sent(FAKE_REQUESTS[-1])
-    check("…the model was given the note with the passage marked, and the notes it links to", "⟦" in said and "⟧" in said and "Notes this one links to" in said and "Why is this so?" in said, said[-600:])
+    start = sent(FAKE_REQUESTS[-2])
+    check("…the model was given the note with the passage marked and how to look things up, and nothing gathered for it",
+          "⟦" in start and "⟧" in start and "## Looking things up" in start and "Why is this so?" in start and "## Notes found by searching" not in start and "## Code from the repository" not in start, start[-600:])
+    check("…its lookups were run and answered: the search's finds and the note's text went back to it", [m["role"] for m in FAKE_REQUESTS[-1]["messages"]][-3:] == ["assistant", "tool", "tool"] and "/design/particle-system.md" in said, said[-600:])
     check("…asked at the usual tier for a question, mid, whose model the reply names", FAKE_REQUESTS[-1]["model"] == "anthropic/claude-sonnet-5.5" and panel.locator(".assist-meta").inner_text().startswith("mid · "), (FAKE_REQUESTS[-1]["model"], panel.locator(".assist-meta").inner_text()))
     check("…and nothing in the note changed", p.locator(".edit-status").inner_text() == "No changes" and p.locator(".cm-suggest").count() == 0)
     panel.get_by_role("button", name="Close the reply").click()
@@ -131,7 +154,8 @@ with sync_playwright() as pw:
     bar.get_by_role("button", name="Write here").click()
     expect(sg).to_contain_text("minimum_image(Vec3 d, double box)", timeout=15000)
     said = sent(FAKE_REQUESTS[-1])
-    check("Write here: the model was given the place (⟦HERE⟧) and the code named, from the repository", "⟦HERE⟧" in said and "Code from the repository" in said and "minimum_image" in said.split("## Code from the repository")[1], said[-800:])
+    tools = [m["content"] for m in FAKE_REQUESTS[-1]["messages"] if m["role"] == "tool"]
+    check("Write here: the model was given the place (⟦HERE⟧), and found the code named for itself in the repository", "⟦HERE⟧" in said and len(tools) == 2 and "vec3.hpp" in tools[0] and "minimum_image" in tools[1], tools)
     check("…the reply says why, and lists the file it drew on", "copied from the header" in panel.inner_text() and "vec3.hpp" in panel.locator(".assist-sources").inner_text(), panel.inner_text())
     p.screenshot(path=str(OUT / "assist-write.png"))
     p.keyboard.press("Control+Enter")
