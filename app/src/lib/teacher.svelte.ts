@@ -4,7 +4,7 @@
 // customising how the agent teaches is possible, not encouraged.
 
 import {
-  deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect,
+  deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect, putApiTeacherTiers,
   deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
   postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherProfile, putApiTeacherSkillsByName,
 } from "./api/sdk.gen.ts";
@@ -203,6 +203,13 @@ export const ai = {
   async disconnect(): Promise<AiState | null> {
     const { data, error } = await deleteApiTeacherAi({ headers: learner.writeHeaders() });
     if (!data) throw new Error(said(error, "Not forgotten"));
+    return data;
+  },
+  /** Set the model of each tier Axis may be asked at in the editor (T83): the person's, in their user config. */
+  async setTiers(tiers: { low?: string; mid?: string; max?: string }): Promise<AiState> {
+    await editing.known;
+    const { data, error } = await putApiTeacherTiers({ body: tiers, headers: { "x-rdstudio-token": editing.token ?? learner.writeHeaders()["x-rdstudio-token"] } });
+    if (!data) throw new Error(said(error, "The models were not changed"));
     return data;
   },
   async check(): Promise<{ text: string; model: string; cost: number }> {

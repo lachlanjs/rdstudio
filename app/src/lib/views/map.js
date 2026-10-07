@@ -43,11 +43,13 @@ export const MARKERS = {
   example: "triangle", trick: "square", reference: "ring", overview: "star",
   decision: "square", task: "triangle", question: "cross", idea: "wye", procedure: "star",
   // The code map's items (T66).
+  artifact: "frame", // an HTML document beside the notes (T77)
   function: "circle", method: "circle", class: "square", field: "triangle", constant: "diamond", target: "star", job: "star", file: "ring", dir: "ring",
 };
 export const SYMBOLS = {
   circle: d3.symbolCircle, diamond: d3.symbolDiamond, triangle: d3.symbolTriangle, square: d3.symbolSquare,
   star: d3.symbolStar, cross: d3.symbolCross, wye: d3.symbolWye, ring: d3.symbolCircle,
+  frame: d3.symbolSquare2 ?? d3.symbolSquare, // a square of line only: a window
 };
 
 const saved = (() => {
@@ -225,6 +227,26 @@ export function buildModel() {
     node.subdirs = d.children.map((id) => dirs.get(id)).filter(Boolean);
     node.notes = chainOrder(d.concepts.map((id) => leaves.get(id)).filter(Boolean), adjacent);
   }
+  // Artifacts (T77): each an item of its folder, joined to the notes that cite it. An artifact comes after
+  // those notes in the layout (it shows what they say), so the link runs as if it required them; a citation
+  // rated "see also" does not shape the layout, as for a note. Nothing leads out of an artifact.
+  for (const a of store.artifacts) {
+    const dir = dirs.get(a.directory);
+    if (!dir) continue;
+    const citing = a.citedBy.filter((c) => known.has(c.note));
+    dir.notes.push({
+      kind: "concept", id: "c:" + a.path, ref: a.path, label: a.title, artifact: a, landmark: false, marker: "frame", weight: 1,
+      rank: 1 + Math.max(0, ...citing.map((c) => depth.get(c.note) ?? 0)),
+      c: { id: a.path, title: a.title, type: "Artifact", description: a.description, trust: "unverified", verification_stale: false, content_stale: false,
+        path: a.path, mtime: Date.parse(a.date) / 1000 || 0, links: [], backlinks: [], meta: {}, directory: a.directory, artifact: a },
+    });
+    const seen = new Set();
+    for (const c of citing) {
+      if (seen.has(c.note)) continue;
+      seen.add(c.note);
+      edges.push([a.path, c.note, STRENGTH[c.rel] || 2]);
+    }
+  }
   // Larger folders first packs more tidily; notes follow in link order.
   const size = (d) => d.notes.length + d.subdirs.reduce((s, x) => s + size(x), 0);
   // A folder holding only tours, goals and exercises (and nothing else below it) is left off too.
@@ -331,10 +353,13 @@ export function controls({ view, readout, summary, key: keyItems }) {
   const types = new Map();
   const code = sourceOf(o) === "code";
   if (code) { for (const i of store.code.items) if (i.kind !== "dir" && !types.has(KIND_LABEL[i.kind])) types.set(KIND_LABEL[i.kind], markerFor(i.kind)); }
-  else for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+  else {
+    for (const c of store.concepts.values()) if (c.type && isStudyNote(c) && !types.has(c.type)) types.set(c.type, markerFor(c.type));
+    if (store.artifacts.length) types.set("Artifact", "frame");
+  }
   for (const [type, shape] of [...types].sort()) {
     const icon = h("svg:svg", { width: 22, height: 22, viewBox: "-7 -7 14 14", class: "m-key", "aria-hidden": "true" });
-    icon.innerHTML = `<path d="${d3.symbol(SYMBOLS[shape], 30)()}" class="key-shape"/>${shape === "ring" ? '<path d="M-3.1 0H3.1" class="key-shape bar"/>' : ""}`;
+    icon.innerHTML = `<path d="${d3.symbol(SYMBOLS[shape], 30)()}" class="key-shape${shape === "frame" ? " line" : ""}"/>${shape === "ring" ? '<path d="M-3.1 0H3.1" class="key-shape bar"/>' : ""}`;
     kinds.append(h("span", {}, icon, titleCase(type)));
   }
   const key = h("ul", { class: "legend map-key" });

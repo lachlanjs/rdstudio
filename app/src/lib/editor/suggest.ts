@@ -20,7 +20,8 @@ export const suggestionHandler = Facet.define<(what: "accepted" | "rejected", s:
 
 /** The text as it goes in: a block (several lines, or a fence) stands clear of the text round it by a blank line. */
 export function placed(doc: string, s: Suggestion): string {
-  const block = s.insert.includes("\n") || s.insert.startsWith("```");
+  // A block: several lines, a fence, or a line that is one picture or one embedded artifact.
+  const block = s.insert.includes("\n") || s.insert.startsWith("```") || /^!\[[^\]]*\]\([^)]+\)$/.test(s.insert.trim());
   if (!block) return s.insert;
   const before = doc.slice(Math.max(0, s.from - 2), s.from), after = doc.slice(s.to, s.to + 2);
   const lead = s.from === 0 || before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
@@ -88,7 +89,7 @@ const suggestField = StateField.define<Suggestion | null>({
   },
   provide: (f) => EditorView.decorations.from(f, (s): DecorationSet => {
     if (!s) return Decoration.none;
-    const block = s.insert.includes("\n") || s.insert.startsWith("```");
+    const block = s.insert.includes("\n") || s.insert.startsWith("```") || /^!\[[^\]]*\]\([^)]+\)$/.test(s.insert.trim());
     const marks = [];
     if (s.to > s.from) marks.push(Decoration.mark({ class: "cm-suggest-old" }).range(s.from, s.to));
     marks.push(Decoration.widget({ widget: new Proposed(s, block), side: 1, block }).range(s.to));

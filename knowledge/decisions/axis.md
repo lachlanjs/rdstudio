@@ -13,8 +13,7 @@ From the developer, 2026-10-07: "I like Axis - lets use that for both the
 teacher and the project helper."
 
 The agent that teaches in Learning mode and helps in Project mode is called
-**Axis** wherever the app names it. Not yet applied: the app still says
-"Teacher".
+**Axis** wherever the app names it. Applied in [T80](/tasks/T80-axis-name.md).
 
 # Why Axis
 

@@ -13,6 +13,7 @@ import texmath from "markdown-it-texmath";
 import { format } from "./commands.ts";
 import { formula, mathsSyntax } from "./maths.ts";
 import { placed } from "./suggest.ts";
+import { choices, choicesFor, kindOf, labelFor, labelOf, linkAt, linksIn, ratingOf, setEmbed, setTitle, setTitles, sideOf } from "./linkControl.ts";
 
 // The note page's renderer, as markdown.ts sets it up.
 const page = new MarkdownIt({ html: true }).use(texmath, { engine: katex, delimiters: ["dollars", "brackets"], katexOptions: { throwOnError: false } });
@@ -137,5 +138,74 @@ describe("a suggestion as it goes into the note (T74)", () => {
     expect(at("Before.\n\n\n\nAfter.", 9, 9, code)).toBe(code);
     expect(at("Before.\n", 8, 8, "Line one.\nLine two.\n")).toBe("\nLine one.\nLine two.");
     expect(at("", 0, 0, code)).toBe(code);
+    expect(at("A sentence.", 11, 11, "![A figure](fig.html)")).toBe("\n\n![A figure](fig.html)"); // an embed is a block of its own
+  });
+});
+
+describe("the link control (T79)", () => {
+  const stateOf = (doc: string) => { const st = EditorState.create({ doc, extensions: [language] }); ensureSyntaxTree(st, doc.length, 5000); return st; };
+  const at = (doc: string, needle: string) => { const st = stateOf(doc); return { st, l: linkAt(st, doc.indexOf(needle) + 1) }; };
+  const after = (st: EditorState, changes: import("@codemirror/state").ChangeSpec) => st.update({ changes }).state.doc.toString();
+
+  test("what an address points at", () => {
+    expect([kindOf("/a/b.md"), kindOf("b.md#h"), kindOf("sub/"), kindOf("fig.html"), kindOf("p.PNG"), kindOf("https://x.org/a.md"), kindOf("#top"), kindOf("data.csv")])
+      .toEqual(["note", "note", "note", "artifact", "image", null, null, null]);
+  });
+  test("the link under the cursor: its address, its title, whether it is shown", () => {
+    const doc = 'See [the metric](/r/metric.md "requires"), [a figure](fig.html), ![a sphere](s.png "left") and [the web](https://x.org).';
+    const { l } = at(doc, "the metric");
+    expect(l).toMatchObject({ kind: "note", url: "/r/metric.md", title: "requires", embed: false });
+    expect(ratingOf(l!)).toBe("requires");
+    expect(at(doc, "a figure").l).toMatchObject({ kind: "artifact", title: null, embed: false });
+    const pic = at(doc, "a sphere").l!;
+    expect(pic).toMatchObject({ kind: "image", embed: true });
+    expect(sideOf(pic)).toBe("left");
+    expect(at(doc, "the web").l).toBeNull(); // the web is not ours to rate
+    expect(linkAt(stateOf(doc), 1)).toBeNull();
+    // At either end of a link counts as in it.
+    const st = stateOf(doc);
+    expect(linkAt(st, doc.indexOf("[the metric]"))).not.toBeNull();
+    expect(linkAt(st, doc.indexOf('"requires")') + '"requires")'.length)).not.toBeNull();
+  });
+  test("a rating is the title: set, changed, taken away, and nothing else moves", () => {
+    const doc = 'A [one](/a.md) and [two](/b.md "uses").';
+    const one = at(doc, "one"), two = at(doc, "two");
+    expect(after(one.st, setTitle(one.l!, "requires"))).toBe('A [one](/a.md "requires") and [two](/b.md "uses").');
+    expect(after(two.st, setTitle(two.l!, "see also"))).toBe('A [one](/a.md) and [two](/b.md "see also").');
+    expect(after(two.st, setTitle(two.l!, null))).toBe("A [one](/a.md) and [two](/b.md).");
+  });
+  test("shown here or a link is the ! before it; a rating or a side does not carry across", () => {
+    const doc = 'A [figure](fig.html "uses") and ![pic](p.png "left").';
+    const fig = at(doc, "figure"), pic = at(doc, "pic");
+    expect(after(fig.st, setEmbed(fig.l!, true))).toBe('A ![figure](fig.html) and ![pic](p.png "left").');
+    expect(after(pic.st, setEmbed(pic.l!, false))).toBe('A [figure](fig.html "uses") and [pic](p.png).');
+    expect(setEmbed(pic.l!, true)).toEqual([]);
+  });
+  test("what is offered for each kind, and what the button says", () => {
+    const doc = 'A [n](/a.md "uses"), [f](fig.html), ![g](fig.html), ![p](p.png) and [q](p.png).';
+    const names = (needle: string) => choices(at(doc, needle).l!).map((c) => (c.on ? "*" : "") + c.label);
+    expect(names("[n]")).toEqual(["Requires", "*Uses", "See also", "Unrated"]);
+    expect(names("[f]")).toEqual(["Shown here", "*Link", "Requires", "Uses", "See also", "*Unrated"]);
+    expect(names("![g]")).toEqual(["*Shown here", "Link"]);
+    expect(names("![p]")).toEqual(["*Shown here", "Link", "*Centre", "Left"]);
+    expect(names("[q]")).toEqual(["Shown here", "*Link"]);
+    expect(["[n]", "[f]", "![g]", "![p]", "[q]"].map((n) => labelOf(at(doc, n).l!))).toEqual(["Uses", "Link", "Shown here", "Shown, centre", "Link"]);
+  });
+  test("several links selected are rated together: only the titles change, and only links wholly selected (T82)", () => {
+    const doc = '# M1\n\n- [x] [T01 One](/tasks/T01.md)\n- [ ] [T02 Two](/tasks/T02.md "requires")\n- [x] [web](https://x.org) and ![fig](f.html) and [art](f.html)\n- [T03](/tasks/T03.md "see also")\n';
+    const st = stateOf(doc);
+    const all = linksIn(st, 0, doc.length);
+    expect(all.map((l) => l.url)).toEqual(["/tasks/T01.md", "/tasks/T02.md", "f.html", "/tasks/T03.md"]); // not the web, not what is shown in place
+    expect(labelFor(all)).toBe("4 links, mixed");
+    expect(after(st, setTitles(all, "see also"))).toBe('# M1\n\n- [x] [T01 One](/tasks/T01.md "see also")\n- [ ] [T02 Two](/tasks/T02.md "see also")\n- [x] [web](https://x.org) and ![fig](f.html) and [art](f.html "see also")\n- [T03](/tasks/T03.md "see also")\n');
+    expect(setTitles(all, "see also")).toHaveLength(3); // the one already so is left
+    expect(after(st, setTitles(all, null))).not.toContain('"');
+    const rated = stateOf(after(st, setTitles(all, "see also")));
+    const now = linksIn(rated, 0, rated.doc.length);
+    expect(labelFor(now)).toBe("4 links, see also");
+    expect(choicesFor(now).map((c) => (c.on ? "*" : "") + c.label)).toEqual(["Requires", "Uses", "*See also", "Unrated"]);
+    // A selection that cuts a link in two leaves it out.
+    const cut = doc.indexOf("/tasks/T02.md");
+    expect(linksIn(st, 0, cut).map((l) => l.url)).toEqual(["/tasks/T01.md"]);
   });
 });

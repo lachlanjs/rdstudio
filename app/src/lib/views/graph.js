@@ -1,4 +1,4 @@
-// Graph tab: force-directed view of concepts, directories and reports.
+// Graph tab: force-directed view of concepts, directories and artifacts.
 // Positions and options survive navigation (module state) and visits (localStorage).
 
 import * as d3 from "d3";
@@ -81,7 +81,7 @@ function buildGraph() {
     add({ id: "c:" + c.id, kind: "concept", ref: c.id, label: c.title, type: c.type, trust: trustState(c), group: topDir(c.id), c });
   }
   if (G.opts.reports) {
-    for (const r of store.reports) add({ id: "r:" + r.path, kind: "report", ref: r.path, label: r.title, r });
+    for (const r of store.artifacts) add({ id: "r:" + r.path, kind: "report", ref: r.path, label: r.title, r });
   }
   if (G.opts.hierarchy) {
     for (const d of Object.values(store.tree)) {
@@ -102,10 +102,11 @@ function buildGraph() {
     }
   }
   if (G.opts.reports) {
-    for (const r of store.reports) {
-      for (const cid of r.links) {
+    // An artifact is joined to the notes that cite it (T76); what it links to itself is not read.
+    for (const r of store.artifacts) {
+      for (const cid of new Set(r.citedBy.map((c) => c.note))) {
         if (!byId.has("c:" + cid)) continue;
-        links.push({ source: "r:" + r.path, target: "c:" + cid, kind: "link" });
+        links.push({ source: "c:" + cid, target: "r:" + r.path, kind: "link" });
         bump("r:" + r.path); bump("c:" + cid);
       }
     }
@@ -257,7 +258,7 @@ export function graphView() {
     function showTip(event, d) {
       const lines = [h("strong", {}, d.label)];
       if (d.kind === "concept") lines.push(h("span", {}, `${d.type || "Concept"} · ${TRUST_LABEL[d.trust]}`), d.c.description ? h("div", {}, d.c.description) : "");
-      else if (d.kind === "report") lines.push(h("span", {}, `Report · ${d.r.date}`));
+      else if (d.kind === "report") lines.push(h("span", {}, `Artifact · ${d.r.date}`));
       else lines.push(h("span", {}, "Directory"));
       tip.replaceChildren(...lines);
       const box = wrap.getBoundingClientRect();
@@ -379,7 +380,7 @@ function controls(redraw) {
     h("div", { class: "row" }, search),
     h("details", { class: "graph-options", open: !narrow },
       h("summary", {}, "Options"),
-      h("div", { class: "row" }, toggle("hierarchy", "Folders"), toggle("reports", "Reports"), toggle("labels", "Labels"), colour),
+      h("div", { class: "row" }, toggle("hierarchy", "Folders"), toggle("reports", "Artifacts"), toggle("labels", "Labels"), colour),
       legend,
       h("div", { class: "sliders" }, sliders),
       h("div", { class: "row" },
@@ -394,7 +395,7 @@ function legendItems() {
     for (const [k, v] of Object.entries(TRUST_COLOR)) items.push(h("span", {}, h("i", { style: `background:${v}` }), TRUST_LABEL[k]));
   }
   items.push(h("span", {}, h("i", { style: "border:1.6px solid var(--ink);background:var(--paper-raised)" }), "Folder"));
-  items.push(h("span", {}, h("i", { style: "background:var(--cat-reports);border-radius:2px" }), "Report"));
+  items.push(h("span", {}, h("i", { style: "background:var(--cat-reports);border-radius:2px" }), "Artifact"));
   items.push(h("span", {}, "→ link, ┄ contains"));
   return items;
 }

@@ -35,7 +35,7 @@
       <button class="toggle" type="button" role="radio" aria-checked={projectIs === "Project"} disabled={modeBusy} onclick={() => setProjectMode("Project")}>Project</button>
     </div>
     <p class="section-note">Learning: study leads (Practice, streaks, the Understanding lens). Project: upkeep leads (the Project space, the week's counters, the Activity lens).
-      Unlike the settings below, this is the project's, not this browser's: it is saved in <code>rdstudio.toml</code> as the teacher's profile
+      Unlike the settings below, this is the project's, not this browser's: it is saved in <code>rdstudio.toml</code> as the agent's profile
       ({teacher.state?.profile}{teacher.state && !teacher.state.profileSet ? ", guessed until it is set" : ""}), for everyone who opens the project.</p>
     {#if modeError}<p class="section-note bad">{modeError}</p>{/if}
   {/if}
@@ -66,7 +66,7 @@
   </div>
 
   {#if !store.site.static}
-    <h2 class="section-h">Teacher</h2>
-    <p class="section-note">How the agent teaches you in this project: its profile, and the skills it follows. <a href="#/teacher">Open the teacher</a>.</p>
+    <h2 class="section-h">Axis</h2>
+    <p class="section-note">Axis is the agent that teaches and helps in this project: its profile, and the skills it follows. <a href="#/teacher">Open Axis</a>.</p>
   {/if}
 </div>

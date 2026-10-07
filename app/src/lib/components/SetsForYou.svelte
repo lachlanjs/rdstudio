@@ -25,7 +25,7 @@
 {#each sets as set (set.id)}
   {@const [head, desc] = setHead(set.note)}
   <section class="sec">
-    <div class="sec-head"><span class="kind">Set for you</span><span class="caption">{set.done.length} of {set.exercises.length} answered · set {fmtDay(set.at)} by the teacher</span></div>
+    <div class="sec-head"><span class="kind">Set for you</span><span class="caption">{set.done.length} of {set.exercises.length} answered · set {fmtDay(set.at)} by Axis</span></div>
     <h2>{head}</h2>
     {#if desc}<p class="desc">{desc}</p>{/if}
     <ol class="ex">
@@ -37,7 +37,7 @@
         {#if next && next.about === x}
           <!-- In one column the next step hangs under its row by a stem (in two, it is in the margin). -->
           <li class="next-inline">
-            <aside class={["pin", "pin-" + next.pen]}><div class="pin-head"><b>The teacher’s next step</b></div><Prose html={render(next.text)} /></aside>
+            <aside class={["pin", "pin-" + next.pen]}><div class="pin-head"><b>Axis’s next step</b></div><Prose html={render(next.text)} /></aside>
           </li>
         {/if}
       {/each}

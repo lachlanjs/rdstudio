@@ -15,10 +15,11 @@ import { loadBundle } from "@rdstudio/core/node";
 import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
+import { Lookup, TOOLS, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
-export const MODES = ["ask", "fill"] as const;
+export const MODES = ["ask", "fill", "figure"] as const;
 export type Mode = (typeof MODES)[number];
 
 /** The marks put round the place in the note that the request is about. */
@@ -32,7 +33,14 @@ export interface Ask {
   from: number; // the selection, or the caret (from === to), as offsets in body
   to: number;
   prompt?: string;
+  /** How strong a model to ask (T83); left out, the mode's usual one. */
+  tier?: models.Tier;
+  /** figure: the artifact it wrote before, and what the check found wrong with it, to put right. */
+  fix?: { html: string; problems: string[] };
 }
+
+/** The tier a mode is asked at when none is chosen: a figure is the hardest to get right. */
+export const USUAL: Record<Mode, models.Tier> = { ask: "mid", fill: "mid", figure: "max" };
 
 /** Something the model was given, shown under its reply. */
 export interface Source {
@@ -47,29 +55,105 @@ export interface Reply {
   reply: string; // as the model wrote it
   answer: string; // what to show: the answer, or why the text was written as it was
   insert: string | null; // fill: the text proposed, for from..to
+  /** figure: the artifact written (T78), to be checked and shown before anything is saved. */
+  artifact?: { title: string; caption: string; html: string } | null;
   from: number;
   to: number;
   sources: Source[];
+  /** What it looked up for itself, in order (T84): each search, each note or file opened, and how it was reached. */
+  steps: Step[];
   model: string;
+  tier: models.Tier;
   cost: number;
 }
 
-const HOW = `# How to help
+// What it works from: what it looks up for itself (T84), or, for a model that cannot call tools, what was gathered for it.
+const USE = { looked: `- Work from the note below and from what you look up with the tools. Do not
+  invent facts, names, file paths or code: if the note and what you looked
+  up do not answer, say so plainly and say what would.`,
+  given: `- Use what you are given below: the note, the notes it links to, notes
+  found by searching the base, and code from the repository. Do not invent
+  facts, names, file paths or code that are not there. If what you are given
+  does not answer, say so plainly and say what would.` };
+
+/** How many times it may look things up before it must reply, by tier. */
+export const ROUNDS: Record<models.Tier, number> = { low: 3, mid: 6, max: 8 };
+
+const LOOKUP = (rounds: number) => `# Looking things up
+
+Before you reply you may look things up in the project's knowledge base and
+in the repository's code, with the tools. Nothing has been looked up for you:
+below there is only the note, and the titles of the notes it links to.
+
+- Look up only what the request needs. A change to the form or wording of
+  the passage (re-rating links, tidying a list, mending grammar, shortening)
+  needs nothing looked up: reply at once.
+- For a question about the project, or text that states facts about it,
+  look first. search_notes finds notes by their words; outline_note shows a
+  note's headings and what it links to; read_note reads one section. Prefer
+  one section to a whole note. Follow a note's links when what you need is
+  one step on from it.
+- For code, search_code finds a name; read_code reads the lines round it.
+  Quote code only as you read it.
+- You may call several tools at once. You have ${rounds} rounds of looking
+  up at most; then reply in the form asked, with what you have.
+- Say nothing between lookups: no "let me check". Only the reply is shown.`;
+
+const HOW_TEXT = (given: string) => `# How to help
 
 You are helping someone write a note in a project's knowledge base (Open
 Knowledge Format: Markdown with links between notes). They are in the
 editor now. The place they are asking about is marked in their note: a
 passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.
 
-- Use what you are given below: the note, the notes it links to, notes
-  found by searching the base, and code from the repository. Do not invent
-  facts, names, file paths or code that are not there. If what you are given
-  does not answer, say so plainly and say what would.
-- Link to a note as [its title](/its/path.md), with the path as given.
-  Refer to code as \`path:line\`.
+${given}
+- Link to a note as [its title](/its/path.md), with the path as given, and
+  no rating unless one is asked for. Refer to code as \`path:line\`, in
+  backticks, not as a link.
 - Write as the note is written: its language, its tone, its level. Plain
   words. No preamble, no closing remarks.
 - Maths goes between dollar signs, as LaTeX.`;
+const HOW = HOW_TEXT(USE.given);
+
+// What a note may hold here beyond plain Markdown, and what the app makes of
+// it. Without this the model does not know, for one, that "see also" is a
+// rating written as a link's title. The ratings are core's RATINGS; the
+// wording follows the record-okf skill, which tells agents outside the app
+// the same.
+export const FORMAT = `# How notes work here
+
+The app reads these forms in a note. When a request names one of them, it
+means the form as written here.
+
+- A link to a note: [its title](/its/path.md). A link may carry a rating,
+  written as the link's title, in double quotes after the path:
+  [its title](/its/path.md "requires"). The ratings are:
+  "requires": this note cannot be understood without that one;
+  "uses": relies on it for a fact, an example or a proof, but not to define it;
+  "see also": a pointer onward, a tangent, or a list entry (an index, a
+  roadmap, a list of tasks).
+  A link with no rating counts as "uses". So "make this a see also link"
+  means: add "see also" as the link's title and change nothing else:
+  [T01 Skeleton](/tasks/T01.md) becomes [T01 Skeleton](/tasks/T01.md "see also").
+  It does not mean writing the words "see also" in the text.
+- The Atlas, the app's map of the notes, draws each link as a route and
+  places a note after the ones it requires or uses. "see also" links are the
+  weakest: they do not decide where notes are placed and can be hidden. A
+  note with many unrated links clutters the map.
+- An artifact (an HTML file beside the notes) or a picture is linked the
+  same way, [title](figure.html), or shown in place with image syntax,
+  ![caption](figure.html), ![alt](pic.png). A picture's title sets its side:
+  ![alt](pic.png "left") or "center".
+- A checklist item is "- [ ] text", or "- [x] text" when done.
+- Maths between dollar signs, as LaTeX. Diagrams in a \`\`\`mermaid fence.
+- A claim from an outside source carries a footnote, [^source-id].
+
+When asked to change the form of something (a link's rating, a list's
+marks, a heading's level), change only that. Give back everything else in
+the passage exactly as it is: every line, in the same order, the same words.`;
+
+/** The longest passage that can be rewritten at once, in characters: what comes back must fit one reply. */
+export const MAX_PASSAGE = 40_000;
 
 const FORM: Record<Mode, string> = {
   ask: `# Your reply
@@ -91,7 +175,54 @@ as given, not rewritten.
 One or two sentences: what you wrote and what you took it from, and anything
 you were unsure of.
 </why>`,
+  figure: `# Your reply
+
+Reply in exactly this form and nothing else:
+
+<title>A short title for the artifact</title>
+<caption>One line to go under it in the note: what it shows and how to use it.</caption>
+<artifact>
+<!doctype html>
+…the whole file…
+</artifact>
+<why>
+One or two sentences: what you made and what you took it from, and anything
+you were unsure of.
+</why>`,
 };
+
+const FIGURE_HOW = `# The artifact
+
+You are writing an artifact: one self-contained HTML file that will be shown
+inside the note, in a frame, where Markdown is not enough. It should make the
+marked passage easier to understand by letting the reader see or try
+something: a plot to hover, sliders that recompute, an animation to play and
+step, a table to sort.
+
+It must keep these rules. It is loaded and checked before it is offered, and
+is not offered if it breaks one.
+
+- One file: all script, style and data inside it. It cannot read other files.
+- No network. It is served with a policy that blocks every address but
+  these, rdstudio's own libraries, which you may use exactly as written:
+  vendor/katex/katex.min.js, vendor/katex/auto-render.min.js,
+  vendor/katex/katex.min.css (maths); vendor/vega/vega.min.js,
+  vendor/vega/vega-lite.min.js, vendor/vega/vega-embed.min.js (charts).
+  Plain canvas, SVG and DOM need no library and are usually enough.
+- No errors: nothing uncaught, nothing written with console.error.
+- Light: well under 200 kB, ready at once. Do no work until asked: an
+  animation starts when the reader presses play, never on load, and stops.
+- The app's colours, through these CSS variables, each with a fallback:
+  --surface, --surface-1, --surface-2, --text, --text-soft, --text-faint,
+  --rule, --rule-strong, --pen-red, --pen-green, --pen-blue, --font-ui,
+  --font-text, --font-mono. A transparent or var(--surface) background.
+- Sized by its content: no fixed page height, no inner scroll bars, a width
+  that works from 320 to 800 pixels. Modest height (under about 480 pixels).
+- Controls a keyboard can reach, each with a label.
+- A <title>, and <meta name="description" content="one sentence">.
+- Only what the note, the notes given and the code given support. Do not
+  invent data: if a figure needs numbers you were not given, compute them
+  from the formula in the passage, and say so in the caption.`;
 
 // ------------------------------------------------------------------ the note, marked
 
@@ -210,25 +341,32 @@ export interface Prepared {
   job: models.Job;
 }
 
-/** Build the request: nothing is sent yet. */
-export function prepare(cfg: Config, ask: Ask): Prepared {
+/** Build the request: nothing is sent yet. As a rule the model looks things up for itself (T84) and is given
+ *  only the note and the titles of the notes it links to; with `gather`, for a model that cannot call tools,
+ *  the linked notes, a search's finds and code by name are put in for it, as they were before. */
+export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}): Prepared {
+  const gather = opts.gather === true;
   if (!(MODES as readonly string[]).includes(ask.mode)) throw new StoreError(`a mode is one of ${MODES.join(", ")}`);
   const prompt = ask.prompt?.trim() ?? "";
   const from = Math.max(0, Math.min(ask.body.length, Math.min(ask.from, ask.to))), to = Math.max(from, Math.min(ask.body.length, Math.max(ask.from, ask.to)));
   const selection = ask.body.slice(from, to);
   if (ask.mode === "ask" && !prompt && !selection.trim()) throw new StoreError("ask something, or select a passage to ask about");
   if (ask.mode === "fill" && !prompt && !selection.trim()) throw new StoreError("say what to write here, or select a passage to rewrite");
+  // A passage cut to fit would come back with part of it missing, and accepting that would delete the rest.
+  if (ask.mode === "fill" && selection.length > MAX_PASSAGE) throw new StoreError(`that passage is too long to rewrite at once (${selection.length} characters; ${MAX_PASSAGE} at most): select less of it`);
+  if (ask.mode === "figure" && !prompt && !selection.trim()) throw new StoreError("select the passage the figure should be about, or say what it should show");
   const b = loadBundle(cfg.knowledgeDir);
   const known = b.concepts.get(ask.note);
   const title = ask.title?.trim() || known?.title || ask.note;
 
   const sources: Source[] = [];
-  const linked = linkedIds(b, ask.note, ask.body).slice(0, 6);
+  const every = linkedIds(b, ask.note, ask.body);
+  const linked = gather ? every.slice(0, 6) : [];
   for (const id of linked) sources.push({ kind: "note", id, title: b.concepts.get(id)!.title });
   // Searched for by the request, the passage, what is written round the place, and the note's title.
   const near = ask.body.slice(Math.max(0, from - 300), Math.min(ask.body.length, to + 300));
   const query = [prompt, selection.slice(0, 400), near, title].filter(Boolean).join(" ");
-  const found = new SearchIndex(b).search(query, { limit: 10 }).map((h) => h.concept.id).filter((id) => id !== ask.note && !linked.includes(id)).slice(0, 5);
+  const found = !gather ? [] : new SearchIndex(b).search(query, { limit: 10 }).map((h) => h.concept.id).filter((id) => id !== ask.note && !linked.includes(id)).slice(0, 5);
   for (const id of found) sources.push({ kind: "note", id, title: b.concepts.get(id)!.title });
 
   const about = [prompt, selection].join("\n");
@@ -236,22 +374,35 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   // With no name given, the index is searched by the request's words only when the request is about code.
   const wantsCode = /\b(code|function|class|method|implement\w*|source|snippet|definition|declaration|signature|api)\b/i.test(prompt);
   const words = wantsCode ? [...new Set((prompt + " " + title).split(/[^A-Za-z]+/).filter((w) => w.length >= 5 && !/^(function|class|method|source|snippet|insert|relevant|where|about|write|there|their|which|definition|declaration|signature)$/i.test(w)))].slice(0, 8) : [];
-  const indexed = fromIndex(codeIndexSync(cfg), names, words).slice(0, 8);
-  const inFiles = fromFiles(cfg, names, new Set(indexed.map((f) => f.path + ":" + f.line))).filter((f) => !indexed.some((i) => i.path === f.path && Math.abs(i.line - f.line) < 12));
+  const indexed = !gather ? [] : fromIndex(codeIndexSync(cfg), names, words).slice(0, 8);
+  const inFiles = !gather ? [] : fromFiles(cfg, names, new Set(indexed.map((f) => f.path + ":" + f.line))).filter((f) => !indexed.some((i) => i.path === f.path && Math.abs(i.line - f.line) < 12));
   const code = [...indexed, ...inFiles].slice(0, 10);
   for (const f of code) sources.push({ kind: "code", id: f.path, title: f.title, line: f.line });
 
   const what = ask.mode === "ask"
     ? (prompt ? `Their question about the marked place:\n\n${prompt}` : "They ask: what should I know about the marked passage? Is it right, and what does it leave out?")
-    : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
+    : ask.mode === "figure"
+      ? (ask.fix
+        ? `The artifact you wrote was loaded and checked, and is not good enough to offer. What was wrong:\n\n${ask.fix.problems.map((p) => "- " + p).join("\n")}\n\nWrite it again, whole, with that put right and nothing else changed.${prompt ? `\n\nWhat they asked for:\n\n${prompt}` : ""}`
+        : (prompt ? `What they want the artifact to show, for the marked place:\n\n${prompt}` : "They want an artifact that makes the marked passage easier to understand."))
+      : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
+  // The whole of the marked passage is always sent, with the note round it.
+  const room = Math.max(14000, selection.length + 6000);
+  // A provider takes few cache marks (Anthropic, four): one where the fixed part ends, one where the request does.
   const { messages, seen } = assemble([
-    { name: "How to help", text: HOW.replace(/^# How to help\n\n/, ""), tokens: 600, cache: true },
+    { name: "How to help", text: (gather ? HOW : HOW_TEXT(USE.looked)).replace(/^# How to help\n\n/, ""), tokens: 600 },
+    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700 },
+    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]]).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
+    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900 },
     { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
-    { name: "Notes this one links to", text: linked.map((id) => noteText(b, id, 2400)).join("\n\n"), tokens: 3600 },
+    { name: "Notes this one links to", text: gather ? linked.map((id) => noteText(b, id, 2400)).join("\n\n")
+      : every.slice(0, 60).map((id) => { const c = b.concepts.get(id)!; return `- ${c.title} (/${id}.md)${c.description ? `: ${c.description}` : ""}`; }).join("\n") + (every.length > 60 ? `\n[…and ${every.length - 60} more]` : ""), tokens: gather ? 3600 : 1500 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
-    { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to) || HERE, tokens: 4000, role: "user" },
-    { name: "What to do", text: what, tokens: 600, role: "user" },
+    { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to, room) || HERE, tokens: Math.ceil(room / 4) + 100, role: "user" },
+    { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
+    // Cached to here: when it looks things up, each further round sends all of this again.
+    { name: "What to do", text: what, tokens: 900, role: "user", cache: true },
   ]);
   return { messages, seen, sources, job: ask.mode === "ask" ? "discuss" : "write" };
 }
@@ -260,19 +411,83 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
 export function parseFill(reply: string): { insert: string | null; why: string } {
   const ins = /<insert>\n?([\s\S]*?)\n?<\/insert>/i.exec(reply);
   const why = /<why>\n?([\s\S]*?)\n?<\/why>/i.exec(reply);
+  // Opened and never closed: the reply ran out of room. Part of a passage is never offered.
+  if (!ins && /<insert>/i.test(reply)) return { insert: null, why: "The reply was cut short before the text was finished, so nothing is proposed. Select less of the note and ask again." };
   if (!ins) return { insert: null, why: reply.trim() };
   const text = ins[1]!.replace(new RegExp(`${OPEN}HERE${CLOSE}|${OPEN}|${CLOSE}`, "g"), "");
   return { insert: text.trim() ? text : null, why: (why?.[1] ?? "").trim() };
 }
 
-/** Ask, streaming the reply's text. Nothing is kept but the usage. */
-export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {
-  const p = prepare(cfg, a);
-  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : "note-fill", messages: p.messages, onText,
-    maxTokens: a.mode === "ask" ? 900 : 2000 });
+/** Read a figure's reply: the artifact, its title and caption, and why. */
+export function parseFigure(reply: string): { artifact: { title: string; caption: string; html: string } | null; why: string } {
+  const part = (tag: string) => new RegExp(`<${tag}>\\n?([\\s\\S]*?)\\n?<\\/${tag}>`, "i").exec(reply)?.[1]?.trim() ?? "";
+  // The file holds its own <title>: the first one in the reply is ours, before <artifact>.
+  const lead = reply.split(/<artifact>/i)[0] ?? "";
+  const title = /<title>\n?([\s\S]*?)\n?<\/title>/i.exec(lead)?.[1]?.trim() ?? "";
+  const body = /<artifact>\n?([\s\S]*)\n?<\/artifact>/i.exec(reply)?.[1]?.trim() ?? "";
+  const html = body.replace(/^```(?:html)?\n/, "").replace(/\n```$/, "");
+  if (!/<(html|body|script|svg|canvas|div|p)\b/i.test(html)) return { artifact: null, why: part("why") || reply.trim() };
+  return { artifact: { title: title || /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "Figure", caption: part("caption"), html }, why: part("why") };
+}
+
+/** Room for a fill's reply: a rewritten passage comes back whole, a little longer than it went.
+ *  A token for each character: text full of links and paths runs near two characters a token
+ *  (the roadmap, 8600 characters, was cut at 4500 tokens), and room not used costs nothing. */
+export const fillTokens = (passage: number): number => Math.max(2000, passage + 1000);
+
+const featureOf = (m: Mode) => (m === "ask" ? "note-ask" : m === "figure" ? "note-figure" : "note-fill");
+const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)));
+/** A model, or the provider it is routed to, that cannot call tools says so; then it is given what it would have looked up. */
+const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|function call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized/i.test(err.message);
+
+export interface Hooks {
+  /** Each piece of the reply's text as it is written. */
+  onText?: (piece: string) => void;
+  /** Each thing it looks up, as it does. What was written before a lookup is not the reply: text starts again after one. */
+  onStep?: (step: Step) => void;
+  signal?: AbortSignal;
+}
+
+/** Ask, streaming the reply's text. The model may look things up first, in rounds: each round's calls are run
+ *  and answered, until it replies or the tier's rounds are used, when it must reply. Nothing is kept but the usage. */
+export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) => void) = {}): Promise<{ reply: Reply; seen: Seen[] }> {
+  const h: Hooks = typeof hooks === "function" ? { onText: hooks } : hooks;
+  const tier = a.tier ?? USUAL[a.mode], model = models.tiers()[tier];
+  let p = prepare(cfg, a);
+  const call = { cfg, job: p.job, feature: featureOf(a.mode), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal };
+  const look = new Lookup(cfg, loadBundle(cfg.knowledgeDir), a.note);
+  const messages = [...p.messages];
+  let text = "", cost = 0, used = model;
+  for (let round = 0; ; round++) {
+    let r: models.Reply;
+    try {
+      r = await models.complete({ ...call, messages, tools: TOOLS, toolChoice: round < ROUNDS[tier] ? "auto" : "none" });
+    } catch (err) {
+      if (round > 0 || !noTools(err)) throw err;
+      p = prepare(cfg, a, { gather: true });
+      r = await models.complete({ ...call, messages: p.messages });
+      r.calls = [];
+    }
+    cost += r.usage.cost; used = r.usage.model; text = r.text;
+    if (!r.calls.length || round >= ROUNDS[tier]) break;
+    messages.push({ role: "assistant", content: r.text, calls: r.calls });
+    for (const c of r.calls) {
+      const out = look.run(c.name, c.arguments);
+      messages.push({ role: "tool", callId: c.id, content: out });
+      h.onStep?.(look.steps.at(-1)!);
+    }
+  }
+  // What it drew on: what was gathered for it, and each note and file it opened itself.
+  const sources = [...p.sources];
+  for (const s of look.steps) {
+    if (s.failed) continue;
+    if (s.opened && !sources.some((x) => x.kind === "note" && x.id === s.opened)) sources.push({ kind: "note", id: s.opened, title: look.b.concepts.get(s.opened)?.title ?? s.opened });
+    else if (s.tool === "read_code" && s.code && !sources.some((x) => x.kind === "code" && x.id === s.code!.path && x.line === s.code!.line)) sources.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
+  }
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
-  const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, cost: r.usage.cost };
-  if (a.mode === "ask") return { reply: { ...base, answer: r.text.trim(), insert: null }, seen: p.seen };
-  const { insert, why } = parseFill(r.text);
+  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost };
+  if (a.mode === "ask") return { reply: { ...base, answer: text.trim(), insert: null }, seen: p.seen };
+  if (a.mode === "figure") { const f = parseFigure(text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
+  const { insert, why } = parseFill(text);
   return { reply: { ...base, answer: why, insert }, seen: p.seen };
 }

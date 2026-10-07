@@ -1,5 +1,6 @@
 // Blocks the live preview draws as the note page does: display maths ($$…$$,
-// \[…\]), Mermaid diagrams and tables. Away from the cursor a block is
+// \[…\]), Mermaid diagrams, tables, and a line that is one picture or one
+// embedded artifact (T76). Away from the cursor a block is
 // replaced by its rendering; with the cursor in it, its source shows for
 // editing, and maths and diagrams keep their rendering beneath it, updated
 // as you type. Clicking a rendering puts the cursor in its source.
@@ -7,12 +8,18 @@
 // view plugin, so this is separate from livePreview.ts.)
 
 import { syntaxTree } from "@codemirror/language";
-import { StateField, type EditorState, type Range } from "@codemirror/state";
+import { Facet, StateField, type EditorState, type Range } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType, type DecorationSet } from "@codemirror/view";
 import { renderDiagrams } from "$lib/diagrams.ts";
+import { mountEmbeds } from "$lib/artifactFrame.ts";
 import { render } from "$lib/markdown.ts";
 
-type Kind = "maths" | "diagram" | "table";
+type Kind = "maths" | "diagram" | "table" | "figure";
+
+/** The folder of the note being edited: what a relative link in it is relative to. */
+export const noteDir = Facet.define<string, string>({ combine: (v) => v[0] ?? "" });
+/** A paragraph that is one image and nothing else: a picture, or an artifact shown in place. */
+const FIGURE = /^!\[[^\]\n]*\]\([^)\n]+\)$/;
 
 // A diagram's drawing, kept by its source, so a block redrawn (the cursor
 // leaving it, a scroll) shows at once instead of flickering while Mermaid runs.
@@ -37,7 +44,8 @@ class BlockWidget extends WidgetType {
       inner.innerHTML = known;
     } else {
       // The same rendering as the note page (render() sanitises it).
-      inner.innerHTML = render(this.kind === "diagram" ? "```mermaid\n" + this.source + "\n```" : this.source);
+      inner.innerHTML = render(this.kind === "diagram" ? "```mermaid\n" + this.source + "\n```" : this.source, { dir: view.state.facet(noteDir) });
+      if (this.kind === "figure") { this.unmount = mountEmbeds(inner); inner.querySelector("img")?.addEventListener("load", () => view.requestMeasure()); }
       if (this.kind === "diagram") {
         void renderDiagrams(inner).then(() => {
           if (inner.querySelector('.mermaid-block[data-rendered="done"]')) drawn.set(key, inner.innerHTML);
@@ -56,8 +64,10 @@ class BlockWidget extends WidgetType {
     return el;
   }
 
+  private unmount: (() => void) | null = null;
+  destroy(): void { this.unmount?.(); this.unmount = null; }
   ignoreEvent(): boolean { return true; }
-  get estimatedHeight(): number { return this.kind === "diagram" ? 240 : this.kind === "maths" ? 60 : 120; }
+  get estimatedHeight(): number { return this.kind === "diagram" || this.kind === "figure" ? 240 : this.kind === "maths" ? 60 : 120; }
 }
 
 function build(state: EditorState): DecorationSet {
@@ -80,6 +90,8 @@ function build(state: EditorState): DecorationSet {
           const end = closed ? last.number - 1 : last.number;
           source = end > first.number ? state.sliceDoc(state.doc.line(first.number + 1).from, state.doc.line(end).to) : "";
         }
+      } else if (node.name === "Paragraph" && FIGURE.test(state.sliceDoc(node.from, node.to).trim())) {
+        kind = "figure"; source = state.sliceDoc(node.from, node.to);
       } else if (node.name === "Document" || node.name === "Blockquote" || /List|ListItem/.test(node.name)) {
         return undefined; // blocks can sit inside these
       }

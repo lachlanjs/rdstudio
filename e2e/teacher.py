@@ -182,7 +182,7 @@ with sync_playwright() as pw:
     # ------------------------------------------------------------ foundation (T43)
     p.goto(URL + "?nosw#/learn")
     p.get_by_role("link", name="How the agent teaches you here").click()
-    p.get_by_role("heading", name="Teacher", exact=True).wait_for()
+    p.get_by_role("heading", name="Axis", exact=True).wait_for()
     p.locator(".teacher-skills li").first.wait_for()
     check("the Teacher page is reached from the Learn tab, and belongs to You",
           p.locator(".you-button[aria-current=page]").count() == 1)
@@ -193,10 +193,10 @@ with sync_playwright() as pw:
     p.screenshot(path=str(OUT / "teacher-desktop.png"), full_page=True)
 
     p.goto(URL + "?nosw#/settings")
-    p.get_by_role("link", name="Open the teacher").click()
+    p.get_by_role("link", name="Open Axis").click()
     p.wait_for_url("**#/teacher")
     rows.first.wait_for()
-    check("and from Settings", p.get_by_role("heading", name="Teacher", exact=True).count() == 1)
+    check("and from Settings", p.get_by_role("heading", name="Axis", exact=True).count() == 1)
 
     rows.first.locator("a.title").click()
     p.locator("h1 .chip").wait_for()
@@ -284,7 +284,7 @@ with sync_playwright() as pw:
     p.locator(".project-places").wait_for()
     check("Project gathers changes, review, reports, procedures and skills", p.locator(".project-places li").count() == 5)
     p.locator(".you-button").click()
-    check("the You menu holds the teacher, settings and light or dark", p.locator(".you-menu a", has_text="Teacher").count() == 1 and p.locator(".you-row button").count() == 3)
+    check("the You menu holds the teacher, settings and light or dark", p.locator(".you-menu a", has_text="Axis").count() == 1 and p.locator(".you-row button").count() == 3)
     p.locator(".you-row button", has_text="Light").click()
     check("light or dark from the You menu", p.evaluate("document.documentElement.dataset.mode") == "light")
     p.locator(".you-row button", has_text="Dark").click()
@@ -691,7 +691,7 @@ with sync_playwright() as pw:
     check("…and elsewhere the spaces are a bar at the bottom", pp.locator(".tabbar").is_visible()
           and pp.locator(".tabbar a, .tabbar button").count() == 5 and not pp.locator(".bar .tabs").is_visible())
     pp.locator(".tabbar").get_by_role("button", name="More").tap()
-    check("…More holds the You menu", pp.get_by_role("menuitem", name="Teacher").is_visible())
+    check("…More holds the You menu", pp.get_by_role("menuitem", name="Axis").is_visible())
     pp.keyboard.press("Escape")
     if pp.locator(".today-pin.has-inline").count():
         check("…and the teacher's next step hangs under its row", pp.locator(".ex li.next-inline .pin").is_visible())

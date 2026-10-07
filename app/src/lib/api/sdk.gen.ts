@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, ServerSentEventsResult, TDataShape } from './client/index.js';
-import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherAiData, DeleteApiTeacherAiErrors, DeleteApiTeacherAiResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherAiData, GetApiTeacherAiErrors, GetApiTeacherAiResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsData, GetApiTeacherDraftsErrors, GetApiTeacherDraftsResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdAssistData, PostApiNotesByIdAssistErrors, PostApiNotesByIdAssistResponse, PostApiNotesByIdAssistResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherAiCheckData, PostApiTeacherAiCheckErrors, PostApiTeacherAiCheckResponses, PostApiTeacherAiConnectData, PostApiTeacherAiConnectErrors, PostApiTeacherAiConnectResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherTutorByIdData, PostApiTeacherTutorByIdErrors, PostApiTeacherTutorByIdResponse, PostApiTeacherTutorByIdResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherProfileData, PutApiTeacherProfileErrors, PutApiTeacherProfileResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses } from './types.gen.js';
+import type { DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherAiData, DeleteApiTeacherAiErrors, DeleteApiTeacherAiResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherAiData, GetApiTeacherAiErrors, GetApiTeacherAiResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsData, GetApiTeacherDraftsErrors, GetApiTeacherDraftsResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiArtifactsPreviewData, PostApiArtifactsPreviewErrors, PostApiArtifactsPreviewResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdAssistData, PostApiNotesByIdAssistErrors, PostApiNotesByIdAssistResponse, PostApiNotesByIdAssistResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherAiCheckData, PostApiTeacherAiCheckErrors, PostApiTeacherAiCheckResponses, PostApiTeacherAiConnectData, PostApiTeacherAiConnectErrors, PostApiTeacherAiConnectResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherTutorByIdData, PostApiTeacherTutorByIdErrors, PostApiTeacherTutorByIdResponse, PostApiTeacherTutorByIdResponses, PutApiArtifactsByPathData, PutApiArtifactsByPathErrors, PutApiArtifactsByPathResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherProfileData, PutApiTeacherProfileErrors, PutApiTeacherProfileResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses, PutApiTeacherTiersData, PutApiTeacherTiersErrors, PutApiTeacherTiersResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -129,6 +129,18 @@ export const getApiTeacherAi = <ThrowOnError extends boolean = false>(options?: 
 export const postApiTeacherAiConnect = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiConnectData, ThrowOnError>): RequestResult<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError>({ url: '/api/teacher/ai/connect', ...options });
 
 /**
+ * Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.
+ */
+export const putApiTeacherTiers = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherTiersData, ThrowOnError>): RequestResult<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError>({
+    url: '/api/teacher/tiers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Check the connection with a tiny request (its cost is logged as "check")
  */
 export const postApiTeacherAiCheck = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiCheckData, ThrowOnError>): RequestResult<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError>({ url: '/api/teacher/ai/check', ...options });
@@ -146,7 +158,7 @@ export const postApiTeacherTutorById = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.
+ * Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill). The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply, or error. Nothing is written.
  */
 export const postApiNotesByIdAssist = <ThrowOnError extends boolean = false>(options: Options<PostApiNotesByIdAssistData, ThrowOnError, PostApiNotesByIdAssistResponse>): Promise<ServerSentEventsResult<PostApiNotesByIdAssistResponses>> => (options.client ?? client).sse.post<PostApiNotesByIdAssistResponses, PostApiNotesByIdAssistErrors, ThrowOnError>({
     url: '/api/notes/{id}/assist',
@@ -275,3 +287,27 @@ export const postApiFoldersMove = <ThrowOnError extends boolean = false>(options
  * Delete a folder (with the notes in it, given withNotes)
  */
 export const deleteApiFoldersByPath = <ThrowOnError extends boolean = false>(options: Options<DeleteApiFoldersByPathData, ThrowOnError>): RequestResult<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiFoldersByPathResponses, DeleteApiFoldersByPathErrors, ThrowOnError>({ url: '/api/folders/{path}', ...options });
+
+/**
+ * Hold an artifact that is not saved yet, to be looked at and checked: it is served like a saved one from the address returned, for a while
+ */
+export const postApiArtifactsPreview = <ThrowOnError extends boolean = false>(options: Options<PostApiArtifactsPreviewData, ThrowOnError>): RequestResult<PostApiArtifactsPreviewResponses, PostApiArtifactsPreviewErrors, ThrowOnError> => (options.client ?? client).post<PostApiArtifactsPreviewResponses, PostApiArtifactsPreviewErrors, ThrowOnError>({
+    url: '/api/artifacts/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Write an artifact made in the app (an HTML file beside the notes); refused where a file is already there unless `replace`
+ */
+export const putApiArtifactsByPath = <ThrowOnError extends boolean = false>(options: Options<PutApiArtifactsByPathData, ThrowOnError>): RequestResult<PutApiArtifactsByPathResponses, PutApiArtifactsByPathErrors, ThrowOnError> => (options.client ?? client).put<PutApiArtifactsByPathResponses, PutApiArtifactsByPathErrors, ThrowOnError>({
+    url: '/api/artifacts/{path}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

@@ -257,6 +257,20 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .report-bar { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--paper-raised); font-size: 14px; flex-wrap: wrap; }
 .report-bar strong { font: 600 16px var(--font-text); }
 .report-frame { flex: 1; width: 100%; border: 0; background: var(--paper); }
+/* Artifacts (T76): on their own page the frame fills the space; in a note it is as tall as its content. */
+.artifact-page { flex: 1; min-height: 0; display: flex; }
+.artifact-page .artifact-frame { flex: 1; height: 100%; }
+.artifact-cited { color: var(--ink-soft); }
+.artifact-frame { width: 100%; border: 0; background: transparent; display: block; color-scheme: normal; }
+.artifact-embed { display: block; margin: 1.2em 0; }
+.artifact-embed .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
+.artifact-caption { display: block; margin-top: 6px; font: 13.5px var(--font-ui); color: var(--ink-faint); text-align: center; }
+.artifact-note { display: block; font: 14px var(--font-ui); color: var(--ink-faint); }
+.artifact-link::after { content: " ◱"; font-size: .8em; color: var(--ink-faint); }
+/* Pictures: 80% of the text's width, centred, or at the left when the title says so. */
+.pic { display: block; margin: 1.2em 0; text-align: center; }
+.pic.left { text-align: left; }
+.pic img { width: 80%; height: auto; border-radius: var(--radius-sm); }
 
 /* skills */
 .cards2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0 28px; }
@@ -448,6 +462,10 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .map-folders li i { width: 12px; height: 12px; }
 .map-folders li .n { color: var(--text-faint); }
 .g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
+/* An artifact on the Atlas (T77): a lighter plate with a broken edge and a square glyph, a window among the notes. */
+.gn.art .gn-block { fill: var(--surface-2); stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 6 2.5; }
+.gn.art .g-note { font-style: italic; }
+.key-shape.line { fill: none; }
 .g-note { font-size: 11px; font-variation-settings: "wdth" 84; }
 .gn.l0 .g-note { fill: var(--text-faint); }
 
@@ -677,6 +695,15 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-bar input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: 14.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-bar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .assist-bar .toggle { white-space: nowrap; }
+.assist-bar select { height: 32px; max-width: 150px; padding: 0 6px; font: 13.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-bar select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+@media (max-width: 640px) { .assist-bar { flex-wrap: wrap; } .assist-bar input { flex-basis: 100%; } }
+.tiers { display: grid; grid-template-columns: max-content minmax(0, 320px) 1fr; gap: 6px 12px; align-items: center; margin: 8px 0 4px; }
+.tiers label { font-weight: 600; }
+.tiers input { height: 32px; padding: 0 10px; font: 13.5px var(--font-mono); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tiers input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.tiers button { justify-self: start; }
+@media (max-width: 640px) { .tiers { grid-template-columns: max-content 1fr; } .tiers .section-note { grid-column: 2; } }
 .assist-off { margin: 0; padding: 6px 0 8px; font-size: 13.5px; color: var(--ink-faint); border-bottom: 1px solid var(--rule); }
 .assist-reply { position: relative; max-width: var(--measure); margin: 10px auto 4px; padding: 10px 14px 12px; background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); }
 .assist-reply header { display: flex; align-items: baseline; gap: 12px; margin: 0 28px 6px 0; font: 13px var(--font-ui); }
@@ -688,6 +715,14 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
 .assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
 .assist-sources code { font-size: 12.5px; }
+.assist-steps { margin: 8px 0 0; padding-left: 1.4em; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+.assist-steps li.failed { color: var(--ink-faint); }
+.assist-steps span { color: var(--ink-faint); }
+.assist-looked { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
+.assist-looked summary { cursor: pointer; }
+.assist-figure { margin: 4px 0 10px; }
+.assist-figure .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-problems { margin: 4px 0 0 18px; padding: 0; font-size: 14px; color: var(--ink-soft); }
 .editor { max-width: var(--measure); min-height: 60vh; }
 
 .edit-conflict {

@@ -53,12 +53,13 @@ test("names to look up in the code: what is in backticks, and words that look li
     .toEqual(["Thermostat", "kinetic_energy", "src/sim.py", "LennardJones", "nanosim::Vec3"]);
 });
 
-test("the model is given the note with the place marked, the notes it links to, notes found by searching, and code by name", () => {
+test("for a model that cannot call tools, it is given the note with the place marked, the notes it links to, notes found by searching, and code by name", () => {
   const { cfg } = project();
   const body = "The integrator keeps the temperature steady with a thermostat.\n\nSee [the forces](/design/forces.md \"requires\") and [units](units.md).\n";
   const at = body.indexOf("thermostat");
-  const p = assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: at, to: at, prompt: "Insert the code of `kinetic_energy` and of leapfrog_step here." });
+  const p = assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: at, to: at, prompt: "Insert the code of `kinetic_energy` and of leapfrog_step here." }, { gather: true });
   const text = said(p);
+  expect(text).not.toContain("## Looking things up");
   expect(text).toContain("with a ⟦HERE⟧thermostat");
   expect(text).toContain("Gravity is softened"); // linked, by a bundle-absolute path
   expect(text).toContain("Lengths in nanometres"); // linked, relative to the note
@@ -97,7 +98,8 @@ test("asking streams the reply and logs the cost by feature; nothing is written"
   const { reply: r } = await assist.ask(cfg, { note: "design/integrator", mode: "fill", body, from: body.length, to: body.length, prompt: "Say why." }, (t) => { streamed += t; });
   expect(streamed).toBe(reply);
   expect(r).toMatchObject({ mode: "fill", insert: "It conserves energy well.", answer: "From the note on forces.", from: body.length, to: body.length, cost: 0.004 });
-  expect(seen.body!.model).toBe(models.DEFAULT_MODELS.write);
+  expect(seen.body!.model).toBe(models.DEFAULT_TIERS.mid); // a tier's model, not a job's (T83)
+  expect(r.tier).toBe("mid");
   expect(models.usageLog().at(-1)).toMatchObject({ feature: "note-fill", cost: 0.004 });
   expect(readFileSync(join(root, "knowledge/design/integrator.md"), "utf8")).toBe(before);
 });
@@ -126,4 +128,192 @@ test("a note says a model wrote part of it: the stamp names it, and a small edit
   src = r.note;
   r = saveNote(k, "design/stamped", { actor: "human:me", base: src.version, body: "# Rewritten again\n\nA third account, typed by hand this time and saved as any other edit would be.\n" });
   expect((r.note.meta.generated as { by: string }).by).toBe("human:me");
+});
+
+test("the model is told how notes work here: a rating is a link's title, and a change of form changes only that (T81)", () => {
+  const { cfg } = project();
+  const body = "- [x] [The forces](/design/forces.md)\n- [ ] [Units](/design/units.md)\n";
+  const p = assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: 0, to: body.length, prompt: "make these see also links" });
+  const text = said(p);
+  expect(text).toContain("## How notes work here");
+  expect(text).toContain('(/tasks/T01.md "see also")');
+  for (const r of ["requires", "uses", "see also"]) expect(assist.FORMAT).toContain(`"${r}"`);
+  expect(text).toContain("change only that");
+  // In every mode, and before the note, where it is cached.
+  for (const mode of ["ask", "figure"] as const) expect(said(assist.prepare(cfg, { note: "design/integrator", mode, body, from: 0, to: body.length, prompt: "x" }))).toContain("## How notes work here");
+  expect(text.indexOf("## How notes work here")).toBeLessThan(text.indexOf("## The note being written"));
+});
+
+test("a long passage is sent whole with room for it to come back; one too long is refused; a reply cut short proposes nothing (T81)", () => {
+  const { cfg } = project();
+  const line = (i: number) => `- [x] [T${i} A task with a fairly long title](/tasks/T${i}-a-task.md)\n`;
+  const body = "# Start\n\n" + Array.from({ length: 400 }, (_, i) => line(i)).join("") + "\n# End\n";
+  expect(body.length).toBeGreaterThan(20_000);
+  const p = assist.prepare(cfg, { note: "tasks/roadmap", mode: "fill", body, from: 0, to: body.length, prompt: "rate them see also" });
+  const sent = p.seen.find((s) => s.name.startsWith("The note being written"))!;
+  expect(sent.shortened).toBe(false);
+  expect(sent.text).toContain("T0 A task");
+  expect(sent.text).toContain("T399 A task");
+  expect(sent.text).toContain("# End");
+  expect(assist.fillTokens(body.length) * 3).toBeGreaterThan(body.length * 1.3);
+  expect(assist.fillTokens(10)).toBe(2000);
+  const huge = "x ".repeat(assist.MAX_PASSAGE);
+  expect(() => assist.prepare(cfg, { note: "a", mode: "fill", body: huge, from: 0, to: huge.length, prompt: "tidy" })).toThrow(/too long to rewrite at once/);
+  expect(assist.prepare(cfg, { note: "a", mode: "ask", body: huge, from: 0, to: huge.length, prompt: "what is this" }).job).toBe("discuss");
+  const cut = assist.parseFill("<insert>\n- [x] [T0](/tasks/T0.md \"see also\")\n- [x] [T1");
+  expect(cut.insert).toBeNull();
+  expect(cut.why).toMatch(/cut short/);
+});
+
+test("a request is asked at a tier, each a model the person sets; a figure is asked at the highest unless told otherwise (T83)", async () => {
+  const { cfg } = project();
+  const conf = join(process.env.XDG_CONFIG_HOME!, "rdstudio", "config.toml");
+  writeFileSync(conf, "[actors]\nhuman = \"human:me\"\n\n[teacher]\nweekly_budget = 5\n");
+  expect(models.tiers()).toEqual(models.DEFAULT_TIERS);
+  expect(models.setTiers({ low: "google/gemini-3.8-flash" })).toEqual({ ...models.DEFAULT_TIERS, low: "google/gemini-3.8-flash" });
+  expect(models.setTiers({ max: " openai/gpt-x:thinking " }).max).toBe("openai/gpt-x:thinking");
+  // The table is written once, whole; the rest of the file is as it was.
+  const text = readFileSync(conf, "utf8");
+  expect(text.startsWith("[actors]\nhuman = \"human:me\"\n\n[teacher]\nweekly_budget = 5\n")).toBe(true);
+  expect(text.match(/\[teacher\.tiers\]/g)).toHaveLength(1);
+  expect(models.tiers()).toEqual({ low: "google/gemini-3.8-flash", mid: models.DEFAULT_TIERS.mid, max: "openai/gpt-x:thinking" });
+  expect(models.weeklyBudget()).toBe(5);
+  expect(() => models.setTiers({ mid: "not a model" })).toThrow(/not a model's id/);
+  expect(() => models.setTiers({ mid: "" })).toThrow(/not a model's id/);
+
+  const asked: string[] = [];
+  models.setFetch((async (_u: unknown, init?: RequestInit) => {
+    asked.push(JSON.parse(String(init?.body)).model);
+    const enc = new TextEncoder(), lines = [`data: ${JSON.stringify({ choices: [{ delta: { content: "Yes." } }] })}\n\n`, `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { cost: 0.001 } })}\n\n`, "data: [DONE]\n\n"];
+    return new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(enc.encode(l)); c.close(); } }), { status: 200 });
+  }) as typeof fetch);
+  const body = "It uses velocity Verlet.";
+  const base = { note: "design/integrator", body, from: 0, to: body.length, prompt: "Is it?" };
+  expect((await assist.ask(cfg, { ...base, mode: "ask", tier: "low" })).reply).toMatchObject({ tier: "low", model: "google/gemini-3.8-flash" });
+  await assist.ask(cfg, { ...base, mode: "ask" });
+  await assist.ask(cfg, { ...base, mode: "figure" });
+  await assist.ask(cfg, { ...base, mode: "figure", tier: "low" });
+  expect(asked).toEqual(["google/gemini-3.8-flash", models.DEFAULT_TIERS.mid, "openai/gpt-x:thinking", "google/gemini-3.8-flash"]);
+});
+
+// ------------------------------------------------------------------ looking things up (T84)
+
+/** A fake OpenRouter that plays a script: each turn is text, or the tools to call. */
+type Turn = string | { name: string; args: Record<string, unknown> }[];
+function script(turns: Turn[], bodies: Record<string, any>[] = []) {
+  let n = 0;
+  models.setFetch((async (_u: unknown, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    const turn = turns[Math.min(n++, turns.length - 1)]!;
+    const enc = new TextEncoder();
+    const deltas = typeof turn === "string" ? [{ content: turn }]
+      // A call arrives in pieces: its name first, its arguments in two halves.
+      : [{ content: "Let me look." }, ...turn.flatMap((t, index) => { const a = JSON.stringify(t.args), h = Math.ceil(a.length / 2);
+        return [{ tool_calls: [{ index, id: `c${n}_${index}`, function: { name: t.name, arguments: "" } }] }, { tool_calls: [{ index, function: { arguments: a.slice(0, h) } }] }, { tool_calls: [{ index, function: { arguments: a.slice(h) } }] }]; })];
+    const lines = [...deltas.map((delta) => `data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`), `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { prompt_tokens: 500, completion_tokens: 20, cost: 0.001 } })}\n\n`, "data: [DONE]\n\n"];
+    return new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(enc.encode(l)); c.close(); } }), { status: 200 });
+  }) as typeof fetch);
+  return bodies;
+}
+
+test("as a rule the model is given only the note and the titles of what it links to, and told how to look things up (T84)", () => {
+  const { cfg } = project();
+  const body = "The integrator keeps the temperature steady with a thermostat.\n\nSee [the forces](/design/forces.md \"requires\") and [units](units.md).\n";
+  const p = assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: 0, to: 14, prompt: "Insert the code of `kinetic_energy` here." });
+  const text = said(p);
+  expect(text).toContain("## Looking things up");
+  expect(text).toContain("You have 6 rounds"); // the usual tier for text, mid
+  expect(said(assist.prepare(cfg, { note: "design/integrator", mode: "fill", tier: "low", body, from: 0, to: 14, prompt: "x" }))).toContain("You have 3 rounds");
+  expect(text).toContain("- The forces (/design/forces.md): About the forces.");
+  expect(text).toContain("- Units (/design/units.md)");
+  for (const absent of ["Gravity is softened", "Lengths in nanometres", "Berendsen", "def kinetic_energy", "## Code from the repository", "## Notes found by searching"]) expect(text).not.toContain(absent);
+  expect(p.sources).toEqual([]);
+  expect(text.length).toBeLessThan(said(assist.prepare(cfg, { note: "design/integrator", mode: "fill", body, from: 0, to: 14, prompt: "Insert the code of `kinetic_energy` here." }, { gather: true })).length + 2500);
+});
+
+test("the model looks things up in rounds: each call is run and answered, the steps are kept, and what it opened is what it drew on (T84)", async () => {
+  const { cfg } = project();
+  const bodies = script([
+    [{ name: "search_notes", args: { query: "thermostat temperature" } }, { name: "search_code", args: { text: "kinetic_energy" } }],
+    [{ name: "outline_note", args: { id: "/design/forces.md" } }, { name: "read_note", args: { id: "design/thermostat" } }, { name: "read_code", args: { path: "src/sim.py", from: 4, to: 6 } }],
+    "It rescales velocities, as [The thermostat](/design/thermostat.md) says.",
+  ]);
+  const steps: string[] = [];
+  let streamed = "";
+  const body = "It uses velocity Verlet. See [the forces](/design/forces.md).";
+  const { reply: r } = await assist.ask(cfg, { note: "design/integrator", mode: "ask", body, from: 0, to: 5, prompt: "How is temperature held?" }, { onText: (t) => { streamed += t; }, onStep: (s) => steps.push(s.said) });
+  expect(bodies).toHaveLength(3);
+  // Tools are offered each round, and the conversation carries the calls and their results.
+  expect(bodies[0]!.tools.map((t: any) => t.function.name)).toEqual(["search_notes", "outline_note", "read_note", "search_code", "read_code"]);
+  expect(bodies[0]!.tool_choice).toBe("auto");
+  const last = bodies[2]!.messages;
+  expect(last.filter((m: any) => m.role === "tool")).toHaveLength(5);
+  expect(last.find((m: any) => m.role === "assistant").tool_calls[0]).toMatchObject({ id: "c1_0", type: "function", function: { name: "search_notes", arguments: '{"query":"thermostat temperature"}' } });
+  const results = last.filter((m: any) => m.role === "tool").map((m: any) => m.content as string);
+  expect(results[0]).toContain("The thermostat (/design/thermostat.md)");
+  expect(results[1]).toMatch(/src\/sim\.py:4:def kinetic_energy/);
+  expect(results[2]).toContain("Linked from: The integrator (/design/integrator.md)");
+  expect(results[3]).toContain("Berendsen thermostat rescales");
+  expect(results[4]).toContain("4\tdef kinetic_energy(masses, velocities):");
+  expect(steps).toEqual(['Searched the notes for "thermostat temperature": 1 found', 'Searched the code for "kinetic_energy": 1 lines found', "Looked at the outline of The forces", "Read The thermostat", "Read src/sim.py, lines 4 to 6"]);
+  // How each was reached: the forces by a link from the note being written; the thermostat by reading it outright.
+  expect(r.steps.map((s) => [s.tool, s.how, s.from ?? null])).toEqual([["search_notes", "search", null], ["search_code", "code", null], ["outline_note", "link", "design/integrator"], ["read_note", "read", null], ["read_code", "code", null]]);
+  expect(r.steps[3]!.excerpt).toContain("Berendsen");
+  expect(r.sources).toEqual([{ kind: "note", id: "design/forces", title: "The forces" }, { kind: "note", id: "design/thermostat", title: "The thermostat" }, { kind: "code", id: "src/sim.py", title: "src/sim.py", line: 4 }]);
+  expect(r.answer).toBe("It rescales velocities, as [The thermostat](/design/thermostat.md) says.");
+  expect(r.cost).toBeCloseTo(0.003);
+  expect(streamed.endsWith(r.answer)).toBe(true);
+});
+
+test("a request that needs nothing looked up is one call; the rounds run out at the tier's count, and then it must reply (T84)", async () => {
+  const { cfg } = project();
+  const one = script(["<insert>\n- [The forces](/design/forces.md \"see also\")\n</insert>\n<why>Rated.</why>"]);
+  const body = "- [The forces](/design/forces.md)";
+  const r1 = (await assist.ask(cfg, { note: "design/integrator", mode: "fill", tier: "low", body, from: 0, to: body.length, prompt: "see also" })).reply;
+  expect(one).toHaveLength(1);
+  expect(r1).toMatchObject({ insert: '- [The forces](/design/forces.md "see also")', steps: [], sources: [] });
+  // A model that never stops looking: low has three rounds, and the fourth call forbids tools.
+  const many = script([[{ name: "search_notes", args: { query: "forces" } }], [{ name: "search_notes", args: { query: "units" } }], [{ name: "search_notes", args: { query: "gravity" } }], "Enough."]);
+  const r2 = (await assist.ask(cfg, { note: "design/integrator", mode: "ask", tier: "low", body, from: 0, to: 5, prompt: "?" })).reply;
+  expect(many.map((b) => b.tool_choice)).toEqual(["auto", "auto", "auto", "none"]);
+  expect(r2.steps).toHaveLength(3);
+  expect(r2.answer).toBe("Enough.");
+});
+
+test("what is looked up stays inside: a wrong id says so, and only files git tracks are read (T84)", async () => {
+  const { cfg, root } = project();
+  put(root, "secret.env", "TOKEN=abc\n"); // not added to git
+  const b = (await import("@rdstudio/core/node")).loadBundle(cfg.knowledgeDir);
+  const { Lookup, noteId } = await import("../src/lookup.ts");
+  const look = new Lookup(cfg, b, "design/integrator");
+  expect(noteId(b, "[the forces](/design/forces.md \"requires\")")).toBe("design/forces");
+  expect(noteId(b, "knowledge/design/forces.md")).toBe("design/forces");
+  expect(look.run("read_note", '{"id":"design/nowhere"}')).toMatch(/There is no note/);
+  expect(look.run("read_note", '{"id":"design/forces","section":"Nope"}')).toMatch(/There is no section "Nope"/);
+  for (const path of ["secret.env", "../outside.txt", "/etc/passwd", "knowledge/../../x"]) expect(look.run("read_code", JSON.stringify({ path }))).toMatch(/is not a file of this repository/);
+  expect(look.run("read_code", '{"path":"src/step.rs"}')).toContain("pub fn leapfrog_step");
+  expect(look.run("search_code", '{"text":"Gravity is softened"}')).toMatch(/Nothing in the code matches/); // the knowledge base is not code
+  expect(look.run("search_code", '{"text":"TOKEN"}')).toMatch(/Nothing in the code matches/);
+  expect(look.run("delete_everything", "{}")).toMatch(/There is no tool/);
+  expect(look.run("search_notes", "not json")).toMatch(/needs a query/);
+  expect(look.steps.filter((s) => s.failed)).toHaveLength(8);
+});
+
+test("a model that cannot call tools is given what it would have looked up, in one call (T84)", async () => {
+  const { cfg } = project();
+  const bodies: Record<string, any>[] = [];
+  let n = 0;
+  models.setFetch((async (_u: unknown, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    if (n++ === 0) return new Response(JSON.stringify({ error: { message: "No endpoints found that support tool use." } }), { status: 404 });
+    const enc = new TextEncoder(), lines = [`data: ${JSON.stringify({ choices: [{ delta: { content: "Softened." } }] })}\n\n`, `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { cost: 0.002 } })}\n\n`, "data: [DONE]\n\n"];
+    return new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(enc.encode(l)); c.close(); } }), { status: 200 });
+  }) as typeof fetch);
+  const body = "See [the forces](/design/forces.md).";
+  const { reply: r, seen } = await assist.ask(cfg, { note: "design/integrator", mode: "ask", body, from: 0, to: 3, prompt: "Why?" });
+  expect(bodies).toHaveLength(2);
+  expect(bodies[1]!.tools).toBeUndefined();
+  expect(seen.map((s) => s.text).join("\n")).toContain("Gravity is softened");
+  expect(r).toMatchObject({ answer: "Softened.", steps: [] });
+  expect(r.sources[0]).toMatchObject({ kind: "note", id: "design/forces" });
 });

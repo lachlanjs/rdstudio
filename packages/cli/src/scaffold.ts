@@ -133,8 +133,7 @@ export function init(target: string, { title, human, force = false }: { title?: 
       "[project]\n" +
       `title = "${title || basename(root)}"\n\n` +
       "[paths]\n" +
-      'knowledge = "knowledge"\n' +
-      'reports = "reports"\n\n' +
+      'knowledge = "knowledge"\n\n' +
       "[actors]\n" +
       `human = "${who}"\n` +
       'agent = "claude-code/claude"\n\n' +
@@ -150,8 +149,6 @@ export function init(target: string, { title, human, force = false }: { title?: 
   for (const rel of walkFiles(join(TEMPLATES, "knowledge")).filter((p) => p.endsWith(".md"))) {
     push(write(join(cfg.knowledgeDir, rel), fill(read(join(TEMPLATES, "knowledge", rel)), values), root));
   }
-  mkdirSync(cfg.reportsDir, { recursive: true });
-  push(write(join(cfg.reportsDir, ".gitkeep"), "", root));
 
   // Skills and agents (rdstudio-managed: --force refreshes them).
   for (const rel of walkFiles(join(TEMPLATES, "skills"))) {

@@ -10,6 +10,7 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { indexCode } from "./code.ts";
+import * as artifacts from "./artifacts.ts";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
 import { brief } from "./brief.ts";
@@ -67,7 +68,11 @@ const COMMANDS: Record<string, Command> = {
       for (const i of issues) {
         if (i.level === "error" || v.warnings) console.log(`${i.level.padEnd(7)} ${i.path}: ${i.message}`);
       }
-      console.log(`${b.concepts.size} concepts, ${errors.length} errors, ${issues.length - errors.length} warnings`);
+      // Artifacts (T76): their weight, addresses elsewhere, a missing title; warnings only.
+      const found = artifacts.scan(cfg.knowledgeDir, b), about = artifacts.lint(found, cfg.reportsDir, cfg.reports);
+      if (v.warnings) for (const i of about) console.log(`${i.severity.padEnd(7)} ${i.path}: ${i.message}`);
+      const count = found.length ? `, ${found.length} artifact${found.length === 1 ? "" : "s"}` : "";
+      console.log(`${b.concepts.size} concepts${count}, ${errors.length} errors, ${issues.length - errors.length + about.length} warnings`);
       return errors.length ? 1 : 0;
     },
   },

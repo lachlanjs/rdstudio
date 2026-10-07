@@ -6,7 +6,7 @@ description: "Scope for replacing reports with artifacts: self-contained HTML fi
   that do what Markdown cannot, shown on the Atlas, linked or embedded from notes, made by the agent
   from the editor, sandboxed, offline, and checked for errors and weight before they are offered."
 tags: [design, artifacts, editor, atlas, agents, scope]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T00:50:23Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T01:07:43Z}
 ---
 
 # What the developer asked for
@@ -215,3 +215,24 @@ to settle). With a passage selected, or a request typed:
 - Whether an artifact may be edited after it is made (by asking the agent
   to change it), and how its history is shown.
 - The limits above are guesses until tried on real figures.
+
+# Pictures
+
+Added by the developer on 2026-10-07: "pictures directly linked or embedded
+in the markdown should also be a feature - this should be treated the same
+way as an embed - but with options to align the image to the left or in the
+center (should have width of 80% of the document width)."
+
+- `![alt](pic.png)` shows the picture at 80% of the text's width, centred.
+- `![alt](pic.png "left")` puts it at the left. The title is the place
+  (`left`, `center`), not a tooltip.
+- `[text](pic.png)` is a link to the file.
+- A picture is a file in the knowledge folders like an artifact, cited the
+  same way, and a missing one is a broken link in the lint.
+- The [link control](/design/link-controls.md) sets link or embed, and left
+  or centre, as it does for an artifact.
+
+# Progress
+
+- Step 1, with embeds on the note page and pictures:
+  [T76](/tasks/T76-artifacts.md), done.

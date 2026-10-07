@@ -1,8 +1,8 @@
 // @rdstudio/core: the Open Knowledge Format core. See fixtures/README.md for
 // the contract it keeps with the Python core.
 
-export { Bundle, Concept, Directory, OKF_VERSION } from "./bundle.ts";
-export type { FileEntry, Issue, IssueCode, Link, Trust } from "./bundle.ts";
+export { Bundle, Concept, Directory, OKF_VERSION, citeKind } from "./bundle.ts";
+export type { Cite, FileEntry, Issue, IssueCode, Link, Trust } from "./bundle.ts";
 export { FrontmatterError, dumpFrontmatter, frontmatterText, parseYaml, splitFrontmatter } from "./frontmatter.ts";
 export type { Meta } from "./frontmatter.ts";
 export { RATINGS, headings, linkRefs, rating, section, slugify } from "./markdown.ts";
@@ -18,7 +18,7 @@ export { RulesClassifier, editSignificance, matchStep, opcodes } from "./classif
 export type { Classifier, Decision } from "./classify.ts";
 export { ATTRIBUTES, EDIT_OPS, Graph, ProcedureError, RELATIONS, applyEdits, describe, graphOf, isProcedure, lintProcedures, validateEdits } from "./procedures.ts";
 export type { Edge as ProcedureEdge } from "./procedures.ts";
-export type { ChangedFile, Changes, CodeIndex, CodeItem, CodeLink, Commit, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, SkillRecord, Skills, Version } from "./site.ts";
+export type { ChangedFile, Changes, CodeIndex, CodeItem, CodeLink, Commit, ConceptRecord, FolderRecord, ArtifactRecord, SiteInfo, SkillRecord, Skills, Version } from "./site.ts";
 export {
   EVIDENCE, INTERVALS, OFF_MAP, RESULTS, REVIEW_CAP, STATES, answerSpec, assignments, attempts, checkAnswer, coverage, discoveryStates, dueReviews, exerciseStatus, goalProgress, isStudyNote, needsMarking,
   loadNote, parseNumber, refId, refIds, requiresClosure, reviewSchedule, splitSolution, streaks, studyLoad, tourBody, tourStops, weekOf, STREAK_KINDS, REPRIEVE_BANK, REPRIEVE_EVERY,

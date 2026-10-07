@@ -24,7 +24,7 @@ export async function askTutor(exercise: string, body: Asking, onText: (soFar: s
   const url = new URL(`api/teacher/tutor/${encodeURIComponent(exercise)}`, new URL(".", location.href));
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...learner.writeHeaders() }, body: JSON.stringify(body), signal });
   if (!res.ok || !res.body) {
-    let why = `The teacher could not be asked (${res.status})`;
+    let why = `Axis could not be asked (${res.status})`;
     try { why = ((await res.json()) as { error?: string }).error ?? why; } catch { /* not JSON */ }
     throw new Error(why);
   }

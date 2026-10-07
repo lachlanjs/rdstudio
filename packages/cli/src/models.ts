@@ -29,8 +29,18 @@ export const DEFAULT_MODELS: Record<Job, string> = {
   feedback: "anthropic/claude-sonnet-5.5",
   discuss: "anthropic/claude-sonnet-5.5",
   marking: "anthropic/claude-sonnet-5.5",
-  write: "anthropic/claude-sonnet-5.5", // text proposed in the note editor (assist.ts)
+  write: "anthropic/claude-sonnet-5.5", // was the editor's (assist.ts); it goes by tier now (T83), and this is kept so that old settings still read
   check: "google/gemini-3.8-flash",
+};
+// The editor's agent (assist.ts) does not go by job: the person picks how strong
+// a model each request is worth (T83). Three tiers, each a model, set in
+// [teacher.tiers] in the user config or from the app.
+export const TIERS = ["low", "mid", "max"] as const;
+export type Tier = (typeof TIERS)[number];
+export const DEFAULT_TIERS: Record<Tier, string> = {
+  low: "anthropic/claude-haiku-4.5",
+  mid: "anthropic/claude-sonnet-5.5",
+  max: "anthropic/claude-opus-5.5",
 };
 export const DEFAULT_WEEKLY_BUDGET = 10;
 /** Warn once this share of the week's budget is spent. */
@@ -53,6 +63,40 @@ const teacherSettings = (): Table => table(readToml(userConfigPath()).teacher);
 export function models(): Record<Job, string> {
   const set = table(teacherSettings().models);
   return Object.fromEntries(JOBS.map((j) => [j, typeof set[j] === "string" && set[j] ? (set[j] as string) : DEFAULT_MODELS[j]])) as Record<Job, string>;
+}
+
+export function tiers(): Record<Tier, string> {
+  const set = table(teacherSettings().tiers);
+  return Object.fromEntries(TIERS.map((t) => [t, typeof set[t] === "string" && set[t] ? (set[t] as string) : DEFAULT_TIERS[t]])) as Record<Tier, string>;
+}
+
+/** Set the tiers' models in the user config: the [teacher.tiers] table is written whole, the rest of the file left as it is. */
+export function setTiers(next: Partial<Record<Tier, string>>): Record<Tier, string> {
+  const now = tiers();
+  for (const t of TIERS) {
+    const m = next[t];
+    if (m === undefined) continue;
+    const id = String(m).trim();
+    if (!/^[\w.-]+\/[\w.:-]+$/.test(id)) throw new ModelError(`"${id}" is not a model's id: it is written as OpenRouter lists it, like ${DEFAULT_TIERS[t]}`, 400);
+    now[t] = id;
+  }
+  const path = userConfigPath();
+  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+  const lines = text.split("\n");
+  const block = ["[teacher.tiers]", ...TIERS.map((t) => `${t} = "${now[t]}"`)];
+  const head = lines.findIndex((l) => /^\s*\[teacher\.tiers\]\s*(#.*)?$/.test(l));
+  let out: string;
+  if (head < 0) out = `${text.replace(/\s*$/, "")}${text.trim() ? "\n\n" : ""}# The models Axis uses in the editor, by how strong a request is worth.\n${block.join("\n")}\n`;
+  else {
+    let end = lines.findIndex((l, i) => i > head && /^\s*\[/.test(l));
+    if (end < 0) end = lines.length;
+    while (end > head + 1 && !lines[end - 1]!.trim()) end--; // the blank lines before the next table stay
+    lines.splice(head, end - head, ...block);
+    out = lines.join("\n");
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, out, "utf8");
+  return now;
 }
 
 export function weeklyBudget(): number {
@@ -160,10 +204,19 @@ export function spending(cfg: Config | null, now = Date.now()): Spending {
 // ------------------------------------------------------------------ calling
 
 export interface Message {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   /** Text, or parts (a part marked cache: true asks providers that support it to cache up to there). */
   content: string | { text: string; cache?: boolean }[];
+  /** assistant: the tools it called in this turn. */
+  calls?: ToolCall[];
+  /** tool: the call this is the result of. */
+  callId?: string;
 }
+
+/** A tool the model may call (T84), as OpenRouter takes it: a function with a JSON schema. */
+export interface ToolDef { type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }
+/** A call the model made: the arguments are JSON, as it wrote them. */
+export interface ToolCall { id: string; name: string; arguments: string }
 
 export interface Call {
   cfg: Config;
@@ -171,7 +224,13 @@ export interface Call {
   feature?: string; // defaults to the job
   messages: Message[];
   maxTokens?: number;
+  /** The model to use, where it is not the job's (a tier's, in the editor). */
+  model?: string;
   exercise?: string;
+  /** Tools the model may call; what it calls comes back in the reply's `calls`, to be run and answered. */
+  tools?: ToolDef[];
+  /** With tools: "none" makes it reply without calling one. */
+  toolChoice?: "auto" | "none";
   /** Called with each piece of text as it streams. */
   onText?: (piece: string) => void;
   signal?: AbortSignal;
@@ -180,13 +239,18 @@ export interface Call {
 export interface Reply {
   text: string;
   usage: Usage;
+  /** The tools it called instead of finishing; empty when the reply is whole. */
+  calls: ToolCall[];
 }
 
-const wire = (m: Message) => ({
-  role: m.role,
-  content: typeof m.content === "string" ? m.content
-    : m.content.map((p) => ({ type: "text", text: p.text, ...(p.cache ? { cache_control: { type: "ephemeral" } } : {}) })),
-});
+const plain = (m: Message) => (typeof m.content === "string" ? m.content : m.content.map((p) => p.text).join("\n\n"));
+const wire = (m: Message) => m.role === "tool" ? { role: "tool", tool_call_id: m.callId ?? "", content: plain(m) }
+  : m.role === "assistant" && m.calls?.length ? { role: "assistant", content: plain(m) || null, tool_calls: m.calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: c.arguments || "{}" } })) }
+  : {
+    role: m.role,
+    content: typeof m.content === "string" ? m.content
+      : m.content.map((p) => ({ type: "text", text: p.text, ...(p.cache ? { cache_control: { type: "ephemeral" } } : {}) })),
+  };
 
 /** Call the model for a job, streaming; the usage is logged and the budget kept. */
 export async function complete(call: Call): Promise<Reply> {
@@ -194,14 +258,15 @@ export async function complete(call: Call): Promise<Reply> {
   if (!k) throw new ModelError("No OpenRouter key: connect an account on the Teacher page, or set OPENROUTER_API_KEY.", 409);
   const s = spending(call.cfg);
   if (s.stopped) throw new ModelError(`This week's budget ($${s.budget.toFixed(2)}) is spent. It renews on Monday; [teacher] weekly_budget in the user config changes it.`, 402);
-  const model = models()[call.job];
+  const model = call.model || models()[call.job];
   const res = await fetcher(`${OPENROUTER}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${k.key}`, "Content-Type": "application/json",
       "HTTP-Referer": "https://github.com/lachlanjs/rdstudio", "X-Title": "rdstudio",
     },
-    body: JSON.stringify({ model, messages: call.messages.map(wire), stream: true, ...(call.maxTokens ? { max_tokens: call.maxTokens } : {}) }),
+    body: JSON.stringify({ model, messages: call.messages.map(wire), stream: true, ...(call.maxTokens ? { max_tokens: call.maxTokens } : {}),
+      ...(call.tools?.length ? { tools: call.tools, tool_choice: call.toolChoice ?? "auto" } : {}) }),
     signal: call.signal,
   });
   if (!res.ok || !res.body) {
@@ -211,6 +276,7 @@ export async function complete(call: Call): Promise<Reply> {
   }
   // Server-sent events: data lines of JSON chunks, the last carrying the usage.
   let text = "", usage: Record<string, unknown> | null = null, buffer = "";
+  const calls: ToolCall[] = []; // a call arrives in pieces, by its index
   const decoder = new TextDecoder();
   const reader = res.body.getReader();
   for (;;) {
@@ -224,11 +290,17 @@ export async function complete(call: Call): Promise<Reply> {
       if (!line.startsWith("data:")) continue;
       const data = line.slice(5).trim();
       if (data === "[DONE]") continue;
-      let chunk: { choices?: { delta?: { content?: string } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
+      let chunk: { choices?: { delta?: { content?: string; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
       try { chunk = JSON.parse(data); } catch { continue; }
       if (chunk.error) throw new ModelError(`OpenRouter: ${chunk.error.message ?? "an error"}`);
       const piece = chunk.choices?.[0]?.delta?.content;
       if (piece) { text += piece; call.onText?.(piece); }
+      for (const t of chunk.choices?.[0]?.delta?.tool_calls ?? []) {
+        const c = (calls[t.index ?? 0] ??= { id: "", name: "", arguments: "" });
+        if (t.id) c.id = t.id;
+        if (t.function?.name) c.name += t.function.name;
+        if (t.function?.arguments) c.arguments += t.function.arguments;
+      }
       if (chunk.usage) usage = chunk.usage;
     }
   }
@@ -240,5 +312,5 @@ export async function complete(call: Call): Promise<Reply> {
     cost: num(usage?.cost), ...(call.exercise ? { exercise: call.exercise } : {}),
   };
   logUsage(u);
-  return { text, usage: u };
+  return { text, usage: u, calls: calls.filter((c) => c && c.name).map((c, k) => ({ ...c, id: c.id || `call_${k}` })) };
 }

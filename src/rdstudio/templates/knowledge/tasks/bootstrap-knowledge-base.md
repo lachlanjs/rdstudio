@@ -27,7 +27,7 @@ placeholders. Working with the developer, tailor it to this project.
    developer wrote is recorded with `generated.by` set to their actor id.
 5. **Record procedures** the developer repeats (release steps, data
    regeneration, bibliography updates) as `type: Procedure` concepts.
-6. Write a short report (`/report`) summarising the structure and what was
+6. Write a short artifact (`/artifact`) summarising the structure and what was
    seeded, and mark this task done.
 
 # Plan

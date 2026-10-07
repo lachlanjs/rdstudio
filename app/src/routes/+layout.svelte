@@ -27,7 +27,7 @@
     "/map/[...focus]": "atlas", "/path/[...id]": "atlas", "/graph": "atlas", "/tour/[...id]": "atlas", "/tours/[...name]": "atlas",
     "/practice/[...rest]": "practice", "/learn": "practice",
     "/code/[...id]": "library",
-    "/project": "project", "/changes": "project", "/review": "project", "/reports": "project", "/r/[...path]": "project",
+    "/project": "project", "/changes": "project", "/review": "project", "/artifacts": "project", "/a/[...path]": "project",
     "/procedures": "project", "/p/[...id]": "project", "/skills": "project", "/skill/[...name]": "project", "/agent/[...name]": "project",
     "/teacher/[...rest]": "you", "/settings": "you",
   };
@@ -127,9 +127,9 @@
           {#if project}
             <a role="menuitem" class="you-project" href="#/practice">Practice<span>goals, exercises and drills</span></a>
           {:else}
-            <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, reports, procedures, skills</span></a>
+            <a role="menuitem" class="you-project" href="#/project">Project<span>changes, review, artifacts, procedures, skills</span></a>
           {/if}
-          <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
+          <a role="menuitem" href="#/teacher">Axis<span>the agent: how it teaches and helps, and what it knows of you</span></a>
           <a role="menuitem" href="#/settings">Settings</a>
           <div class="you-row" role="group" aria-label="Theme">
             {#each THEMES as t (t.id)}

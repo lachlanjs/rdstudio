@@ -23,7 +23,7 @@
   }
 </script>
 
-<div class="a-tools" role="toolbar" aria-label="Ask the teacher">
+<div class="a-tools" role="toolbar" aria-label="Ask Axis">
   <button class="toggle" type="button" data-key="h" data-key-label="hint" disabled={off} onclick={() => ask("hint")}
     title="The smallest push towards the next step: a word, then a direction, then the step">Hint{session.hints ? ` (${nextRung} of ${HINT_RUNGS})` : ""}</button>
   <button class="toggle" type="button" data-key="f" disabled={off || !text.trim()} aria-pressed={picking}
@@ -32,7 +32,7 @@
     onclick={() => { discussing = !discussing; picking = false; }} title="Ask about your answer, or about a passage you highlight">Discuss</button>
 </div>
 {#if connected === false}
-  <p class="caption tools-note">To work with the teacher here, connect a model account on the <a href="#/teacher">Teacher page</a>.</p>
+  <p class="caption tools-note">To work with Axis here, connect a model account on the <a href="#/teacher">Axis page</a>.</p>
 {/if}
 {#if picking}
   <div class="tutor-ask" role="group" aria-label="How sure are you of your answer?">

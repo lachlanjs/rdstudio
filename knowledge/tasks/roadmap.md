@@ -145,6 +145,26 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [ ] [T73 Bring the browser walkthroughs up to the grid Atlas](/tasks/T73-walkthroughs-grid-atlas.md)
 - [x] [T74 An agent in the editor: ask about a passage, or have text proposed](/tasks/T74-agent-in-editor.md)
 - [x] [T75 Switch a project between Learning and Project from the app](/tasks/T75-mode-switch.md)
+- [x] [T76 Artifacts in the knowledge folders, and pictures](/tasks/T76-artifacts.md)
+- [x] [T77 Artifacts on the Atlas](/tasks/T77-artifacts-atlas.md)
+- [x] [T78 Make a figure from the editor](/tasks/T78-figure-from-editor.md)
+- [x] [T79 Link controls in the editor](/tasks/T79-link-controls.md)
+- [x] [T80 The agent is called Axis in the app](/tasks/T80-axis-name.md)
+- [x] [T81 Axis in the editor is told how notes work here](/tasks/T81-assist-knows-the-format.md)
+- [x] [T82 Rate several selected links at once](/tasks/T82-rate-many-links.md)
+- [x] [T83 Model tiers for Axis in the editor](/tasks/T83-model-tiers.md)
+- [x] [T84 Axis in the editor looks things up with tools](/tasks/T84-assist-lookup.md)
+
+# M14 — Axis finds things
+
+In the order agreed on 2026-10-07.
+
+- [ ] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
+- [ ] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
+- [ ] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
+- [ ] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
+- [ ] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
+- [ ] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
 
 # Future
 

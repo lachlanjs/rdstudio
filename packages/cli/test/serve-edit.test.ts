@@ -173,3 +173,24 @@ test("the mode is switched by setting the profile, which is written to rdstudio.
   expect(toml()).toContain('profile = "topic"');
   expect(toml()).toContain("title = 'T'"); // the rest of the file is kept
 });
+
+test("the editor's tiers are set over the API, into the user config (T83)", async () => {
+  // A user config of this test's own: the person's is never written.
+  const kept = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = join(tmp, "tiers-config");
+  try {
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const first = (await call("GET", "/api/teacher/ai")).json as { tiers: Record<string, string> };
+  expect(Object.keys(first.tiers)).toEqual(["low", "mid", "max"]);
+  expect((await call("PUT", "/api/teacher/tiers", { ...good, "X-Rdstudio-Token": "wrong" }, { low: "a/b" })).status).toBe(403);
+  expect((await call("PUT", "/api/teacher/tiers", good, { low: "no slash" })).status).toBe(400);
+  const set = await call("PUT", "/api/teacher/tiers", good, { low: "google/gemini-3.8-flash" });
+  expect(set.status).toBe(200);
+  expect((set.json as { tiers: Record<string, string> }).tiers).toEqual({ ...first.tiers, low: "google/gemini-3.8-flash" });
+  expect(((await call("GET", "/api/teacher/ai")).json as { tiers: Record<string, string> }).tiers.low).toBe("google/gemini-3.8-flash");
+  expect(readFileSync(join(tmp, "tiers-config", "rdstudio", "config.toml"), "utf8")).toContain('[teacher.tiers]\nlow = "google/gemini-3.8-flash"');
+  } finally {
+    if (kept === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = kept;
+  }
+});

@@ -2,7 +2,7 @@
 // again whenever the build's version changes (live updates), plus the private
 // learner record through rdstudio serve's API (the generated client in api/).
 
-import type { Changes, CodeIndex, ConceptRecord, FolderRecord, ReportRecord, SiteInfo, Skills } from "@rdstudio/core";
+import type { Changes, CodeIndex, ArtifactRecord, ConceptRecord, FolderRecord, SiteInfo, Skills } from "@rdstudio/core";
 import { client } from "./api/client.gen.ts";
 import { deleteApiLearnerToursByName, getApiLearner, getApiLearnerTours, postApiLearner, putApiLearnerToursByName } from "./api/sdk.gen.ts";
 import type { LearnerEvent, PrivateTour } from "./api/types.gen.ts";
@@ -36,7 +36,8 @@ class Store {
   concepts = $state.raw(new Map<string, ConceptRecord>());
   tree = $state.raw<Record<string, FolderRecord>>({});
   changes = $state.raw<Changes>({ available: false, commits: [] });
-  reports = $state.raw<ReportRecord[]>([]);
+  /** HTML documents in the knowledge folders (T76); they were reports. */
+  artifacts = $state.raw<ArtifactRecord[]>([]);
   skills = $state.raw<Skills>({ skills: [], agents: [] });
   /** The code map's index (T66), when the project's code is mapped. */
   code = $state.raw<CodeIndex | null>(null);
@@ -46,9 +47,9 @@ class Store {
 
   async load(): Promise<void> {
     const start = performance.now();
-    const [version, site, concepts, tree, changes, reports, skills] = await Promise.all([
+    const [version, site, concepts, tree, changes, artifacts, skills] = await Promise.all([
       currentVersion(), getJSON<SiteInfo>("site"), getJSON<ConceptRecord[]>("concepts"), getJSON<Record<string, FolderRecord>>("tree"),
-      getJSON<Changes>("changes"), getJSON<ReportRecord[]>("reports"), getJSON<Skills>("skills"),
+      getJSON<Changes>("changes"), getJSON<ArtifactRecord[]>("artifacts").catch(() => [] as ArtifactRecord[]), getJSON<Skills>("skills"),
     ]);
     this.bodies.clear();
     this.version = version === "signin" ? null : version;
@@ -56,7 +57,7 @@ class Store {
     this.concepts = new Map(concepts.map((c) => [c.id, c]));
     this.tree = tree;
     this.changes = changes;
-    this.reports = reports;
+    this.artifacts = artifacts;
     this.skills = skills;
     this.code = site.counts?.code ? await getJSON<CodeIndex>("code").catch(() => null) : null;
     this.loaded = true;

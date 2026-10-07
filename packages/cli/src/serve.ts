@@ -27,6 +27,7 @@ import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
+import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
 import { pyDumps } from "./pyjson.ts";
@@ -233,6 +234,7 @@ const AiState = z.object({
   connected: z.boolean(),
   from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
   models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
+  tiers: z.object({ low: z.string(), mid: z.string(), max: z.string() }).openapi({ description: "The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config)." }),
   spending: z.object({
     budget: z.number(), spent: z.number(), left: z.number(), warn: z.boolean(), stopped: z.boolean(), weekStart: z.string(),
     byFeature: Money, byModel: Money, byExercise: Money, calls: z.number(),
@@ -241,6 +243,14 @@ const AiState = z.object({
 const getAi = createRoute({
   method: "get", path: "/api/teacher/ai", summary: "Whether a model account is connected, the models by job, and this week's spending",
   responses: { 200: { description: "The state", content: { "application/json": { schema: AiState } } }, 403: teacherErrors[403] },
+});
+const putTiers = createRoute({
+  method: "put", path: "/api/teacher/tiers",
+  summary: "Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ low: z.string().optional(), mid: z.string().optional(), max: z.string().optional() }).openapi("TiersSet") } }, required: true } },
+  responses: { 200: { description: "Set", content: { "application/json": { schema: AiState } } },
+    400: { description: "Not a model's id", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } } },
 });
 const connectAi = createRoute({
   method: "post", path: "/api/teacher/ai/connect", summary: "Start connecting an OpenRouter account: the address to send the browser to",
@@ -265,6 +275,22 @@ const askTutor = createRoute({
     prompt: z.string().optional(), selection: z.string().optional(), confidence: z.string().optional(),
   }).openapi("TutorAsk") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } }, ...teacherErrors },
+});
+const ArtifactPath = z.object({ path: z.string().openapi({ param: { name: "path", in: "path" }, description: "The artifact's path in the knowledge base, URL-encoded: design%2Ffigure.html" }) });
+const putArtifact = createRoute({
+  method: "put", path: "/api/artifacts/{path}", summary: "Write an artifact made in the app (an HTML file beside the notes); refused where a file is already there unless `replace`",
+  request: { params: ArtifactPath, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ html: z.string(), replace: z.boolean().optional(), author: z.string().optional() }).openapi("ArtifactSave") } }, required: true } },
+  responses: { 200: { description: "Written", content: { "application/json": { schema: z.object({ path: z.string(), bytes: z.number() }).openapi("ArtifactSaved") } } },
+    400: { description: "Not an artifact's path", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "A file is already there", content: { "application/json": { schema: ErrorBody } } } },
+});
+const previewArtifact = createRoute({
+  method: "post", path: "/api/artifacts/preview", summary: "Hold an artifact that is not saved yet, to be looked at and checked: it is served like a saved one from the address returned, for a while",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ path: z.string(), html: z.string() }).openapi("ArtifactPreview") } }, required: true } },
+  responses: { 200: { description: "Held", content: { "application/json": { schema: z.object({ url: z.string() }).openapi("ArtifactPreviewed") } } },
+    400: { description: "Not an artifact's path", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } } },
 });
 const deleteSkill = createRoute({
   method: "delete", path: "/api/teacher/skills/{name}", summary: "Reset a skill to rdstudio's default (a skill of your own is deleted)",
@@ -342,9 +368,9 @@ const putProfile = createRoute({
 });
 const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
-  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
+  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill). The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply, or error. Nothing is written.",
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
-    mode: z.enum(["ask", "fill"]), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+    mode: z.enum(["ask", "fill", "figure"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
   }).openapi("NoteAssist") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
@@ -547,7 +573,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   // ---------------------------------------------------------------- models (OpenRouter)
   const aiState = () => {
     const k = models.apiKey();
-    return { connected: !!k, from: k?.from ?? null, models: models.models(), spending: models.spending(cfg) };
+    return { connected: !!k, from: k?.from ?? null, models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
   };
   app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
   // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
@@ -580,6 +606,17 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     }
   });
   app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(putTiers, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const next: Partial<Record<models.Tier, string>> = {};
+    for (const t of models.TIERS) if (typeof body[t] === "string") next[t] = body[t] as string;
+    try { models.setTiers(next); } catch (err) { return refuse(c, err instanceof models.ModelError ? err.status : 400, (err as Error).message); }
+    return json(c, 200, aiState(), true);
+  }) as never);
   app.openapi(checkAi, (async (c: Context) => {
     const refused = writeRefused(c, false);
     if (refused) return refused;
@@ -623,12 +660,19 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
     const str = (v: unknown) => (typeof v === "string" ? v : undefined), num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0);
     const a: assist.Ask = { note: c.req.param("id") ?? "", mode: body.mode as assist.Mode, body: str(body.body) ?? "", from: num(body.from), to: num(body.to), prompt: str(body.prompt), title: str(body.title) };
+    if ((models.TIERS as readonly string[]).includes(body.tier as string)) a.tier = body.tier as models.Tier;
+    const fix = body.fix as { html?: unknown; problems?: unknown } | undefined;
+    if (fix && typeof fix.html === "string" && Array.isArray(fix.problems)) a.fix = { html: fix.html, problems: fix.problems.filter((x) => typeof x === "string").slice(0, 12) as string[] };
     if (!(assist.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${assist.MODES.join(", ")}`);
     if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Teacher page.");
     try { assist.prepare(cfg, a); } catch (err) { return refuse(c, 400, (err as Error).message); } // what is wrong with the request, before anything is sent
     return streamSSE(c, async (stream) => {
       try {
-        const { reply, seen } = await assist.ask(cfg, a, (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); });
+        const { reply, seen } = await assist.ask(cfg, a, {
+          onText: (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); },
+          // Something looked up: what was written before it was not the reply, so the text starts again.
+          onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
+        });
         await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
@@ -716,6 +760,40 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   }) as never);
 
   app.doc31("/api/openapi.json", { openapi: "3.1.0", info: { title: "rdstudio serve", version: "0.1.0" } });
+  // Artifacts made in the app (T78): held to be checked, then written beside the notes.
+  app.openapi(previewArtifact, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    let body: { path?: unknown; html?: unknown };
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    if (typeof body.path !== "string" || typeof body.html !== "string") return refuse(c, 400, "expected {path, html}");
+    try { artifactPath(cfg.knowledgeDir, body.path); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const path = body.path.replace(/^\/+/, "");
+    return json(c, 200, { url: `p/${keepPreview(path, body.html)}/${path.split("/").map(encodeURIComponent).join("/")}` }, true);
+  }) as never);
+  app.openapi(putArtifact, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: { html?: unknown; replace?: unknown; author?: unknown };
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    if (typeof body.html !== "string") return refuse(c, 400, "expected {html}");
+    try {
+      const made = typeof body.author === "string" && /^[\w./:@ -]{1,160}$/.test(body.author) ? body.author : actor;
+      const saved = saveArtifact(cfg.knowledgeDir, c.req.param("path") ?? "", body.html, { author: made, replace: body.replace === true });
+      onWrite?.();
+      return json(c, 200, saved, true);
+    } catch (err) {
+      if (err instanceof ArtifactError) return refuse(c, err.status, err.message);
+      throw err;
+    }
+  }) as never);
+  app.get("/p/:id/*", (c) => {
+    if (!hostOk(c)) return c.text("Host not allowed", 403);
+    const html = preview(c.req.param("id"));
+    return html === null ? c.text("Not found", 404) : c.body(html, 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": SANDBOX, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+  });
+
   app.all("/api/*", (c) => json(c, 404, { error: "not found" }));
   app.on(["GET", "HEAD"], "*", (c) => staticFile(c, site));
   return app;
@@ -757,6 +835,9 @@ function staticFile(c: Context, site: string): Response {
     if (!Number.isNaN(t) && mtime <= t / 1000) return c.body(null, 304, headers);
   }
   headers["Content-Type"] = TYPES[extname(file).toLowerCase()] ?? "application/octet-stream";
+  // An artifact (T76) runs apart from the app, whether framed or opened on its own: no access to the
+  // app's page, its storage or the write token.
+  if (/^\/a\//.test(url.pathname)) { headers["Content-Security-Policy"] = SANDBOX; headers["X-Content-Type-Options"] = "nosniff"; }
   headers["Last-Modified"] = httpDate(mtime);
   let body: Buffer;
   if (gzip) {

@@ -72,27 +72,27 @@
   }
 </script>
 
-<svelte:head><title>{skillName ? `${skillName} · Teacher` : fileName ? `${FILE_TITLE[fileName]} · Teacher` : evidenceId ? "Evidence · Teacher" : "Teacher"} · {store.site.title}</title></svelte:head>
+<svelte:head><title>{skillName ? `${skillName} · Axis` : fileName ? `${FILE_TITLE[fileName]} · Axis` : evidenceId ? "Evidence · Axis" : "Axis"} · {store.site.title}</title></svelte:head>
 
 <div class="page teacher">
   {#if store.site.static}
-    <h1>Teacher</h1>
-    <p class="lede">This is an exported snapshot, so the teacher, which is private to whoever runs rdstudio serve, is not part of it.</p>
+    <h1>Axis</h1>
+    <p class="lede">This is an exported snapshot, so Axis's side, which is private to whoever runs rdstudio serve, is not part of it.</p>
 
   {:else if fileName}
-    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Teacher</a></p>
+    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Axis</a></p>
     <h1>{FILE_TITLE[fileName]}</h1>
     <p class="lede">{fileName === "profile.md" ? "What the agent has learnt about how you learn, from the evidence in your learner record. Private to you. If a claim is wrong, edit it: the next agent to update the profile is told, and answers." : "Where the knowledge base's sources came from: what was searched, what was chosen and rejected, and why."}</p>
     <TeacherFile name={fileName} full />
 
   {:else if evidenceId}
-    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Teacher</a><a href="#/teacher/profile">About you</a><span>Evidence</span></p>
+    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Axis</a><a href="#/teacher/profile">About you</a><span>Evidence</span></p>
     <EvidenceView id={evidenceId} />
 
   {:else if !skillName}
     <p class="doc-kind"><a href="#/learn">Learn</a></p>
-    <h1>Teacher</h1>
-    <p class="lede">How the agent teaches you here, and what it has learnt about you. The skills it follows are rdstudio's defaults unless you change them; all of this stays private, beside your learner record.</p>
+    <h1>Axis</h1>
+    <p class="lede">Axis is the agent that works with you here: your teacher in a learning project, and the one that keeps a project in order. This is how it works, and what it has learnt about you. The skills it follows are rdstudio's defaults unless you change them; all of this stays private, beside your learner record.</p>
 
     {#if learner.enabled}
       <h2 class="section-h">About you</h2>
@@ -107,7 +107,7 @@
     {#if !teacher.loaded}
       <p class="section-note">Loading…</p>
     {:else if !teacher.state}
-      <p class="empty">This server does not have the teacher yet. Update rdstudio and restart rdstudio serve.</p>
+      <p class="empty">This server does not have Axis yet. Update rdstudio and restart rdstudio serve.</p>
     {:else}
       {@const t = teacher.state}
       <h2 class="section-h">Profile</h2>
@@ -137,12 +137,12 @@
         </ul>
         <p class="section-note">Kept in <code>{t.dir}</code>, in a git repository of its own.</p>
       {:else}
-        <p class="section-note">Nothing yet. Each change to the teacher folder (<code>{t.dir}</code>) is kept in its own git history.</p>
+        <p class="section-note">Nothing yet. Each change to Axis's folder (<code>{t.dir}</code>) is kept in its own git history.</p>
       {/if}
     {/if}
 
   {:else}
-    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Teacher</a><span>Skill</span></p>
+    <p class="doc-kind"><a href="#/learn">Learn</a><a href="#/teacher">Axis</a><span>Skill</span></p>
     {#if missing}
       <h1>{skillName}</h1>
       <p class="empty">{status || "There is no skill by that name."} <a href="#/teacher">All skills</a></p>

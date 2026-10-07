@@ -16,10 +16,10 @@
   const go = (href: string) => () => { void goto(href); };
   const ACTIONS = (): Item[] => [
     ["Today", "#/", "What to do now"], ["Library", "#/library", "Notes and folders"], ["Atlas", "#/map", "The map of the knowledge base"],
-    ["Practice", "#/practice", "Goals, exercises and drills"], ["Project", "#/project", "Changes, review, reports, procedures, skills"],
-    ["Changes", "#/changes", "What changed, from git"], ["Review", "#/review", "What waits for your review"], ["Reports", "#/reports", "Reports by agents"],
+    ["Practice", "#/practice", "Goals, exercises and drills"], ["Project", "#/project", "Changes, review, artifacts, procedures, skills"],
+    ["Changes", "#/changes", "What changed, from git"], ["Review", "#/review", "What waits for your review"], ["Artifacts", "#/artifacts", "Interactive pages kept beside the notes"],
     ["Procedures", "#/procedures", "Recorded procedures"], ["Skills and agents", "#/skills", "What agents can do here"],
-    ["Graph", "#/graph", "Every note and link"], ["Teacher", "#/teacher", "How the agent teaches you, and what it knows of you"],
+    ["Graph", "#/graph", "Every note and link"], ["Axis", "#/teacher", "The agent: how it teaches and helps here, and what it knows of you"],
     ["Settings", "#/settings", "Light or dark, the graph"], ["Practise recall", "#/practice/recall", "A round of recall, reviews due first"],
   ].map(([label, href, detail]) => ({ id: "go:" + href, kind: "action" as const, label: label!, detail: detail!, run: go(href!) }))
     .concat(editing.enabled ? [

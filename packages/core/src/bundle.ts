@@ -6,7 +6,7 @@
 // text, so it runs the same in a browser, Node and Tauri (see node.ts).
 
 import { FrontmatterError, splitFrontmatter, type Meta } from "./frontmatter.ts";
-import { headings, linkRefs, type Rating } from "./markdown.ts";
+import { citeRefs, headings, linkRefs, rating, type Rating } from "./markdown.ts";
 import { lintProcedures } from "./procedures.ts";
 import { basename, cmp, cmpTuple, dirname, join, normpath, strip, text, toTime, unquote } from "./text.ts";
 
@@ -26,6 +26,20 @@ export interface Link {
   broken: boolean;
   rel: Rating | null;
 }
+
+/** A file in the bundle that a note cites and that is not a note (T76): an artifact (an HTML document) or a
+ *  picture, linked or shown in place. What an artifact links to in turn is never read. */
+export interface Cite {
+  target: string; // the file's path in the bundle: "design/figure.html"
+  kind: "artifact" | "image";
+  embed: boolean; // ![…](…): shown in the note; else a link to it
+  broken: boolean;
+  rel: Rating | null; // a link's rating, as for a link to a note
+  align: "left" | "center" | null; // a picture's place, from its title
+}
+const ARTIFACT = /\.html?$/i, IMAGE = /\.(png|jpe?g|gif|svg|webp|avif)$/i;
+/** What kind of citable file a path is, or null. */
+export const citeKind = (path: string): Cite["kind"] | null => (ARTIFACT.test(path) ? "artifact" : IMAGE.test(path) ? "image" : null);
 
 export type IssueCode =
   | "broken-link" | "requires-cycle" | "frontmatter-invalid" | "frontmatter-missing" | "type-missing"
@@ -51,6 +65,7 @@ export class Concept {
   readonly body: string;
   readonly mtime: number;
   links: Link[] = [];
+  cites: Cite[] = [];
 
   constructor(id: string, path: string, meta: Meta, body: string, mtime = 0) {
     this.id = id;
@@ -143,6 +158,8 @@ export class Bundle {
   readonly concepts = new Map<string, Concept>();
   readonly directories = new Map<string, Directory>();
   readonly issues: Issue[] = [];
+  /** Every file in the bundle that is not Markdown, by path: what a note may cite (artifacts, pictures, data). */
+  readonly files = new Set<string>();
   rootMeta: Meta = {};
   private cache = new Map<string, unknown>();
 
@@ -180,7 +197,7 @@ export class Bundle {
       if (f.text !== undefined) f.text = f.text.replace(/\r\n?/g, "\n");
       if (rel.split("/").some((part) => part.startsWith("."))) continue;
       if (f.dir) { this.ensureDir(rel); continue; }
-      if (!rel.endsWith(".md")) continue;
+      if (!rel.endsWith(".md")) { this.files.add(rel); continue; }
       const directory = dirname(rel);
       this.ensureDir(directory);
       const name = basename(rel);
@@ -203,6 +220,15 @@ export class Bundle {
       concept.links = links;
       for (const link of links) {
         if (link.broken) this.issue(concept.path, "warning", "broken-link", `broken link to ${link.target}`);
+      }
+      // Artifacts and pictures cited: links to them, or embeds (image syntax).
+      for (const { href, title, embed } of citeRefs(concept.body)) {
+        const path = this.filePath(concept, href), kind = path === null ? null : citeKind(path);
+        if (path === null || kind === null) continue;
+        const t = strip((title ?? "").toLowerCase());
+        const cite: Cite = { target: path, kind, embed, broken: !this.files.has(path), rel: rating(title), align: t === "left" ? "left" : t === "center" || t === "centre" ? "center" : null };
+        concept.cites.push(cite);
+        if (cite.broken) this.issue(concept.path, "warning", "broken-link", `broken link to ${path}`);
       }
     }
     for (const group of this.requiresCycles()) {
@@ -271,6 +297,15 @@ export class Bundle {
         this.issue(rel, "warning", "log-heading-date", `log heading is not YYYY-MM-DD: ${strip(line)}`);
       }
     }
+  }
+
+  /** A link's target as a path in the bundle (not checked to exist), or null for an address or a way out of it. */
+  private filePath(concept: Concept, raw: string): string | null {
+    if (!raw || raw.startsWith("#") || SCHEME.test(raw)) return null;
+    const target = unquote(raw.split("#", 1)[0]!.split("?", 1)[0]!);
+    if (!target || target.endsWith("/")) return null;
+    const norm = normpath(target.startsWith("/") ? target.replace(/^\/+/, "") : join(concept.directory, target));
+    return norm.startsWith("..") || norm === "." ? null : norm;
   }
 
   private resolve(concept: Concept, raw: string): Link | null {

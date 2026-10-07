@@ -11,10 +11,11 @@ import { Compartment, EditorState } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, placeholder } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { linkCompletion, type LinkTarget } from "./links.ts";
-import { blocksTheme, renderedBlocks } from "./blocks.ts";
+import { blocksTheme, noteDir, renderedBlocks } from "./blocks.ts";
 import { format, formatKeymap, type Format } from "./commands.ts";
 import { livePreview, livePreviewTheme } from "./livePreview.ts";
 import { mathsSyntax } from "./maths.ts";
+import { linkControl } from "./linkControl.ts";
 import { pinsField, pinsTheme } from "./pins.ts";
 import { setSuggestion, suggestionHandler, suggestions, type Suggestion } from "./suggest.ts";
 
@@ -27,6 +28,8 @@ export interface EditorOptions {
   onSave: () => void;
   label: string;
   notes: () => LinkTarget[];
+  /** The note's folder, for showing the pictures and artifacts it cites by a relative path. */
+  dir?: string;
   source?: boolean; // plain Markdown instead of the live preview
   placeholder?: string;
   /** A box within a page (an answer), rather than the whole page: no room
@@ -106,8 +109,9 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       EditorView.lineWrapping,
       markdown({ base: markdownLanguage, extensions: [mathsSyntax], completeHTMLTags: false }),
       syntaxHighlighting(highlight),
+      noteDir.of(opts.dir ?? ""),
       theme,
-      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : [suggestions, suggestionHandler.of((what, s) => opts.onSuggestion?.(what, s))]),
+      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : [suggestions, suggestionHandler.of((what, s) => opts.onSuggestion?.(what, s)), linkControl]),
       mode.of(modeExtensions(Boolean(opts.source))),
       closeBrackets(),
       // Only brackets: closing quotes would get in the way of apostrophes in prose.
