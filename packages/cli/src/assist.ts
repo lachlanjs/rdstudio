@@ -448,35 +448,43 @@ export interface Hooks {
   signal?: AbortSignal;
 }
 
-/** Ask, streaming the reply's text. The model may look things up first, in rounds: each round's calls are run
- *  and answered, until it replies or the tier's rounds are used, when it must reply. Nothing is kept but the usage. */
+/** The rounds of looking up (T84): the model is asked, each tool it calls is run and answered, and it is asked
+ *  again, until it replies or the tier's rounds are used, when it must reply. `gathered` is what to send
+ *  in place of the request for a model that cannot call tools. */
+export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" | "toolChoice">; messages: models.Message[]; look: Lookup; tier: models.Tier;
+  onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string }> {
+  const messages = [...o.messages], most = ROUNDS[o.tier];
+  let text = "", cost = 0, used = o.call.model ?? "";
+  for (let round = 0; ; round++) {
+    let r: models.Reply;
+    try {
+      r = await models.complete({ ...o.call, messages, tools: TOOLS, toolChoice: round < most ? "auto" : "none" });
+    } catch (err) {
+      if (round > 0 || !noTools(err)) throw err;
+      r = await models.complete({ ...o.call, messages: o.gathered() });
+      r.calls = [];
+    }
+    cost += r.usage.cost; used = r.usage.model; text = r.text;
+    if (!r.calls.length || round >= most) break;
+    messages.push({ role: "assistant", content: r.text, calls: r.calls });
+    for (const c of r.calls) {
+      const out = o.look.run(c.name, c.arguments);
+      messages.push({ role: "tool", callId: c.id, content: out });
+      o.onStep?.(o.look.steps.at(-1)!);
+    }
+  }
+  return { text, cost, model: used };
+}
+
+/** Ask, streaming the reply's text. The model may look things up first (`rounds`). Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) => void) = {}): Promise<{ reply: Reply; seen: Seen[] }> {
   const h: Hooks = typeof hooks === "function" ? { onText: hooks } : hooks;
   const tier = a.tier ?? USUAL[a.mode], model = models.tiers()[tier];
   let p = prepare(cfg, a);
-  const call = { cfg, job: p.job, feature: featureOf(a.mode), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal };
   const look = new Lookup(cfg, loadBundle(cfg.knowledgeDir), a.note);
-  const messages = [...p.messages];
-  let text = "", cost = 0, used = model;
-  for (let round = 0; ; round++) {
-    let r: models.Reply;
-    try {
-      r = await models.complete({ ...call, messages, tools: TOOLS, toolChoice: round < ROUNDS[tier] ? "auto" : "none" });
-    } catch (err) {
-      if (round > 0 || !noTools(err)) throw err;
-      p = prepare(cfg, a, { gather: true });
-      r = await models.complete({ ...call, messages: p.messages });
-      r.calls = [];
-    }
-    cost += r.usage.cost; used = r.usage.model; text = r.text;
-    if (!r.calls.length || round >= ROUNDS[tier]) break;
-    messages.push({ role: "assistant", content: r.text, calls: r.calls });
-    for (const c of r.calls) {
-      const out = look.run(c.name, c.arguments);
-      messages.push({ role: "tool", callId: c.id, content: out });
-      h.onStep?.(look.steps.at(-1)!);
-    }
-  }
+  const { text, cost, model: used } = await rounds({
+    call: { cfg, job: p.job, feature: featureOf(a.mode), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal },
+    messages: p.messages, look, tier, onStep: h.onStep, gathered: () => (p = prepare(cfg, a, { gather: true })).messages });
   // What it drew on: what was gathered for it, and each note and file it opened itself.
   const sources = [...p.sources];
   for (const s of look.steps) {

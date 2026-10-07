@@ -26,6 +26,7 @@ import { buildCells, reachedCells, maskPaths } from "./grid/cells.js";
 import { effective, buildModel, controls, heightLens, lensValue, remember, SYMBOLS, M } from "./map.js";
 import { codeMap, codeHref, KIND_LABEL, LINK_LABEL } from "../code.ts";
 import { artifactHref } from "../artifactFrame.ts";
+import { askBox } from "./ask.js";
 
 const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
@@ -163,6 +164,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   const gTitles = world.append("g").attr("class", "g-titles");
   const gCounts = world.append("g").attr("class", "g-counts");
   const gHot = world.append("g").attr("class", "g-hot");
+  const gAsk = world.append("g").attr("class", "g-ask");
   const gSteps = world.append("g").attr("class", "m-steps");
 
   let model = timed("map-model", buildModel);
@@ -261,9 +263,10 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     trunkAt = new Map((L.trunks || []).map((t, k) => [t.a + "|" + t.b, k]));
     feederAt = new Map((L.feeders || []).map((f, k) => [f.trunk + "|" + f.folder + "|" + f.item, k]));
     hot = null; hotFor = null; lights.clear();
+    askHot = null; askHotFor = null;
     // A new layout numbers its items afresh: what is drawn is keyed by those numbers, so it is drawn again from
     // nothing, and what was pointed at or selected in the last one may not be in this one (Notes to Code).
-    if (!first) for (const g of [gFloor, gWalls, gRoutes, gHot, gCounts, gNotes, gTitles]) g.selectAll("*").remove();
+    if (!first) for (const g of [gFloor, gWalls, gRoutes, gHot, gAsk, gCounts, gNotes, gTitles]) g.selectAll("*").remove();
     hovered = -1;
     if (selected && !L.items.some((n) => n.id === selected)) { selected = null; fillCard(); }
     noteAt = new Map(L.items.map((n, i) => [n.ref, i]).filter(([, i]) => L.items[i].kind === "note"));
@@ -276,7 +279,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   let drawnAt = null, drawnWhen = 0, moving = false;
   const zoom = d3.zoom().scaleExtent([0.03, 12]).extent(() => [[0, 0], [w || 800, hgt || 600]])
-    .on("start", (event) => { if (event.sourceEvent) userMoved = true; moving = true; svg.classed("moving", true); })
+    .on("start", (event) => { if (event.sourceEvent) userMoved = handsOn = true; moving = true; svg.classed("moving", true); })
     .on("zoom", (event) => {
       const t = event.transform;
       T = t;
@@ -461,6 +464,106 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     });
   }
 
+  // ------------------------------------------------------------ Ask Atlas (T85)
+
+  // A question asked here is answered beside the map (ask.js), and the map shows where the answer came from:
+  // the notes a search named, the notes opened, each link followed from one note to the next drawn along the
+  // way between them, and a passage beside each note the answer rests on.
+  let handsOn = false; // the map was moved by hand since the question was asked: it is not moved for the answer
+  let askHot = null, askHotFor = null, askFit = "";
+  const ask = trail ? null : askBox({
+    where: () => {
+      if (!L || model.code) return null;
+      const n = selected ? L.items.find((m) => m.id === selected) : null;
+      if (n && nodes.get(selected)?.c && !nodes.get(selected).artifact) return { ref: n.ref, label: nodes.get(selected).label || n.ref, kind: "note" };
+      return focus >= 0 ? { ref: L.items[focus].ref, label: nodes.get(L.items[focus].id)?.label || L.items[focus].ref, kind: "folder" } : null;
+    },
+    changed: (what) => {
+      wrap.classList.toggle("asking", ask.active());
+      if (what === "clear") { handsOn = false; askFit = ""; }
+      askHotFor = null;
+      if (what !== "clear") fitAsk();
+      schedule();
+    },
+    show: (id) => {
+      const i = noteAt.get(id);
+      if (i === undefined) return;
+      handsOn = true;
+      zoomTo(L.items[i].parent);
+      select(L.items[i].id);
+    },
+  });
+  if (ask) wrap.append(ask.form, ask.card, ask.previews);
+
+  // The links followed, as routes: the layout's own path where the two notes are joined by one, else the router's.
+  function askRoutes(open, am) {
+    const sig = am ? am.version + "|" + key + "|" + Array.from(open).join("") : "";
+    if (sig === askHotFor) return;
+    askHotFor = sig;
+    if (!am || !am.chain.length || !o.showLinks) { askHot = null; return; }
+    const shownAs = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
+    const routes = [], asks = [];
+    for (const { from, to } of am.chain) {
+      const a = noteAt.get(from), b = noteAt.get(to);
+      if (a === undefined || b === undefined) continue;
+      const sa = shownAs(a), sb = shownAs(b), own = sa === a && sb === b && (ownPath.get(a + "|" + b) || tracePath(a, b));
+      if (sa === sb) continue;
+      // Drawn from the note in hand to the one it led to. The layout's path runs the other way.
+      if (own) routes.push({ key: `q${from}>${to}`, pts: own, lane: 0, rev: true });
+      else asks.push({ key: `q${from}>${to}`, a: sa, b: sb, rev: false });
+    }
+    const mine = askHot = { routes };
+    if (!asks.length) return;
+    computeGridRoutes(key, L, asks.map(({ a, b }) => ({ a, b }))).then((res) => {
+      if (left) return;
+      mine.routes = [...routes, ...asks.map((m, k) => res.routes[k] && { ...m, pts: res.routes[k].pts, lane: 0 }).filter(Boolean)];
+      if (askHot === mine) schedule();
+    });
+  }
+
+  // Bring what was opened into view, once for each note more, unless the map has been moved by hand.
+  function fitAsk() {
+    const am = ask?.marks();
+    if (!am || !L || handsOn) return;
+    const on = [...am.notes].filter(([, q]) => q.opened || q.cited || q.how === "start").map(([id]) => noteAt.get(id)).filter((i) => i !== undefined);
+    const sig = on.join(",");
+    if (!on.length || sig === askFit) return;
+    askFit = sig;
+    const to = fitItems(on.map((i) => L.items[i]));
+    if (reduceMotion) svg.call(zoom.transform, to);
+    else svg.transition().duration(450).call(zoom.transform, to);
+  }
+
+  // A passage beside each note the answer rests on (the first few), joined to it by a dotted line: placed
+  // as a note's tip is, clear of the marked notes, the panels and each other.
+  function placePreviews(X, Y, open, shown, onScreen, am) {
+    const els = ask && am ? ask.previewEls() : [], leads = [];
+    if (els.length) {
+      const at = wrap.getBoundingClientRect();
+      const box = (i) => { const m = L.items[i]; return [X(m.gx) - 3, Y(m.gy) - 3, X(m.gx + m.w) + 3, Y(m.gy + m.h) + 3]; };
+      const shownAs = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
+      const avoid = [panel, crumbs, legend, card, ask.form, ask.card].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
+      for (const id of am.notes.keys()) { const i = noteAt.get(id); if (i !== undefined && shown[shownAs(i)]) avoid.push(box(shownAs(i))); }
+      // Rather not over any other note either, where there is room.
+      const others = L.items.map((n, i) => i).filter((i) => L.items[i].kind === "note" && shown[i] && onScreen(L.items[i])).map(box);
+      for (const el of els) {
+        const i0 = noteAt.get(el.dataset.note), i = i0 === undefined ? -1 : shownAs(i0);
+        el.hidden = !(w >= 700 && i >= 0 && shown[i] && onScreen(L.items[i]));
+        if (el.hidden) continue;
+        const b = box(i), tw = el.offsetWidth, th = el.offsetHeight, at2 = beside(b, tw, th, avoid, others);
+        el.style.left = `${Math.round(at2.x)}px`;
+        el.style.top = `${Math.round(at2.y)}px`;
+        const p = [at2.x, at2.y, at2.x + tw, at2.y + th];
+        avoid.push([p[0] - 6, p[1] - 6, p[2] + 6, p[3] + 6]);
+        // From the preview's edge nearest the note to the note's edge nearest that.
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const px = clamp((b[0] + b[2]) / 2, p[0], p[2]), py = clamp((b[1] + b[3]) / 2, p[1], p[3]);
+        leads.push({ key: el.dataset.note, d: `M${px.toFixed(1)} ${py.toFixed(1)}L${clamp(px, b[0] + 3, b[2] - 3).toFixed(1)} ${clamp(py, b[1] + 3, b[3] - 3).toFixed(1)}` });
+      }
+    }
+    gAsk.selectAll("path.aq-lead").data(leads, (d) => d.key).join("path").attr("class", "aq-lead").attr("d", (d) => d.d);
+  }
+
   // A link between notes in different folders, the long way (T72): from the note required, out along the
   // feeders to its trunk, along the trunk, and in along the feeders at the other end. Null where some part
   // of the way is not drawn (a back trunk): the router then finds the short way.
@@ -562,19 +665,21 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   // Step numbers: on each note of the path, and on each closed folder holding
   // some of it (as the steps inside, e.g. 3–5).
-  function drawSteps(items, shown, open, X, Y, c) {
+  function drawSteps(items, shown, open, X, Y, c, am) {
     const badges = [];
-    if (trail) {
+    // An answer's notes are numbered as the answer lists them.
+    const numbered = trail ? step : am ? new Map([...am.notes].filter(([, q]) => q.cited).map(([id, q]) => [id, q.cited])) : null;
+    if (numbered) {
       const inside = new Map(); // closed folder -> the steps in it
-      for (const [ref, k] of step) {
+      for (const [ref, k] of numbered) {
         const i = noteAt.get(ref);
         if (i === undefined) continue;
-        if (shown[i]) { badges.push({ id: items[i].id, x: X(items[i].gx), y: Y(items[i].gy), text: String(k), last: ref === goalId() }); continue; }
+        if (shown[i]) { badges.push({ id: items[i].id, x: X(items[i].gx), y: Y(items[i].gy), text: String(k), last: !trail || ref === goalId() }); continue; }
         const f = up[i].find((p) => shown[p] && !open[p]);
         if (f !== undefined) inside.set(f, [...(inside.get(f) || []), k]);
       }
-      const end = tour ? step.get(goalId()) : trail.length;
-      for (const [f, ks] of inside) badges.push({ id: items[f].id, x: X(items[f].gx + items[f].w) - c, y: Y(items[f].gy) + c, text: spans(ks.sort((a, b) => a - b)), last: ks.includes(end) });
+      const end = !trail ? -1 : tour ? step.get(goalId()) : trail.length;
+      for (const [f, ks] of inside) badges.push({ id: items[f].id, x: X(items[f].gx + items[f].w) - c, y: Y(items[f].gy) + c, text: spans(ks.sort((a, b) => a - b)), last: !trail || ks.includes(end) });
     }
     gSteps.selectAll("g").data(badges, (b) => b.id).join((enter) => { const g = enter.append("g"); g.append("rect"); g.append("text"); return g; })
       .attr("class", (b) => `m-step${b.last ? " goal" : ""}`)
@@ -677,11 +782,15 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   // A view that holds every note on the path.
   function trailFit() {
     const on = trail.map((id) => noteAt.get(id)).filter((i) => i !== undefined).map((i) => L.items[i]);
-    if (!on.length) return null;
+    return on.length ? fitItems(on) : null;
+  }
+  // A view that holds these items, between the lens panel and, where one is shown, the answer at the other side.
+  function fitItems(on) {
     const x0 = Math.min(...on.map((n) => n.gx)) - 2, x1 = Math.max(...on.map((n) => n.gx + n.w)) + 2;
     const y0 = Math.min(...on.map((n) => n.gy)) - 2, y1 = Math.max(...on.map((n) => n.gy + n.h)) + 2, left = inset();
-    const k = Math.min(1.6, (w - left) / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
-    return d3.zoomIdentity.translate(left + (w - left) / 2 - (k * (x0 + x1) * CELL) / 2, hgt / 2 - (k * (y0 + y1) * CELL) / 2).scale(k);
+    const wide = w - left - (ask && w >= 900 && !ask.card.hidden ? ask.card.offsetWidth + 24 : 0);
+    const k = Math.min(1.6, wide / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
+    return d3.zoomIdentity.translate(left + wide / 2 - (k * (x0 + x1) * CELL) / 2, hgt / 2 - (k * (y0 + y1) * CELL) / 2).scale(k);
   }
 
   function render() {
@@ -722,6 +831,10 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const folders = items.map((n, i) => i).filter((i) => items[i].kind === "folder" && shown[i] && onScreen(items[i])).sort((a, b) => items[a].depth - items[b].depth);
     const wall = (i) => { const n = items[i]; return cut(X(n.gx), Y(n.gy), X(n.gx + n.w), Y(n.gy + n.h), c * 1.5); };
     const enter = (event, i) => showTip(event, i), leave = () => { tip.hidden = true; };
+    // What a question's answer marked (ask.js), and the closed folders that hold some of it.
+    const am = ask?.marks() ?? null, askIn = new Set();
+    ask?.place();
+    if (am) for (const id of am.notes.keys()) { const i = noteAt.get(id), f = i === undefined || shown[i] ? undefined : up[i].find((p) => shown[p] && !open[p]); if (f !== undefined) askIn.add(f); }
     const zoomIn = (event, i) => { event.stopPropagation(); zoomTo(i === focus ? items[i].parent : i); };
     gFloor.selectAll("path").data(folders.filter((i) => open[i]), (i) => items[i].id).join("path")
       .attr("class", (i) => `g-floor d${Math.min(items[i].depth, 3)}`).attr("d", wall).on("click", zoomIn);
@@ -729,15 +842,16 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     reachArea.attr("d", ground.area);
     reachEdge.attr("d", ground.edge);
     gWalls.selectAll("path").data(folders, (i) => items[i].id).join("path")
-      .attr("class", (i) => `g-wall d${Math.min(items[i].depth, 3)} ${open[i] ? "open" : "closed"}`).attr("d", wall)
+      .attr("class", (i) => `g-wall d${Math.min(items[i].depth, 3)} ${open[i] ? "open" : "closed"}${askIn.has(i) ? " aq-in" : ""}`).attr("d", wall)
       .on("click", zoomIn).on("pointerenter", enter).on("pointerleave", leave);
 
     // Routes: neutral lines, wider with more links, each in its lane; a later
     // one is drawn over an earlier one with a gap, so a crossing reads as over and under.
     routesFor(open, shown);
     lightFor(open);
-    svg.classed("lit", !!hot).classed("trail", !!trail);
-    drawSteps(items, shown, open, X, Y, c);
+    askRoutes(open, am);
+    svg.classed("lit", !!hot).classed("trail", !!trail).classed("asked", !!am).classed("answered", !!am?.done);
+    drawSteps(items, shown, open, X, Y, c, am);
     const laneStep = Math.max(2.2, Math.min(5, c / 4.2));
     const line = (m) => cutPath(offsetLine(m.pts.map(([x, y]) => [X(x), Y(y)]), m.lane * laneStep), c * 0.9);
     const width = (m) => 1 + Math.log2(m.count) * 0.8;
@@ -765,6 +879,19 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         if (m.rev) this.classList.add("rev");
         this.addEventListener("animationend", () => this.classList.remove("draw", "rev"), { once: true });
       });
+    // The links a question's answer followed, each drawn out from the note in hand when it is first followed.
+    gAsk.selectAll("path.aq-rt").data(askHot ? askHot.routes : [], (m) => m.key)
+      .join((el) => el.append("path").attr("class", "aq-rt").property("fresh", true))
+      .attr("d", line)
+      .each(function (m) {
+        if (!this.fresh) return;
+        this.fresh = false;
+        if (reduceMotion) return;
+        this.style.setProperty("--len", this.getTotalLength().toFixed(1));
+        this.classList.add("draw");
+        if (m.rev) this.classList.add("rev");
+        this.addEventListener("animationend", () => this.classList.remove("draw", "rev"), { once: true });
+      });
     // A trunk's count, where it runs between its two folders.
     const counted = drawn.filter((m) => m.count > 1);
     gCounts.selectAll("text").data(counted, (m) => m.key || m.cls[0] + m.a + "|" + m.b).join("text").attr("class", (m) => (m.cls.includes("feed") ? "g-count feed" : "g-count"))
@@ -775,7 +902,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const labels = c >= LABELS_AT;
     const station = document.documentElement.dataset.theme === "station";
     gNotes.selectAll("g").data(notes, (i) => items[i].id).join("g")
-      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? ((hot.far.get(i) ?? 1) > 1 ? " dep far" : " dep") : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}${nodes.get(items[i].id)?.artifact ? " art" : ""}`)
+      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? ((hot.far.get(i) ?? 1) > 1 ? " dep far" : " dep") : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}${nodes.get(items[i].id)?.artifact ? " art" : ""}${askClass(am, items[i].ref)}`)
       .attr("tabindex", 0).attr("role", "link").attr("aria-label", (i) => nodes.get(items[i].id)?.label || items[i].ref)
       .on("click", (event, i) => { event.stopPropagation(); if (selected === items[i].id) openNote(i); else select(items[i].id); })
       .on("dblclick", (event, i) => { event.stopPropagation(); openNote(i); })
@@ -800,6 +927,9 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
             ring.classList.add("draw");
           }
         }
+        const q = am?.notes.get(n.ref);
+        // Marked by a question's answer: a frame that says how the note was reached, heavier once it was opened.
+        if (q) g.append("path").attr("class", `aq-ring ${q.how}${q.opened ? " open" : ""}`).attr("d", frame);
         if (l === 3 && lens !== "activity" && bw > 14) g.append("path").attr("class", "gn-ok").attr("d", `M${(x0 + 5).toFixed(1)} ${(y0 + bh - 5.5).toFixed(1)}h${(bw - 10).toFixed(1)}M${(x0 + 5).toFixed(1)} ${(y0 + bh - 8.5).toFixed(1)}h${(bw - 10).toFixed(1)}`);
         // The title fills the block: the largest size at which it fits, wrapped
         // to the block's width with room left for the glyph of its kind; at the
@@ -840,6 +970,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       });
 
     placeTip(X, Y);
+    placePreviews(X, Y, open, shown, onScreen, am);
 
     // Titles, each with how many of the folder's notes are reached.
     const size = Math.max(10, Math.min(12, c * 0.72));
@@ -867,6 +998,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     }
     readout.textContent = `Grid ${L.W} by ${L.H} cells, flowing ${L.flow}.` + (m ? ` Routes ${m.routes}, crossings ${m.crossings}, cells of route ${m.length}, beside another route ${Math.round(m.beside * 100)}%${m.lost ? `, no way found for ${m.lost}` : ""}.` : "");
   }
+
+  const askClass = (am, ref) => { const q = am?.notes.get(ref); return q ? ` aq aq-${q.how}${q.opened ? " aq-open" : ""}${q.cited ? " aq-cited" : am.done && q.how !== "start" ? " aq-unused" : ""}` : ""; };
 
   function openNote(i) {
     persist();
@@ -910,10 +1043,17 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (tip.hidden || !n || n.kind !== "note") return;
     const box = (i) => { const m = L.items[i]; return [X(m.gx) - 3, Y(m.gy) - 3, X(m.gx + m.w) + 3, Y(m.gy + m.h) + 3]; };
     const at = wrap.getBoundingClientRect();
-    const fixed = [panel, crumbs, legend, card].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
+    const fixed = [panel, crumbs, legend, card, ...(ask ? [ask.form, ask.card] : [])].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
     const avoid = [box(hovered), ...(hot ? [...hot.notes].filter((i) => L.items[i]).map(box) : []), ...fixed];
-    const [x0, y0, x1, y1] = box(hovered), tw = tip.offsetWidth, th = tip.offsetHeight;
-    const covered = (x, y) => avoid.reduce((t, [a, b, c2, d]) => t + Math.max(0, Math.min(x + tw, c2) - Math.max(x, a)) * Math.max(0, Math.min(y + th, d) - Math.max(y, b)), 0);
+    const best = beside(box(hovered), tip.offsetWidth, tip.offsetHeight, avoid);
+    tip.style.left = `${Math.round(best.x)}px`;
+    tip.style.top = `${Math.round(best.y)}px`;
+  }
+  // Where a box of this size goes beside a rectangle: the nearest place that covers none of `avoid`, or the one that covers least.
+  // What is in `soft` is avoided too, but a tenth as much.
+  function beside([x0, y0, x1, y1], tw, th, avoid, soft = []) {
+    const over = (list, x, y) => list.reduce((t, [a, b, c2, d]) => t + Math.max(0, Math.min(x + tw, c2) - Math.max(x, a)) * Math.max(0, Math.min(y + th, d) - Math.max(y, b)), 0);
+    const covered = (x, y) => over(avoid, x, y) + over(soft, x, y) / 10;
     let best = null;
     for (let ring = 0; ring < 5 && !(best && best.cost === 0); ring++) {
       const gx = 8 + ring * (tw * 0.5 + 12), gy = 8 + ring * (th * 0.6 + 12);
@@ -925,8 +1065,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
         if (cost === 0) break;
       }
     }
-    tip.style.left = `${Math.round(best.x)}px`;
-    tip.style.top = `${Math.round(best.y)}px`;
+    return best;
   }
 
   function size() {
@@ -953,7 +1092,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   });
   const onResize = () => { size(); arrange(); schedule(); };
   window.addEventListener("resize", onResize);
-  wrap.leave = () => { left = true; svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
+  wrap.leave = () => { left = true; ask?.clear(); svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
   wrap.refresh = () => { model = timed("map-model", buildModel); nodes = byId(model); o = effective(); arrange(); tones = null; schedule(); };
   M.reset = () => zoomTo(-1);
   // The panel's Notes or Code, or folders or none: another map, so shown whole, with a panel made for it

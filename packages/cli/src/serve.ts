@@ -27,6 +27,7 @@ import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
+import * as atlasask from "./atlasask.ts";
 import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
@@ -377,6 +378,17 @@ const assistNote = createRoute({
     403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
     409: { description: "No model account is connected", content: { "application/json": { schema: ErrorBody } } } },
 });
+const askAtlas = createRoute({
+  method: "post", path: "/api/atlas/ask",
+  summary: "Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer, or error. Nothing is written.",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
+    question: z.string(), start: z.string().optional().openapi({ description: "Where the asker is on the map: a note's id or a folder. Left out, the whole map." }), tier: z.enum(["low", "mid", "max"]).optional(),
+  }).openapi("AtlasAsk") } }, required: true } },
+  responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
+    400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "No model account is connected", content: { "application/json": { schema: ErrorBody } } } },
+});
 const putNote = createRoute({
   method: "put", path: "/api/notes/{id}", summary: "Save an edit to a note, or create it",
   request: {
@@ -674,6 +686,29 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
           onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
         });
         await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
+      }
+    });
+  }) as never);
+
+  // Ask Atlas (T85): the same lookups, asked from the map.
+  app.openapi(askAtlas, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const q: atlasask.Question = { question: typeof body.question === "string" ? body.question : "", start: typeof body.start === "string" ? body.start : undefined };
+    if ((models.TIERS as readonly string[]).includes(body.tier as string)) q.tier = body.tier as models.Tier;
+    if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Axis page.");
+    try { atlasask.prepare(cfg, q); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    return streamSSE(c, async (stream) => {
+      try {
+        const { answer, seen } = await atlasask.ask(cfg, q, {
+          onText: (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); },
+          onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
+        });
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ answer, seen }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
       }

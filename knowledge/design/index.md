@@ -7,6 +7,7 @@
 * [An agent in the editor](assist.md) - While a note is edited, the connected model can be asked about a passage, or asked for text to go at a place in it; an answer is shown beside the note and proposed text is a suggestion to accept or reject.
 * [Architecture](architecture.md) - Components, repository layout, and data flow of rdstudio.
 * [Artifacts: HTML documents in the knowledge base, linked or embedded from notes](artifacts.md) - Scope for replacing reports with artifacts: self-contained HTML files beside the notes that do what Markdown cannot, shown on the Atlas, linked or embedded from notes, made by the agent from the editor, sandboxed, offline, and checked for errors and weight before they are offered.
+* [Ask Atlas](ask-atlas.md) - A question asked on the Atlas is answered beside the map from the notes and the code, and the map shows where the answer came from: the notes found, the links followed, and a passage beside each note the answer rests on.
 * [Conventions](conventions.md) - How rdstudio uses OKF fields, actor names, concept types, tasks, reports and procedures.
 * [Dashboard design](dashboard-design.md) - Visual tokens and layout rules for the dashboard, and why they were chosen.
 * [How an agent uses the knowledge base, compared with RAG](okf-and-rag.md) - Both put knowledge a model lacks in front of it; RAG retrieves chunks of existing documents by similarity before the model sees anything, while here the agent navigates notes written as knowledge, by search and links, and writes back.

@@ -159,7 +159,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 
 In the order agreed on 2026-10-07.
 
-- [ ] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
+- [x] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
 - [ ] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
 - [ ] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
 - [ ] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)

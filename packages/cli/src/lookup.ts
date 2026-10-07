@@ -50,7 +50,11 @@ export const TOOLS: ToolDef[] = [
 
 const MAX_READ = 8000;
 const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n).trimEnd() + "\n[…cut: read a section of it for the rest]" : s);
-const brief = (s: string, n = 400) => { const t = s.replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n).trimEnd() + "…" : t; };
+/** The start of a passage as plain words, for a preview: without Markdown's marks, a link as its text. */
+const brief = (s: string, n = 400) => {
+  const t = s.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[\^[^\]]*\]/g, "").replace(/^\s*(?:[-*+]|\d+\.|#+|>)\s+/gm, "").replace(/\*\*|__|`/g, "").replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n).trimEnd() + "…" : t;
+};
 
 /** A note's id from what a model writes for one: /design/model.md, design/model, [x](/design/model.md). */
 export function noteId(b: Bundle, raw: unknown): string | null {
