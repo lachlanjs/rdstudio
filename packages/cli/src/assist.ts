@@ -382,8 +382,10 @@ export function parseFigure(reply: string): { artifact: { title: string; caption
   return { artifact: { title: title || /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.trim() || "Figure", caption: part("caption"), html }, why: part("why") };
 }
 
-/** Room for a fill's reply: a rewritten passage comes back whole, a little longer than it went. */
-export const fillTokens = (passage: number): number => Math.max(2000, Math.ceil((passage * 1.4) / 3) + 600);
+/** Room for a fill's reply: a rewritten passage comes back whole, a little longer than it went.
+ *  A token for each character: text full of links and paths runs near two characters a token
+ *  (the roadmap, 8600 characters, was cut at 4500 tokens), and room not used costs nothing. */
+export const fillTokens = (passage: number): number => Math.max(2000, passage + 1000);
 
 /** Ask, streaming the reply's text. Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {

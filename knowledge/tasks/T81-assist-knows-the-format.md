@@ -56,6 +56,14 @@ In `packages/cli/src/assist.ts`:
 Checked by two unit tests in `packages/cli/test/assist.test.ts`; the CLI
 suite (119) and the editor walkthrough (21/21) pass.
 
+# Tried by the developer
+
+2026-10-07, the whole roadmap, on `anthropic/claude-sonnet-5.5`: the reply
+was cut at exactly its allowance, 4512 tokens, and nothing was proposed.
+The allowance assumed three characters a token; a list of links and paths
+runs nearer two. It is now a token for each character of the passage, plus
+1000 (`fillTokens`).
+
 # Not done
 
 - Not tried with a real model: the developer's roadmap request is the test.
