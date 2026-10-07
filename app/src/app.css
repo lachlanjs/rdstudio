@@ -462,6 +462,10 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .map-folders li i { width: 12px; height: 12px; }
 .map-folders li .n { color: var(--text-faint); }
 .g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
+/* An artifact on the Atlas (T77): a lighter plate with a broken edge and a square glyph, a window among the notes. */
+.gn.art .gn-block { fill: var(--surface-2); stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 6 2.5; }
+.gn.art .g-note { font-style: italic; }
+.key-shape.line { fill: none; }
 .g-note { font-size: 11px; font-variation-settings: "wdth" 84; }
 .gn.l0 .g-note { fill: var(--text-faint); }
 

@@ -25,6 +25,7 @@ import { plainModel, gridKey, cachedGrid, computeGrid, computeGridRoutes } from 
 import { buildCells, reachedCells, maskPaths } from "./grid/cells.js";
 import { effective, buildModel, controls, heightLens, lensValue, remember, SYMBOLS, M } from "./map.js";
 import { codeMap, codeHref, KIND_LABEL, LINK_LABEL } from "../code.ts";
+import { artifactHref } from "../artifactFrame.ts";
 
 const KEY = "rdstudio.gridmap";
 const CELL = 10; // a cell's side at zoom 1
@@ -492,7 +493,8 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   // What you have not reached, hidden when you choose (understanding.svelte.ts):
   // a note, unless it is reached, on the frontier or on the path being shown; a folder holding none.
-  const hiddenFromYou = (n) => !model.code && understanding.hiding && !step.has(n.ref) && !(n.kind === "note" ? understanding.visible(n.ref) : understanding.folderVisible(n.ref));
+  // (An artifact is not something to reach: it shows while a note that cites it does.)
+  const hiddenFromYou = (n) => !model.code && understanding.hiding && !(n.kind === "note" && nodes.get(n.id)?.artifact && nodes.get(n.id).artifact.citedBy.some((c) => understanding.visible(c.note))) && !step.has(n.ref) && !(n.kind === "note" ? understanding.visible(n.ref) : understanding.folderVisible(n.ref));
 
   // ------------------------------------------------------------ selection
 
@@ -503,6 +505,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (i < 0) return;
     const ref = L.items[i].ref, label = nodes.get(selected)?.label || ref;
     if (nodes.get(selected)?.code) return fillCodeCard(nodes.get(selected).code);
+    if (nodes.get(selected)?.artifact) return fillArtifactCard(nodes.get(selected).artifact);
     const st = understanding.state(ref)?.state, needs = needsWork().has(ref);
     const reqs = needsOf[i].length, builds = neededBy[i].length;
     const where = needs ? "Needs work." : st ? `${STATE_LABEL[st]}.` : "";
@@ -519,6 +522,21 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       h("div", { class: "atlas-card-actions" }, open,
         exercises.length ? h("a", { class: "toggle", href: conceptHref(exercises[0].id) }, exercises.length === 1 ? "Exercise" : `Exercises (${exercises.length})`) : "",
         reqs ? h("a", { class: "toggle", href: "#/path/" + ref, title: "This note and everything it requires, in reading order" }, "Study path") : ""));
+  }
+
+  // An artifact's card (T77): what it is, and the notes that cite it.
+  function fillArtifactCard(a) {
+    const notes = [...new Set(a.citedBy.map((c) => c.note))].map((id) => store.concepts.get(id)).filter(Boolean);
+    const open = h("a", { class: "toggle primary", href: artifactHref(a.path) }, "Open");
+    open.addEventListener("click", () => persist());
+    const close = h("button", { class: "atlas-card-close", type: "button", "aria-label": "Close" }, "×");
+    close.addEventListener("click", () => select(null));
+    card.className = "atlas-card";
+    card.setAttribute("aria-label", a.title);
+    card.replaceChildren(
+      h("h3", {}, a.title), close,
+      h("p", {}, `An artifact: an interactive page.${a.description ? " " + a.description : ""} ${notes.length ? `Cited by ${plural(notes.length, "note")}.` : "No note cites it yet."}${a.network ? " It needs the network." : ""}`),
+      h("div", { class: "atlas-card-actions" }, open, ...notes.slice(0, 2).map((c) => h("a", { class: "toggle", href: conceptHref(c.id) }, c.title))));
   }
 
   // A code item's card (T66): what it is, where, and its links by kind.
@@ -757,7 +775,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const labels = c >= LABELS_AT;
     const station = document.documentElement.dataset.theme === "station";
     gNotes.selectAll("g").data(notes, (i) => items[i].id).join("g")
-      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? ((hot.far.get(i) ?? 1) > 1 ? " dep far" : " dep") : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}`)
+      .attr("class", (i) => `gn l${level[i]}${needs.has(items[i].ref) ? " bad" : ""}${items[i].id === selected ? " sel" : ""}${hot?.notes.has(i) ? ((hot.far.get(i) ?? 1) > 1 ? " dep far" : " dep") : ""}${hot?.at === i ? " at" : ""}${trail && !step.has(items[i].ref) ? " off" : ""}${nodes.get(items[i].id)?.landmark ? " landmark" : ""}${nodes.get(items[i].id)?.artifact ? " art" : ""}`)
       .attr("tabindex", 0).attr("role", "link").attr("aria-label", (i) => nodes.get(items[i].id)?.label || items[i].ref)
       .on("click", (event, i) => { event.stopPropagation(); if (selected === items[i].id) openNote(i); else select(items[i].id); })
       .on("dblclick", (event, i) => { event.stopPropagation(); openNote(i); })
@@ -852,7 +870,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
 
   function openNote(i) {
     persist();
-    location.hash = model.code ? codeHref(L.items[i].ref) : conceptHref(L.items[i].ref);
+    location.hash = model.code ? codeHref(L.items[i].ref) : nodes.get(L.items[i].id)?.artifact ? artifactHref(L.items[i].ref) : conceptHref(L.items[i].ref);
   }
 
   function drawCrumbs() {
@@ -873,7 +891,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (!d) return;
     const lines = [h("strong", {}, d.label)];
     if (n.kind === "note") {
-      lines.push(h("span", {}, d.code ? `${d.c.type} in ${d.code.path}` : `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
+      lines.push(h("span", {}, d.artifact ? `Artifact · cited by ${plural(new Set(d.artifact.citedBy.map((c) => c.note)).size, "note")}` : d.code ? `${d.c.type} in ${d.code.path}` : `${d.c.type || "Concept"} · ${TRUST_LABEL[trustState(d.c)]}${d.landmark ? " · Landmark" : ""}`));
       if (flat && d.c.directory) lines.push(h("div", {}, `In ${d.c.directory}`));
       if (d.c.description) lines.push(h("div", {}, d.c.description));
     } else lines.push(h("span", {}, `${d.code ? KIND_LABEL[d.code.kind] : "Folder"} · ${noteCount[i]} ${model.code ? "item" : "note"}${noteCount[i] === 1 ? "" : "s"}`));

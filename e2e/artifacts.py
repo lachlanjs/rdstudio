@@ -150,6 +150,22 @@ with sync_playwright() as pw:
     p.wait_for_timeout(400)
     rows = p.locator(".rows .title").all_inner_texts()
     check("the Artifacts page lists them, where reports were", set(rows) == {"A standing wave", "Broken", "Tiles", "From a CDN"} or len(rows) == 4, rows)
+    # On the Atlas (T77): an item of its folder, after the notes that cite it.
+    p.goto(URL + "?nosw#/map/design")
+    art = p.locator('svg.gridmap g.gn.art[aria-label="A standing wave"]')
+    expect(art).to_have_count(1, timeout=20000)
+    p.wait_for_timeout(800)
+    lay = p.evaluate("""() => { const L = document.querySelector('.map-wrap').layout(); const at = (ref) => L.items.findIndex((n) => n.ref === ref);
+      const a = at('design/wave.html'), w = at('design/waves'), o = at('design/other');
+      return { arts: L.items.filter((n) => /\\.html$/.test(n.ref)).length, folder: L.items[L.items[a].parent].ref, joined: L.links.filter((l) => l.a === a).map((l) => l.b).sort(), notes: [w, o].sort(), out: L.links.filter((l) => l.b === a).length }; }""")
+    check("on the Atlas an artifact is an item of its folder, joined to the notes that cite it, with nothing leading out of it",
+          lay["arts"] == 4 and lay["folder"] == "design" and lay["joined"] == lay["notes"] and lay["out"] == 0, lay)
+    art.click()
+    card = p.locator(".atlas-card")
+    expect(card).to_be_visible()
+    check("…its card says what it is and who cites it, and opens it", "An artifact" in card.inner_text() and "Cited by 2 notes" in card.inner_text() and card.get_by_role("link", name="Open").get_attribute("href") == "#/a/design/wave.html", card.inner_text())
+    check("…and the key names the kind", "Artifact" in p.locator(".map-legend.kinds").inner_text())
+    p.screenshot(path=str(OUT / "artifacts-atlas.png"))
     concepts = json.load(urllib.request.urlopen(URL + "data/concepts.json"))
     waves = next(c for c in concepts if c["id"] == "design/waves")
     check("a note's links to notes are as they were: citing an artifact adds none, and an artifact adds none back", waves["links"] == [] and waves["backlinks"] == [] and len(waves["cites"]) == 6, waves)

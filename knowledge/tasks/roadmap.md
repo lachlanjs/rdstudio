@@ -146,6 +146,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T74 An agent in the editor: ask about a passage, or have text proposed](/tasks/T74-agent-in-editor.md)
 - [x] [T75 Switch a project between Learning and Project from the app](/tasks/T75-mode-switch.md)
 - [x] [T76 Artifacts in the knowledge folders, and pictures](/tasks/T76-artifacts.md)
+- [x] [T77 Artifacts on the Atlas](/tasks/T77-artifacts-atlas.md)
 
 # Future
 
