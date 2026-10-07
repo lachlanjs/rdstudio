@@ -148,6 +148,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T76 Artifacts in the knowledge folders, and pictures](/tasks/T76-artifacts.md)
 - [x] [T77 Artifacts on the Atlas](/tasks/T77-artifacts-atlas.md)
 - [x] [T78 Make a figure from the editor](/tasks/T78-figure-from-editor.md)
+- [x] [T79 Link controls in the editor](/tasks/T79-link-controls.md)
 
 # Future
 

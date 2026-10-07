@@ -13,6 +13,7 @@ import texmath from "markdown-it-texmath";
 import { format } from "./commands.ts";
 import { formula, mathsSyntax } from "./maths.ts";
 import { placed } from "./suggest.ts";
+import { choices, kindOf, labelOf, linkAt, ratingOf, setEmbed, setTitle, sideOf } from "./linkControl.ts";
 
 // The note page's renderer, as markdown.ts sets it up.
 const page = new MarkdownIt({ html: true }).use(texmath, { engine: katex, delimiters: ["dollars", "brackets"], katexOptions: { throwOnError: false } });
@@ -138,5 +139,56 @@ describe("a suggestion as it goes into the note (T74)", () => {
     expect(at("Before.\n", 8, 8, "Line one.\nLine two.\n")).toBe("\nLine one.\nLine two.");
     expect(at("", 0, 0, code)).toBe(code);
     expect(at("A sentence.", 11, 11, "![A figure](fig.html)")).toBe("\n\n![A figure](fig.html)"); // an embed is a block of its own
+  });
+});
+
+describe("the link control (T79)", () => {
+  const stateOf = (doc: string) => { const st = EditorState.create({ doc, extensions: [language] }); ensureSyntaxTree(st, doc.length, 5000); return st; };
+  const at = (doc: string, needle: string) => { const st = stateOf(doc); return { st, l: linkAt(st, doc.indexOf(needle) + 1) }; };
+  const after = (st: EditorState, changes: import("@codemirror/state").ChangeSpec) => st.update({ changes }).state.doc.toString();
+
+  test("what an address points at", () => {
+    expect([kindOf("/a/b.md"), kindOf("b.md#h"), kindOf("sub/"), kindOf("fig.html"), kindOf("p.PNG"), kindOf("https://x.org/a.md"), kindOf("#top"), kindOf("data.csv")])
+      .toEqual(["note", "note", "note", "artifact", "image", null, null, null]);
+  });
+  test("the link under the cursor: its address, its title, whether it is shown", () => {
+    const doc = 'See [the metric](/r/metric.md "requires"), [a figure](fig.html), ![a sphere](s.png "left") and [the web](https://x.org).';
+    const { l } = at(doc, "the metric");
+    expect(l).toMatchObject({ kind: "note", url: "/r/metric.md", title: "requires", embed: false });
+    expect(ratingOf(l!)).toBe("requires");
+    expect(at(doc, "a figure").l).toMatchObject({ kind: "artifact", title: null, embed: false });
+    const pic = at(doc, "a sphere").l!;
+    expect(pic).toMatchObject({ kind: "image", embed: true });
+    expect(sideOf(pic)).toBe("left");
+    expect(at(doc, "the web").l).toBeNull(); // the web is not ours to rate
+    expect(linkAt(stateOf(doc), 1)).toBeNull();
+    // At either end of a link counts as in it.
+    const st = stateOf(doc);
+    expect(linkAt(st, doc.indexOf("[the metric]"))).not.toBeNull();
+    expect(linkAt(st, doc.indexOf('"requires")') + '"requires")'.length)).not.toBeNull();
+  });
+  test("a rating is the title: set, changed, taken away, and nothing else moves", () => {
+    const doc = 'A [one](/a.md) and [two](/b.md "uses").';
+    const one = at(doc, "one"), two = at(doc, "two");
+    expect(after(one.st, setTitle(one.l!, "requires"))).toBe('A [one](/a.md "requires") and [two](/b.md "uses").');
+    expect(after(two.st, setTitle(two.l!, "see also"))).toBe('A [one](/a.md) and [two](/b.md "see also").');
+    expect(after(two.st, setTitle(two.l!, null))).toBe("A [one](/a.md) and [two](/b.md).");
+  });
+  test("shown here or a link is the ! before it; a rating or a side does not carry across", () => {
+    const doc = 'A [figure](fig.html "uses") and ![pic](p.png "left").';
+    const fig = at(doc, "figure"), pic = at(doc, "pic");
+    expect(after(fig.st, setEmbed(fig.l!, true))).toBe('A ![figure](fig.html) and ![pic](p.png "left").');
+    expect(after(pic.st, setEmbed(pic.l!, false))).toBe('A [figure](fig.html "uses") and [pic](p.png).');
+    expect(setEmbed(pic.l!, true)).toEqual([]);
+  });
+  test("what is offered for each kind, and what the button says", () => {
+    const doc = 'A [n](/a.md "uses"), [f](fig.html), ![g](fig.html), ![p](p.png) and [q](p.png).';
+    const names = (needle: string) => choices(at(doc, needle).l!).map((c) => (c.on ? "*" : "") + c.label);
+    expect(names("[n]")).toEqual(["Requires", "*Uses", "See also", "Unrated"]);
+    expect(names("[f]")).toEqual(["Shown here", "*Link", "Requires", "Uses", "See also", "*Unrated"]);
+    expect(names("![g]")).toEqual(["*Shown here", "Link"]);
+    expect(names("![p]")).toEqual(["*Shown here", "Link", "*Centre", "Left"]);
+    expect(names("[q]")).toEqual(["Shown here", "*Link"]);
+    expect(["[n]", "[f]", "![g]", "![p]", "[q]"].map((n) => labelOf(at(doc, n).l!))).toEqual(["Uses", "Link", "Shown here", "Shown, centre", "Link"]);
   });
 });
