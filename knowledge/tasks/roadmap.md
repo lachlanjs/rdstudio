@@ -161,8 +161,8 @@ In the order agreed on 2026-10-07.
 
 - [x] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
 - [x] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
-- [ ] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
-- [ ] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
+- [x] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
+- [x] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
 - [ ] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
 - [ ] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
 
