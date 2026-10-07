@@ -34,7 +34,7 @@ So:
 4. **[Ask Atlas](/ideas/ask-atlas.md "see also") comes before any code
    retrieval.**
 
-The scope is in [semantic retrieval](/ideas/semantic-retrieval.md "requires").
+The scope is in [semantic retrieval](/ideas/semantic-retrieval.md "see also").
 
 # Assumption
 
