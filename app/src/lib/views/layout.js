@@ -1,190 +1,97 @@
-// Map layout: where each folder and note sits, in layout units. Runs in a Web
-// Worker (layout-worker.js) so the page stays responsive; the result is cached
-// in this browser by what the map contains and the layout settings, so a
-// reload places everything at once.
+// The Atlas's layout and routes, worked out in a Web Worker
+// (layout-worker.js) so the page stays responsive. A layout is kept in this
+// browser by what the map contains, so a reload places everything at once.
 
-import * as d3 from "d3";
-import { bake } from "./terrain.js";
-import { outlines, routingGrid, routeAll } from "./contours.js";
-import { build as gridBuild, search as gridSearchPositions, routeCells } from "./grid.js";
-
-export const SIZE = 1000; // layout units
-// Bump when the algorithm changes, so cached layouts are not reused.
-const VERSION = 4;
-// The settings that change positions (the rest only change drawing).
-export const LAYOUT_KEYS = ["room", "spread", "outward", "spacing", "margin", "north"];
-const CACHE = "rdstudio.layout";
+import { nestedLayout } from "./grid/nested.js";
+import { buildCells } from "./grid/cells.js";
+import { makeRouter, lanes, routeAll as gridRouteAll } from "./grid/router.js";
 
 // What the layout needs from the map model, as plain data a worker can receive.
-export function plainModel(model) {
+// `flat`: the folderless view (T71): every note an item of one folder, the root, so the whole base is one DAG.
+export function plainModel(model, flat = false) {
   const strip = (n) => (n.kind === "dir"
     ? { kind: "dir", id: n.id, ref: n.ref, children: n.children.map(strip) }
     : { kind: n.kind, id: n.id, ref: n.ref, weight: n.weight, rank: n.rank || 0 });
-  return { root: strip(model.root), edges: model.edges };
+  if (flat) {
+    const notes = [];
+    const walk = (n) => { if (n.kind === "dir") n.children.forEach(walk); else notes.push(strip(n)); };
+    walk(model.root);
+    return { root: { kind: "dir", id: model.root.id, ref: model.root.ref, children: notes }, edges: model.edges, code: false };
+  }
+  return { root: strip(model.root), edges: model.edges, code: !!model.code };
 }
 
-function hierarchy(root) {
-  return d3.hierarchy(root, (d) => (d.kind === "dir" ? d.children : null))
-    .sum((d) => (d.kind === "concept" ? d.weight : d.children.length ? 0 : 1));
+// The grid Atlas's layout (grid/nested.js, which says what one is): each
+// folder a layered DAG of its items, and one item in its parent's. `gridFlow`
+// is the top level's direction, "up" or "right".
+export function gridLayout(model, o) {
+  const layout = nestedLayout(model, { flow: o.gridFlow === "right" ? "right" : "up" });
+  layout.feeders = feeders(layout);
+  return layout;
 }
 
-// The quick starting arrangement (circle packing), with an index and colour
-// groups: a usable map while the full layout is worked out.
-export function start(modelRoot) {
-  const root = hierarchy(modelRoot);
-  d3.pack().size([SIZE, SIZE]).padding((d) => (d.depth === 0 ? 10 : 6))(root);
-  const byId = new Map();
-  root.each((n) => byId.set(n.data.id, n));
-  const groups = [...new Set((root.children || []).map((c) => c.data.ref))].sort();
-  root.each((n) => {
-    const top = n.ancestors().reverse()[1];
-    n.group = top ? (top.data.kind === "dir" ? groups.indexOf(top.data.ref) : -1) : -1;
+// Feeders (T72): where a trunk ends on a folder, what is in the folder that the trunk's links come from.
+// From each of the folder's items holding an end of one of those links, a branch runs to the trunk's foot,
+// the cell just inside the wall where the trunk arrives, with the number of links it carries. Branches to
+// one foot join: subfolders are routed first, the one with the most links before the rest, and each one
+// after may stop on a branch already there. A branch from a subfolder is itself fed, from inside it, in
+// the same way. Only the branches from subfolders are drawn at rest (a branch from every note is too
+// much); those from notes (`leaf`) are kept so that a link can be traced the whole way, note to note,
+// along its trunk. A note's branch may join any branch; a subfolder's only another subfolder's.
+//   [{ item, folder, trunk, count, pts, lane, leaf, via }]: the item fed from, the folder it is in, the
+//   trunk fed (an index into `trunks`), the links carried, the path in cells from the item's edge, whether
+//   the item is a note, and the feeder whose branch this one ends on (its index, or -1 at the foot).
+export function feeders(layout) {
+  const { items, links, trunks, W } = layout;
+  if (!trunks.some((t) => t.pts && (items[t.a].kind === "folder" || items[t.b].kind === "folder"))) return [];
+  const cells = buildCells(layout), router = makeRouter(layout, cells, { crowd: 1 });
+  for (const t of trunks) if (t.pts) router.occupy(t.pts);
+  const childIn = (i, f) => { while (items[i].parent !== f) i = items[i].parent; return i; }; // the item of folder f that holds i
+  const foot = (f, [x, y]) => { // the cell just inside f's wall at a point on the wall
+    const F = items[f], near = (p, q) => Math.abs(p - q) < 1e-6;
+    return near(x, F.gx) ? [F.gx, Math.floor(y)] : near(x, F.gx + F.w) ? [F.gx + F.w - 1, Math.floor(y)] : near(y, F.gy) ? [Math.floor(x), F.gy] : [Math.floor(x), F.gy + F.h - 1];
+  };
+  // Each end of a drawn trunk that is a folder is a stem to feed: the notes in the folder that its links end on.
+  const stems = [];
+  trunks.forEach((t, k) => {
+    if (!t.pts) return;
+    const level = items[t.a].parent, mine = links.filter((l) => l.s >= 2 && l.level === level && childIn(l.a, level) === t.a && childIn(l.b, level) === t.b);
+    if (items[t.a].kind === "folder") stems.push({ folder: t.a, at: t.pts[t.pts.length - 1], notes: mine.map((l) => l.a), trunk: k });
+    if (items[t.b].kind === "folder") stems.push({ folder: t.b, at: t.pts[0], notes: mine.map((l) => l.b), trunk: k });
   });
-  return { root, byId };
-}
-
-// Positions as [x, y, r] per node, in the order root.each() visits them.
-export function positions(root) {
   const out = [];
-  root.each((n) => out.push(n.x, n.y, n.r));
-  return Float64Array.from(out);
-}
-
-export function applyPositions(root, xyr) {
-  let i = 0;
-  root.each((n) => { n.x = xyr[i++]; n.y = xyr[i++]; n.r = xyr[i++]; });
-}
-
-// The full layout, from a plain model. Returns positions. `prev` holds where
-// items sat in an earlier layout ({id: [x, y]}, relative to their folder's
-// centre and radius), so a change of contents leaves the rest in place.
-export function layoutPositions(model, o, prev = null) {
-  const { root, byId } = start(model.root);
-  arrange(root, byId, model.edges, o, prev);
-  return positions(root);
-}
-
-// Where each item sits relative to its folder, from a layout: the `prev` of
-// the next one.
-export function relative(root) {
-  const out = {};
-  root.each((n) => { if (n.parent && n.parent.r) out[n.data.id] = [(n.x - n.parent.x) / n.parent.r, (n.y - n.parent.y) / n.parent.r]; });
-  return out;
-}
-
-// Top down: give each folder's contents room, then spread them out evenly
-// inside its wall, keeping linked items near each other and drawing items
-// towards the side where their links leave the folder, and later in the study
-// order further north.
-function arrange(root, byId, edges, o, prev) {
-  // A link ends on a place, or on the code map on a folder (a file, a class).
-  const end = (ref) => byId.get("c:" + ref) || byId.get("d:" + ref);
-  const leafEdges = edges.map(([a, b]) => [end(a), end(b)]).filter(([a, b]) => a && b && !a.ancestors().includes(b) && !b.ancestors().includes(a));
-  // A link matters only to the folders that contain one of its ends, so each
-  // folder looks at those links alone (in their original order).
-  const linksIn = new Map();
-  for (const e of leafEdges) {
-    const folders = new Set([...e[0].ancestors().slice(1), ...e[1].ancestors().slice(1)]);
-    for (const f of folders) {
-      if (!linksIn.has(f)) linksIn.set(f, []);
-      linksIn.get(f).push(e);
+  for (let s = 0; s < stems.length; s++) {
+    const { folder, at, notes, trunk } = stems[s];
+    const [fx, fy] = foot(folder, at);
+    if (fx < 0 || fy < 0 || fx >= W || cells.blocked[fy * W + fx]) continue;
+    const by = new Map();
+    for (const n of notes) { const c = childIn(n, folder); by.set(c, [...(by.get(c) || []), n]); }
+    const footCell = fy * W + fx, isNote = (i) => items[i].kind === "note";
+    const ends = new Map([[footCell, [footCell, at[0], at[1]]]]), endsAny = new Map(ends), owner = new Map([[footCell, -1]]);
+    for (const [item, held] of [...by].sort((a, b) => isNote(a[0]) - isNote(b[0]) || b[1].length - a[1].length || a[0] - b[0])) {
+      const leaf = isNote(item), r = router.routeTo(item, { ends: leaf ? endsAny : ends, folder });
+      if (!r) continue;
+      const me = out.length;
+      out.push({ item, folder, trunk, count: held.length, pts: r.pts, cells: r.cells, leaf, via: owner.get(r.cells[r.cells.length - 1]) ?? -1 });
+      for (const c of r.cells) {
+        if (endsAny.has(c)) continue;
+        const end = [c, (c % W) + 0.5, Math.floor(c / W) + 0.5];
+        endsAny.set(c, end); owner.set(c, me);
+        if (!leaf) ends.set(c, end);
+      }
+      if (!leaf) stems.push({ folder: item, at: r.pts[0], notes: held, trunk });
     }
   }
-  const moveTree = (n, dx, dy) => n.each((d) => { d.x += dx; d.y += dy; });
-  const scaleTree = (n, k) => n.each((d) => { d.x = n.x + (d.x - n.x) * k; d.y = n.y + (d.y - n.y) * k; d.r *= k; });
-  const childOf = (folder, n) => n.ancestors().find((a) => a.parent === folder);
-
-  function place(folder) {
-    const kids = folder.children;
-    if (!kids) return;
-    const unit = folder.r / (SIZE / 2); // settings are given for the whole map; scale them to this folder
-    const inner = folder.depth ? folder.r - Math.min(o.margin * unit, folder.r * 0.25) : folder.r;
-    const gap = o.spacing * unit;
-    const area = kids.reduce((s, c) => s + c.r * c.r, 0) || 1;
-    // The top level gets more room than the folders inside it, so the map
-    // fills the screen instead of sitting in its middle third.
-    const room = folder.depth === 0 ? Math.max(o.room, 0.55) : o.room;
-    const k = Math.min(1, Math.sqrt((room * inner * inner) / area));
-    for (const c of kids) {
-      scaleTree(c, k);
-      moveTree(c, folder.x + (c.x - folder.x) * (inner / folder.r) - c.x, folder.y + (c.y - folder.y) * (inner / folder.r) - c.y);
-    }
-    if (kids.length > 1) {
-      // Items that were laid out before start where they were, so they stay put.
-      const was = (c) => prev?.[c.data.id];
-      const warm = kids.filter(was).length >= kids.length / 2;
-      const nodes = kids.map((c) => {
-        const at = warm && was(c);
-        return { c, x: at ? at[0] * folder.r : c.x - folder.x, y: at ? at[1] * folder.r : c.y - folder.y, r: c.r, pull: [0, 0, 0] };
-      });
-      // North: each child's mean depth in the requires-chain, centred on the
-      // folder's own and scaled to [-1, 1]; deeper (later) sits further north.
-      if (o.north) {
-        const rk = kids.map((c) => { const l = c.leaves(); return l.reduce((t, n) => t + (n.data.rank || 0), 0) / l.length; });
-        const lo = Math.min(...rk), hi = Math.max(...rk), mid = (lo + hi) / 2, half = (hi - lo) / 2 || 1;
-        nodes.forEach((nd, i) => { nd.rank = (rk[i] - mid) / half; });
-      }
-      const index = new Map(kids.map((c, i) => [c, i]));
-      const links = [];
-      for (const [u, v] of linksIn.get(folder) || []) {
-        const cu = childOf(folder, u), cv = childOf(folder, v);
-        if (cu && cv && cu !== cv) links.push({ source: index.get(cu), target: index.get(cv) });
-        // A link leaving the folder pulls its end towards that side.
-        for (const [inside, outside, other] of [[cu, cv, v], [cv, cu, u]]) {
-          if (!inside || outside) continue;
-          const dx = other.x - folder.x, dy = other.y - folder.y, d = Math.hypot(dx, dy) || 1;
-          const pull = nodes[index.get(inside)].pull;
-          pull[0] += dx / d; pull[1] += dy / d; pull[2] += 1;
-        }
-      }
-      for (const nd of nodes) {
-        if (nd.pull[2]) {
-          const d = Math.hypot(nd.pull[0], nd.pull[1]) || 1;
-          nd.tx = (nd.pull[0] / d) * inner * 0.7;
-          nd.ty = (nd.pull[1] / d) * inner * 0.7;
-        }
-      }
-      const sim = d3.forceSimulation(nodes).stop()
-        .force("collide", d3.forceCollide((d) => d.r + gap / 2).strength(1).iterations(2))
-        .force("charge", d3.forceManyBody().strength(-o.spread * inner * 0.15))
-        .force("link", d3.forceLink(links).distance((l) => l.source.r + l.target.r + gap * 1.5).strength(0.04))
-        .force("x", d3.forceX((d) => d.tx ?? 0).strength((d) => (d.tx !== undefined ? 0.04 * o.outward : 0.03)))
-        .force("y", d3.forceY((d) => d.ty ?? 0).strength((d) => (d.ty !== undefined ? 0.04 * o.outward : 0.03)))
-        .force("north", o.north ? d3.forceY((d) => -d.rank * inner * 0.55).strength(0.05 * o.north) : null);
-      if (warm) sim.alpha(0.3); // settle from where they were, not from scratch
-      const contain = () => {
-        for (const nd of nodes) { // stay inside the wall
-          const d = Math.hypot(nd.x, nd.y), max = Math.max(0, inner - nd.r - gap / 4);
-          if (d > max) { nd.x *= max / d; nd.y *= max / d; }
-        }
-      };
-      for (let i = 0; i < 240; i++) { sim.tick(); contain(); }
-      // Finish by separating anything still overlapping, without other forces.
-      for (let round = 0; round < 80; round++) {
-        let moved = false;
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i], b = nodes[j];
-            const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-6, want = a.r + b.r + gap;
-            if (d < want) {
-              const push = (want - d) / 2;
-              a.x -= (dx / d) * push; a.y -= (dy / d) * push;
-              b.x += (dx / d) * push; b.y += (dy / d) * push;
-              moved = true;
-            }
-          }
-        }
-        contain();
-        if (!moved) break;
-      }
-      for (const nd of nodes) moveTree(nd.c, folder.x + nd.x - nd.c.x, folder.y + nd.y - nd.c.y);
-    }
-    kids.forEach(place);
-  }
-  place(root);
+  lanes(out, cells.W * cells.H);
+  return out.map(({ item, folder, trunk, count, pts, lane, leaf, via }) => ({ item, folder, trunk, count, pts, lane, leaf, via }));
 }
 
-// ------------------------------------------------------------ cache
+// Routes over a grid layout's cells (grid/router.js). The cells and the
+// router's arrays are made once per layout and kept.
+export function gridRouter(layout) {
+  const cells = buildCells(layout), router = makeRouter(layout, cells);
+  return (asks) => gridRouteAll(router, asks, cells.W, cells.H);
+}
 
 // cyrb53: a fast 53-bit string hash, plenty to tell layouts apart.
 function hash(str) {
@@ -197,45 +104,6 @@ function hash(str) {
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-}
-
-export function layoutKey(plain, o) {
-  return hash(JSON.stringify([VERSION, LAYOUT_KEYS.map((k) => o[k]), plain]));
-}
-
-export function cached(key, count) {
-  try {
-    const hit = JSON.parse(localStorage.getItem(CACHE) || "null");
-    return hit?.key === key && hit.xyr.length === count * 3 ? Float64Array.from(hit.xyr) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function remember(key, xyr, root) {
-  try {
-    const ids = [], parents = [], index = new Map();
-    root.each((n) => { index.set(n, ids.length); ids.push(n.data.id); parents.push(n.parent ? index.get(n.parent) : -1); });
-    localStorage.setItem(CACHE, JSON.stringify({ key, xyr: Array.from(xyr, (v) => Math.round(v * 1000) / 1000), ids, parents }));
-  } catch { /* storage full or unavailable: lay out again next time */ }
-}
-
-// The last layout this browser kept, as a `prev` for the next one.
-export function previous() {
-  try {
-    const hit = JSON.parse(localStorage.getItem(CACHE) || "null");
-    if (!hit?.ids || !hit.parents) return null;
-    const out = {};
-    hit.ids.forEach((id, i) => {
-      const p = hit.parents[i];
-      if (p < 0) return;
-      const r = hit.xyr[p * 3 + 2];
-      if (r) out[id] = [(hit.xyr[i * 3] - hit.xyr[p * 3]) / r, (hit.xyr[i * 3 + 1] - hit.xyr[p * 3 + 1]) / r];
-    });
-    return out;
-  } catch {
-    return null;
-  }
 }
 
 // ------------------------------------------------------------ worker
@@ -267,48 +135,40 @@ function getWorker() {
   return worker;
 }
 
-// The full layout's positions, worked out off the main thread where possible.
-export function computeLayout(plain, o, prev = null) {
-  const settings = Object.fromEntries(LAYOUT_KEYS.map((k) => [k, o[k]]));
-  return ask({ model: plain, o: settings, prev }, () => layoutPositions(plain, settings, prev));
+// One is kept for each direction of flow, so turning a phone finds its map
+// ready. The key is what the map contains and the direction: none of the
+// continuous layout's settings move anything on the grid.
+const GRID_CACHE = "rdstudio.gridlayout", GRID_VERSION = 11; // bump whenever the grid layout changes what it returns, or browsers keep the old one
+const slot = (o) => GRID_CACHE + (o.gridFlow === "right" ? ".right" : "");
+export function gridKey(plain, o) {
+  return hash(JSON.stringify([GRID_VERSION, o.gridFlow === "right" ? "right" : "up", plain]));
+}
+export function cachedGrid(key, o) {
+  try {
+    const hit = JSON.parse(localStorage.getItem(slot(o)) || "null");
+    return hit?.key === key ? hit.layout : null;
+  } catch {
+    return null;
+  }
+}
+export function computeGrid(key, plain, o) {
+  const settings = { gridFlow: o.gridFlow };
+  return ask({ grid: { model: plain, o: settings } }, () => gridLayout(plain, settings)).then((layout) => {
+    try { localStorage.setItem(slot(o), JSON.stringify({ key, layout })); } catch { /* storage full or unavailable: lay out again next time */ }
+    return layout;
+  });
 }
 
-// The terrain of some top-level folders (terrain.js), off the main thread.
-export function computeTerrain(folders) {
-  return ask({ terrain: folders }, () => folders.map(bake));
-}
-
-// Contour folders' outlines (contours.js), off the main thread.
-export function computeOutlines(specs) {
-  return ask({ outlines: specs }, () => outlines(specs));
-}
-
-// The grid Atlas's searched positions (grid.js): from the plain model and its
-// smooth positions, snapped, then searched within a time budget.
-export function gridSearch({ model, xyr, links, budget, from }) {
-  const { root } = start(model.root);
-  applyPositions(root, xyr);
-  const deg = new Map();
-  for (const [a, b] of links) { deg.set(a, (deg.get(a) || 0) + 1); deg.set(b, (deg.get(b) || 0) + 1); }
-  gridBuild(root, deg);
-  return gridSearchPositions(root, links, { budget, start: from });
-}
-export function computeGrid(input) {
-  return ask({ grid: input }, () => gridSearch(input));
-}
-
-// Grid routes (grid.js), off the main thread.
-export function computeGridRoutes(key, plain, asks) {
-  return ask({ gridRoutes: { key, plain, asks } }, () => routeCells(plain, asks));
-}
-
-// Downhill routes (contours.js), off the main thread. The grid is built once
-// per key and kept (by the worker, or here).
-let localGrid = null;
-export function computeRoutes(key, input, asks) {
-  return ask({ routes: { key, input, asks } }, () => {
-    if (localGrid?.key !== key) localGrid = { key, grid: routingGrid(input) };
-    return routeAll(localGrid.grid, asks);
+// Routes on a grid layout (grid/router.js), off the main thread. The router is
+// built once per key and kept (by the worker, or here).
+// The layout is sent to the worker once for each key, not with every ask.
+let localRouter = null, sentKey = null;
+export function computeGridRoutes(key, layout, asks) {
+  const first = sentKey !== key;
+  sentKey = key;
+  return ask({ gridRoutes: { key, layout: first ? layout : null, asks } }, () => {
+    if (localRouter?.key !== key) localRouter = { key, run: gridRouter(layout) };
+    return localRouter.run(asks);
   });
 }
 

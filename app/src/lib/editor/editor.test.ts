@@ -12,6 +12,7 @@ import MarkdownIt from "markdown-it";
 import texmath from "markdown-it-texmath";
 import { format } from "./commands.ts";
 import { formula, mathsSyntax } from "./maths.ts";
+import { placed } from "./suggest.ts";
 
 // The note page's renderer, as markdown.ts sets it up.
 const page = new MarkdownIt({ html: true }).use(texmath, { engine: katex, delimiters: ["dollars", "brackets"], katexOptions: { throwOnError: false } });
@@ -121,5 +122,20 @@ describe("formatting commands", () => {
     format(v, "link");
     expect(v.state.doc.toString()).toBe("see [[]]");
     expect(v.state.selection.main.head).toBe(6);
+  });
+});
+
+describe("a suggestion as it goes into the note (T74)", () => {
+  const at = (doc: string, from: number, to: number, insert: string) => placed(doc, { from, to, insert, model: "m" });
+  test("a phrase goes in as it is", () => {
+    expect(at("One two.", 4, 7, "three")).toBe("three");
+  });
+  test("a block stands clear of the text round it by a blank line, without adding lines that are there", () => {
+    const code = "```python\nx = 1\n```";
+    expect(at("Before. After.", 8, 8, code)).toBe("\n\n" + code + "\n\n");
+    expect(at("Before.\n\nAfter.", 9, 9, code)).toBe(code + "\n\n");
+    expect(at("Before.\n\n\n\nAfter.", 9, 9, code)).toBe(code);
+    expect(at("Before.\n", 8, 8, "Line one.\nLine two.\n")).toBe("\nLine one.\nLine two.");
+    expect(at("", 0, 0, code)).toBe(code);
   });
 });

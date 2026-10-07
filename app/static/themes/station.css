@@ -1,11 +1,8 @@
-/* Station terminal (T61, design/project/README.md): a theme option on top of
-   Marginalia, made for fun. A late-1970s film computer: cold white phosphor
-   on blue-black, Departure Mono for headings and short labels and Ioskeley
-   Mono for the rest (prose too, in mixed case), upper case for short labels
-   only, reversed title bars, thin cyan frames, numbered spaces, scan lines,
-   and the Atlas as a deck plan on a grid. No glow: blur is ruled out. The
-   three pens keep their colours and line styles; cyan is structure only.
-   Tokens from design/project/tokens.json (station-*). */
+/* Station: rdstudio's second theme (design/project/README.md, "Station terminal"; knowledge/decisions/station-theme.md).
+   A late-1970s film computer: cold white phosphor on blue-black, thin cyan frames, pixel and mono type.
+   It restyles Marginalia, which loads first: only the surfaces, rules and text change, with one new token,
+   --line, for frames and map outlines. The three pens keep their colours, so the cyan line is structure
+   and never a meaning. Corners are square. Tokens from design/tools/tokens.mjs (station-*). */
 
 :root[data-theme="station"] {
   --surface: #060a0f;
@@ -18,10 +15,13 @@
   --text-soft: #a9bcc6;
   --text-faint: #8499a5;
   --line: #8fcfdb;
-  --font-text: "Ioskeley Mono", ui-monospace, Menlo, monospace;
-  --text-size: 15px;
   --radius-sm: 0px; --radius-md: 0px; --radius-lg: 0px; --radius: 0px;
+  /* Prose is mono, in mixed case; reading sizes come down, since mono runs wide. Maths keeps its own letters. */
+  --font-text: var(--font-ui);
+  --text-size: 15px;
 }
+
+/* Light: cold printout paper and blue-black ink. */
 :root[data-theme="station"][data-mode="light"] {
   --surface: #e4eaee;
   --surface-1: #edf1f4;
@@ -36,68 +36,15 @@
 }
 @media (prefers-color-scheme: light) {
   :root[data-theme="station"][data-mode="system"] {
-    --surface: #e4eaee; --surface-1: #edf1f4; --surface-2: #f6f8fa; --surface-3: #d3dce2;
-    --rule: #c2cdd4; --rule-strong: #647883; --text: #101a22; --text-soft: #34454f; --text-faint: #4b5d68; --line: #1f6373;
+    --surface: #e4eaee;
+    --surface-1: #edf1f4;
+    --surface-2: #f6f8fa;
+    --surface-3: #d3dce2;
+    --rule: #c2cdd4;
+    --rule-strong: #647883;
+    --text: #101a22;
+    --text-soft: #34454f;
+    --text-faint: #4b5d68;
+    --line: #1f6373;
   }
 }
-
-/* Scan lines over everything, never in the way. */
-[data-theme="station"] body::after {
-  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .3;
-  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, var(--surface) 2px, var(--surface) 3px);
-}
-@media print { [data-theme="station"] body::after { display: none; } }
-
-/* Pixel type for headings and short labels; upper case for the short labels only. */
-[data-theme="station"] :is(h1, h2, h3, .brand, .kind, .s-num b, .pin-head b, .m-head b, .lens-title, .tabs a, .tabbar span, .toggle, .mode-tag, .atlas-card h3, .section-h) {
-  font-family: var(--font-pixel); font-weight: 400; letter-spacing: 0;
-}
-[data-theme="station"] :is(.brand, .kind, .pin-head b, .m-head b, .lens-title, .tabs a, .tabbar span, .toggle, .mode-tag, .atlas-card h3, .section-h) {
-  text-transform: uppercase; font-size: 11px;
-}
-[data-theme="station"] .katex { letter-spacing: 0; text-transform: none; }
-[data-theme="station"] .page-head h1, [data-theme="station"] .page > h1 { font-size: 22px; }
-[data-theme="station"] .s-num b { font-size: 55px; }
-[data-theme="station"] .doc-head h1 { font-size: 24px; }
-
-/* The spaces are numbered, like a terminal's screens. */
-[data-theme="station"] .bar .tabs { counter-reset: space; }
-[data-theme="station"] .bar .tabs a::before { counter-increment: space; content: counter(space); margin-right: 8px; color: var(--text-faint); }
-[data-theme="station"] .bar .tabs a[aria-current="page"] { background: var(--text); color: var(--surface); border-bottom-color: transparent; }
-[data-theme="station"] .bar .tabs a[aria-current="page"]::before { color: var(--surface); }
-[data-theme="station"] .bar, [data-theme="station"] .tabbar { border-color: var(--line); }
-
-/* Thin cyan frames; titles are reversed bars. */
-[data-theme="station"] :is(.sec, .mblock, .pin, .streak-strip, .graph-panel, .atlas-card, .map-crumbs, .palette, .you-menu, .versions-pop) { border: 1px solid var(--line); }
-[data-theme="station"] :is(.sec, .mblock, .streak-strip) { padding: 10px 12px; margin-bottom: 16px; }
-[data-theme="station"] :is(.sec-head .kind, .mblock .kind, .kind-row .kind) { background: var(--text); color: var(--surface); padding: 2px 10px; }
-[data-theme="station"] .toggle { border: 1px solid var(--text); background: transparent; color: var(--text); }
-[data-theme="station"] .toggle[aria-pressed="true"], [data-theme="station"] .toggle[aria-checked="true"], [data-theme="station"] .toggle.primary { background: var(--text); color: var(--surface); border-color: var(--text); }
-[data-theme="station"] .box { border-color: var(--text); }
-
-/* Rows are numbered like log entries, with dotted rules. */
-[data-theme="station"] .ex .n::before { content: "00"; }
-[data-theme="station"] .ex li { grid-template-columns: 44px 1fr auto; font: 13px/1.55 var(--font-ui); }
-[data-theme="station"] :is(.ex, .ex li, .mblock li, .week) { border-color: var(--rule-strong); }
-[data-theme="station"] :is(.ex li, .mblock li) { border-bottom-style: dotted; }
-[data-theme="station"] .prose { font-size: 15px; line-height: 1.7; }
-[data-theme="station"] :is(.mblock li, .sec .desc, .cont .draft, .cont .for, .pin) { font-size: 13px; line-height: 1.55; }
-
-/* The Atlas as a deck plan: a grid, cyan walls and contours, pixel labels. */
-[data-theme="station"] .map-wrap {
-  background-color: var(--surface);
-  background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-[data-theme="station"] .m-landfill { fill: var(--surface-1); }
-[data-theme="station"] .m-dir { stroke: var(--line); }
-[data-theme="station"] .m-dir.open.depth-1 { stroke-width: 1.5; stroke-dasharray: none; }
-[data-theme="station"] .m-dir.open:not(.depth-1) { stroke-dasharray: 6 4; }
-[data-theme="station"] .a-contour, [data-theme="station"] .a-front { stroke: var(--line); }
-[data-theme="station"] .m-link { stroke: var(--text); }
-[data-theme="station"] :is(.m-arc, .m-text.territory, .m-head, .m-count, .atlas-north) { font-family: var(--font-pixel); font-variation-settings: normal; font-weight: 400; text-transform: uppercase; }
-[data-theme="station"] .m-text.place { font-family: var(--font-pixel); font-variation-settings: normal; font-size: 11px; }
-[data-theme="station"] .g-wall { stroke: var(--line); }
-[data-theme="station"] .g-dot { fill: var(--line); opacity: .4; }
-[data-theme="station"] :is(.g-title, .g-note) { font-family: var(--font-pixel); font-variation-settings: normal; font-weight: 400; }
-[data-theme="station"] .g-title { text-transform: uppercase; }

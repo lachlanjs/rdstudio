@@ -10,10 +10,11 @@
   import { store, learner } from "$lib/data.svelte.ts";
   import { editing } from "$lib/edit.svelte.ts";
   import ActionDialogs from "$lib/components/ActionDialogs.svelte";
+  import StatusLine from "$lib/components/StatusLine.svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import { reviewCount } from "$lib/review.ts";
   import { setCount } from "$lib/exercises.ts";
-  import { MODES, settings } from "$lib/settings.svelte.ts";
+  import { MODES, THEMES, settings } from "$lib/settings.svelte.ts";
   import { palette, projectMode } from "$lib/shell.svelte.ts";
   import { teacher } from "$lib/teacher.svelte.ts";
 
@@ -37,6 +38,12 @@
   const setForYou = $derived(store.loaded ? setCount() : 0);
   const mode = $derived(projectMode());
   const project = $derived(mode === "Project");
+  let switching = $state(false);
+  async function switchMode() {
+    switching = true;
+    try { await teacher.setMode(mode === "Learning" ? "Project" : "Learning"); } catch (err) { alert((err as Error).message); }
+    switching = false;
+  }
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
   let drawer = $state(false);
@@ -78,7 +85,12 @@
   {/if}
   <a class="brand" href="#/">rdstudio</a>
   <span class="project-name" title={store.site.title}>{store.site.title}</span>
-  {#if mode}<span class="mode-tag" title={mode === "Learning" ? "A learning project: the learning layer leads" : "A project: its upkeep leads, the learning layer sits on top"}>{mode}</span>{/if}
+  {#if mode}
+    <!-- The mode, and the way to switch it (T75): it is the project's, kept in rdstudio.toml. -->
+    <button class="mode-tag" type="button" disabled={switching}
+      title={`${mode === "Learning" ? "A learning project: the learning layer leads." : "A project: its upkeep leads, the learning layer sits on top."} Click to switch to ${mode === "Learning" ? "Project" : "Learning"} mode (saved in rdstudio.toml, for everyone who opens this project).`}
+      aria-label={`Mode: ${mode}. Switch to ${mode === "Learning" ? "Project" : "Learning"} mode`} onclick={switchMode}>{mode}</button>
+  {/if}
   <nav class="tabs" aria-label="Spaces">
     {#snippet link(id: string, href: string, label: string, count?: number)}
       <a {href} data-tab={id} aria-current={space === id ? "page" : undefined}>{label}{#if count}<span class="count"> {count}</span>{/if}</a>
@@ -119,6 +131,11 @@
           {/if}
           <a role="menuitem" href="#/teacher">Teacher<span>how the agent teaches you, and what it knows of you</span></a>
           <a role="menuitem" href="#/settings">Settings</a>
+          <div class="you-row" role="group" aria-label="Theme">
+            {#each THEMES as t (t.id)}
+              <button type="button" role="menuitemradio" aria-checked={settings.theme === t.id} onclick={() => settings.setTheme(t.id)}>{t.name}</button>
+            {/each}
+          </div>
           <div class="you-row" role="group" aria-label="Light or dark">
             {#each MODES as [id, label] (id)}
               <button type="button" role="menuitemradio" aria-checked={settings.mode === id} onclick={() => settings.setMode(id)}>{label}</button>
@@ -157,5 +174,7 @@
     <span>More</span>
   </button>
 </nav>
+<StatusLine mode={exercise ? "Practice" : space[0]!.toUpperCase() + space.slice(1)}
+  items={[store.site.title, setForYou ? `${setForYou} set for you` : "", review ? `${review} to review` : ""].filter(Boolean)} />
 {#if editing.enabled}<ActionDialogs />{/if}
 <CommandPalette />

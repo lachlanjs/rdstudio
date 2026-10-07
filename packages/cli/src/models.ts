@@ -11,6 +11,7 @@
 //   feedback = "anthropic/claude-sonnet-5.5"
 //   discuss = "anthropic/claude-sonnet-5.5"
 //   marking = "anthropic/claude-sonnet-5.5"
+//   write = "anthropic/claude-sonnet-5.5"
 // The key: OPENROUTER_API_KEY, or the file written by connecting from the
 // Teacher page (~/.config/rdstudio/openrouter.key, readable only by you).
 
@@ -21,13 +22,14 @@ import * as learner from "./learner.ts";
 
 /** OpenRouter's API (RDSTUDIO_OPENROUTER_URL points it elsewhere, for tests). */
 export const OPENROUTER = process.env.RDSTUDIO_OPENROUTER_URL || "https://openrouter.ai/api/v1";
-export const JOBS = ["hint", "feedback", "discuss", "marking", "check"] as const;
+export const JOBS = ["hint", "feedback", "discuss", "marking", "write", "check"] as const;
 export type Job = (typeof JOBS)[number];
 export const DEFAULT_MODELS: Record<Job, string> = {
   hint: "google/gemini-3.8-flash",
   feedback: "anthropic/claude-sonnet-5.5",
   discuss: "anthropic/claude-sonnet-5.5",
   marking: "anthropic/claude-sonnet-5.5",
+  write: "anthropic/claude-sonnet-5.5", // text proposed in the note editor (assist.ts)
   check: "google/gemini-3.8-flash",
 };
 export const DEFAULT_WEEKLY_BUDGET = 10;

@@ -9,7 +9,7 @@
   import { learner } from "$lib/data.svelte.ts";
   import { render } from "$lib/markdown.ts";
   import { loadTour, stopsOf, type Stop, type Tour } from "$lib/tours.ts";
-  import { mapView } from "$lib/views/map.js";
+  import { mapView } from "$lib/views/gridmap.js";
 
   const key = $derived(page.params.id ?? "");
   let loaded = $state<{ key: string; tour: Tour | null; stops: Stop[] } | null>(null);

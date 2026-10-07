@@ -1,10 +1,12 @@
 ---
 type: Task
-title: "T64 — A codebase test bed: a nanobind simulation"
+title: "T69 — A codebase test bed: a nanobind simulation"
 description: "A dummy project in Python and C++ (nanobind), with CMake, CI, documentation and notes, to show project mode on a real codebase, down to classes and functions."
 tags: [task, m13, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-05T15:00:00Z }
 ---
+
+> This was T64 on `main` before it was merged with the grid-dag-view branch, whose T64 is the layered layout.
 
 # Prompt
 

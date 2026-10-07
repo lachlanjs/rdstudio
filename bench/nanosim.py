@@ -1,4 +1,4 @@
-"""Create ~/Repositories/nanosim (or the folder given): a dummy codebase test bed for rdstudio's project mode (T64).
+"""Create ~/Repositories/nanosim (or the folder given): a dummy codebase test bed for rdstudio's project mode (T69).
 
 A particle simulation with a C++ core bound to Python by nanobind: CMake and scikit-build-core,
 tests in both languages, CI workflows, documentation, and rdstudio notes. Commits are backdated

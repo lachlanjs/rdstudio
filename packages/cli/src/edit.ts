@@ -57,6 +57,15 @@ function sourceOf(root: string, path: string, text: string): NoteSource {
 
 // ------------------------------------------------------------------ saving
 
+/** The stamp's `by` for a note a person wrote with a model's text in it: "human:x with openrouter/model". */
+export function withModels(actor: string, modelNames: string[]): string {
+  const names = [...new Set(modelNames.map((m) => m.trim()).filter((m) => /^[\w./:@-]{1,120}$/.test(m)))].map((m) => (m.includes("/") && !m.startsWith("openrouter/") ? "openrouter/" + m : m));
+  const [who, already = ""] = actor.split(" with ");
+  const all = [...new Set([...already.split(/,\s*/).filter(Boolean), ...names])];
+  return all.length ? `${who} with ${all.join(", ")}` : who!;
+}
+
+
 export interface SaveOptions {
   actor: string;
   /** The version the edit started from; null creates a new note. */
@@ -67,6 +76,9 @@ export interface SaveOptions {
   /** true stamps `generated`; false leaves it alone; null (the default) decides from the change. */
   significant?: boolean | null;
   classifier?: Classifier;
+  /** Models whose proposed text the person accepted into this edit (T74): named in the stamp, "human:x with
+   *  openrouter/model". The edit is still the person's: whether it is significant is judged as any other. */
+  assist?: string[] | null;
 }
 
 export interface SaveResult {
@@ -85,7 +97,7 @@ export function saveNote(root: string, cid: string, opts: SaveOptions): SaveResu
     const meta = { ...(opts.meta ?? {}) };
     if (!meta.type) throw new StoreError("a note needs a non-empty 'type'");
     const fields = Object.fromEntries(Object.entries(meta).filter(([, v]) => v !== null && v !== undefined));
-    const front = editFrontmatter("", { ...fields, generated: { by: opts.actor, at: now() } });
+    const front = editFrontmatter("", { ...fields, generated: { by: withModels(opts.actor, opts.assist ?? []), at: now() } });
     const body = (opts.body ?? "").replace(/\r\n?/g, "\n");
     const text = `---\n${front}---\n\n${body.trim() ? body.replace(/\n*$/, "\n") : ""}`;
     mkdirSync(dirname(path), { recursive: true });
@@ -119,7 +131,13 @@ export function saveNote(root: string, cid: string, opts: SaveOptions): SaveResu
       significant = d.choice !== "minor";
     }
   }
-  if (significant) changes.generated = { by: opts.actor, at: now() };
+  const assisted = (opts.assist ?? []).length > 0 && newBody !== body;
+  if (significant) changes.generated = { by: withModels(opts.actor, opts.assist ?? []), at: now() };
+  else if (assisted) {
+    // A small edit leaves the stamp's time alone (verification is not made stale), but the model is still named.
+    const was = (old.meta.generated ?? {}) as { by?: unknown; at?: unknown };
+    changes.generated = { by: withModels(typeof was.by === "string" && was.by ? was.by : opts.actor, opts.assist ?? []), at: typeof was.at === "string" || was.at instanceof Date ? was.at : now() };
+  }
 
   const text = spliceText(before, changes, newBody === body ? null : newBody);
   writeFileSync(path, text, "utf8");

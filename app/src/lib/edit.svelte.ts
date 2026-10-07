@@ -105,6 +105,8 @@ export class EditSession {
   revision = $state(0);
   /** On a phone or a narrow window the details form is a sheet, open or not. */
   detailsOpen = $state(false);
+  /** Models whose proposed text was accepted since the last save (T74): the save names them in the note's stamp. */
+  assisted = new Set<string>();
   private draftTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(id: string) {
@@ -175,9 +177,10 @@ export class EditSession {
       const { data, error, response } = await putApiNotesById({
         path: { id: this.id },
         headers: { "x-rdstudio-token": editing.token },
-        body: { base: base.version, body: this.body, meta: changes(this.fields, base.meta) },
+        body: { base: base.version, body: this.body, meta: changes(this.fields, base.meta), ...(this.assisted.size ? { assist: [...this.assisted] } : {}) },
       });
       if (data) {
+        this.assisted.clear();
         this.source = data.note;
         this.conflict = null;
         if (this.draftTimer) clearTimeout(this.draftTimer);

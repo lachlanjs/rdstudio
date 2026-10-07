@@ -294,7 +294,6 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 }
 .graph-panel .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .graph-panel input[type="search"] { flex: 1; min-width: 120px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; }
-.graph-options > summary { display: none; }
 .graph-options { display: grid; gap: 8px; }
 .graph-options[open] { display: grid; }
 .sliders { display: grid; gap: 4px; }
@@ -317,86 +316,11 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 
 /* ----------------------------------------------------------------- map */
 
-/* The Atlas (T57, design/project/README.md "The Atlas"). Labels are Martian
-   Mono, narrowed. Folders are land with a dashed wall; closed ones are solid
-   discs. Routes are neutral lines (structure, not meaning); a selected note's
-   links are the blue pen, dotted. Reached ground is clear and the rest is a
-   dot stipple of fog; contours are steps of understanding and the frontier is
-   hachured on the side facing the fog. No filters (glows, blurs, wobble): the
-   map is repainted on every zoom step, and filters made that 25 to 80 times
-   slower (bench/, T31). Effects are fills, strokes, dashes and opacity. */
+/* The Atlas (T62, T64): everything on a square grid. No filters (glows, blurs,
+   wobble): the map is repainted on every zoom step, and filters made that 25
+   to 80 times slower (bench/, T31). Effects are fills, strokes, dashes and
+   opacity. */
 .map-wrap { background: var(--surface); }
-.map-wrap .m-back { fill: transparent; }
-.m-landfill { fill: var(--surface-1); }
-.m-dir { fill: none; stroke: var(--rule-strong); stroke-width: 1; cursor: zoom-in; transition: opacity .2s; }
-.m-dir.open.depth-1 { stroke-dasharray: none; }
-.m-dir.open:not(.depth-1) { stroke-dasharray: 4 4; }
-.a-reached { fill: var(--surface-2); fill-rule: evenodd; }
-.m-key .m-landfill { fill: var(--surface-1); }
-svg.folder-hover .m-routes .m-link:not(.hot) { opacity: .2; }
-svg.folder-hover .m-count { opacity: .35; }
-.m-dir.closed { fill: var(--surface-2); fill-opacity: .92; stroke-width: 1.25; }
-.m-dir.closed:hover { fill: var(--surface-3); }
-.fogdot { fill: var(--text-soft); opacity: .5; }
-.a-fog { fill: url(#m-fogdots); fill-rule: evenodd; }
-.a-tint { fill: var(--text); fill-rule: evenodd; }
-.a-tint.t1, .a-tint.t2 { fill-opacity: .05; }
-.a-tint.t3 { fill-opacity: .06; }
-.a-contour { fill: none; stroke: var(--text-soft); stroke-width: 1; }
-.a-contour.c1 { opacity: .5; } .a-contour.c2 { opacity: .7; } .a-contour.c3 { opacity: .95; stroke-width: 1.5; }
-.a-front { fill: none; stroke: var(--text); stroke-width: 1.5; }
-.a-front.thin { stroke-width: 1; opacity: .7; }
-.a-hach { fill: none; stroke: var(--text); stroke-width: 1.25; }
-.m-terrain, .m-land { pointer-events: none; }
-/* Places: shape is the kind of note; fill and ring are where you stand. */
-.m-place { cursor: pointer; transition: opacity .2s; }
-.m-place .mark { fill: var(--text-soft); stroke: none; }
-.m-place.st-undiscovered .mark { fill: var(--surface); stroke: var(--text-faint); stroke-width: 1.25; }
-.m-place.st-discovered .mark { fill: var(--surface); stroke: var(--text); stroke-width: 1.75; }
-.m-place.st-processed .mark, .m-place.st-understood .mark { fill: var(--text); }
-.m-place .bar { fill: none; stroke: var(--text-faint); stroke-width: 1.25; }
-.m-place.st-processed .bar, .m-place.st-understood .bar { stroke: var(--surface); }
-.m-place .ring-a, .m-place .ring-b { fill: none; stroke: var(--pen-green); stroke-width: 1.6; }
-.m-place.needs .ring-a { stroke: var(--pen-red); stroke-width: 2.2; }
-.m-place:focus { outline: none; }
-.m-place .sel { fill: none; stroke: var(--pen-blue); stroke-width: 1.75; stroke-dasharray: .1 4.6; stroke-linecap: round; }
-.m-place:focus-visible .sel { r: 13px; }
-/* Routes: neutral; wider with more links. */
-.m-link { fill: none; stroke: var(--text-soft); stroke-linecap: round; opacity: .9; transition: opacity .2s; }
-.m-link.quiet { opacity: .35; }
-.m-link.s1 { stroke-dasharray: 2 4; }
-.m-link.req, .m-link.dep, .m-link.trail { stroke: var(--pen-blue); opacity: 1; }
-.m-link.req { stroke-width: 3.2; stroke-dasharray: .1 7.5; }
-.m-link.dep { stroke-width: 1.9; stroke-dasharray: .1 4.2; }
-.m-link.trail { stroke-width: 3.2; stroke-dasharray: .1 7.5; }
-.m-key .m-link.req { stroke-width: 3; stroke-dasharray: .1 6; }
-svg.focusing .m-routes .m-link:not(.hot) { opacity: .15; }
-svg.focusing .m-routes .m-link.hot { opacity: 1; stroke: var(--text); }
-.m-routes.context .m-link { opacity: .22; }
-.m-routes.context .m-link.hot { opacity: 1; }
-svg.focusing .m-place:not(.related) { opacity: .3; }
-svg.focusing .m-text.place:not(.related) { opacity: .3; }
-.m-implied { fill: none; stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; pointer-events: none; }
-.m-labels, .m-counts, .m-leader { pointer-events: none; }
-.m-text, .m-arc, .m-count {
-  font: 11px var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text);
-  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round;
-}
-.m-text.place.landmark { font-weight: 700; }
-.m-text.territory { font-size: 12px; font-weight: 600; font-variation-settings: "wdth" 90; fill: var(--text-soft); }
-.m-text.territory .count, .m-arc .count { font-weight: 400; fill: var(--text-faint); }
-.m-arc { font-size: 12px; font-weight: 600; font-variation-settings: "wdth" 90; fill: var(--text-soft); stroke-width: 5px; }
-.m-arc.sub { font-size: 11px; font-weight: 500; }
-.m-text.m-head.sub { font-size: 11px; font-weight: 500; }
-.m-count { font-weight: 700; font-size: 12px; text-anchor: middle; }
-.m-count.quiet { opacity: .45; }
-.m-leader .leader { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }
-.m-leader .leader.card-red { stroke: var(--pen-red); }
-.m-leader .leader.card-green { stroke: var(--pen-green); }
-.m-leader .leader-dot { fill: var(--text-soft); }
-.m-leader .leader-dot.card-red { fill: var(--pen-red); }
-.m-leader .leader-dot.card-green { fill: var(--pen-green); }
-.map-wrap svg.moving .m-leader { display: none; }
 .atlas-card { position: absolute; right: 12px; top: 96px; width: 264px; padding: 12px 14px 14px; background: var(--surface-1);
   border: 1px solid var(--rule); border-radius: var(--radius-md, 6px); font: 12px/16px var(--font-ui); color: var(--text-soft); }
 .atlas-card[hidden] { display: none; }
@@ -408,10 +332,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .atlas-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .atlas-card-actions .toggle { text-decoration: none; }
 .atlas-card-close { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: var(--text-faint); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
-.atlas-north { position: absolute; right: 24px; bottom: 64px; width: 120px; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  font: 11px/14px var(--font-map); font-variation-settings: "wdth" 84; color: var(--text-soft); text-align: center; pointer-events: none; }
-.atlas-north[hidden] { display: none; }
-.atlas-north .north-arrow { fill: none; stroke: var(--text-soft); stroke-width: 1.25; }
 .map-crumbs {
   position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
   max-width: calc(100% - 400px); justify-content: flex-end;
@@ -433,25 +353,104 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
 .map-summary { margin: 0; color: var(--text-faint); }
 .graph-options > summary .lens-names { margin-left: 10px; color: var(--text); }
 .graph-options > summary .lens-change { float: right; color: var(--pen-blue); text-decoration: underline dotted 1.5px; text-underline-offset: 3px; }
-.graph-options[open] > summary .lens-change { visibility: hidden; }
-.graph-options > summary { list-style: none; min-height: 32px; line-height: 32px; }
+.graph-options[open] > summary .lens-names { display: none; }
+.graph-options > summary { list-style: none; min-height: 28px; line-height: 28px; cursor: pointer; color: var(--text-soft); font-size: 13.5px; }
+.graph-options > summary .lens-label { font-weight: 700; color: var(--text); }
+.map-panel.folded { width: auto; min-width: 200px; }
+.graph-options > summary .lens-change { margin-left: 14px; }
 .graph-options > summary::-webkit-details-marker { display: none; }
-.map-more > summary, .map-tuning > summary { cursor: pointer; color: var(--text-soft); }
+.map-more > summary { cursor: pointer; color: var(--text-soft); }
 .map-more[open] { display: grid; gap: 8px; }
-.map-tuning .slider { grid-template-columns: 150px 1fr 44px; }
-.dual-slider { grid-template-columns: 104px 1fr; }
-.dual-slider output { grid-column: 2; text-align: left; }
-.dual { position: relative; height: 20px; margin: 0 14px; cursor: pointer; touch-action: none; }
-.dual::before { content: ""; position: absolute; left: 0; right: 0; top: 9px; height: 3px; border-radius: 2px; background: var(--rule); }
-.dual-fill { position: absolute; top: 9px; height: 3px; border-radius: 2px; background: var(--accent); }
-.dual-thumb { position: absolute; top: 2px; width: 11px; height: 17px; background: var(--accent);
-  border: 2px solid var(--paper-raised); box-shadow: 0 0 0 1px var(--accent); }
-/* The lower thumb sits just left of its value and the upper just right, as
-   the two halves of a bracket: apart even when both mark the same value. */
-.dual-thumb.lo { margin-left: -13px; border-radius: 9px 2px 2px 9px; }
-.dual-thumb.hi { margin-left: 2px; border-radius: 2px 9px 9px 2px; }
-.dual-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dist { display: grid; gap: 4px; }
+/* Height is nesting: each level of folder is one tone lighter, and the only
+   contours are folder walls. Where you stand is tone and fill, never height. */
+.gridmap .g-sea { fill: transparent; }
+.gridmap-wrap.dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--rule-strong) 55%, transparent) 0 .8px, transparent 1.3px); }
+.g-floor { cursor: zoom-in; }
+/* A folder is an area, not an outline: its floor is a clear tone lighter than what it lies in, and its edge
+   is a soft band, so the only thin lines on the map are routes. */
+:root { --floor-1: color-mix(in srgb, var(--text) 5%, var(--surface)); --floor-2: color-mix(in srgb, var(--text) 10%, var(--surface)); --floor-3: color-mix(in srgb, var(--text) 15%, var(--surface)); --wall: color-mix(in srgb, var(--text) 13%, transparent); }
+.g-floor.d1 { fill: var(--floor-1); } .g-floor.d2 { fill: var(--floor-2); } .g-floor.d3 { fill: var(--floor-3); }
+.g-ground { pointer-events: none; }
+.g-reach { fill: var(--text); fill-opacity: .06; }
+/* The edge of reached ground is a plain line. The sketch dots it, but thousands of
+   dots repaint at 12 frames a second against 55 (the bench, 63 notes). */
+.g-front { fill: none; stroke: var(--rule-strong); stroke-opacity: .45; stroke-width: 1; vector-effect: non-scaling-stroke; } /* faint: the edge of reached ground is not a route either */
+.g-wall { fill: none; stroke: var(--wall); stroke-width: 5px; stroke-linejoin: round; cursor: zoom-in; }
+.g-wall.d2, .g-wall.d3 { stroke-width: 4px; }
+.g-wall.closed { fill: var(--floor-2); }
+.g-wall.closed.d2 { fill: var(--floor-3); }
+.g-wall.closed:hover { fill: color-mix(in srgb, var(--text) 19%, var(--surface)); }
+.g-routes, .g-titles, .g-counts { pointer-events: none; }
+.g-rt { fill: none; stroke: var(--text-soft); stroke-linecap: round; stroke-linejoin: round; }
+.g-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; }
+.g-routes .quiet { opacity: .35; }
+.back .g-rt { stroke-dasharray: 5 4; }
+/* The layout's own paths (T64): square runs that share a bus, so no halo cuts them where they join. */
+.g-routes .dag .g-halo { display: none; }
+/* A feeder (T72): where a trunk's links come from inside a folder; a little quieter than the trunk it feeds. */
+.feed .g-rt { opacity: .7; }
+.g-count.feed { font-size: 10px; font-weight: 500; fill: var(--text-soft); }
+/* Pointing at a note lights what it depends on, in the blue pen: what it requires down its chain as a
+   line, what builds on it dotted; the rest steps back. */
+.g-hot { pointer-events: none; }
+.g-hot .g-rt { stroke: var(--pen-blue); stroke-width: 2px; }
+.g-hot .g-rt.dep { stroke-width: 1.6px; stroke-dasharray: .1 4.6; }
+.gridmap.lit .g-routes, .gridmap.lit .g-counts { opacity: .22; }
+.gridmap.lit .gn:not(.dep):not(.at) { opacity: .45; }
+/* What the note's requirements require in turn, all the way back: fainter and thinner, and in another colour
+   than the pen that draws the note's own. */
+:is(.gridmap, .m-key) .g-hot .g-rt.far { stroke: var(--far); stroke-width: 1.25px; opacity: .55; }
+.gn-ring.far { stroke: var(--far); stroke-width: 1.25px; opacity: .6; }
+.gridmap.lit .gn.dep.far { opacity: .7; }
+/* Lit: a frame in the blue pen. Pointing at a note draws each link out from it in turn, then the frame of
+   the note the link reaches (the delays are set in gridmap.js). */
+.gn-ring { fill: none; stroke: var(--pen-blue); stroke-width: 1.75; pointer-events: none; }
+@keyframes g-draw { to { stroke-dashoffset: 0; } }
+.g-hot .g-rt.draw, .gn-ring.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: g-draw .28s ease-out var(--delay, 0ms) forwards; }
+.g-hot .g-rt.draw.rev { stroke-dashoffset: calc(var(--len) * -1); }
+.gn-ring.draw { animation-duration: .32s; }
+.g-title, .g-note, .g-count { font-family: var(--font-map); fill: var(--text); }
+.g-title { font-weight: 600; font-variation-settings: "wdth" 88; paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px; stroke-linejoin: round; }
+.g-title.closed { text-anchor: middle; }
+/* An open folder's title sits on its top edge and breaks the line, rimmed in the ground outside the folder. */
+.g-title.open { stroke-width: 7px; }
+.g-title.open.d1 { stroke: var(--surface); }
+.g-title.open.d2 { stroke: var(--floor-1); }
+.g-title.open.d3 { stroke: var(--floor-2); }
+.g-title .g-n { font-weight: 400; fill: var(--text-soft); }
+.g-count { font-size: 12px; font-weight: 700; font-variation-settings: "wdth" 84; text-anchor: middle; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+/* A note's block: faint not reached, outlined opened, filled worked through,
+   filled with a double green rule understood; a red frame needs work. */
+.gn { cursor: pointer; }
+.gn:focus { outline: none; }
+.gn-block { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1; }
+.gn.l1 .gn-block { fill: var(--surface-1); stroke: var(--text); }
+.gn.l2 .gn-block, .gn.l3 .gn-block { fill: var(--surface-3); stroke: var(--text); stroke-width: 1.25; }
+.gn.landmark .gn-block { stroke-width: 2.25; } /* a landmark: a heavier frame */
+.gn.bad .gn-block { stroke: var(--pen-red); stroke-width: 2; }
+.gn.sel .gn-block, .gn:focus-visible .gn-block { stroke: var(--pen-blue); stroke-width: 1.75; stroke-dasharray: .1 4.6; stroke-linecap: round; }
+.gn-ok { fill: none; stroke: var(--pen-green); stroke-width: 1.5; }
+/* The folderless view (T71): a note's folder is a strip of colour down its first edge. These eight say
+   which folder, nothing more; they are no pen's red, green or blue. */
+:root { --far: var(--syntax-literal); --f0: #e08a2b; --f1: #2bb3ae; --f2: #d95a9c; --f3: #9a7fe0; --f4: #cfae2d; --f5: #b5835a; --f6: #9aa832; --f7: #7f8ea6; }
+.gn-folder { stroke: none; pointer-events: none; }
+.f0 { fill: var(--f0); background: var(--f0); } .f1 { fill: var(--f1); background: var(--f1); } .f2 { fill: var(--f2); background: var(--f2); } .f3 { fill: var(--f3); background: var(--f3); }
+.f4 { fill: var(--f4); background: var(--f4); } .f5 { fill: var(--f5); background: var(--f5); } .f6 { fill: var(--f6); background: var(--f6); } .f7 { fill: var(--f7); background: var(--f7); }
+.map-folders { position: absolute; top: 56px; right: 12px; min-width: 190px; max-width: 260px; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); padding: 2px 10px 8px; font-size: 13.5px; }
+.map-folders:not([open]) { padding-bottom: 2px; }
+.map-folders[hidden] { display: none; }
+.map-folders > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 16px; min-height: 28px; line-height: 28px; color: var(--text-soft); }
+.map-folders > summary::-webkit-details-marker { display: none; }
+.map-folders .lens-label { font-weight: 700; color: var(--text); }
+.map-folders .lens-change { color: var(--pen-blue); text-decoration: underline dotted 1.5px; text-underline-offset: 3px; }
+.map-folders ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.map-folders li { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; color: var(--text); }
+.map-folders li i { width: 12px; height: 12px; }
+.map-folders li .n { color: var(--text-faint); }
+.g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
+.g-note { font-size: 11px; font-variation-settings: "wdth" 84; }
+.gn.l0 .g-note { fill: var(--text-faint); }
+
 .seg { font-size: 13px; color: var(--ink-soft); }
 .seg .toggle { padding: 2px 8px; font-size: 12.5px; }
 .map-hint { margin: 0; font-size: 12.5px; color: var(--ink-faint); }
@@ -460,7 +459,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   color: var(--ink-soft); font-size: 13px; pointer-events: none; }
 .map-status[hidden] { display: none; }
 .map-readout { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.map-snippet { margin: 0; font-size: 12px; padding: 8px; background: var(--paper-sunk); border-radius: 4px; user-select: all; white-space: pre; overflow: auto; }
 .legend .key-across { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed var(--accent); }
 
 /* ------------------------------------------------------------ narrow */
@@ -508,7 +506,7 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   .map-create { bottom: 56px; right: 8px; }
   .map-create .toggle { min-height: 40px; }
   .map-panel { width: auto; }
-  .map-panel .lens-title, .atlas-north { display: none; }
+  .map-panel .lens-title { display: none; }
   .atlas-card { top: auto; bottom: 104px; left: 8px; right: 8px; width: auto; }
 }
 
@@ -565,8 +563,6 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   body { background-attachment: fixed; }
 }
 
-/* No fades while the map is being panned or zoomed. */
-.map-wrap svg.moving .m-link, .map-wrap svg.moving .m-dir, .map-wrap svg.moving .m-place { transition: none; }
 
 /* Short screens (a phone on its side) get the compact map and graph controls too. */
 @media (max-height: 560px) {
@@ -575,7 +571,7 @@ svg.focusing .m-text.place:not(.related) { opacity: .3; }
   .map-panel { max-height: calc(100% - 16px); }
   .graph-hint { display: none; }
   .map-crumbs { top: 8px; right: 8px; padding: 2px 6px; font-size: 12.5px; }
-  .map-panel .lens-title, .atlas-north { display: none; }
+  .map-panel .lens-title { display: none; }
 }
 
 .fullscreen { border: 0; background: none; color: var(--ink-soft); cursor: pointer; padding: 6px; display: inline-flex; border-radius: var(--radius); }
@@ -595,10 +591,9 @@ ol.reading li.step > a:first-child { color: var(--ink); text-decoration: none; }
 ol.reading li.step > a:first-child:hover { color: var(--accent); }
 ol.reading .path-link { font: 12px/1 var(--font-ui); color: var(--ink-soft); }
 
-/* Study path on the map */
-svg.trail .m-place:not(.on-trail) { opacity: .28; }
-svg.trail .m-text.place:not(.on-trail) { opacity: .35; }
-svg.trail .m-text.on-trail { font-weight: 700; }
+/* A study path or a tour on the map: its notes stand out, numbered, and the rest steps back. */
+.gridmap.trail .gn.off { opacity: .35; }
+.gridmap.trail .g-routes, .gridmap.trail .g-counts { opacity: .22; }
 .m-steps { pointer-events: none; }
 .m-step rect { fill: var(--surface); stroke: var(--pen-blue); stroke-width: 1.5; stroke-dasharray: .1 3.6; stroke-linecap: round; }
 .m-step text { font: 700 11px/1 var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text); text-anchor: middle; }
@@ -677,6 +672,22 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .edit-status.error, .edit-status.conflict { color: var(--stale); font-weight: 600; }
 .edit-message { max-width: var(--measure); font-size: 14.5px; color: var(--ink-soft); margin: 10px auto; }
 .edit-message.bad { color: var(--stale); }
+/* An agent in the editor (T74): the bar to ask from, and its reply. */
+.assist-bar { display: flex; gap: 6px; align-items: center; padding: 6px 0 8px; border-bottom: 1px solid var(--rule); }
+.assist-bar input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: 14.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-bar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.assist-bar .toggle { white-space: nowrap; }
+.assist-off { margin: 0; padding: 6px 0 8px; font-size: 13.5px; color: var(--ink-faint); border-bottom: 1px solid var(--rule); }
+.assist-reply { position: relative; max-width: var(--measure); margin: 10px auto 4px; padding: 10px 14px 12px; background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); }
+.assist-reply header { display: flex; align-items: baseline; gap: 12px; margin: 0 28px 6px 0; font: 13px var(--font-ui); }
+.assist-reply header b { font-weight: 700; color: var(--ink); }
+.assist-meta { color: var(--ink-faint); }
+.assist-stream { margin: 0; white-space: pre-wrap; font: 14px/1.55 var(--font-mono); color: var(--ink-soft); max-height: 40vh; overflow: auto; }
+.assist-answer { font-size: 16px; max-height: 50vh; overflow: auto; }
+.assist-answer > :first-child { margin-top: 0; } .assist-answer > :last-child { margin-bottom: 0; }
+.assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
+.assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
+.assist-sources code { font-size: 12.5px; }
 .editor { max-width: var(--measure); min-height: 60vh; }
 
 .edit-conflict {
@@ -892,9 +903,6 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .you-why { font-weight: 400; color: var(--ink-faint); }
 .you-marks { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .you-marks .toggle { padding: 3px 12px; font-size: 13.5px; }
-.m-text.place.st-understood, .m-text.place.changed { font-weight: 700; }
-.m-text.place.st-undiscovered { fill: var(--ink-faint); }
-.m-place.frontier, .m-text.place.frontier { opacity: .55; }
 .map-panel .hide-undiscovered { margin: 4px 0 8px; }
 .coverage { border-collapse: collapse; width: 100%; max-width: 760px; margin: 6px 0 10px; font-size: 14.5px; }
 .coverage th { text-align: left; font-weight: 600; padding: 6px 14px 6px 0; white-space: nowrap; width: 1%; }
@@ -1028,10 +1036,6 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 /* Exercises and goal panels sit in the reading column, like the prose. */
 .exercise, .goal-panel { max-width: var(--measure); }
 .exercise-value .section-note { max-width: none; }
-.exercise-working { margin: 14px 0 0; }
-.exercise-working > summary { cursor: pointer; color: var(--ink-soft); font-size: 14.5px; margin-bottom: 8px; }
-.exercise-review { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14.5px; color: var(--ink-soft); }
-.exercise-review input { accent-color: var(--accent); }
 .exercise-offer { margin: 10px 0 6px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--paper); }
 .exercise-offer p { margin: 0 0 8px; font-size: 14.5px; }
 .exercise-offer .toggle { margin-top: 10px; }
@@ -1129,7 +1133,9 @@ dialog.sheet label.confirm input { display: inline; width: 20px; height: 20px; m
 .bar { gap: 0; }
 .bar .brand { margin-right: 18px; }
 .project-name { font: 13px/1 var(--font-ui); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
-.mode-tag { font: 12px/1 var(--font-ui); color: var(--text-soft); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); padding: 3px 6px; margin-left: 8px; white-space: nowrap; }
+.mode-tag { font: 12px/1 var(--font-ui); color: var(--text-soft); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); padding: 3px 6px; margin-left: 8px; white-space: nowrap; background: none; cursor: pointer; }
+.mode-tag:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
+.mode-tag:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .bar .tabs { margin-left: 28px; }
 .bar .tabs a { font: 13px/1 var(--font-ui); padding: 0 14px; }
 .bar-end { margin-left: auto; display: flex; align-items: center; gap: 18px; height: 100%; }
@@ -1488,34 +1494,136 @@ p code { overflow-wrap: anywhere; }
 .project-today a.s-tile:hover .s-label { color: var(--text); }
 .ex.needs .t { font-size: 17px; }
 .need-what { display: block; font: 12px/16px var(--font-ui); margin-top: 2px; }
-/* The Activity lens's top state: a plain ring, since recent is not right. */
-.m-place.plain .ring-a { stroke: var(--text); stroke-width: 1.5; }
 
-/* The grid Atlas (T63): a plan on square cells. Height is nesting, one tone
-   lighter per level; understanding is tone and fill, not height. */
-.g-dot { fill: var(--rule-strong); opacity: .45; }
-.g-floor { cursor: zoom-in; }
-.g-floor.d1 { fill: var(--surface-1); }
-.g-floor.d2 { fill: var(--surface-2); }
-.g-floor.d3 { fill: var(--surface-3); }
-.g-wall { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; pointer-events: none; }
-.g-wall.d2, .g-wall.d3 { stroke-width: 1; }
-.m-grid .a-reached { fill: var(--text); fill-opacity: .06; pointer-events: none; }
-.g-front { fill: none; stroke: var(--text-soft); stroke-width: 1; stroke-dasharray: 1 3; stroke-linecap: round; pointer-events: none; }
-.g-routes { pointer-events: none; }
-.g-routes .rt-halo { fill: none; stroke: var(--surface); stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
-.g-routes .line { stroke-linejoin: round; }
-.grid-note { cursor: pointer; }
-.grid-note .gn { stroke: var(--rule-strong); stroke-width: 1; fill: var(--surface); }
-.grid-note.st-discovered .gn { stroke: var(--text); fill: var(--surface-1); }
-.grid-note.st-processed .gn, .grid-note.st-understood .gn { stroke: var(--text); stroke-width: 1.25; fill: var(--surface-3); }
-.grid-note.needs .gn { stroke: var(--pen-red); stroke-width: 2; }
-.grid-note.selected .gn { stroke: var(--pen-blue); stroke-width: 2; }
-.grid-note:focus-visible .gn { stroke: var(--pen-blue); stroke-width: 2.5; }
-.gn-ok { stroke: var(--pen-green); stroke-width: 1.5; fill: none; }
-.g-kind { fill: none; stroke: var(--text-soft); stroke-width: 1.1; }
-.g-note { font: 11px var(--font-map); font-variation-settings: "wdth" 84; fill: var(--text); pointer-events: none; }
-.grid-note.st-undiscovered .g-note { fill: var(--text-faint); }
-.g-title { font-family: var(--font-map); font-variation-settings: "wdth" 88; font-weight: 600; fill: var(--text); pointer-events: none;
-  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
-.g-title .count { font-weight: 400; fill: var(--text-soft); }
+/* ------------------------------------------------------------ the status line (T61) */
+
+/* Station shows it along the bottom; the keys it names work in either theme, and ? lists them. */
+.status { display: none; }
+.status-keys { position: fixed; right: 12px; bottom: 44px; z-index: 45; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: var(--radius-md); font: 13px/1.5 var(--font-ui); color: var(--text-soft); }
+.status-keys p { margin: 0; }
+.status-keys kbd { color: var(--text); font-weight: 700; }
+
+/* ------------------------------------------------------------ Station (T61) */
+
+/* The second theme (design/project/README.md "Station terminal"; themes/station.css has its tokens): a
+   late-1970s film computer. Pixel type for headings and labels, upper case for short labels only, reversed
+   title bars, thin cyan frames (--line), dotted rules between rows, a status line with the keys, scan
+   lines. Prose is mono in mixed case. The pens are unchanged. Everything here restyles; nothing is built twice. */
+[data-theme="station"] body { letter-spacing: .01em; }
+[data-theme="station"] .katex { letter-spacing: 0; }
+/* Scan lines: one fixed sheet over the page that takes no pointer; off in Settings. */
+[data-theme="station"]:not([data-scan="off"]) body::after {
+  content: ""; position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: .13;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, var(--surface) 2px, var(--surface) 3px);
+}
+/* Type, after the reference (the crafting screen of Alien: Isolation): thin, wide capitals for headings and
+   labels (Martian Mono at its widest and lightest), pixel type kept for the big numbers. */
+[data-theme="station"] :is(h1, h2, h3, .brand, .kind, .toggle, .mode-tag, .section-h, .lens-title, .lens-label, .quiet-link, .you-button, .bar .tabs a, .tabbar a, .tabbar button, .pin-head b, .m-head b, .map-crumbs, .palette-box kbd) {
+  font-family: var(--font-map); font-variation-settings: "wdth" 112; font-weight: 300; letter-spacing: .04em; text-transform: uppercase;
+}
+[data-theme="station"] .s-num { font-family: var(--font-pixel); font-weight: 400; }
+[data-theme="station"] :is(.kind, .toggle, .mode-tag, .section-h, .bar .tabs a, .quiet-link, .pin-head b, .m-head b) { font-size: 11px; }
+[data-theme="station"] h1 { font-size: 22px; line-height: 28px; font-weight: 400; }
+[data-theme="station"] h2 { font-size: 18px; line-height: 26px; }
+[data-theme="station"] h3 { font-size: 15px; line-height: 24px; }
+[data-theme="station"] .prose :is(h1, h2, h3) { margin-top: 1.4em; }
+[data-theme="station"] :is(em, .draft, .empty, .mblock-empty, .lede, .description, .doc-description, .pin-quote) { font-style: normal; }
+/* Labels are the drawing line's cyan: structure, like the frames. */
+[data-theme="station"] :is(.kind, .section-h, .lens-title, .lens-label, .pin-head b, .m-head b, .mode-tag) { color: var(--line); }
+[data-theme="station"] .mode-tag { border-color: var(--line); }
+/* The bar: a cyan rule under it, the spaces numbered, the current one in reverse video. */
+[data-theme="station"] .bar { border-bottom: 1px solid var(--line); }
+[data-theme="station"] .bar .tabs { counter-reset: space; align-items: center; gap: 4px; }
+[data-theme="station"] .bar .tabs a { height: 24px; padding: 0 10px; box-shadow: none; border: 0; display: inline-flex; align-items: center; }
+[data-theme="station"] .bar .tabs a::before { counter-increment: space; content: counter(space); margin-right: 9px; color: var(--line); }
+[data-theme="station"] .bar .tabs a[aria-current="page"] { background: var(--text); color: var(--surface); font-weight: 500; }
+[data-theme="station"] .bar .tabs a[aria-current="page"]::before, [data-theme="station"] .bar .tabs a[aria-current="page"] .count { color: var(--surface); }
+[data-theme="station"] .palette-box { border: 0; border-bottom: 1px solid var(--rule-strong); padding: 6px 2px; }
+[data-theme="station"] .palette-box .palette-text::before { content: "› "; color: var(--text); }
+[data-theme="station"] .palette-box .palette-icon { display: none; }
+/* Buttons: a white outline round white capitals; the main one a heavier outline; pressed is filled. */
+[data-theme="station"] .toggle { border: 1px solid var(--text-soft); background: transparent; color: var(--text); min-height: 30px; }
+[data-theme="station"] .toggle.primary { border: 2px solid var(--text); background: transparent; color: var(--text); font-weight: 400; }
+[data-theme="station"] .toggle:is(.primary, :not([aria-pressed="true"])):hover { background: var(--surface-3); }
+[data-theme="station"] .toggle:is([aria-pressed="true"], [role="radio"][aria-checked="true"]) { background: var(--text); color: var(--surface); border-color: var(--text); font-weight: 500; }
+[data-theme="station"] .toggle[aria-pressed="false"] { color: var(--text-soft); }
+[data-theme="station"] .toggle[data-key]::before { content: "[" attr(data-key) "] "; color: var(--line); }
+/* Frames are brackets, not boxes: a cyan rule above and below, with a short tick down or up at each end. */
+[data-theme="station"] :is(.sec, .mblock, .streaks, .streak-strip, .pin, .map-panel, .map-crumbs, .atlas-card, .trail-card, .you-menu, .status-keys, .graph-tip) {
+  border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0;
+  background-image: linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line));
+  background-size: 1px 9px; background-repeat: no-repeat; background-position: left top, right top, left bottom, right bottom;
+}
+[data-theme="station"] :is(.sec, .mblock, .streaks, .streak-strip) { padding: 14px 16px; }
+/* Rows: dotted rules, in the strong rule's colour. */
+[data-theme="station"] :is(.sec, .mblock) li { border-bottom-style: dotted; border-color: var(--rule-strong); }
+[data-theme="station"] a { text-decoration-thickness: 1px; }
+/* The status line: no bar, as on the reference: where you are and what waits, then each key in cyan with dotted leaders. */
+[data-theme="station"] .status {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: 30px; display: flex; align-items: center; white-space: nowrap; overflow: hidden;
+  background: var(--surface); font: 300 11px/16px var(--font-map); font-variation-settings: "wdth" 112; letter-spacing: .04em; text-transform: uppercase; color: var(--text);
+}
+[data-theme="station"] .status b { padding: 0 12px 0 16px; color: var(--line); font-weight: 400; }
+[data-theme="station"] .status span { padding: 0 12px; color: var(--text-soft); }
+[data-theme="station"] .status .sp { flex: 1; }
+[data-theme="station"] .status .sp ~ span { color: var(--text); padding: 0 6px; }
+[data-theme="station"] .status .sp ~ span::after { content: " . . . . ."; color: var(--text-faint); }
+[data-theme="station"] .status .sp ~ span:last-child { padding-right: 16px; }
+[data-theme="station"] .status .sp ~ span:last-child::after { content: ""; }
+[data-theme="station"] .status kbd { font: inherit; font-weight: 500; color: var(--line); margin-right: 6px; }
+[data-theme="station"] #view { padding-bottom: 30px; }
+[data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h) - 30px); }
+[data-theme="station"] .status-keys { bottom: 40px; font: 300 11px/1.8 var(--font-map); font-variation-settings: "wdth" 112; text-transform: uppercase; background-color: var(--surface-1); }
+[data-theme="station"] .status-keys kbd { color: var(--line); }
+/* The Atlas as a schematic: cyan outlines, each note a small dark tile with a thin cyan edge, bright when
+   reached and a dim outline when not; capitals in the titles. */
+/* Station keeps its frames: thin cyan lines round the floors it had. */
+[data-theme="station"] { --floor-1: var(--surface-1); --floor-2: var(--surface-2); --floor-3: var(--surface-3); }
+[data-theme="station"] .g-wall { stroke: var(--line); stroke-width: 1.25px; }
+[data-theme="station"] .g-wall:is(.d2, .d3) { stroke-width: 1px; }
+[data-theme="station"] :is(.g-title, .g-count, .m-step text) { font-family: var(--font-map); font-variation-settings: "wdth" 100; font-weight: 400; }
+[data-theme="station"] .g-title { text-transform: uppercase; font-weight: 300; letter-spacing: .04em; fill: var(--line); }
+[data-theme="station"] .g-title .g-n { fill: var(--text-soft); }
+[data-theme="station"] .g-note { font-family: var(--font-map); font-variation-settings: "wdth" 88; text-transform: uppercase; letter-spacing: .02em; }
+[data-theme="station"] .gn-block { fill: var(--surface-2); stroke: color-mix(in srgb, var(--line) 45%, transparent); }
+[data-theme="station"] .gn.l1 .gn-block { fill: var(--surface-2); stroke: var(--line); }
+[data-theme="station"] .gn:is(.l2, .l3) .gn-block { fill: var(--surface-3); stroke: var(--text); }
+[data-theme="station"] .gn.bad .gn-block { stroke: var(--pen-red); }
+[data-theme="station"] .gn.l0 .g-note { fill: var(--text-faint); }
+[data-theme="station"] .g-kind { stroke: var(--line); }
+[data-theme="station"] .g-rt { stroke: var(--text-soft); }
+[data-theme="station"] .g-hot .g-rt { stroke: var(--pen-blue); }
+[data-theme="station"] .gridmap-wrap.dotted { background-image: radial-gradient(circle, color-mix(in srgb, var(--line) 45%, transparent) 0 .8px, transparent 1.3px); }
+/* A phone: the tab bar is at the bottom, so the status line gives way to it. */
+@media (max-width: 760px) {
+  [data-theme="station"] .status { display: none; }
+  [data-theme="station"] #view { padding-bottom: 0; }
+  [data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h)); }
+}
+
+/* ------------------------------------------------------------ the answer sheet */
+
+/* A number or a choice is answered on one sheet, as on paper: the working (a scratch area that grows as you
+   write), then the answer on a line of its own at its foot, with the actions on the line under it. */
+.sheet { margin-top: 6px; }
+.sheet-label { display: block; font: 700 13px/16px var(--font-ui); color: var(--text-soft); }
+.sheet-working { border-left: 2px solid var(--rule); padding: 2px 0 2px 14px; }
+.sheet-working:focus-within { border-left-color: var(--rule-strong); }
+.answer .sheet-working .answer-editor { margin-top: 4px; border: 0; background: transparent; box-shadow: none; }
+.answer .sheet-working .answer-editor .cm-content { font-size: 16px; line-height: 1.7; }
+.sheet-answer { display: flex; align-items: center; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.sheet-answer.choices { display: block; }
+.sheet-answer.choices .exercise-choices { margin-top: 8px; }
+.sheet-answer .sheet-label { flex: none; }
+.sheet-answer.exercise-value input { flex: 1; width: auto; max-width: 420px; font-size: 18px; padding: 8px 12px; }
+.sheet-answer.exercise-value input::placeholder { font-size: 14px; color: var(--text-faint); }
+.a-foot.sheet-foot { margin-top: 14px; border-top: 0; padding-top: 0; }
+/* Station: the sheet in a bracket frame, its labels in the drawing line's cyan. */
+[data-theme="station"] .sheet {
+  padding: 14px 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  background-image: linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line));
+  background-size: 1px 9px; background-repeat: no-repeat; background-position: left top, right top, left bottom, right bottom;
+}
+[data-theme="station"] .sheet-label { font: 300 11px/16px var(--font-map); font-variation-settings: "wdth" 112; letter-spacing: .04em; text-transform: uppercase; color: var(--line); }
+[data-theme="station"] .sheet-working { border-left: 0; padding-left: 0; }
+[data-theme="station"] .sheet-answer { border-top-style: dotted; border-color: var(--rule-strong); }

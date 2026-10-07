@@ -1,10 +1,12 @@
 ---
 type: Task
-title: "T62 — A calmer Atlas"
+title: "T67 — A calmer Atlas (the continuous Atlas)"
 description: "Less ink, the same information: a lighter tone for reached ground, a thin frontier, thin solid walls, unreached notes counted not drawn at overview, the key folded, a card for a folder."
 tags: [task, m13, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-05T15:00:00Z }
 ---
+
+> Superseded. This describes the continuous Atlas and its searched grid, which the layered grid Atlas replaced ([T64](/tasks/T64-dag-layout.md), retired in [T63](/tasks/T63-grid-atlas-parity.md)). Kept as a record; it was T62 on `main` before the two lines of work were merged.
 
 # Prompt
 

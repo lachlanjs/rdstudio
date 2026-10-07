@@ -66,6 +66,9 @@ export function setProfile(cfg: Config, p: string): Profile {
     out = lines.join("\n");
   }
   writeFileSync(path, out, "utf8");
+  // What was read when the project was opened follows (whether the code is indexed reads it: code.ts).
+  const raw = cfg.raw as Record<string, unknown>;
+  raw.teacher = { ...((raw.teacher as Record<string, unknown> | undefined) ?? {}), profile: p };
   return p as Profile;
 }
 

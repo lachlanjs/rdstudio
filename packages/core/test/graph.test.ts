@@ -1,6 +1,7 @@
-// The core's link graph against the copies the dashboard's map view still
-// carries (pagerank, impliedLinks, stronglyConnected), until the map imports
-// the core (the renderer refactor, B3).
+// The core's link graph against the copy the dashboard's map view still
+// carries (pagerank), until the map imports the core (the renderer refactor,
+// B3). The grid Atlas works out implied links in its layout, so the map no
+// longer has a copy of impliedLinks to compare.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -18,9 +19,8 @@ function lift(name: string): string {
   if (start < 0 || end < 0) throw new Error(`map.js has no function ${name}`);
   return mapJs.slice(start, end + 3);
 }
-const map = new Function(`${lift("pagerank")}\n${lift("stronglyConnected")}\n${lift("impliedLinks")}\nreturn { pagerank, impliedLinks };`)() as {
+const map = new Function(`${lift("pagerank")}\nreturn { pagerank };`)() as {
   pagerank: (ids: string[], edges: Edge[]) => Map<string, number>;
-  impliedLinks: (ids: string[], edges: Edge[]) => Set<string>;
 };
 
 // How map.js builds its edges from the dashboard's concepts.json.
@@ -49,7 +49,6 @@ describe.each(bundles)("%s", (name) => {
     expect(edges).toEqual(mapEdges(concepts));
   });
   test("pagerank", () => expect(pagerank(ids, edges)).toEqual(map.pagerank(ids, edges)));
-  test("implied links", () => expect([...impliedLinks(ids, edges)].sort()).toEqual([...map.impliedLinks(ids, edges)].sort()));
 });
 
 test("implied links skip see also and cycles", () => {

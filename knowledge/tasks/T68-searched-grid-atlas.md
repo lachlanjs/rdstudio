@@ -1,10 +1,12 @@
 ---
 type: Task
-title: "T63 — The grid Atlas"
+title: "T68 — The searched grid Atlas"
 description: "A third folder shape: everything on a coarse square grid, notes as blocks, folders as free-form regions, layout and routes searched together, routes in lanes with over and under."
 tags: [task, m13, done]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-05T15:00:00Z }
 ---
+
+> Superseded. This describes the continuous Atlas and its searched grid, which the layered grid Atlas replaced ([T64](/tasks/T64-dag-layout.md), retired in [T63](/tasks/T63-grid-atlas-parity.md)). Kept as a record; it was T63 on `main` before the two lines of work were merged.
 
 # Prompt
 

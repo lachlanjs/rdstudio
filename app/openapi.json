@@ -122,6 +122,15 @@
             "type": "boolean",
             "description": "False when guessed: set it in rdstudio.toml ([teacher] profile) or with rdstudio teacher profile."
           },
+          "guessed": {
+            "type": "string",
+            "enum": [
+              "topic",
+              "codebase",
+              "project"
+            ],
+            "description": "What the profile would be if it were not set: a codebase where the repository holds code, else a topic."
+          },
           "dir": {
             "type": [
               "string",
@@ -162,6 +171,7 @@
           "enabled",
           "profile",
           "profileSet",
+          "guessed",
           "dir",
           "skills",
           "history"
@@ -195,6 +205,22 @@
           "description",
           "status",
           "defaultChanged"
+        ]
+      },
+      "ProfileSet": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "topic",
+              "codebase",
+              "project"
+            ]
+          }
+        },
+        "required": [
+          "profile"
         ]
       },
       "Skill": {
@@ -439,6 +465,39 @@
         "required": [
           "mode",
           "text"
+        ]
+      },
+      "NoteAssist": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "fill"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "from": {
+            "type": "integer"
+          },
+          "to": {
+            "type": "integer"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "body",
+          "from",
+          "to"
         ]
       },
       "DraftSummary": {
@@ -935,6 +994,13 @@
             ],
             "additionalProperties": {},
             "description": "Fields to set; null removes one."
+          },
+          "assist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Models whose proposed text was accepted into this edit: named in the note's stamp."
           }
         },
         "required": [
@@ -1269,6 +1335,63 @@
           },
           "403": {
             "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/profile": {
+      "put": {
+        "summary": "Set the project's profile, and so its mode: topic is Learning; codebase and project are Project. Written to rdstudio.toml ([teacher] profile), so it is the project's, for everyone who opens it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
             "content": {
               "application/json": {
                 "schema": {
@@ -1859,6 +1982,83 @@
           },
           "409": {
             "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{id}/assist": {
+      "post": {
+        "summary": "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The note's id, such as design/model (slashes encoded)."
+            },
+            "required": true,
+            "description": "The note's id, such as design/model (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteAssist"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-sent events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No model account is connected",
             "content": {
               "application/json": {
                 "schema": {

@@ -164,21 +164,22 @@ def first(measures: list[dict], name: str) -> dict | None:
 
 
 def load_metrics(page) -> dict:
-    # Downhill routes and contour outlines arrive from the worker after the map
-    # has settled; wait a little for them, so their times are reported too.
+    # Routes for back links arrive from the worker after the map has settled;
+    # wait a little for them, so their time is reported too.
     try:
-        page.wait_for_function("() => performance.getEntriesByName('rd:map-downhill').length > 0", timeout=5000, polling=50)
+        page.wait_for_function("() => performance.getEntriesByName('rd:map-grid-routes').length > 0", timeout=2000, polling=50)
     except Exception:
-        pass  # gates routing, or no links to route
+        pass  # no back links to route
     ms = page.evaluate(MEASURES)
     render = first(ms, "map-render")
     settled = first(ms, "map-settled")
     out = {"first_map_ms": r1(render["start"] + render["duration"]) if render else None,
            # the measure runs from when the page opened
            "settled_ms": r1(settled["duration"]) if settled else None}
-    for step in ("data", "map-model", "map-place", "map-layout", "map-routes", "map-render", "map-outlines", "map-downhill", "map-terrain"):
+    # layout_ms and routes_ms keep their names from the continuous Atlas, so results compare across it.
+    for step, name in (("data", "data"), ("map-model", "model"), ("map-grid-layout", "layout"), ("map-grid-routes", "routes"), ("map-render", "render")):
         m = first(ms, step)
-        out[step.replace("map-", "") + "_ms"] = r1(m["duration"]) if m else None
+        out[name + "_ms"] = r1(m["duration"]) if m else None
     info = page.evaluate(PAGE)
     out.update({k: r1(v) if isinstance(v, float) else v for k, v in info.items()})
     return out

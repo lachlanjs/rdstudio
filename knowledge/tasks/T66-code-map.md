@@ -10,7 +10,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-05T19:00:00Z }
 
 The developer's choice on 2026-10-05 ("Both"): the index gives the skeleton
 and stays current; notes document the items worth explaining and attach to
-them. Test bed: [nanosim](/tasks/T64-codebase-testbed.md).
+them. Test bed: [nanosim](/tasks/T69-codebase-testbed.md).
 
 - **Levels:**
   - library directories;

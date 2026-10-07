@@ -1,0 +1,22 @@
+{
+  "enabledMcpjsonServers": [
+    "rdstudio"
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__rdstudio"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run rdstudio brief"
+          }
+        ]
+      }
+    ]
+  }
+}

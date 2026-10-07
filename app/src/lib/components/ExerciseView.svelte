@@ -239,37 +239,39 @@
       <blockquote><Prose html={html(marking.answer)} /></blockquote>
     {:else if stage === "answer"}
       {#if !recording}<p class="caption">{store.site.static ? "This is an exported snapshot, so" : "The learner record is off, so"} answers are not kept.</p>{/if}
-      {#if s.kind === "choice"}
-        <h2>Your answer</h2>
-        <div class="exercise-choices" role={s.multiple ? "group" : "radiogroup"} aria-label={s.multiple ? "Choose every right answer" : "Choose one"}>
-          {#if s.multiple}<p class="caption">Choose every one that is right.</p>{/if}
-          {#each s.choices as ch, i (i)}
-            <label class={["exercise-choice", picked.includes(i) && "on"]}>
-              <input type={s.multiple ? "checkbox" : "radio"} name={"ex-" + c.id} checked={picked.includes(i)} onchange={() => toggle(i)} />
-              <Prose html={html(ch)} class="prose choice-text" />
+      {#if s.kind !== "text"}
+        <!-- One sheet, as on paper: the working, then the answer on a line of its own at its foot. -->
+        <div class="sheet">
+          <div class="sheet-working">
+            <span class="sheet-label">Working:</span>
+            {@render workingBox(3)}
+          </div>
+          {#if s.kind === "choice"}
+            <div class="sheet-answer choices">
+              <span class="sheet-label">Answer:</span>
+              <div class="exercise-choices" role={s.multiple ? "group" : "radiogroup"} aria-label={s.multiple ? "Choose every right answer" : "Choose one"}>
+                {#if s.multiple}<p class="caption">Choose every one that is right.</p>{/if}
+                {#each s.choices as ch, i (i)}
+                  <label class={["exercise-choice", picked.includes(i) && "on"]}>
+                    <input type={s.multiple ? "checkbox" : "radio"} name={"ex-" + c.id} checked={picked.includes(i)} onchange={() => toggle(i)} />
+                    <Prose html={html(ch)} class="prose choice-text" />
+                  </label>
+                {/each}
+              </div>
+            </div>
+          {:else}
+            <label class="sheet-answer exercise-value">
+              <span class="sheet-label">Answer:</span>
+              <input bind:value={typed} inputmode="decimal" autocomplete="off" placeholder="a number: 120, 1/4 or 2.5e-3" aria-label={`Your answer, a number${s.unit ? ` in ${s.unit}` : ""}`}
+                onkeydown={(e) => { if (e.key === "Enter" && ready) void check(); }} />
+              {#if s.unit}<span class="unit">{s.unit}</span>{/if}
             </label>
-          {/each}
+          {/if}
         </div>
-      {:else if s.kind === "value"}
-        <h2>Your answer</h2>
-        <label class="exercise-value">
-          <span class="caption">A number (0.25, 1/4 and 2.5e-3 all work){s.unit ? `, in ${s.unit}` : ""}:</span>
-          <input bind:value={typed} inputmode="decimal" autocomplete="off" onkeydown={(e) => { if (e.key === "Enter" && ready) void check(); }} />
-          {#if s.unit}<span class="unit">{s.unit}</span>{/if}
-        </label>
       {:else}
         {#if recording}<TutorTools session={tutor} {text} {working} {selection} />{/if}
         <AnswerEditor bind:this={editor} bind:value={text} bind:selection pins={placed.marks} label="Your answer" rows={12} placeholder="Write your answer here: $x^2$ for maths, **bold**, - for a list." />
         <p class="a-note caption">Maths is typeset everywhere except the line you are writing. For working on paper or in code, say where it is.</p>
-      {/if}
-      {#if s.kind !== "text"}
-        <details class="exercise-working" bind:open={showWorking}>
-          <summary>Show your working (optional)</summary>
-          {@render workingBox()}
-          {#if recording}
-            <label class="exercise-review"><input type="checkbox" bind:checked={review} disabled={!working.trim()} /> Have my working reviewed, whatever the answer</label>
-          {/if}
-        </details>
       {/if}
       {#if showing}
         <div class="draft-shown" role="region" aria-label={`Your draft as it was at ${showing.id}`}>
@@ -279,7 +281,7 @@
           {#if !showing.text && !showing.working}<p class="empty">It was empty.</p>{/if}
         </div>
       {/if}
-      <div class="a-foot">
+      <div class={["a-foot", s.kind !== "text" && "sheet-foot"]}>
         {#if recording && (s.kind === "text" || working.trim() || versions.length)}
           <span class="saved"><i class={["box", savedAt && "on"]} aria-hidden="true"></i>{savedAt ? "Draft saved" : "Saved as you type"}</span>
           <details class="draft-versions">
@@ -302,6 +304,10 @@
           <button class="toggle" type="button" disabled={busy || !ready} onclick={markMine}>Mark it yourself</button>
           {#if recording}<button class="toggle primary" type="button" disabled={busy || !ready} onclick={askAgent}>Ask an agent to mark it</button>{/if}
         {:else}
+          <!-- Offered once there is working to review. -->
+          {#if recording && working.trim()}
+            <button class="toggle" type="button" aria-pressed={review} onclick={() => (review = !review)} title="Have your working reviewed, whatever the answer">Review my working</button>
+          {/if}
           <button class="toggle primary" type="button" disabled={busy || !ready} onclick={check}>Check</button>
         {/if}
       </div>
@@ -403,6 +409,6 @@
   {/if}
 {/snippet}
 
-{#snippet workingBox()}
-  <AnswerEditor bind:value={working} label="Your working" rows={9} placeholder="Your working, step by step: maths between dollar signs." />
+{#snippet workingBox(rows = 9)}
+  <AnswerEditor bind:value={working} label="Your working" {rows} placeholder="Step by step, if you like: maths between dollar signs." />
 {/snippet}

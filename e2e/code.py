@@ -45,13 +45,33 @@ with sync_playwright() as pw:
     p.on("pageerror", lambda e: errors.append(str(e)))
     p.on("console", lambda m: m.type == "error" and errors.append(m.text))
 
-    # The Atlas, in project mode, maps the code.
+    # The Atlas maps the knowledge base; the code when asked for (Map: Code), which this browser then keeps.
     p.goto(URL + "?nosw#/map")
-    p.wait_for_selector(".m-dir", timeout=20000)
-    p.wait_for_timeout(1500)
-    names = p.locator("text.m-head .name, text.m-arc .name, text.m-text.territory").evaluate_all("els => els.map(e => e.textContent.trim())")
-    check("in project mode the Atlas maps the code: its directories", any(n.startswith("src") for n in names) and any(n.startswith("python") for n in names), names[:20])
+    p.wait_for_selector(".g-title", timeout=20000)
+    p.wait_for_timeout(1200)
+    names = p.locator(".g-title").evaluate_all("els => els.map(e => e.textContent.trim().toLowerCase())")
+    check("the Atlas maps the notes by default, in project mode too", any(n.startswith("design") or n.startswith("decisions") for n in names), names[:20])
+    p.locator(".map-more > summary").click()
+    p.get_by_role("group", name="Map").get_by_role("button", name="Code").click()
+    p.wait_for_timeout(2500)
+    names = p.locator(".g-title").evaluate_all("els => els.map(e => e.textContent.trim().toLowerCase())")
+    check("Code from the panel: the Atlas maps the code, its directories", any(n.startswith("src") for n in names) and any(n.startswith("python") for n in names), names[:20])
+    check("…each folder a layered DAG, with trunks between them", len(p.evaluate("() => document.querySelector('.map-wrap').routes()")) >= 3)
     check("…and says so: Map, Code", p.locator(".map-more").evaluate("d => { d.open = true; return d.querySelector('[aria-label=Map] [aria-pressed=true]')?.textContent }") == "Code")
+    # Folderless (T71): the whole map as one layout, each item with its folder's colour.
+    p.get_by_role("group", name="Folders").get_by_role("button", name="None").click()
+    p.wait_for_function("() => document.querySelectorAll('svg.gridmap .gn-folder').length > 20 && !document.querySelector('svg.gridmap .g-wall')", timeout=15000)
+    check("Folders: None: one layout with no folders, a colour on each item for its folder, and the folders named", p.locator(".map-folders li").count() >= 4 and p.locator(".map-folders li").first.is_visible(), p.locator(".map-folders li").count())
+    p.locator(".map-folders > summary").click()
+    check("…the list of folders folds away", not p.locator(".map-folders li").first.is_visible())
+    p.locator(".map-folders > summary").click()
+    p.screenshot(path=str(OUT / "code-atlas-flat.png"))
+    p.get_by_role("group", name="Folders").get_by_role("button", name="Shown").click()
+    p.wait_for_selector("svg.gridmap .g-wall", timeout=15000)
+    # The panel folds to a bar.
+    p.locator(".graph-options > summary").click()
+    check("the Atlas's settings fold away, and come back", not p.locator(".map-legend.kinds").is_visible())
+    p.locator(".graph-options > summary").click()
     check("…with code's kinds in the key", "Class" in p.locator(".map-legend.kinds").inner_text() and "Method" in p.locator(".map-legend.kinds").inner_text())
     p.screenshot(path=str(OUT / "code-atlas.png"))
 
@@ -77,12 +97,12 @@ with sync_playwright() as pw:
     check("…and a link goes to the C++ class's page", "src/nanosim/forces/gravity.hpp" in p.locator(".code-page").inner_text())
 
     # A code item on the Atlas: its card.
-    p.goto(URL + "?nosw#/map/src")
-    p.wait_for_selector(".m-place", timeout=20000)
+    p.goto(URL + "?nosw#/map/src/nanosim/core/")
+    p.wait_for_selector("svg.gridmap g.gn", timeout=20000)
     p.wait_for_timeout(1200)
-    place = p.locator(".m-place[data-ref]").first
-    ref = place.get_attribute("data-ref")
-    place.click()
+    check("…a link may end on a file or a class: trunks inside src/nanosim/core", len(p.evaluate("() => document.querySelector('.map-wrap').routes()")) >= 3)
+    check("…and feeders: inside a folder, branches from its items to the foot of each trunk", p.locator("svg.gridmap .g-routes g.feed").count() >= 5, p.locator("svg.gridmap .g-routes g.feed").count())
+    p.locator("svg.gridmap g.gn").first.click()
     card = p.locator(".atlas-card")
     expect(card).to_be_visible()
     check("selecting a code item: its card, with Open", card.get_by_role("link", name="Open").count() == 1 and " in " in card.inner_text(), card.inner_text())
@@ -91,13 +111,27 @@ with sync_playwright() as pw:
     p.locator(".map-more > summary").click()
     p.get_by_role("group", name="Map").get_by_role("button", name="Notes").click()
     p.wait_for_timeout(1500)
-    names = p.locator("text.m-head .name, text.m-arc .name, text.m-text.territory").evaluate_all("els => els.map(e => e.textContent.trim())")
-    check("Notes from the panel: the knowledge base's folders", any(n.startswith("Design") or n.startswith("Decisions") for n in names), names[:20])
+    names = p.locator(".g-title").evaluate_all("els => els.map(e => e.textContent.trim().toLowerCase())")
+    check("Notes from the panel: the knowledge base's folders", any(n.startswith("design") or n.startswith("decisions") for n in names), names[:20])
 
     # The index is quick.
     t0 = time.time()
     subprocess.run(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "__index-code"], check=True, stdout=subprocess.DEVNULL, env=ENV)
     check("indexing the code takes under two seconds (a child process, parsers and all)", time.time() - t0 < 2, round(time.time() - t0, 2))
+
+    # The mode is switched from the tag beside the project's name (T75), and is the project's: rdstudio.toml.
+    p.goto(URL + "?nosw#/")
+    tag = p.locator(".mode-tag")
+    expect(tag).to_have_text("Project")
+    tag.click()
+    expect(tag).to_have_text("Learning")
+    toml = (ROOT / "rdstudio.toml").read_text()
+    check("the mode tag switches the project to Learning: Practice takes the Project space's place, and rdstudio.toml says topic",
+          p.locator('nav.tabs a[data-tab="practice"]').count() == 1 and p.locator('nav.tabs a[data-tab="project"]').count() == 0 and 'profile = "topic"' in toml, toml)
+    p.goto(URL + "?nosw#/settings")
+    p.get_by_role("radiogroup", name="This project's mode").get_by_role("radio", name="Project").click()
+    expect(tag).to_have_text("Project")
+    check("…and Settings switches it back: the profile is a codebase again", 'profile = "codebase"' in (ROOT / "rdstudio.toml").read_text() and p.locator('nav.tabs a[data-tab="project"]').count() == 1)
 
     check("no errors in the browser console", not errors, errors[:5])
     browser.close()

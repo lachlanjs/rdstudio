@@ -117,19 +117,34 @@ See the [redesign](/design/redesign.md) and the brand book in
 - [x] [T59 Project mode](/tasks/T59-project-mode.md)
 - [x] [T60 The Atlas: contour folders and downhill routes](/tasks/T60-atlas-contours.md)
 
-# M13 — Station, the grid Atlas, and a codebase to tell the modes apart
+# M13 — Station and the grid Atlas
 
-The second round from Claude Design (`design/project/README.md`: Station
-terminal, "Atlas · calmer", "The grid Atlas", "Layout and routes searched
-together"), then a codebase test bed so project mode has a real project to
-show.
+On the branch `grid-dag-view`, built from the sketches added to the design
+since M12 (`design/README.md`). Decisions:
+[Station](/decisions/station-theme.md) and
+[the grid Atlas](/decisions/grid-atlas.md). A layout built on the directed
+acyclic graphs in each folder is T64. In working order:
 
-- [x] [T61 The Station theme](/tasks/T61-station-theme.md)
-- [x] [T62 A calmer Atlas](/tasks/T62-calmer-atlas.md)
-- [x] [T63 The grid Atlas](/tasks/T63-grid-atlas.md)
-- [x] [T64 A codebase test bed: a nanobind simulation](/tasks/T64-codebase-testbed.md)
-- [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md)
+- [ ] [T62 The grid Atlas: cells, routes and drawing](/tasks/T62-grid-atlas.md)
+- [ ] [T64 The grid Atlas: a layout from the DAGs in each folder](/tasks/T64-dag-layout.md)
+- [x] [T63 The grid Atlas: parity, the Station skin and retiring the old Atlas](/tasks/T63-grid-atlas-parity.md)
+- [ ] [T61 The Station theme](/tasks/T61-station-theme.md)
+
+Merged in from `main` on 2026-10-06, where a second line of M13 work had been
+done on the continuous Atlas: a codebase test bed and the code map, which the
+grid Atlas now draws (Map: Code in the panel), and two tasks the grid Atlas
+supersedes. Their numbers clashed with the ones above, so three were renumbered.
+
+- [x] [T69 A codebase test bed: a nanobind simulation](/tasks/T69-codebase-testbed.md) (was T64 on main)
 - [x] [T66 The code map: an index of the code, and notes attached to it](/tasks/T66-code-map.md)
+- [x] [T67 A calmer Atlas](/tasks/T67-calmer-atlas.md) (was T62 on main; superseded)
+- [x] [T68 The searched grid Atlas](/tasks/T68-searched-grid-atlas.md) (was T63 on main; superseded)
+- [ ] [T65 Bake the grid Atlas into the repository](/tasks/T65-atlas-bake.md) (dropped: the layered layout needs no baking)
+- [x] [T71 The Atlas: a folderless view, room for routes, a panel that folds](/tasks/T71-atlas-flat-and-room.md)
+- [x] [T72 The Atlas: feeders, where a trunk's links come from inside a folder](/tasks/T72-feeders.md)
+- [ ] [T73 Bring the browser walkthroughs up to the grid Atlas](/tasks/T73-walkthroughs-grid-atlas.md)
+- [x] [T74 An agent in the editor: ask about a passage, or have text proposed](/tasks/T74-agent-in-editor.md)
+- [x] [T75 Switch a project between Learning and Project from the app](/tasks/T75-mode-switch.md)
 
 # Future
 
