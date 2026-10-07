@@ -155,6 +155,17 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T83 Model tiers for Axis in the editor](/tasks/T83-model-tiers.md)
 - [x] [T84 Axis in the editor looks things up with tools](/tasks/T84-assist-lookup.md)
 
+# M14 — Axis finds things
+
+In the order agreed on 2026-10-07.
+
+- [ ] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
+- [ ] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
+- [ ] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
+- [ ] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
+- [ ] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
+- [ ] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
+
 # Future
 
 - [Per-agent model and harness settings](/ideas/future-agent-settings.md)

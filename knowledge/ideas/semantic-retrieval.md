@@ -130,7 +130,7 @@ above to start with OpenRouter. Sizes and speeds are estimates.
 
 ## Order
 
-1. **A trial of the runtime:** the model through WebAssembly in Node, timed
+1. **A trial of the runtime** ([T87](/tasks/T87-embedding-runtime-trial.md "see also")): the model through WebAssembly in Node, timed
    on this base, and its size in the package. Everything else rests on it.
 2. **The measure:** questions with the note that answers each, scored for
    keyword search alone and with search by meaning.
