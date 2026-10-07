@@ -32,9 +32,14 @@ export interface Ask {
   from: number; // the selection, or the caret (from === to), as offsets in body
   to: number;
   prompt?: string;
+  /** How strong a model to ask (T83); left out, the mode's usual one. */
+  tier?: models.Tier;
   /** figure: the artifact it wrote before, and what the check found wrong with it, to put right. */
   fix?: { html: string; problems: string[] };
 }
+
+/** The tier a mode is asked at when none is chosen: a figure is the hardest to get right. */
+export const USUAL: Record<Mode, models.Tier> = { ask: "mid", fill: "mid", figure: "max" };
 
 /** Something the model was given, shown under its reply. */
 export interface Source {
@@ -55,6 +60,7 @@ export interface Reply {
   to: number;
   sources: Source[];
   model: string;
+  tier: models.Tier;
   cost: number;
 }
 
@@ -390,10 +396,10 @@ export const fillTokens = (passage: number): number => Math.max(2000, passage + 
 /** Ask, streaming the reply's text. Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void): Promise<{ reply: Reply; seen: Seen[] }> {
   const p = prepare(cfg, a);
-  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill", messages: p.messages, onText,
+  const r = await models.complete({ cfg, job: p.job, feature: a.mode === "ask" ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill", messages: p.messages, onText, model: models.tiers()[a.tier ?? USUAL[a.mode]],
     maxTokens: a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)) });
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
-  const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, cost: r.usage.cost };
+  const base = { mode: a.mode, reply: r.text, from, to, sources: p.sources, model: r.usage.model, tier: a.tier ?? USUAL[a.mode], cost: r.usage.cost };
   if (a.mode === "ask") return { reply: { ...base, answer: r.text.trim(), insert: null }, seen: p.seen };
   if (a.mode === "figure") { const f = parseFigure(r.text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
   const { insert, why } = parseFill(r.text);

@@ -20,8 +20,12 @@
   onMount(() => {
     const back = new URLSearchParams(location.search).get("ai");
     if (back && RETURN[back]) status = RETURN[back];
-    void ai.state().then((s) => { st = s; loaded = true; });
+    void ai.state().then((s) => { st = s; loaded = true; if (s) tiers = { ...s.tiers }; });
   });
+  // The editor's three tiers (T83): which model each one is.
+  const TIER = [["low", "Low", "Small, mechanical changes: quick and cheap"], ["mid", "Mid", "Most questions and drafting"], ["max", "Max", "Figures, and what needs the most care"]] as const;
+  let tiers = $state({ low: "", mid: "", max: "" });
+  const tiersChanged = $derived(!!st && TIER.some(([k]) => tiers[k].trim() !== st!.tiers[k]));
   const JOB: Record<string, string> = { hint: "Hints", feedback: "Feedback", discuss: "Discussion", marking: "Marking", write: "Writing in notes", "note-ask": "Answers in the editor", "note-fill": "Text proposed in the editor", "note-figure": "Figures made in the editor", check: "Checking the connection" };
   const sorted = (m: Record<string, number>) => Object.entries(m).sort((a, b) => b[1] - a[1]);
 
@@ -75,9 +79,20 @@
     </details>
   {/if}
 
-  <h3 class="sub-h">Models</h3>
+  <h3 class="sub-h">Models in the editor</h3>
+  <p class="section-note">Asking Axis in a note, you choose how strong a model the request is worth. Each tier is a model, written as OpenRouter lists it.</p>
+  <form class="tiers" onsubmit={(e) => { e.preventDefault(); void act(async () => { st = await ai.setTiers({ low: tiers.low.trim(), mid: tiers.mid.trim(), max: tiers.max.trim() }); tiers = { ...st.tiers }; status = "The editor's models are set."; }); }}>
+    {#each TIER as [k, label, hint] (k)}
+      <label for="tier-{k}">{label}</label>
+      <input id="tier-{k}" type="text" bind:value={tiers[k]} spellcheck="false" autocomplete="off" aria-describedby="tier-{k}-hint" />
+      <span class="section-note" id="tier-{k}-hint">{hint}</span>
+    {/each}
+    <span></span><button class="toggle" type="submit" disabled={busy || !tiersChanged}>Save the models</button>
+  </form>
+
+  <h3 class="sub-h">Models elsewhere</h3>
   <table class="fm spend">
-    <tbody>{#each Object.entries(st.models).filter(([k]) => k !== "check") as [job, model] (job)}<tr><th>{JOB[job] ?? job}</th><td><code>{model}</code></td></tr>{/each}</tbody>
+    <tbody>{#each Object.entries(st.models).filter(([k]) => k !== "check" && k !== "write") as [job, model] (job)}<tr><th>{JOB[job] ?? job}</th><td><code>{model}</code></td></tr>{/each}</tbody>
   </table>
   <p class="section-note">Set in <code>[teacher.models]</code> in the user config, by job: any model OpenRouter offers. A fast, cheap model suits hints; a strong one, feedback and marking.</p>
 {/if}

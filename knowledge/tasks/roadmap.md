@@ -152,6 +152,7 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 - [x] [T80 The agent is called Axis in the app](/tasks/T80-axis-name.md)
 - [x] [T81 Axis in the editor is told how notes work here](/tasks/T81-assist-knows-the-format.md)
 - [x] [T82 Rate several selected links at once](/tasks/T82-rate-many-links.md)
+- [x] [T83 Model tiers for Axis in the editor](/tasks/T83-model-tiers.md)
 
 # Future
 

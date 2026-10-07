@@ -97,7 +97,8 @@ test("asking streams the reply and logs the cost by feature; nothing is written"
   const { reply: r } = await assist.ask(cfg, { note: "design/integrator", mode: "fill", body, from: body.length, to: body.length, prompt: "Say why." }, (t) => { streamed += t; });
   expect(streamed).toBe(reply);
   expect(r).toMatchObject({ mode: "fill", insert: "It conserves energy well.", answer: "From the note on forces.", from: body.length, to: body.length, cost: 0.004 });
-  expect(seen.body!.model).toBe(models.DEFAULT_MODELS.write);
+  expect(seen.body!.model).toBe(models.DEFAULT_TIERS.mid); // a tier's model, not a job's (T83)
+  expect(r.tier).toBe("mid");
   expect(models.usageLog().at(-1)).toMatchObject({ feature: "note-fill", cost: 0.004 });
   expect(readFileSync(join(root, "knowledge/design/integrator.md"), "utf8")).toBe(before);
 });
@@ -161,4 +162,35 @@ test("a long passage is sent whole with room for it to come back; one too long i
   const cut = assist.parseFill("<insert>\n- [x] [T0](/tasks/T0.md \"see also\")\n- [x] [T1");
   expect(cut.insert).toBeNull();
   expect(cut.why).toMatch(/cut short/);
+});
+
+test("a request is asked at a tier, each a model the person sets; a figure is asked at the highest unless told otherwise (T83)", async () => {
+  const { cfg } = project();
+  const conf = join(process.env.XDG_CONFIG_HOME!, "rdstudio", "config.toml");
+  writeFileSync(conf, "[actors]\nhuman = \"human:me\"\n\n[teacher]\nweekly_budget = 5\n");
+  expect(models.tiers()).toEqual(models.DEFAULT_TIERS);
+  expect(models.setTiers({ low: "google/gemini-3.8-flash" })).toEqual({ ...models.DEFAULT_TIERS, low: "google/gemini-3.8-flash" });
+  expect(models.setTiers({ max: " openai/gpt-x:thinking " }).max).toBe("openai/gpt-x:thinking");
+  // The table is written once, whole; the rest of the file is as it was.
+  const text = readFileSync(conf, "utf8");
+  expect(text.startsWith("[actors]\nhuman = \"human:me\"\n\n[teacher]\nweekly_budget = 5\n")).toBe(true);
+  expect(text.match(/\[teacher\.tiers\]/g)).toHaveLength(1);
+  expect(models.tiers()).toEqual({ low: "google/gemini-3.8-flash", mid: models.DEFAULT_TIERS.mid, max: "openai/gpt-x:thinking" });
+  expect(models.weeklyBudget()).toBe(5);
+  expect(() => models.setTiers({ mid: "not a model" })).toThrow(/not a model's id/);
+  expect(() => models.setTiers({ mid: "" })).toThrow(/not a model's id/);
+
+  const asked: string[] = [];
+  models.setFetch((async (_u: unknown, init?: RequestInit) => {
+    asked.push(JSON.parse(String(init?.body)).model);
+    const enc = new TextEncoder(), lines = [`data: ${JSON.stringify({ choices: [{ delta: { content: "Yes." } }] })}\n\n`, `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { cost: 0.001 } })}\n\n`, "data: [DONE]\n\n"];
+    return new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(enc.encode(l)); c.close(); } }), { status: 200 });
+  }) as typeof fetch);
+  const body = "It uses velocity Verlet.";
+  const base = { note: "design/integrator", body, from: 0, to: body.length, prompt: "Is it?" };
+  expect((await assist.ask(cfg, { ...base, mode: "ask", tier: "low" })).reply).toMatchObject({ tier: "low", model: "google/gemini-3.8-flash" });
+  await assist.ask(cfg, { ...base, mode: "ask" });
+  await assist.ask(cfg, { ...base, mode: "figure" });
+  await assist.ask(cfg, { ...base, mode: "figure", tier: "low" });
+  expect(asked).toEqual(["google/gemini-3.8-flash", models.DEFAULT_TIERS.mid, "openai/gpt-x:thinking", "google/gemini-3.8-flash"]);
 });

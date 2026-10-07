@@ -695,6 +695,14 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .assist-bar input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: 14.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-bar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .assist-bar .toggle { white-space: nowrap; }
+.assist-bar select { height: 32px; max-width: 150px; padding: 0 6px; font: 13.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.assist-bar select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.tiers { display: grid; grid-template-columns: max-content minmax(0, 320px) 1fr; gap: 6px 12px; align-items: center; margin: 8px 0 4px; }
+.tiers label { font-weight: 600; }
+.tiers input { height: 32px; padding: 0 10px; font: 13.5px var(--font-mono); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.tiers input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.tiers button { justify-self: start; }
+@media (max-width: 640px) { .tiers { grid-template-columns: max-content 1fr; } .tiers .section-note { grid-column: 2; } }
 .assist-off { margin: 0; padding: 6px 0 8px; font-size: 13.5px; color: var(--ink-faint); border-bottom: 1px solid var(--rule); }
 .assist-reply { position: relative; max-width: var(--measure); margin: 10px auto 4px; padding: 10px 14px 12px; background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); }
 .assist-reply header { display: flex; align-items: baseline; gap: 12px; margin: 0 28px 6px 0; font: 13px var(--font-ui); }

@@ -6,7 +6,7 @@
   import type { EditorView } from "@codemirror/view";
   import { store } from "$lib/data.svelte.ts";
   import type { EditSession } from "$lib/edit.svelte.ts";
-  import { askAssist, streamingFill, type Mode, type Reply } from "$lib/assist.ts";
+  import { askAssist, streamingFill, type Mode, type Reply, type Tier } from "$lib/assist.ts";
   import { mountArtifact } from "$lib/artifactFrame.ts";
   import { slug } from "$lib/edit.svelte.ts";
   import { check as checkFigure, save as saveFigure } from "$lib/figure.ts";
@@ -72,7 +72,7 @@
 
   onMount(() => {
     void session.load();
-    void ai.state().then((st) => { connected = st ? st.connected : null; });
+    void ai.state().then((st) => { connected = st ? st.connected : null; tiers = st?.tiers ?? null; });
     // Leaving the page with unsaved changes asks first (the draft is kept anyway).
     const leave = (e: BeforeUnloadEvent) => { if (session.dirty) e.preventDefault(); };
     addEventListener("beforeunload", leave);
@@ -84,6 +84,13 @@
   // An agent in the editor (T74): ask the connected model about the selection, or for text to go at the
   // caret (or in place of the selection). An answer is shown below the bar and changes nothing; proposed
   // text is a suggestion in the note to accept or reject.
+  // How strong a model to ask (T83): the mode's usual tier, or one chosen here and remembered.
+  const TIER_KEY = "rdstudio.assist.tier";
+  let tiers = $state<{ low: string; mid: string; max: string } | null>(null);
+  let tier = $state<"" | Tier>("");
+  try { const t = localStorage.getItem(TIER_KEY); if (t === "low" || t === "mid" || t === "max") tier = t; } catch { /* no storage */ }
+  const keepTier = () => { try { if (tier) localStorage.setItem(TIER_KEY, tier); else localStorage.removeItem(TIER_KEY); } catch { /* no storage */ } };
+  const short = (m: string | undefined) => (m ?? "").split("/").pop() ?? "";
   let connected = $state<boolean | null>(null); // a model account is connected (null: no server to ask, or not known yet)
   let prompt = $state("");
   let selected = $state(false);
@@ -103,7 +110,7 @@
     busy = mode; streaming = ""; reply = null; outcome = ""; failed = "";
     stop = new AbortController();
     try {
-      const r = await askAssist(session.id, { mode, body: view.state.doc.toString(), from, to, prompt: prompt.trim() || undefined, title: session.fields.title || undefined },
+      const r = await askAssist(session.id, { mode, tier: tier || undefined, body: view.state.doc.toString(), from, to, prompt: prompt.trim() || undefined, title: session.fields.title || undefined },
         (soFar) => { streaming = mode === "fill" ? streamingFill(soFar) : soFar; }, stop.signal);
       reply = r;
       if (mode === "fill" && r.insert !== null) {
@@ -134,7 +141,7 @@
     try {
       let fix: { html: string; problems: string[] } | undefined;
       for (let round = 0; round < 3; round++) {
-        const r = await askAssist(session.id, { mode: "figure", body, from, to, prompt: asked, title: session.fields.title || undefined, fix }, () => {}, stop.signal);
+        const r = await askAssist(session.id, { mode: "figure", tier: tier || undefined, body, from, to, prompt: asked, title: session.fields.title || undefined, fix }, () => {}, stop.signal);
         reply = r;
         if (!r.artifact) { failed = "No figure was written."; break; }
         stage = "Checking that it loads, raises no error and stays light…";
@@ -217,6 +224,13 @@
             title={selected ? "Propose text in place of the selection, to accept or reject" : "Propose text at the cursor, to accept or reject"}>{selected ? "Rewrite" : "Write here"}</button>
           <button class="toggle" type="button" disabled={busy !== null || (!selected && !prompt.trim())} onclick={() => void makeFigure()}
             title="Have an interactive figure made for the selection, checked, and shown to accept or discard">Figure</button>
+          <select class="assist-tier" bind:value={tier} onchange={keepTier} disabled={busy !== null} aria-label="How strong a model to ask"
+            title="How strong a model to ask. Usual: mid for questions and text, max for a figure. Set which models these are on the Axis page.">
+            <option value="">Usual</option>
+            <option value="low">Low{tiers ? ` · ${short(tiers.low)}` : ""}</option>
+            <option value="mid">Mid{tiers ? ` · ${short(tiers.mid)}` : ""}</option>
+            <option value="max">Max{tiers ? ` · ${short(tiers.max)}` : ""}</option>
+          </select>
           {#if busy}<button class="toggle" type="button" onclick={() => stop?.abort()}>Stop</button>{/if}
         </form>
       {:else}
@@ -230,7 +244,7 @@
       <header>
         <b>{busy === "figure" || reply?.mode === "figure" ? "Figure" : busy === "fill" || reply?.mode === "fill" ? "Suggested text" : "Answer"}</b>
         {#if busy}<span class="assist-meta">Writing…</span>
-        {:else if reply}<span class="assist-meta">{reply.model} · {money(reply.cost)}</span>{/if}
+        {:else if reply}<span class="assist-meta">{reply.tier ? `${reply.tier} · ` : ""}{reply.model} · {money(reply.cost)}</span>{/if}
         <button class="atlas-card-close" type="button" aria-label="Close the reply" onclick={closeReply}>×</button>
       </header>
       {#if failed}<p class="edit-message bad">{failed}</p>{/if}

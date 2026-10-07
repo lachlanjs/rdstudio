@@ -341,6 +341,26 @@
             },
             "description": "The model for each job ([teacher.models] in the user config)."
           },
+          "tiers": {
+            "type": "object",
+            "properties": {
+              "low": {
+                "type": "string"
+              },
+              "mid": {
+                "type": "string"
+              },
+              "max": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "low",
+              "mid",
+              "max"
+            ],
+            "description": "The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config)."
+          },
           "spending": {
             "type": "object",
             "properties": {
@@ -402,6 +422,7 @@
           "connected",
           "from",
           "models",
+          "tiers",
           "spending"
         ]
       },
@@ -415,6 +436,20 @@
         "required": [
           "url"
         ]
+      },
+      "TiersSet": {
+        "type": "object",
+        "properties": {
+          "low": {
+            "type": "string"
+          },
+          "mid": {
+            "type": "string"
+          },
+          "max": {
+            "type": "string"
+          }
+        }
       },
       "AiCheck": {
         "type": "object",
@@ -477,6 +512,15 @@
               "fill",
               "figure"
             ]
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "low",
+              "mid",
+              "max"
+            ],
+            "description": "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier."
           },
           "fix": {
             "type": "object",
@@ -1925,6 +1969,63 @@
           },
           "409": {
             "description": "The learner record is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/tiers": {
+      "put": {
+        "summary": "Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TiersSet"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a model's id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
             "content": {
               "application/json": {
                 "schema": {

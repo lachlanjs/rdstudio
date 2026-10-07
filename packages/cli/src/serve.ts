@@ -234,6 +234,7 @@ const AiState = z.object({
   connected: z.boolean(),
   from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
   models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
+  tiers: z.object({ low: z.string(), mid: z.string(), max: z.string() }).openapi({ description: "The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config)." }),
   spending: z.object({
     budget: z.number(), spent: z.number(), left: z.number(), warn: z.boolean(), stopped: z.boolean(), weekStart: z.string(),
     byFeature: Money, byModel: Money, byExercise: Money, calls: z.number(),
@@ -242,6 +243,14 @@ const AiState = z.object({
 const getAi = createRoute({
   method: "get", path: "/api/teacher/ai", summary: "Whether a model account is connected, the models by job, and this week's spending",
   responses: { 200: { description: "The state", content: { "application/json": { schema: AiState } } }, 403: teacherErrors[403] },
+});
+const putTiers = createRoute({
+  method: "put", path: "/api/teacher/tiers",
+  summary: "Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({ low: z.string().optional(), mid: z.string().optional(), max: z.string().optional() }).openapi("TiersSet") } }, required: true } },
+  responses: { 200: { description: "Set", content: { "application/json": { schema: AiState } } },
+    400: { description: "Not a model's id", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token, host not allowed, or read-only", content: { "application/json": { schema: ErrorBody } } } },
 });
 const connectAi = createRoute({
   method: "post", path: "/api/teacher/ai/connect", summary: "Start connecting an OpenRouter account: the address to send the browser to",
@@ -361,7 +370,7 @@ const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
   summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill); the reply streams as server-sent events: text, then done with the reply, or error. Nothing is written.",
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
-    mode: z.enum(["ask", "fill", "figure"]), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+    mode: z.enum(["ask", "fill", "figure"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
   }).openapi("NoteAssist") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
@@ -564,7 +573,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   // ---------------------------------------------------------------- models (OpenRouter)
   const aiState = () => {
     const k = models.apiKey();
-    return { connected: !!k, from: k?.from ?? null, models: models.models(), spending: models.spending(cfg) };
+    return { connected: !!k, from: k?.from ?? null, models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
   };
   app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
   // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
@@ -597,6 +606,17 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     }
   });
   app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(putTiers, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    if (readOnly) return refuse(c, 403, "this server is read-only (rdstudio serve --read-only)");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const next: Partial<Record<models.Tier, string>> = {};
+    for (const t of models.TIERS) if (typeof body[t] === "string") next[t] = body[t] as string;
+    try { models.setTiers(next); } catch (err) { return refuse(c, err instanceof models.ModelError ? err.status : 400, (err as Error).message); }
+    return json(c, 200, aiState(), true);
+  }) as never);
   app.openapi(checkAi, (async (c: Context) => {
     const refused = writeRefused(c, false);
     if (refused) return refused;
@@ -640,6 +660,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
     const str = (v: unknown) => (typeof v === "string" ? v : undefined), num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0);
     const a: assist.Ask = { note: c.req.param("id") ?? "", mode: body.mode as assist.Mode, body: str(body.body) ?? "", from: num(body.from), to: num(body.to), prompt: str(body.prompt), title: str(body.title) };
+    if ((models.TIERS as readonly string[]).includes(body.tier as string)) a.tier = body.tier as models.Tier;
     const fix = body.fix as { html?: unknown; problems?: unknown } | undefined;
     if (fix && typeof fix.html === "string" && Array.isArray(fix.problems)) a.fix = { html: fix.html, problems: fix.problems.filter((x) => typeof x === "string").slice(0, 12) as string[] };
     if (!(assist.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${assist.MODES.join(", ")}`);

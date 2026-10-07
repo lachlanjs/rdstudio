@@ -29,8 +29,18 @@ export const DEFAULT_MODELS: Record<Job, string> = {
   feedback: "anthropic/claude-sonnet-5.5",
   discuss: "anthropic/claude-sonnet-5.5",
   marking: "anthropic/claude-sonnet-5.5",
-  write: "anthropic/claude-sonnet-5.5", // text proposed in the note editor (assist.ts)
+  write: "anthropic/claude-sonnet-5.5", // was the editor's (assist.ts); it goes by tier now (T83), and this is kept so that old settings still read
   check: "google/gemini-3.8-flash",
+};
+// The editor's agent (assist.ts) does not go by job: the person picks how strong
+// a model each request is worth (T83). Three tiers, each a model, set in
+// [teacher.tiers] in the user config or from the app.
+export const TIERS = ["low", "mid", "max"] as const;
+export type Tier = (typeof TIERS)[number];
+export const DEFAULT_TIERS: Record<Tier, string> = {
+  low: "anthropic/claude-haiku-4.5",
+  mid: "anthropic/claude-sonnet-5.5",
+  max: "anthropic/claude-opus-5.5",
 };
 export const DEFAULT_WEEKLY_BUDGET = 10;
 /** Warn once this share of the week's budget is spent. */
@@ -53,6 +63,40 @@ const teacherSettings = (): Table => table(readToml(userConfigPath()).teacher);
 export function models(): Record<Job, string> {
   const set = table(teacherSettings().models);
   return Object.fromEntries(JOBS.map((j) => [j, typeof set[j] === "string" && set[j] ? (set[j] as string) : DEFAULT_MODELS[j]])) as Record<Job, string>;
+}
+
+export function tiers(): Record<Tier, string> {
+  const set = table(teacherSettings().tiers);
+  return Object.fromEntries(TIERS.map((t) => [t, typeof set[t] === "string" && set[t] ? (set[t] as string) : DEFAULT_TIERS[t]])) as Record<Tier, string>;
+}
+
+/** Set the tiers' models in the user config: the [teacher.tiers] table is written whole, the rest of the file left as it is. */
+export function setTiers(next: Partial<Record<Tier, string>>): Record<Tier, string> {
+  const now = tiers();
+  for (const t of TIERS) {
+    const m = next[t];
+    if (m === undefined) continue;
+    const id = String(m).trim();
+    if (!/^[\w.-]+\/[\w.:-]+$/.test(id)) throw new ModelError(`"${id}" is not a model's id: it is written as OpenRouter lists it, like ${DEFAULT_TIERS[t]}`, 400);
+    now[t] = id;
+  }
+  const path = userConfigPath();
+  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+  const lines = text.split("\n");
+  const block = ["[teacher.tiers]", ...TIERS.map((t) => `${t} = "${now[t]}"`)];
+  const head = lines.findIndex((l) => /^\s*\[teacher\.tiers\]\s*(#.*)?$/.test(l));
+  let out: string;
+  if (head < 0) out = `${text.replace(/\s*$/, "")}${text.trim() ? "\n\n" : ""}# The models Axis uses in the editor, by how strong a request is worth.\n${block.join("\n")}\n`;
+  else {
+    let end = lines.findIndex((l, i) => i > head && /^\s*\[/.test(l));
+    if (end < 0) end = lines.length;
+    while (end > head + 1 && !lines[end - 1]!.trim()) end--; // the blank lines before the next table stay
+    lines.splice(head, end - head, ...block);
+    out = lines.join("\n");
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, out, "utf8");
+  return now;
 }
 
 export function weeklyBudget(): number {
@@ -171,6 +215,8 @@ export interface Call {
   feature?: string; // defaults to the job
   messages: Message[];
   maxTokens?: number;
+  /** The model to use, where it is not the job's (a tier's, in the editor). */
+  model?: string;
   exercise?: string;
   /** Called with each piece of text as it streams. */
   onText?: (piece: string) => void;
@@ -194,7 +240,7 @@ export async function complete(call: Call): Promise<Reply> {
   if (!k) throw new ModelError("No OpenRouter key: connect an account on the Teacher page, or set OPENROUTER_API_KEY.", 409);
   const s = spending(call.cfg);
   if (s.stopped) throw new ModelError(`This week's budget ($${s.budget.toFixed(2)}) is spent. It renews on Monday; [teacher] weekly_budget in the user config changes it.`, 402);
-  const model = models()[call.job];
+  const model = call.model || models()[call.job];
   const res = await fetcher(`${OPENROUTER}/chat/completions`, {
     method: "POST",
     headers: {

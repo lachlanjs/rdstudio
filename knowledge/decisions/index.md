@@ -13,4 +13,5 @@
 * [Support a global bundle alongside project bundles](multiple-bundles.md) - A private ~/knowledge bundle holds cross-project knowledge; no links between bundles; promote moves concepts up.
 * [The agent is called Axis, in both modes](axis.md) - The teacher of Learning mode and the helper of Project mode are one agent with one name, Axis, chosen to pair with the Atlas.
 * [The grid Atlas replaces the continuous Atlas](grid-atlas.md) - The Atlas moves to a square grid of note blocks and rectangular folders with routes over cells; the circle and contour Atlas is kept switchable until the grid reaches parity, then deleted.
+* [The person chooses how strong a model each editor request gets, from three tiers](model-tiers.md) - Axis in the editor is asked at a tier (low, mid, max), each a model the person sets; rdstudio offers a usual tier per action and does not judge a request's difficulty itself.
 * [Verification goes stale only on significant edits](verification-staleness.md) - Significant edits bump generated.at; human verification older than that is stale.

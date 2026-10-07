@@ -101,8 +101,15 @@ with sync_playwright() as pw:
     check("…and what it drew on is listed", panel.locator(".assist-sources a").count() >= 1, panel.inner_text())
     said = sent(FAKE_REQUESTS[-1])
     check("…the model was given the note with the passage marked, and the notes it links to", "⟦" in said and "⟧" in said and "Notes this one links to" in said and "Why is this so?" in said, said[-600:])
+    check("…asked at the usual tier for a question, mid, whose model the reply names", FAKE_REQUESTS[-1]["model"] == "anthropic/claude-sonnet-5.5" and panel.locator(".assist-meta").inner_text().startswith("mid · "), (FAKE_REQUESTS[-1]["model"], panel.locator(".assist-meta").inner_text()))
     check("…and nothing in the note changed", p.locator(".edit-status").inner_text() == "No changes" and p.locator(".cm-suggest").count() == 0)
     panel.get_by_role("button", name="Close the reply").click()
+
+    # A tier chosen on the bar (T83): the request goes to that tier's model, and the choice is remembered.
+    pick = bar.get_by_label("How strong a model to ask")
+    check("the bar offers how strong a model to ask: the usual, or low, mid or max, each naming its model",
+          [o.strip() for o in pick.locator("option").all_inner_texts()] == ["Usual", "Low · claude-haiku-4.5", "Mid · claude-sonnet-5.5", "Max · claude-opus-5.5"], pick.locator("option").all_inner_texts())
+    pick.select_option("low")
 
     # Rewrite the selection: a suggestion, rejected.
     first.click(click_count=3)
@@ -112,6 +119,8 @@ with sync_playwright() as pw:
     expect(sg).to_contain_text("softened at short range", timeout=15000)
     check("Rewrite: the passage struck through and the proposed text beside it, to accept or reject", p.locator(".cm-suggest-old").count() >= 1 and sg.get_by_role("button", name="Accept").count() == 1)
     p.screenshot(path=str(OUT / "assist-rewrite.png"))
+    check("…asked at Low, the rewrite went to the low tier's model", FAKE_REQUESTS[-1]["model"] == "anthropic/claude-haiku-4.5" and p.evaluate("localStorage.getItem('rdstudio.assist.tier')") == "low", FAKE_REQUESTS[-1]["model"])
+    pick.select_option("")
     sg.get_by_role("button", name="Reject").click()
     check("Reject: the suggestion goes and the note is as it was", p.locator(".cm-suggest").count() == 0 and p.locator(".edit-status").inner_text() == "No changes" and old[:20] in p.inner_text(".cm-content"))
 
@@ -172,6 +181,26 @@ with sync_playwright() as pw:
     check("a figure that keeps animating while untouched is sent back twice, then not offered, and why is said",
           len(FAKE_REQUESTS) - before_n == 3 and "kept animating" in panel.inner_text() and p.locator(".assist-figure").count() == 0 and not (ROOT / "knowledge/design/softened-gravity-2.html").exists(), panel.inner_text())
 
+    check("…a figure is asked at max unless told otherwise", FAKE_REQUESTS[-1]["model"] == "anthropic/claude-opus-5.5", FAKE_REQUESTS[-1]["model"])
+
+    # The tiers' models are set on the Axis page (T83), into the user config.
+    p.once("dialog", lambda d: d.accept())
+    p.goto(URL + "?nosw#/teacher")
+    low = p.get_by_label("Low", exact=True)
+    expect(low).to_have_value("anthropic/claude-haiku-4.5", timeout=15000)
+    save = p.get_by_role("button", name="Save the models")
+    was_off = save.is_disabled()
+    low.fill("google/gemini-3.8-flash")
+    save.click()
+    expect(p.locator(".edit-status", has_text="The editor's models are set.")).to_be_visible()
+    conf = (TMP / "config/rdstudio/config.toml").read_text()
+    check("the Axis page sets which model each tier is, written to the user config", was_off and '[teacher.tiers]\nlow = "google/gemini-3.8-flash"' in conf, conf)
+    low.fill("not a model")
+    save.click()
+    expect(p.locator(".edit-status", has_text="not a model's id")).to_be_visible()
+    check("…and refuses what is not a model's id, saying how one is written", "written as OpenRouter lists it" in p.locator(".edit-status", has_text="not a model's id").inner_text() and "not a model" not in (TMP / "config/rdstudio/config.toml").read_text())
+    p.screenshot(path=str(OUT / "assist-tiers.png"), full_page=True)
+
     # No account: the bar says how to connect one.
     browser.close()
 
@@ -194,7 +223,7 @@ with sync_playwright() as pw:
     check("with no model account, the editor says how to connect one and offers nothing to ask", p.locator(".assist-bar").count() == 0 and p.locator(".assist-off a").get_attribute("href") == "#/teacher")
     browser.close()
 
-own = [e for e in errors if "undefinedHelper" not in e]  # the first figure's own error, inside the frame it was checked in
+own = [e for e in errors if "undefinedHelper" not in e and "400 (Bad Request)" not in e]  # the refused model id is a 400  # the first figure's own error, inside the frame it was checked in
 check("no errors in the browser console", not own, own[:5])
 server.terminate()
 shutil.rmtree(TMP, ignore_errors=True)

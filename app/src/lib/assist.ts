@@ -8,11 +8,12 @@ export type Mode = "ask" | "fill" | "figure";
 export interface Source { kind: "note" | "code"; id: string; title: string; line?: number }
 export interface Reply {
   mode: Mode; reply: string; answer: string; insert: string | null; from: number; to: number;
-  sources: Source[]; model: string; cost: number;
+  sources: Source[]; model: string; tier?: Tier; cost: number;
   /** figure: the artifact written, to be checked and shown before anything is saved. */
   artifact?: { title: string; caption: string; html: string } | null;
 }
-export interface Asking { mode: Mode; body: string; from: number; to: number; prompt?: string; title?: string; fix?: { html: string; problems: string[] } }
+export type Tier = "low" | "mid" | "max";
+export interface Asking { mode: Mode; tier?: Tier; body: string; from: number; to: number; prompt?: string; title?: string; fix?: { html: string; problems: string[] } }
 
 /** Ask; `onText` gets the reply as it is written. Resolves with the reply, or throws with the reason. */
 export async function askAssist(note: string, body: Asking, onText: (soFar: string) => void, signal?: AbortSignal): Promise<Reply> {

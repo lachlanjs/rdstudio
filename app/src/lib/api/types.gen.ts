@@ -135,6 +135,14 @@ export type AiState = {
     models: {
         [key: string]: string;
     };
+    /**
+     * The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config).
+     */
+    tiers: {
+        low: string;
+        mid: string;
+        max: string;
+    };
     spending: {
         budget: number;
         spent: number;
@@ -159,6 +167,12 @@ export type AiConnect = {
     url: string;
 };
 
+export type TiersSet = {
+    low?: string;
+    mid?: string;
+    max?: string;
+};
+
 export type AiCheck = {
     text: string;
     model: string;
@@ -176,6 +190,10 @@ export type TutorAsk = {
 
 export type NoteAssist = {
     mode: 'ask' | 'fill' | 'figure';
+    /**
+     * How strong a model to ask: the tier's model is used. Left out, the mode's usual tier.
+     */
+    tier?: 'low' | 'mid' | 'max';
     fix?: {
         html: string;
         problems: Array<string>;
@@ -925,6 +943,38 @@ export type PostApiTeacherAiConnectResponses = {
 };
 
 export type PostApiTeacherAiConnectResponse = PostApiTeacherAiConnectResponses[keyof PostApiTeacherAiConnectResponses];
+
+export type PutApiTeacherTiersData = {
+    body: TiersSet;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/tiers';
+};
+
+export type PutApiTeacherTiersErrors = {
+    /**
+     * Not a model's id
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+};
+
+export type PutApiTeacherTiersError = PutApiTeacherTiersErrors[keyof PutApiTeacherTiersErrors];
+
+export type PutApiTeacherTiersResponses = {
+    /**
+     * Set
+     */
+    200: AiState;
+};
+
+export type PutApiTeacherTiersResponse = PutApiTeacherTiersResponses[keyof PutApiTeacherTiersResponses];
 
 export type PostApiTeacherAiCheckData = {
     body?: never;
