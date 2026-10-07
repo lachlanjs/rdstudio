@@ -42,18 +42,26 @@
   <p class="section-note">This server does not call models yet: update rdstudio and restart rdstudio serve.</p>
 {:else}
   {@const sp = st.spending}
-  {#if st.connected}
+  {@const own = st.provider?.custom === true}
+  {#if own}
+    <!-- An organisation's own gateway ([teacher.provider] in the user config): nothing to sign in to here. -->
+    <p>Models come from <strong>{st.provider.name}</strong> (<code>{st.provider.host}</code>), set in <code>[teacher.provider]</code> in your user config.
+      {st.connected ? (st.from === "none" ? "It needs no key." : `Its key comes from ${st.from === "command" ? "a command" : st.from === "file" ? "a file" : "the environment"}.`) : "It has no key yet: set one as the provider's settings say."}
+      <code>rdstudio provider check</code> on the command line says what is wrong when a request fails.</p>
+  {:else if st.connected}
     <p>Connected to <strong>OpenRouter</strong>{st.from === "environment" ? " (the key is in OPENROUTER_API_KEY)" : ""}.</p>
   {:else}
     <p class="section-note">Working with Axis in the dashboard (hints, feedback, discussion) calls a model. Connect an OpenRouter account: you sign in there, and rdstudio keeps the key it is given beside your user config, never in a project.</p>
   {/if}
   <div class="teacher-actions">
-    {#if !st.connected}
+    {#if !st.connected && own}
+      <span class="section-note">Nothing can be asked until the key is set.</span>
+    {:else if !st.connected}
       <button class="toggle primary" type="button" disabled={busy || !learner.enabled} onclick={() => act(() => ai.connect())}>Connect OpenRouter</button>
       {#if !learner.enabled}<span class="section-note">Turn the learner record on first.</span>{/if}
     {:else}
       <button class="toggle" type="button" disabled={busy} onclick={() => act(async () => { const r = await ai.check(); status = `It answered "${r.text}" (${r.model}, ${money(r.cost)}).`; st = await ai.state(); })}>Check the connection</button>
-      {#if st.from === "file"}<button class="toggle" type="button" disabled={busy} onclick={() => act(async () => { if (confirm("Forget the OpenRouter key kept here?")) { st = await ai.disconnect(); status = "Forgotten."; } })}>Disconnect</button>{/if}
+      {#if st.from === "file" && !own}<button class="toggle" type="button" disabled={busy} onclick={() => act(async () => { if (confirm("Forget the OpenRouter key kept here?")) { st = await ai.disconnect(); status = "Forgotten."; } })}>Disconnect</button>{/if}
     {/if}
   </div>
   <p class="edit-status" role="status">{status}</p>
@@ -64,7 +72,8 @@
   </div>
   <p class="section-note">{money(sp.spent)} of {money(sp.budget)} this week, across your projects, in {sp.calls} {sp.calls === 1 ? "call" : "calls"}.
     {sp.stopped ? "The budget is spent: requests stop until Monday." : sp.warn ? "Most of the budget is spent." : ""}
-    The budget is <code>[teacher] weekly_budget</code> in the user config.</p>
+    The budget is <code>[teacher] weekly_budget</code> in the user config.
+    {#if own && !st.provider.priced}No prices are set for {st.provider.name}'s models, so spending shows as nothing and the budget stops nothing: set them under <code>[teacher.provider.prices]</code>.{/if}</p>
   {#if sp.calls}
     <table class="fm spend">
       <tbody>
@@ -80,7 +89,7 @@
   {/if}
 
   <h3 class="sub-h">Models in the editor</h3>
-  <p class="section-note">Asking Axis in a note, you choose how strong a model the request is worth. Each tier is a model, written as OpenRouter lists it.</p>
+  <p class="section-note">Asking Axis in a note, you choose how strong a model the request is worth. Each tier is a model, written as {own ? st.provider.name : "OpenRouter"} {own ? "names" : "lists"} it.</p>
   <form class="tiers" onsubmit={(e) => { e.preventDefault(); void act(async () => { st = await ai.setTiers({ low: tiers.low.trim(), mid: tiers.mid.trim(), max: tiers.max.trim() }); tiers = { ...st.tiers }; status = "The editor's models are set."; }); }}>
     {#each TIER as [k, label, hint] (k)}
       <label for="tier-{k}">{label}</label>
@@ -94,5 +103,5 @@
   <table class="fm spend">
     <tbody>{#each Object.entries(st.models).filter(([k]) => k !== "check" && k !== "write") as [job, model] (job)}<tr><th>{JOB[job] ?? job}</th><td><code>{model}</code></td></tr>{/each}</tbody>
   </table>
-  <p class="section-note">Set in <code>[teacher.models]</code> in the user config, by job: any model OpenRouter offers. A fast, cheap model suits hints; a strong one, feedback and marking.</p>
+  <p class="section-note">Set in <code>[teacher.models]</code> in the user config, by job: any model {own ? st.provider.name : "OpenRouter"} offers. A fast, cheap model suits hints; a strong one, feedback and marking.</p>
 {/if}

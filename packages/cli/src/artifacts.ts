@@ -101,12 +101,15 @@ export function lint(items: ArtifactRecord[], reportsDir: string, reports: strin
 // ------------------------------------------------------------------ the copy that is served
 
 /** What an artifact may load: itself and rdstudio's own libraries. No network. */
-export const POLICY = "default-src 'none'; script-src 'unsafe-inline' 'self'; style-src 'unsafe-inline' 'self'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; worker-src blob:; connect-src 'none'; form-action 'none'; base-uri 'none'";
+// ('unsafe-eval': Vega compiles a chart's expressions as functions, and without it no chart of the template's is
+// drawn. It gives an artifact nothing its own inline script does not already have.)
+export const POLICY = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'self'; style-src 'unsafe-inline' 'self'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; worker-src blob:; connect-src 'none'; form-action 'none'; base-uri 'none'";
 /** Sent with every artifact by rdstudio serve: it runs apart from the app (no access to its page, its storage or the write token), framed or opened on its own. */
 export const SANDBOX = "sandbox allow-scripts allow-pointer-lock";
 
 // The bridge: tells the page that frames the artifact its height, when it is ready, and anything that went
-// wrong; takes the theme's colours; and counts animation frames when asked, to tell whether it is idle.
+// wrong; takes the app's theme (which one, light or dark, and its colours: first from the address it is framed
+// at, so that it is never drawn in another, then by message whenever it changes); and counts animation frames when asked, to tell whether it is idle.
 const BRIDGE = `<script>(function(){
 var say=function(m){try{parent.postMessage(Object.assign({rdstudio:"artifact"},m),"*")}catch(e){}};
 var err=function(x){say({type:"error",message:String(x&&x.message||x).slice(0,300)})};
@@ -114,12 +117,15 @@ addEventListener("error",function(e){err(e.error||e.message||(e.target&&e.target
 addEventListener("unhandledrejection",function(e){err(e.reason)});
 var ce=console.error;console.error=function(){err(Array.prototype.join.call(arguments," "));ce.apply(console,arguments)};
 var frames=0,raf=window.requestAnimationFrame;window.requestAnimationFrame=function(f){frames++;return raf.call(window,f)};
+var root=document.documentElement,look=function(theme,mode){if(theme==="station")root.dataset.theme="station";else delete root.dataset.theme;
+ if(mode){root.dataset.mode=mode;root.style.colorScheme=mode==="light"?"light":"dark"}};
+try{var q=new URLSearchParams(location.search);if(q.get("mode")||q.get("theme"))look(q.get("theme"),q.get("mode"))}catch(e){}
 var size=function(){var d=document.documentElement,b=document.body;say({type:"size",height:Math.ceil(Math.max(d.scrollHeight,b?b.scrollHeight:0))})};
 addEventListener("load",function(){say({type:"ready",ms:Math.round(performance.now())});size();
  if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement)});
 addEventListener("message",function(e){var m=e.data||{};
  if(m.rdstudio==="theme"){var r=document.documentElement;for(var k in m.vars||{})r.style.setProperty(k,m.vars[k]);
-  r.dataset.mode=m.mode||"";r.style.colorScheme=m.mode==="light"?"light":"dark";size()}
+  look(m.theme,m.mode||"dark");size()}
  if(m.rdstudio==="probe"){var was=frames;setTimeout(function(){say({type:"idle",frames:frames-was,ms:m.ms||1000})},m.ms||1000)}});
 })();</script>`;
 
@@ -127,7 +133,14 @@ addEventListener("message",function(e){var m=e.data||{};
  *  `report.js` pointed at rdstudio's own copies from wherever it sits. */
 export function prepared(text: string, path: string, network: boolean): string {
   const up = "../".repeat(path.split("/").length); // served at a/<path>
-  const lead = (network ? "" : `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`) + BRIDGE;
+  // The policy names the server it came from as well as 'self'. An artifact is sandboxed, and to some browsers
+  // (WebKit: Safari, and every browser on an iPhone) a sandboxed page's 'self' is no origin at all, so that
+  // rdstudio's own stylesheet, themes and libraries were refused and the artifact was shown bare. Only the page
+  // knows the address it was reached at (a tunnel's, say), so its first script writes the policy; a short one
+  // that needs no address stands in case that script does not run.
+  const policy = `<meta http-equiv="Content-Security-Policy" content="connect-src 'none'; form-action 'none'; base-uri 'none'">`
+    + `<script>document.write('<meta http-equiv="Content-Security-Policy" content="'+${JSON.stringify(POLICY)}.replace(/'self'/g,"'self' "+location.protocol+"//"+location.host)+'">')</script>`;
+  const lead = (network ? "" : policy) + BRIDGE;
   let out = text.replace(/((?:src|href)\s*=\s*["'])(vendor\/|report\.(?:css|js)["'])/gi, `$1${up}$2`);
   if (/<head[^>]*>/i.test(out)) out = out.replace(/<head[^>]*>/i, (m) => m + lead);
   else if (/<html[^>]*>/i.test(out)) out = out.replace(/<html[^>]*>/i, (m) => m + "<head>" + lead + "</head>");

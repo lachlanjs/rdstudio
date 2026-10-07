@@ -2,31 +2,23 @@
 (function () {
   const SCRIPT_SRC = document.currentScript && document.currentScript.src;
 
-  // Follow the theme and mode chosen in the dashboard's Settings tab.
+  // The theme and the mode are the app's: the frame's bridge sets them on this page (data-theme, data-mode)
+  // before anything is drawn, and again whenever they change. The theme files come with report.css. An
+  // artifact is sandboxed, so it cannot read the app's settings itself. What is drawn from the colours
+  // (charts) waits for the stylesheets, and is drawn again when the theme changes.
   function applyTheme() {
     return new Promise((resolve) => {
-      try {
-        const mode = localStorage.getItem("rdstudio.mode");
-        document.documentElement.dataset.mode = mode === "light" || mode === "system" ? mode : "dark";
-        if (SCRIPT_SRC) {
-          const link = document.createElement("link");
-          link.rel = "stylesheet";
-          link.href = new URL("themes/marginalia.css", SCRIPT_SRC).href;
-          link.onload = link.onerror = () => resolve();
-          document.head.append(link);
-          if (localStorage.getItem("rdstudio.theme") === "station") { // Station restyles Marginalia: its tokens load after
-            document.documentElement.dataset.theme = "station";
-            const over = document.createElement("link");
-            over.rel = "stylesheet";
-            over.href = new URL("themes/station.css", SCRIPT_SRC).href;
-            document.head.append(over);
-          }
-          return;
-        }
-      } catch (err) { /* storage unavailable: the default theme applies */ }
-      resolve();
+      if (document.readyState === "complete") resolve();
+      else addEventListener("load", () => resolve(), { once: true });
     });
   }
+  const look = () => `${document.documentElement.dataset.theme || ""}|${document.documentElement.dataset.mode || ""}|${css("--surface")}|${css("--text")}`;
+  let drawnFor = null, again = 0;
+  addEventListener("message", (e) => {
+    if (!e.data || e.data.rdstudio !== "theme" || drawnFor === null) return;
+    clearTimeout(again);
+    again = setTimeout(() => { if (look() !== drawnFor) renderCharts(); }, 60); // after the bridge has set the page
+  });
 
   function css(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -61,6 +53,8 @@
 
   function renderCharts() {
     if (!window.vegaEmbed) return;
+    drawnFor = look();
+    for (const old of document.querySelectorAll("div.chart")) old.remove(); // drawn before, in other colours
     for (const script of document.querySelectorAll('script.vega-lite[type="application/json"]')) {
       const holder = document.createElement("div");
       holder.className = "chart";

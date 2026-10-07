@@ -114,7 +114,7 @@ with sync_playwright() as pw:
     embed = p.locator('.artifact-embed[data-artifact="design/wave.html"]')
     expect(embed.locator("iframe")).to_be_visible(timeout=15000)
     p.wait_for_function("() => document.querySelector('.artifact-embed[data-artifact=\"design/wave.html\"]').classList.contains('ready')", timeout=15000)
-    frame = next(f for f in p.frames if f.url.endswith("/a/design/wave.html"))
+    frame = next(f for f in p.frames if "/a/design/wave.html" in f.url)
     p.wait_for_timeout(1200)
     res = frame.evaluate("window.__r")
     check("an embed runs: a script draws on a canvas, and a library from rdstudio's own vendor folder loads and renders", res.get("katex") is True and res.get("rendered") is True and res.get("drawn") == 2, res)
@@ -236,6 +236,54 @@ with sync_playwright() as pw:
     check("a note's links to notes are as they were: citing an artifact adds none, and an artifact adds none back", waves["links"] == [] and waves["backlinks"] == [] and len(waves["cites"]) == 6, waves)
     own = [e for e in errors if "undefinedFunction" not in e]  # the broken artifact's own error, inside its frame
     check("no errors in the app's own page", not own, own[:4])
+    # (Written now, so that the checks above count what they counted.)
+    WRITEUP = """<!doctype html><html><head><meta charset="utf-8"><title>A write-up</title>
+<link rel="stylesheet" href="report.css"><script defer src="vendor/vega/vega.min.js"></script><script defer src="vendor/vega/vega-lite.min.js"></script><script defer src="vendor/vega/vega-embed.min.js"></script><script defer src="report.js"></script></head>
+<body><main><h1>A write-up</h1><p class="summary">What was done. <a href="#x">A link</a>.</p>
+<script type="application/json" class="vega-lite">{"data":{"values":[{"a":"x","b":1},{"a":"y","b":2}]},"mark":"bar","encoding":{"x":{"field":"a","type":"nominal"},"y":{"field":"b","type":"quantitative"}},"height":80}</script>
+</main></body></html>"""
+    put("knowledge/design/writeup.html", WRITEUP)
+    for _ in range(100):
+        try:
+            urllib.request.urlopen(URL + "a/design/writeup.html"); break
+        except Exception:
+            time.sleep(0.2)
+    time.sleep(1.5)  # the site is built again with it in the list
+    # An artifact follows the theme chosen in the app, and light or dark: from its first paint, and when they change.
+    def looks(page, name):
+        fr = next(f for f in page.frames if name in f.url and f != page.main_frame)
+        fr.wait_for_selector("div.chart svg", timeout=15000) if "writeup" in name else None
+        inside = fr.evaluate("""() => { const cs = getComputedStyle(document.documentElement), b = getComputedStyle(document.body), ax = document.querySelector('div.chart svg .role-axis-label text');
+            return { theme: document.documentElement.dataset.theme || '', mode: document.documentElement.dataset.mode, bg: cs.backgroundColor, surface: cs.getPropertyValue('--surface').trim(), text: cs.getPropertyValue('--text').trim(),
+                     font: b.fontFamily, size: b.fontSize, axis: ax ? ax.getAttribute('fill') : '' }; }""")
+        outside = page.evaluate("() => { const cs = getComputedStyle(document.documentElement); return { surface: cs.getPropertyValue('--surface').trim(), text: cs.getPropertyValue('--text').trim(), soft: cs.getPropertyValue('--text-soft').trim(), size: cs.getPropertyValue('--text-size').trim() }; }")
+        return inside, outside
+    t = browser.new_page(viewport={"width": 1100, "height": 800})
+    t.on("pageerror", lambda e: errors.append(str(e)))
+    t.add_init_script("try { localStorage.setItem('rdstudio.theme', 'station'); localStorage.setItem('rdstudio.mode', 'light'); } catch (e) {}")
+    t.goto(URL + "?nosw#/a/design/writeup.html")
+    t.wait_for_selector(".artifact.ready", timeout=15000)
+    inside, outside = looks(t, "writeup.html")
+    check("an artifact made from the template is in the app's theme and mode: Station, light, with its colours, type and chart",
+          inside["theme"] == "station" and inside["mode"] == "light" and inside["surface"] == outside["surface"] == "#e4eaee" and inside["text"] == outside["text"]
+          and "Ioskeley" in inside["font"] and inside["size"] == outside["size"] == "15px" and inside["axis"].lower() == outside["soft"].lower(), f"{inside} {outside}")
+    check("…from its first paint: the theme is in the address it is framed at", "theme=station&mode=light" in next(f.url for f in t.frames if "writeup.html" in f.url and f != t.main_frame))
+    t.screenshot(path=str(OUT / "artifact-station-light.png"))
+    # Changed while it is open: the artifact follows, and its chart is drawn again in the new colours.
+    t.evaluate("() => { document.documentElement.dataset.theme = 'marginalia'; document.documentElement.dataset.mode = 'dark'; }")
+    t.wait_for_function("() => true")
+    t.wait_for_timeout(700)
+    inside, outside = looks(t, "writeup.html")
+    check("…and when the theme is changed while it is open: Marginalia, dark, the chart drawn again",
+          inside["theme"] == "" and inside["mode"] == "dark" and inside["surface"] == outside["surface"] == "#0d1219" and "Charter" in inside["font"] and inside["axis"].lower() == outside["soft"].lower(), f"{inside} {outside}")
+    t.screenshot(path=str(OUT / "artifact-marginalia-dark.png"))
+    # One written without the template still gets the colours, as variables.
+    t.goto(URL + "?nosw#/a/design/wave.html")
+    t.wait_for_selector(".artifact.ready", timeout=15000)
+    t.wait_for_timeout(300)
+    inside, outside = looks(t, "wave.html")
+    check("an artifact written without the template is given the theme's colours as variables", inside["surface"] == outside["surface"] and inside["text"] == outside["text"] and inside["theme"] == "station", f"{inside} {outside}")
+    t.close()
     browser.close()
 
 server.terminate()

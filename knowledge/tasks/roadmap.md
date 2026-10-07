@@ -157,14 +157,15 @@ supersedes. Their numbers clashed with the ones above, so three were renumbered.
 
 # M14 — Axis finds things
 
-In the order agreed on 2026-10-07.
+In the order agreed on 2026-10-07. Written up in
+[M14: Axis finds things](m14-axis-finds-things.html).
 
-- [ ] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
-- [ ] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
-- [ ] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
-- [ ] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
-- [ ] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
-- [ ] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
+- [x] [T85 Ask Atlas, first version](/tasks/T85-ask-atlas.md)
+- [x] [T86 Axis reads the code index: outlines and symbols](/tasks/T86-code-index-tools.md)
+- [x] [T87 Trial: a small embedding model through WebAssembly](/tasks/T87-embedding-runtime-trial.md)
+- [x] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
+- [x] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
+- [x] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
 
 # Future
 

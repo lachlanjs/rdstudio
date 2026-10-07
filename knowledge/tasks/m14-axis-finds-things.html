@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M14: Axis finds things</title>
+<meta name="rdstudio:date" content="2026-10-07">
+<meta name="rdstudio:author" content="claude-code/claude-opus-5-5">
+<meta name="description" content="Write-up of milestone M14: Ask Atlas, code index tools for Axis, and search by meaning, with the trial's and the measure's figures.">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<link rel="stylesheet" href="report.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/auto-render.min.js"></script>
+<script defer src="vendor/vega/vega.min.js"></script>
+<script defer src="vendor/vega/vega-lite.min.js"></script>
+<script defer src="vendor/vega/vega-embed.min.js"></script>
+<script defer src="report.js"></script>
+</head>
+<body>
+<main>
+  <header class="report-head">
+    <p class="report-meta">Report, 2026-10-07, claude-code/claude-opus-5-5</p>
+    <h1>M14: Axis finds things</h1>
+  </header>
+
+  <p class="summary">All six tasks of the milestone are built, on the branch <code>feat/axis-finds</code>. A question can be asked on the Atlas and is answered beside the map, with the notes it came from marked. Axis has two more tools over the code index. Notes can be searched by meaning with a small model that runs on the device. Nothing is merged or pushed.</p>
+
+  <h2>What changed</h2>
+  <ul>
+    <li><b>T85, Ask Atlas.</b> A box on the Atlas, an answer card, and marks on the map: notes found, links followed, a passage beside each note the answer rests on. Each sentence the model quotes is checked against its note. <code>packages/cli/src/atlasask.ts</code>, <code>app/src/lib/views/ask.js</code>, <code>gridmap.js</code>.</li>
+    <li><b>T86, code index tools.</b> <code>search_symbols</code> and <code>outline_code</code> in <code>lookup.ts</code>.</li>
+    <li><b>T87, the trial.</b> The embedding model through WebAssembly, timed and sized.</li>
+    <li><b>T88, the measure.</b> 45 questions with known answers in <code>bench/retrieval/</code>.</li>
+    <li><b>T89, search by meaning.</b> <code>packages/cli/src/embed.ts</code>, the tool <code>find_similar</code> for Axis and on the MCP server, a cache in <code>.rdstudio/</code>, and code search that works without git.</li>
+    <li><b>T90.</b> A third mark on the Atlas for notes found by meaning.</li>
+    <li>Two new dependencies of the command line: <code>onnxruntime-web</code> and <code>@huggingface/tokenizers</code>.</li>
+    <li>Notes: the designs "Ask Atlas" and "Search by meaning", and each task's Done or Result section.</li>
+  </ul>
+
+  <h2>Results</h2>
+
+  <h3>The measure</h3>
+  <p>The share of 45 questions for which a note that answers is among the first k notes returned, on this knowledge base, with the built code.</p>
+  <script type="application/json" class="vega-lite">
+  {
+    "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+    "data": { "values": [
+      { "search": "Keyword", "k": "First", "share": 49 }, { "search": "Keyword", "k": "First 3", "share": 62 }, { "search": "Keyword", "k": "First 5", "share": 64 }, { "search": "Keyword", "k": "First 10", "share": 71 },
+      { "search": "By meaning", "k": "First", "share": 62 }, { "search": "By meaning", "k": "First 3", "share": 71 }, { "search": "By meaning", "k": "First 5", "share": 76 }, { "search": "By meaning", "k": "First 10", "share": 84 },
+      { "search": "Either", "k": "First", "share": 73 }, { "search": "Either", "k": "First 3", "share": 80 }, { "search": "Either", "k": "First 5", "share": 80 }, { "search": "Either", "k": "First 10", "share": 87 }
+    ] },
+    "mark": { "type": "bar", "tooltip": true },
+    "encoding": {
+      "x": { "field": "k", "type": "nominal", "sort": ["First", "First 3", "First 5", "First 10"], "title": null, "axis": { "labelAngle": 0 } },
+      "xOffset": { "field": "search", "sort": ["Keyword", "By meaning", "Either"] },
+      "y": { "field": "share", "type": "quantitative", "title": "Questions answered (%)", "scale": { "domain": [0, 100] } },
+      "color": { "field": "search", "sort": ["Keyword", "By meaning", "Either"], "title": null }
+    },
+    "height": 220
+  }
+  </script>
+  <p class="chart-caption">From <code>mise run bench:retrieval</code>. "Either" asks both and takes the better place.</p>
+  <ul>
+    <li>The questions were written by the agent, who knew the notes, in words the notes avoid. That favours search by meaning.</li>
+    <li>Each search is one query. In the one real trial on a question keyword search missed, the model reworded its keyword searches, found the answer, and never called search by meaning. So these figures understate keyword search in an agent's hands.</li>
+    <li>45 questions: one question is two points.</li>
+  </ul>
+
+  <h3>The model's cost</h3>
+  <table>
+    <thead><tr><th>What</th><th>Figure</th></tr></thead>
+    <tbody>
+      <tr><td>Added to the package</td><td>49 MB on disk, 28 MB compressed</td></tr>
+      <tr><td>One query</td><td>11 ms in Node; 28 ms in a browser slowed four times</td></tr>
+      <tr><td>First pass over this base (665 pieces)</td><td>87 s on one process, 25 s on four</td></tr>
+      <tr><td>An edited section</td><td>about 0.13 s</td></tr>
+      <tr><td>The cache for this base</td><td>0.36 MB</td></tr>
+      <tr><td>Memory while embedding</td><td>about 360 MB a process</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Checks</h3>
+  <ul>
+    <li>Unit tests: 137 in the command line, 54 in the app, 207 in the core, all passing.</li>
+    <li>Walkthroughs passing: Ask Atlas 27 of 27, the editor's agent 29 of 29, editing 26 of 26, the code map 23 of 23, artifacts 29 of 29.</li>
+    <li>Knowledge lint: 165 concepts, no errors or warnings.</li>
+    <li>Three requests to a real model, about 12 US cents of OpenRouter credit in all.</li>
+  </ul>
+
+  <h2>Deviations and issues</h2>
+  <ul>
+    <li>T89 was conditional on the measure. The agent judged the measure to support it and went ahead; the decision is yours to reverse.</li>
+    <li>The model is not in git (34 MB). A checkout fetches it with <code>mise run embed:model</code>; the npm package carries it. Without it, search by meaning is simply not offered.</li>
+    <li>The Python wheel carries no model.</li>
+    <li>WebKit was not tested: only Chromium is installed here. The desktop and phone apps would use WebKit on Apple devices and Linux.</li>
+    <li>The code index reads Python and C++ only, so the two code tools do nothing useful in this repository, which is TypeScript.</li>
+    <li>Ask Atlas marks nothing in the code view, and maths in the answer card is not typeset.</li>
+    <li>The measure scores by note, not by section as planned.</li>
+    <li>The walkthroughs for learning, the teacher, composing and reshaping (T73) and sign-in were not run; they were already failing or flaky before this work.</li>
+  </ul>
+
+  <section class="todo">
+    <h2>For you to do</h2>
+    <ul>
+      <li>Try Ask Atlas: <code>mise run serve</code>, open the Atlas, and ask from the box at the top right.</li>
+      <li>Decide whether a 49 MB larger package is acceptable, now that the gain is measured.</li>
+      <li>Say whether to merge <code>feat/artifacts</code> and <code>feat/axis-finds</code> into <code>main</code>. The second is branched from the first.</li>
+      <li>Consider writing ten or so questions of your own into <code>bench/retrieval/questions.json</code>, for a fairer measure.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

@@ -105,6 +105,21 @@ Add `?nosw` to the address to bypass the copy.
   # path = "~/knowledge/learning"   # optional: somewhere versioned and private
   ```
 
+- **Models inside the app** (Axis in the editor, Ask Atlas, the tutor) call
+  OpenRouter: connect an account on the Axis page. To use a gateway your
+  organisation runs instead (any OpenAI-compatible one, with its own
+  certificate authority, client certificate or proxy), add this to
+  `~/.config/rdstudio/config.toml` and run `rdstudio provider check`:
+
+  ```toml
+  [teacher.provider]
+  url = "https://ai.example.com/v1"
+  key_env = "MY_AI_KEY"
+  ca_file = "/etc/ssl/certs/my-org-ca.pem"
+  ```
+
+  Every setting, and where to patch what they do not cover, is in
+  `knowledge/procedures/enterprise-models.md`.
 - **Static site:** `rdstudio export <dir>` writes a snapshot that any static
   host can serve (see below).
 

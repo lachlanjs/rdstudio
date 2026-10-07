@@ -6,7 +6,7 @@ node = "24"  # LTS; the TypeScript packages (npm workspaces)
 
 [tasks.setup]
 description = "Install every dependency group and the benchmark browser"
-run = ["mise install", "uv sync --all-groups", "npm install", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
+run = ["mise install", "uv sync --all-groups", "npm install", "node packages/cli/scripts/embed-model.ts", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
 description = "Run every test: Python, then the TypeScript packages"
@@ -106,10 +106,18 @@ run = "npm run build --workspace @rdstudio/app"
 description = "Type-check the Svelte dashboard (svelte-check)"
 run = "npm run check --workspace @rdstudio/app"
 
+[tasks."embed:model"]
+description = "Fetch the model for search by meaning (34 MB, checked against its SHA-256) into packages/cli/models/; the release packs it, so only a checkout needs this"
+run = "node packages/cli/scripts/embed-model.ts"
+
+[tasks."bench:retrieval"]
+description = "Score keyword search and search by meaning on questions with known answers (bench/retrieval/)"
+run = "node bench/retrieval/measure.ts"
+
 [tasks.generate]
 description = "Regenerate the dashboard's typed API client from rdstudio serve's schemas (OpenAPI, HeyAPI)"
 run = "npm run generate --workspace @rdstudio/app"
 
 [tasks.e2e]
-description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing; maths, diagrams and tables in the editor, its toolbar and the phone sheet; creating, moving and deleting notes, also from the map; signing in again through a tunnel; the learning features; the teacher; the code map; an agent in the editor; artifacts and pictures); screenshots in .e2e/"
-run = ["uv run --group bench python e2e/edit.py", "uv run --group bench python e2e/compose.py", "uv run --group bench python e2e/reshape.py", "uv run --group bench python e2e/signin.py", "uv run --group bench python e2e/learn.py", "uv run --group bench python e2e/teacher.py", "uv run --group bench python e2e/code.py", "uv run --group bench python e2e/assist.py", "uv run --group bench python e2e/artifacts.py"]
+description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing; maths, diagrams and tables in the editor, its toolbar and the phone sheet; creating, moving and deleting notes, also from the map; signing in again through a tunnel; the learning features; the teacher; the code map; an agent in the editor; artifacts and pictures; Ask Atlas); screenshots in .e2e/"
+run = ["uv run --group bench python e2e/edit.py", "uv run --group bench python e2e/compose.py", "uv run --group bench python e2e/reshape.py", "uv run --group bench python e2e/signin.py", "uv run --group bench python e2e/learn.py", "uv run --group bench python e2e/teacher.py", "uv run --group bench python e2e/code.py", "uv run --group bench python e2e/assist.py", "uv run --group bench python e2e/artifacts.py", "uv run --group bench python e2e/ask.py"]

@@ -128,7 +128,19 @@ export type AiState = {
     /**
      * Where the key comes from.
      */
-    from: 'environment' | 'file' | null;
+    from: 'environment' | 'file' | 'command' | 'none' | null;
+    provider: {
+        name: string;
+        host: string;
+        /**
+         * True for a gateway set in the user config ([teacher.provider]); false for OpenRouter.
+         */
+        custom: boolean;
+        /**
+         * Whether spending can be known: OpenRouter reports it; a gateway needs prices set.
+         */
+        priced: boolean;
+    };
     /**
      * The model for each job ([teacher.models] in the user config).
      */
@@ -203,6 +215,15 @@ export type NoteAssist = {
     to: number;
     prompt?: string;
     title?: string;
+};
+
+export type AtlasAsk = {
+    question: string;
+    /**
+     * Where the asker is on the map: a note's id or a folder. Left out, the whole map.
+     */
+    start?: string;
+    tier?: 'low' | 'mid' | 'max';
 };
 
 export type DraftSummary = {
@@ -1093,6 +1114,42 @@ export type PostApiNotesByIdAssistResponses = {
 };
 
 export type PostApiNotesByIdAssistResponse = PostApiNotesByIdAssistResponses[keyof PostApiNotesByIdAssistResponses];
+
+export type PostApiAtlasAskData = {
+    body: AtlasAsk;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/atlas/ask';
+};
+
+export type PostApiAtlasAskErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No model account is connected
+     */
+    409: Error;
+};
+
+export type PostApiAtlasAskError = PostApiAtlasAskErrors[keyof PostApiAtlasAskErrors];
+
+export type PostApiAtlasAskResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiAtlasAskResponse = PostApiAtlasAskResponses[keyof PostApiAtlasAskResponses];
 
 export type GetApiTeacherDraftsData = {
     body?: never;

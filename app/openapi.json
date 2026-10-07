@@ -330,9 +330,36 @@
             "enum": [
               "environment",
               "file",
+              "command",
+              "none",
               null
             ],
             "description": "Where the key comes from."
+          },
+          "provider": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "custom": {
+                "type": "boolean",
+                "description": "True for a gateway set in the user config ([teacher.provider]); false for OpenRouter."
+              },
+              "priced": {
+                "type": "boolean",
+                "description": "Whether spending can be known: OpenRouter reports it; a gateway needs prices set."
+              }
+            },
+            "required": [
+              "name",
+              "host",
+              "custom",
+              "priced"
+            ]
           },
           "models": {
             "type": "object",
@@ -421,6 +448,7 @@
         "required": [
           "connected",
           "from",
+          "provider",
           "models",
           "tiers",
           "spending"
@@ -561,6 +589,29 @@
           "body",
           "from",
           "to"
+        ]
+      },
+      "AtlasAsk": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "description": "Where the asker is on the map: a note's id or a folder. Left out, the whole map."
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "low",
+              "mid",
+              "max"
+            ]
+          }
+        },
+        "required": [
+          "question"
         ]
       },
       "DraftSummary": {
@@ -2200,6 +2251,73 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NoteAssist"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-sent events",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token or host not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No model account is connected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/atlas/ask": {
+      "post": {
+        "summary": "Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer, or error. Nothing is written.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtlasAsk"
               }
             }
           }

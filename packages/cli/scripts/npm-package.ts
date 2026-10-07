@@ -34,6 +34,14 @@ cpSync(join(REPO, "src", "rdstudio", "web"), join(OUT, "web"), { recursive: true
 cpSync(join(REPO, "src", "rdstudio", "templates"), join(OUT, "templates"), { recursive: true });
 cpSync(join(REPO, "LICENSE"), join(OUT, "LICENSE"));
 
+// Search by meaning (T89): the model and the runtime's binary go beside the command line, so nothing is fetched
+// when it is used. The checksums are checked by the script that fetches the model.
+execFileSync("node", [join(REPO, "packages", "cli", "scripts", "embed-model.ts")], { stdio: ["ignore", "ignore", "inherit"] });
+const MODEL = join(REPO, "packages", "cli", "models", "bge-small-en-v1.5");
+mkdirSync(join(OUT, "embed"));
+for (const f of ["model.onnx", "tokenizer.json", "tokenizer_config.json"]) cpSync(join(MODEL, f), join(OUT, "embed", f));
+cpSync(join(REPO, "node_modules", "onnxruntime-web", "dist", "ort-wasm-simd-threaded.wasm"), join(OUT, "embed", "ort.wasm"));
+
 writeFileSync(join(OUT, "package.json"), JSON.stringify({
   name: "rdstudio",
   version,
@@ -46,7 +54,7 @@ writeFileSync(join(OUT, "package.json"), JSON.stringify({
   keywords: ["knowledge-base", "okf", "mcp", "agents", "research", "claude-code", "opencode", "learning"],
   type: "module",
   bin: { rdstudio: "rdstudio.mjs" },
-  files: ["rdstudio.mjs", "web/", "templates/"],
+  files: ["rdstudio.mjs", "web/", "templates/", "embed/"],
   engines: { node: ">=24" },
 }, null, 2) + "\n");
 

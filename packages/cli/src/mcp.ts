@@ -16,6 +16,7 @@ import { loadBundle, writeIndexes } from "@rdstudio/core/node";
 import { brief } from "./brief.ts";
 import { fromConfig } from "./classifier.ts";
 import type { Config } from "./config.ts";
+import * as embed from "./embed.ts";
 import { propose } from "./procedures.ts";
 import * as refs from "./references.ts";
 import { PyFloat, pyDumps } from "./pyjson.ts";
@@ -59,6 +60,21 @@ export function createServer(cfg: Config, version: string): McpServer {
   tool("brief", `A short orientation to the project knowledge base: what exists, active
 tasks, what awaits the developer and recent commits. Call it at the start
 of a session unless one was already provided.`, {}, () => brief(cfg));
+
+  // Search by meaning (T89), where the model for it is installed: second to the keyword search.
+  if (embed.available()) server.registerTool("find_similar", { description: `Find concepts by meaning: ones that say something like the text given, even
+in quite other words. Runs a small model on this machine; nothing is sent
+anywhere. Use it after search and the links of the concepts in hand have not
+found what is needed. Give a question or a sentence, not keywords. Returns
+each concept's nearest section and how alike it is (0 to 1); read before
+relying on one. Project knowledge base only.`, inputSchema: { text: z.string(), under: opt(z.string()), limit: z.number().int().default(6) } },
+    (async ({ text, under, limit }: { text: string; under?: string | null; limit: number }) => {
+      const b = bundle();
+      const found = await embed.similar(cfg, b, text, { limit, under: under ?? undefined });
+      if (!found.ready) return reply("Search by meaning is still being prepared for this knowledge base (the first time takes a minute or two). Use search for now.");
+      return reply(JSON.stringify({ results: found.hits.map((h) => { const c = b.concepts.get(h.note)!; return { id: h.note, title: c.title, type: c.type, description: c.description, section: h.heading, alike: Number(h.score.toFixed(3)), snippet: h.body.replace(/\s+/g, " ").slice(0, 200) }; }),
+        ...(found.pending ? { pending: `${found.pending} sections changed lately are not searched by meaning yet` } : {}) }, null, 1));
+    }) as never);
 
   tool("search", `Keyword (BM25) search over the knowledge base. Returns concept ids, titles,
 descriptions and a one-line snippet. Filter by concept type (e.g. "Decision"),

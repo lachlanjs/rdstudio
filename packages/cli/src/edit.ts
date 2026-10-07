@@ -6,6 +6,7 @@
 // changed since (an agent or another device wrote it).
 
 import { createHash } from "node:crypto";
+import { provider } from "./provider.ts";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { isMap } from "yaml";
@@ -59,7 +60,12 @@ function sourceOf(root: string, path: string, text: string): NoteSource {
 
 /** The stamp's `by` for a note a person wrote with a model's text in it: "human:x with openrouter/model". */
 export function withModels(actor: string, modelNames: string[]): string {
-  const names = [...new Set(modelNames.map((m) => m.trim()).filter((m) => /^[\w./:@-]{1,120}$/.test(m)))].map((m) => (m.includes("/") && !m.startsWith("openrouter/") ? "openrouter/" + m : m));
+  const names = [...new Set(modelNames.map((m) => m.trim()).filter((m) => /^[\w./:@-]{1,120}$/.test(m)))].map((m) => {
+    // Named with where it was reached: openrouter/vendor/model, or a gateway's own name before its model's.
+    const p = provider();
+    if (p.custom) return m.startsWith(p.name + "/") ? m : `${p.name}/${m}`;
+    return m.includes("/") && !m.startsWith("openrouter/") ? "openrouter/" + m : m;
+  });
   const [who, already = ""] = actor.split(" with ");
   const all = [...new Set([...already.split(/,\s*/).filter(Boolean), ...names])];
   return all.length ? `${who} with ${all.join(", ")}` : who!;

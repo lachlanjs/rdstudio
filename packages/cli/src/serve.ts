@@ -27,6 +27,8 @@ import * as teacher from "./teacher.ts";
 import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
+import * as atlasask from "./atlasask.ts";
+import * as embed from "./embed.ts";
 import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
 import { historySince } from "./gitlog.ts";
@@ -232,7 +234,9 @@ const fileDraftRoute = createRoute({
 const Money = z.record(z.string(), z.number());
 const AiState = z.object({
   connected: z.boolean(),
-  from: z.enum(["environment", "file"]).nullable().openapi({ description: "Where the key comes from." }),
+  from: z.enum(["environment", "file", "command", "none"]).nullable().openapi({ description: "Where the key comes from." }),
+  provider: z.object({ name: z.string(), host: z.string(), custom: z.boolean().openapi({ description: "True for a gateway set in the user config ([teacher.provider]); false for OpenRouter." }),
+    priced: z.boolean().openapi({ description: "Whether spending can be known: OpenRouter reports it; a gateway needs prices set." }) }),
   models: z.record(z.string(), z.string()).openapi({ description: "The model for each job ([teacher.models] in the user config)." }),
   tiers: z.object({ low: z.string(), mid: z.string(), max: z.string() }).openapi({ description: "The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config)." }),
   spending: z.object({
@@ -372,6 +376,17 @@ const assistNote = createRoute({
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
     mode: z.enum(["ask", "fill", "figure"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
   }).openapi("NoteAssist") } }, required: true } },
+  responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
+    400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
+    403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
+    409: { description: "No model account is connected", content: { "application/json": { schema: ErrorBody } } } },
+});
+const askAtlas = createRoute({
+  method: "post", path: "/api/atlas/ask",
+  summary: "Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer, or error. Nothing is written.",
+  request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
+    question: z.string(), start: z.string().optional().openapi({ description: "Where the asker is on the map: a note's id or a folder. Left out, the whole map." }), tier: z.enum(["low", "mid", "max"]).optional(),
+  }).openapi("AtlasAsk") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
     403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
@@ -573,13 +588,18 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
   // ---------------------------------------------------------------- models (OpenRouter)
   const aiState = () => {
     const k = models.apiKey();
-    return { connected: !!k, from: k?.from ?? null, models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
+    const p = models.provider();
+    let host = p.url;
+    try { host = new URL(p.url).host; } catch { /* as written */ }
+    return { connected: !!k, from: k?.from ?? null, provider: { name: p.custom ? p.name : "OpenRouter", host, custom: p.custom, priced: !p.custom || Object.keys(p.prices).length > 0 },
+      models: models.models(), tiers: models.tiers(), spending: models.spending(cfg) };
   };
   app.openapi(getAi, ((c: Context) => (hostOk(c) ? json(c, 200, aiState()) : json(c, 403, { error: "host not allowed" }))) as never);
   // Connecting: OAuth with PKCE. The verifier waits here, by state, for ten minutes.
   const pending = new Map<string, { verifier: string; until: number }>();
   const b64url = (b: Buffer) => b.toString("base64url");
   app.openapi(connectAi, ((c: Context) => tourChange(c, () => {
+    if (models.provider().custom) throw new StoreError(`models come from ${models.provider().name}, set in the user config ([teacher.provider]): there is no account to connect here`);
     for (const [k, v] of pending) if (v.until < Date.now()) pending.delete(k);
     const verifier = b64url(randomBytes(32)), state = b64url(randomBytes(16));
     pending.set(state, { verifier, until: Date.now() + 10 * 60_000 });
@@ -605,7 +625,7 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
       return back("failed");
     }
   });
-  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { models.forgetKey(); return aiState(); }, false)) as never);
+  app.openapi(disconnectAi, ((c: Context) => tourChange(c, () => { if (!models.provider().custom) models.forgetKey(); return aiState(); }, false)) as never);
   app.openapi(putTiers, (async (c: Context) => {
     const refused = writeRefused(c);
     if (refused) return refused;
@@ -674,6 +694,29 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
           onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
         });
         await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
+      }
+    });
+  }) as never);
+
+  // Ask Atlas (T85): the same lookups, asked from the map.
+  app.openapi(askAtlas, (async (c: Context) => {
+    const refused = writeRefused(c);
+    if (refused) return refused;
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(await c.req.text()); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    const q: atlasask.Question = { question: typeof body.question === "string" ? body.question : "", start: typeof body.start === "string" ? body.start : undefined };
+    if ((models.TIERS as readonly string[]).includes(body.tier as string)) q.tier = body.tier as models.Tier;
+    if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Axis page.");
+    try { atlasask.prepare(cfg, q); } catch (err) { return refuse(c, 400, (err as Error).message); }
+    return streamSSE(c, async (stream) => {
+      try {
+        const { answer, seen } = await atlasask.ask(cfg, q, {
+          onText: (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); },
+          onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
+        });
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ answer, seen }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
       }
@@ -818,6 +861,9 @@ function staticFile(c: Context, site: string): Response {
   const headers: Record<string, string> = {};
   const cc = cacheControl(url.pathname);
   if (cc) headers["Cache-Control"] = cc;
+  // An artifact is sandboxed, so to it the app's fonts are another origin's: without this it could not load
+  // the theme's type. Fonts only: they are rdstudio's own files and say nothing of the project.
+  if (/\.(woff2?|ttf|otf)$/i.test(url.pathname)) headers["Access-Control-Allow-Origin"] = "*";
   let st;
   try { st = statSync(file); } catch { return c.body("File not found", 404, headers); }
   if (st.isDirectory()) {
@@ -884,7 +930,9 @@ export function serve(cfg: Config, { host = "127.0.0.1", port = 8000, watch = tr
   const onWrite = () => {
     try { build(cfg); } catch (err) { console.error(`[${clock()}] build failed: ${(err as Error).message}`); }
     last = fingerprint(cfg);
+    embed.refreshInBackground(cfg); // the sections that changed, for search by meaning (T89); the save does not wait
   };
+  embed.refreshInBackground(cfg); // and whatever changed while this was not running
   const app = createApp({ cfg, site, token: randomBytes(24).toString("base64url"), loopback: LOOPBACK.has(host), allowHosts, readOnly, onWrite });
   const server = nodeServe({ fetch: app.fetch, hostname: host, port });
   if (watch) {

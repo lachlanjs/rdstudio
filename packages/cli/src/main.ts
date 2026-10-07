@@ -10,6 +10,9 @@ import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { indexCode } from "./code.ts";
+import * as embed from "./embed.ts";
+import * as models from "./models.ts";
+import { describe as describeProvider } from "./provider.ts";
 import * as artifacts from "./artifacts.ts";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
@@ -341,6 +344,38 @@ const COMMANDS: Record<string, Command> = {
         console.error(err.message);
         return 1;
       }
+      return 0;
+    },
+  },
+
+  provider: {
+    help: "where the models come from (OpenRouter, or a gateway set in the user config), and a check that it answers",
+    usage: "[show|check [model]]",
+    run(cfg, _v, [action = "show", model]) {
+      const p = models.provider();
+      if (action === "show" || action === "check") {
+        console.log(`user config: ${userConfigPath()}`);
+        for (const [k, v] of Object.entries(describeProvider(p))) console.log(`${(k + ":").padEnd(20)} ${v}`);
+        console.log(`${"models:".padEnd(20)} tiers ${Object.entries(models.tiers()).map(([t, m]) => `${t}=${m}`).join(", ")}`);
+        if (action === "show") { console.log("\nrdstudio provider check   sends one small request and says what came back"); return 0; }
+        const use = model ?? models.models().check;
+        console.log(`\nAsking ${use} for one word…`);
+        const t0 = Date.now();
+        void models.complete({ cfg, job: "check", model: use, maxTokens: 20, messages: [{ role: "user", content: "Reply with the one word: ready" }] }).then((r) => {
+          console.log(`It answered ${JSON.stringify(r.text.trim())} in ${Date.now() - t0} ms (${r.usage.prompt_tokens} tokens in, ${r.usage.completion_tokens} out, $${r.usage.cost.toFixed(5)}).`);
+          if (!r.usage.prompt_tokens) console.log("No token counts came back: spending cannot be worked out. If replies are streamed, try stream_usage = true, or stream = false.");
+          else if (p.custom && !p.prices[use] && !r.usage.cost) console.log(`No price is set for ${use}: add it under [teacher.provider.prices] for the weekly budget to count it.`);
+        }, (err: Error) => { console.log(`It failed: ${err.message}`); process.exitCode = 1; });
+        return 0;
+      }
+      return usageError("provider", `argument action: invalid choice: ${pyRepr(action)} (choose from 'show', 'check')`);
+    },
+  },
+
+  "__embed": {
+    help: "(internal) make the vectors for search by meaning that are missing",
+    run(cfg) {
+      void embed.refreshAll(cfg).then((r) => { process.stdout.write(`${r.made} of ${r.pieces}\n`); });
       return 0;
     },
   },
