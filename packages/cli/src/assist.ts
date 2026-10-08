@@ -20,7 +20,9 @@ import { Lookup, toolsFor, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
-export const MODES = ["ask", "fill", "figure"] as const;
+// "chat" (T97) is what the editor's panel sends: one turn of a conversation beside the note, which may answer,
+// and may propose changes where it has been let (T98). "ask" and "fill" are the two it replaced.
+export const MODES = ["ask", "fill", "figure", "chat"] as const;
 export type Mode = (typeof MODES)[number];
 
 /** The marks put round the place in the note that the request is about. */
@@ -38,10 +40,19 @@ export interface Ask {
   tier?: models.Tier;
   /** figure: the artifact it wrote before, and what the check found wrong with it, to put right. */
   fix?: { html: string; problems: string[] };
+  /** chat: a place for new text, apart from the passage (from..to), as an offset in body. */
+  at?: number | null;
+  /** chat: what it may change: the marked passage, or anything in the note. Left out, nothing but at the place set. */
+  may?: { passage?: boolean; note?: boolean };
+  /** chat: the turns before this one, oldest first. */
+  thread?: { question: string; answer: string }[];
 }
 
+/** A change proposed to the note (T98): `insert` in place of from..to of the text sent. */
+export interface Edit { kind: "passage" | "insert" | "change"; from: number; to: number; insert: string }
+
 /** The tier a mode is asked at when none is chosen: a figure is the hardest to get right. */
-export const USUAL: Record<Mode, models.Tier> = { ask: "mid", fill: "mid", figure: "max" };
+export const USUAL: Record<Mode, models.Tier> = { ask: "mid", fill: "mid", figure: "max", chat: "mid" };
 
 /** Something the model was given, shown under its reply. */
 export interface Source {
@@ -66,6 +77,12 @@ export interface Reply {
   model: string;
   tier: models.Tier;
   cost: number;
+  /** What the request used, over all its rounds. */
+  spent: Spent;
+  /** chat: the changes proposed, each placed in the text sent, in order and apart from one another. */
+  edits?: Edit[];
+  /** chat: changes it proposed that are not offered, each with why (not let, not found in the note, cut short). */
+  dropped?: string[];
 }
 
 // What it works from: what it looks up for itself (T84), or, for a model that cannot call tools, what was gathered for it.
@@ -108,12 +125,17 @@ below there is only the note, and the titles of the notes it links to.
   up at most; then reply in the form asked, with what you have.
 - Say nothing between lookups: no "let me check". Only the reply is shown.`;
 
-const HOW_TEXT = (given: string) => `# How to help
+const PLACE = `The place they are asking about is marked in their note: a
+passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.`;
+const PLACES = `You are talking with them beside the note. Places they point at are marked
+in it: a passage between ${OPEN} and ${CLOSE} is what they are asking about, and the
+point ${HERE} is where they want new text to go. Either, both or neither may
+be there. The marks are not part of the note.`;
+const HOW_TEXT = (given: string, place = PLACE) => `# How to help
 
 You are helping someone write a note in a project's knowledge base (Open
 Knowledge Format: Markdown with links between notes). They are in the
-editor now. The place they are asking about is marked in their note: a
-passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.
+editor now. ${place}
 
 ${given}
 - Link to a note as [its title](/its/path.md), with the path as given, and
@@ -164,7 +186,7 @@ the passage exactly as it is: every line, in the same order, the same words.`;
 /** The longest passage that can be rewritten at once, in characters: what comes back must fit one reply. */
 export const MAX_PASSAGE = 40_000;
 
-const FORM: Record<Mode, string> = {
+const FORM: Record<Exclude<Mode, "chat">, string> = {
   ask: `# Your reply
 
 Answer the question about the marked place, in Markdown, in a few short
@@ -199,6 +221,68 @@ One or two sentences: what you made and what you took it from, and anything
 you were unsure of.
 </why>`,
 };
+
+/** What a chat turn may change, from what was let and what was marked. */
+export function allowed(a: Pick<Ask, "from" | "to" | "at" | "may">): { passage: boolean; insert: boolean; note: boolean } {
+  const note = a.may?.note === true;
+  return { passage: Math.abs(a.to - a.from) > 0 && (note || a.may?.passage === true), insert: typeof a.at === "number", note };
+}
+
+/** The form of a chat turn's reply: an answer, then only the changes it has been let make. */
+export function chatForm(a: Pick<Ask, "from" | "to" | "at" | "may">): string {
+  const ok = allowed(a), marked = Math.abs(a.to - a.from) > 0;
+  const head = `# Your reply
+
+First, between <answer> tags, what is shown beside the note, in Markdown: the
+answer to their question, or a sentence or two on what you propose and why,
+and anything you were unsure of. Keep it short.
+
+<answer>
+…
+</answer>`;
+  if (!ok.passage && !ok.insert && !ok.note) return `${head}
+
+You may not change the note in this turn: reply with the answer only.${marked ? ` The
+passage between ${OPEN} and ${CLOSE} is there to be read, not rewritten.` : ""} If they ask for a
+change, say in the answer what you would change, and that they can let you:
+by ticking "Axis may change it" for a marked passage, by setting a place for
+new text, or by letting you edit the whole note.`;
+  const forms: string[] = [];
+  if (ok.insert) forms.push(`<insert>
+New text to go at ${HERE}.
+</insert>`);
+  if (ok.passage) forms.push(`<passage>
+The text to stand in place of the whole passage between ${OPEN} and ${CLOSE}.
+</passage>`);
+  if (ok.note) forms.push(`<change>
+<old>
+Text copied exactly from the note: whole lines or sentences, enough of it to
+be found in one place only.
+</old>
+<new>
+What stands in its place. Leave this empty to delete it. To add text, give
+the line it follows as <old>, and that line followed by the new text here.
+</new>
+</change>`);
+  const limits = [
+    marked && !ok.passage ? `The passage between ${OPEN} and ${CLOSE} is there to be read: do not change it.` : "",
+    !ok.note ? "Change nothing else in the note: there is no form for it, and what is not in a form above is not offered." : "As many <change> blocks as are needed, each as small as it can be: never the whole note in one. Choose the places yourself: add, reword, move or delete where the request calls for it, and leave the rest alone.",
+  ].filter(Boolean).join("\n");
+  return `${head}
+
+After the answer you may propose changes to the note, in ${forms.length === 1 ? "this form" : "these forms"} and no
+other. Each is shown in the note as a suggestion to accept or reject:
+nothing changes until they accept it. Propose only what was asked for; a
+question that asks for no change gets the answer alone.
+
+${forms.join("\n\n")}
+
+${limits}
+In every form give only the text itself: none of the note round it, no
+frontmatter, and not the marks. Code goes in a fenced block with its
+language, and a line before it saying where it is from (\`path:line\`),
+copied as read, not rewritten.`;
+}
 
 const FIGURE_HOW = `# The artifact
 
@@ -242,6 +326,41 @@ export function marked(body: string, from: number, to: number, room = 14000): st
   if (text.length <= room) return text;
   const half = Math.floor((room - (b - a)) / 2), start = Math.max(0, a - half), end = Math.min(text.length, b + half + 2);
   return (start ? "[…]\n" : "") + text.slice(start, end) + (end < text.length ? "\n[…]" : "");
+}
+
+/** The longest note that can be edited as a whole, in characters: it is sent whole, and found text must be exact. */
+export const MAX_WHOLE = 60_000;
+
+/** A chat turn's note: the passage between its marks and the place for new text, either or both, cut round them when the note is long (never when `whole`). */
+export function markedPlaces(body: string, from: number, to: number, at: number | null | undefined, room = 14000, whole = false): string {
+  const clamp = (n: number) => Math.max(0, Math.min(body.length, Math.trunc(n)));
+  const a = clamp(Math.min(from, to)), b = clamp(Math.max(from, to));
+  // At one offset, a passage closes before the place, and the place comes before a passage opens.
+  const marks: { pos: number; rank: number; text: string }[] = [];
+  if (b > a) marks.push({ pos: a, rank: 2, text: OPEN }, { pos: b, rank: 0, text: CLOSE });
+  if (typeof at === "number") marks.push({ pos: clamp(at), rank: 1, text: HERE });
+  marks.sort((x, y) => x.pos - y.pos || x.rank - y.rank);
+  let text = "", last = 0;
+  const spans: [number, number][] = []; // where, in the marked text, each thing that must be kept is
+  let open = -1;
+  for (const m of marks) {
+    text += body.slice(last, m.pos);
+    last = m.pos;
+    if (m.text === OPEN) open = text.length;
+    text += m.text;
+    if (m.text === CLOSE) spans.push([open, text.length]);
+    if (m.text === HERE) spans.push([text.length - HERE.length, text.length]);
+  }
+  text += body.slice(last);
+  if (whole || text.length <= room) return text;
+  if (!spans.length) return text.slice(0, room).trimEnd() + "\n[…]";
+  const kept = spans.reduce((n, [x, y]) => n + (y - x), 0), pad = Math.max(1500, Math.floor((room - kept) / (2 * spans.length)));
+  const keep: [number, number][] = [];
+  for (const [x, y] of spans.map(([x, y]) => [Math.max(0, x - pad), Math.min(text.length, y + pad)] as [number, number]).sort((p, q) => p[0] - q[0])) {
+    const prev = keep.at(-1);
+    if (prev && x <= prev[1]) prev[1] = Math.max(prev[1], y); else keep.push([x, y]);
+  }
+  return (keep[0]![0] ? "[…]\n" : "") + keep.map(([x, y]) => text.slice(x, y)).join("\n[…]\n") + (keep.at(-1)![1] < text.length ? "\n[…]" : "");
 }
 
 // ------------------------------------------------------------------ notes
@@ -364,6 +483,10 @@ export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}):
   // A passage cut to fit would come back with part of it missing, and accepting that would delete the rest.
   if (ask.mode === "fill" && selection.length > MAX_PASSAGE) throw new StoreError(`that passage is too long to rewrite at once (${selection.length} characters; ${MAX_PASSAGE} at most): select less of it`);
   if (ask.mode === "figure" && !prompt && !selection.trim()) throw new StoreError("select the passage the figure should be about, or say what it should show");
+  const chat = ask.mode === "chat", ok = allowed(ask), thread = chat ? (ask.thread ?? []).filter((t) => t && typeof t.question === "string" && typeof t.answer === "string").slice(-8) : [];
+  if (chat && !prompt && !selection.trim()) throw new StoreError("ask something, or mark a passage to ask about");
+  if (chat && ok.passage && selection.length > MAX_PASSAGE) throw new StoreError(`that passage is too long to rewrite at once (${selection.length} characters; ${MAX_PASSAGE} at most): mark less of it`);
+  if (chat && ok.note && ask.body.length > MAX_WHOLE) throw new StoreError(`this note is too long to be edited as a whole (${ask.body.length} characters; ${MAX_WHOLE} at most): mark the passage to change instead`);
   const b = loadBundle(cfg.knowledgeDir);
   const known = b.concepts.get(ask.note);
   const title = ask.title?.trim() || known?.title || ask.note;
@@ -388,7 +511,12 @@ export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}):
   const code = [...indexed, ...inFiles].slice(0, 10);
   for (const f of code) sources.push({ kind: "code", id: f.path, title: f.title, line: f.line });
 
-  const what = ask.mode === "ask"
+  const what = chat
+    ? (thread.length ? "This goes on from the conversation above. The note is given as it is now: what you proposed before may or may not have been accepted.\n\n" : "")
+      + (prompt ? `Their ${thread.length ? "next " : ""}question:\n\n${prompt}`
+        : ok.passage ? "They want the marked passage rewritten: clearer and more exact, saying the same thing."
+          : "They ask: what should I know about the marked passage? Is it right, and what does it leave out?")
+    : ask.mode === "ask"
     ? (prompt ? `Their question about the marked place:\n\n${prompt}` : "They ask: what should I know about the marked passage? Is it right, and what does it leave out?")
     : ask.mode === "figure"
       ? (ask.fix
@@ -397,23 +525,90 @@ export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}):
       : (prompt ? `What they want written at the marked place:\n\n${prompt}` : "They want the marked passage rewritten: clearer and more exact, saying the same thing.");
   // The whole of the marked passage is always sent, with the note round it.
   const room = Math.max(14000, selection.length + 6000);
+  const how = chat ? HOW_TEXT(gather ? USE.given : USE.looked, PLACES) : gather ? HOW : HOW_TEXT(USE.looked);
   // A provider takes few cache marks (Anthropic, four): one where the fixed part ends, one where the request does.
   const { messages, seen } = assemble([
-    { name: "How to help", text: (gather ? HOW : HOW_TEXT(USE.looked)).replace(/^# How to help\n\n/, ""), tokens: 600 },
+    { name: "How to help", text: how.replace(/^# How to help\n\n/, ""), tokens: 600 },
     { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700 },
     { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]], embed.available()).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
     { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900 },
-    { name: "Your reply", text: FORM[ask.mode].replace(/^# Your reply\n\n/, ""), tokens: 400, cache: true },
+    { name: "Your reply", text: (ask.mode === "chat" ? chatForm(ask) : FORM[ask.mode]).replace(/^# Your reply\n\n/, ""), tokens: 700, cache: true },
     { name: "Notes this one links to", text: gather ? linked.map((id) => noteText(b, id, 2400)).join("\n\n")
       : every.slice(0, 60).map((id) => { const c = b.concepts.get(id)!; return `- ${c.title} (/${id}.md)${c.description ? `: ${c.description}` : ""}`; }).join("\n") + (every.length > 60 ? `\n[…and ${every.length - 60} more]` : ""), tokens: gather ? 3600 : 1500 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
-    { name: `The note being written: ${title} (/${ask.note}.md)`, text: marked(ask.body, from, to, room) || HERE, tokens: Math.ceil(room / 4) + 100, role: "user" },
+    { name: `The note being written: ${title} (/${ask.note}.md)`, text: chat ? markedPlaces(ask.body, from, to, ask.at, room, ok.note) : marked(ask.body, from, to, room) || HERE, tokens: chat && ok.note ? Math.ceil(MAX_WHOLE / 4) + 400 : Math.ceil(room / 4) + 100, role: "user" },
     { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
     // Cached to here: when it looks things up, each further round sends all of this again.
     { name: "What to do", text: what, tokens: 900, role: "user", cache: true },
   ]);
-  return { messages, seen, sources, job: ask.mode === "ask" ? "discuss" : "write" };
+  // The turns before this one go between what is fixed and the note as it is now.
+  if (thread.length) {
+    const first = messages.findIndex((m) => m.role === "user");
+    messages.splice(first < 0 ? messages.length : first, 0, ...thread.flatMap((t): models.Message[] => [
+      { role: "user", content: t.question.slice(0, 4000) }, { role: "assistant", content: t.answer.slice(0, 6000) || "(No answer.)" }]));
+  }
+  return { messages, seen, sources, job: ask.mode === "ask" || (chat && !ok.passage && !ok.insert && !ok.note) ? "discuss" : "write" };
+}
+
+const unmark = (text: string) => text.replace(new RegExp(`${OPEN}HERE${CLOSE}|${OPEN}|${CLOSE}`, "g"), "");
+
+/** Where a text copied from the note is in it: its one place, or why it has none. Lines broken differently still match. */
+export function locate(body: string, old: string): { from: number; to: number } | "missing" | "many" {
+  for (const t of [old, old.trim()]) {
+    if (!t) continue;
+    const i = body.indexOf(t);
+    if (i < 0) continue;
+    return body.indexOf(t, i + 1) >= 0 ? "many" : { from: i, to: i + t.length };
+  }
+  const words = old.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "missing";
+  const found = [...body.matchAll(new RegExp(words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+"), "g"))];
+  return found.length === 1 ? { from: found[0]!.index!, to: found[0]!.index! + found[0]![0].length } : found.length ? "many" : "missing";
+}
+
+/** Read a chat turn's reply: the answer, and the changes it proposes that it was let make and that can be placed in the note. */
+export function parseChat(reply: string, a: Pick<Ask, "body" | "from" | "to" | "at" | "may">): { answer: string; edits: Edit[]; dropped: string[] } {
+  const ok = allowed(a), dropped: string[] = [], edits: Edit[] = [];
+  const from = Math.max(0, Math.min(a.body.length, Math.min(a.from, a.to))), to = Math.max(from, Math.min(a.body.length, Math.max(a.from, a.to)));
+  const block = (tag: string, text = reply) => [...text.matchAll(new RegExp(`<${tag}>\\n?([\\s\\S]*?)\\n?<\\/${tag}>`, "gi"))].map((m) => unmark(m[1]!));
+  const said = /<answer>\n?([\s\S]*?)(?:\n?<\/answer>|$)/i.exec(reply);
+  const answer = (said ? said[1]! : reply).replace(/<(passage|insert|change)>[\s\S]*$/i, "").replace(/<\/?answer>/gi, "").trim();
+  for (const tag of ["passage", "insert", "change"]) {
+    if ((reply.match(new RegExp(`<${tag}>`, "gi"))?.length ?? 0) > (reply.match(new RegExp(`</${tag}>`, "gi"))?.length ?? 0)) dropped.push("The reply was cut short before a change was finished, so that one is not offered. Ask for less at once.");
+  }
+  const short = (t: string) => { const l = t.trim().split("\n")[0]!.trim(); return l.length > 60 ? l.slice(0, 57) + "…" : l; };
+  const passage = block("passage")[0], insert = block("insert")[0];
+  if (passage !== undefined) {
+    if (!ok.passage) dropped.push(to > from ? "It proposed a new text for the marked passage, which it was not let change." : "It proposed a new text for a passage, but none was marked.");
+    else if (passage.trim()) edits.push({ kind: "passage", from, to, insert: passage });
+  }
+  if (insert !== undefined && insert.trim()) {
+    if (!ok.insert) dropped.push("It proposed new text, but no place was set for it.");
+    else { const at = Math.max(0, Math.min(a.body.length, a.at!)); edits.push({ kind: "insert", from: at, to: at, insert }); }
+  }
+  const changes = [...reply.matchAll(/<change>([\s\S]*?)<\/change>/gi)].map((m) => m[1]!);
+  if (changes.length && !ok.note) dropped.push(`It proposed ${changes.length === 1 ? "a change" : `${changes.length} changes`} elsewhere in the note, which it was not let edit.`);
+  else for (const c of changes) {
+    const old = block("old", c)[0] ?? "", next = block("new", c)[0] ?? "";
+    if (!old.trim()) { dropped.push("A change did not say what text it replaces."); continue; }
+    const at = locate(a.body, old);
+    if (at === "missing") { dropped.push(`A change could not be placed: “${short(old)}” is not in the note.`); continue; }
+    if (at === "many") { dropped.push(`A change could not be placed: “${short(old)}” is in the note more than once.`); continue; }
+    let end = at.to;
+    const exact = a.body.slice(at.from, at.to) === old, text = exact ? next : next.trim();
+    // Whole lines deleted take their line break with them.
+    if (!text && (at.from === 0 || a.body[at.from - 1] === "\n") && a.body[end] === "\n") end++;
+    if (a.body.slice(at.from, end) !== text) edits.push({ kind: "change", from: at.from, to: end, insert: text });
+  }
+  edits.sort((x, y) => x.from - y.from || x.to - y.to);
+  const apart: Edit[] = [];
+  for (const e of edits) {
+    const prev = apart.at(-1);
+    if (prev && (e.from < prev.to || (e.from === prev.from && e.to === prev.to))) dropped.push("Two changes it proposed were to the same text: the second is not offered.");
+    else apart.push(e);
+  }
+  return { answer, edits: apart, dropped: [...new Set(dropped)] };
 }
 
 /** Read a fill's reply: the text proposed, and why. */
@@ -444,8 +639,11 @@ export function parseFigure(reply: string): { artifact: { title: string; caption
  *  (the roadmap, 8600 characters, was cut at 4500 tokens), and room not used costs nothing. */
 export const fillTokens = (passage: number): number => Math.max(2000, passage + 1000);
 
-const featureOf = (m: Mode) => (m === "ask" ? "note-ask" : m === "figure" ? "note-figure" : "note-fill");
-const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : fillTokens(Math.abs(a.to - a.from)));
+const changes = (a: Ask) => { const ok = allowed(a); return ok.passage || ok.insert || ok.note; };
+const featureOf = (a: Ask) => (a.mode === "ask" || (a.mode === "chat" && !changes(a)) ? "note-ask" : a.mode === "figure" ? "note-figure" : "note-fill");
+/** Room for a chat turn's reply: the answer, and each kind of change it has been let make. */
+export const chatTokens = (a: Ask): number => { const ok = allowed(a); return Math.min(32_000, 1200 + (ok.passage ? fillTokens(Math.abs(a.to - a.from)) : 0) + (ok.insert ? 2500 : 0) + (ok.note ? Math.max(4000, Math.ceil(a.body.length / 2)) : 0)); };
+const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : a.mode === "chat" ? chatTokens(a) : fillTokens(Math.abs(a.to - a.from)));
 /** A model, or the provider it is routed to, that cannot call tools says so; then it is given what it would have looked up. */
 const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|tool_choice|function.?call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized|not allowed|not permitted|unexpected|extra|disabled/i.test(err.message);
 
@@ -457,15 +655,20 @@ export interface Hooks {
   signal?: AbortSignal;
 }
 
+/** What a request used, over all its rounds: calls to the model, and tokens sent (of which read from the cache) and written. */
+export interface Spent { calls: number; input: number; output: number; cached: number }
+
 /** The rounds of looking up (T84): the model is asked, each tool it calls is run and answered, and it is asked
  *  again, until it replies or the tier's rounds are used, when it must reply. `gathered` is what to send
  *  in place of the request for a model that cannot call tools. */
 export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" | "toolChoice">; messages: models.Message[]; look: Lookup; tier: models.Tier;
-  onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string }> {
+  onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string; spent: Spent }> {
   const messages = [...o.messages], most = ROUNDS[o.tier], tools = toolsFor();
   let text = "", cost = 0, used = o.call.model ?? "";
+  const spent: Spent = { calls: 0, input: 0, output: 0, cached: 0 };
+  const add = (u: models.Usage) => { spent.calls++; spent.input += u.prompt_tokens; spent.output += u.completion_tokens; spent.cached += u.cached_tokens; };
   // A provider set not to offer tools (provider.ts, tools = false): one call, with the context gathered for it.
-  if (!models.provider().tools) { const r = await models.complete({ ...o.call, messages: o.gathered() }); return { text: r.text, cost: r.usage.cost, model: r.usage.model }; }
+  if (!models.provider().tools) { const r = await models.complete({ ...o.call, messages: o.gathered() }); add(r.usage); return { text: r.text, cost: r.usage.cost, model: r.usage.model, spent }; }
   for (let round = 0; ; round++) {
     let r: models.Reply;
     try {
@@ -476,6 +679,7 @@ export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" |
       r.calls = [];
     }
     cost += r.usage.cost; used = r.usage.model; text = r.text;
+    add(r.usage);
     if (!r.calls.length || round >= most) break;
     messages.push({ role: "assistant", content: r.text, calls: r.calls });
     for (const c of r.calls) {
@@ -484,7 +688,7 @@ export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" |
       o.onStep?.(o.look.steps.at(-1)!);
     }
   }
-  return { text, cost, model: used };
+  return { text, cost, model: used, spent };
 }
 
 /** Ask, streaming the reply's text. The model may look things up first (`rounds`). Nothing is kept but the usage. */
@@ -493,8 +697,8 @@ export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) =
   const tier = a.tier ?? USUAL[a.mode], model = models.tiers()[tier];
   let p = prepare(cfg, a);
   const look = new Lookup(cfg, loadBundle(cfg.knowledgeDir), a.note);
-  const { text, cost, model: used } = await rounds({
-    call: { cfg, job: p.job, feature: featureOf(a.mode), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal },
+  const { text, cost, model: used, spent } = await rounds({
+    call: { cfg, job: p.job, feature: featureOf(a), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal },
     messages: p.messages, look, tier, onStep: h.onStep, gathered: () => (p = prepare(cfg, a, { gather: true })).messages });
   // What it drew on: what was gathered for it, and each note and file it opened itself.
   const sources = [...p.sources];
@@ -504,7 +708,8 @@ export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) =
     else if (s.tool === "read_code" && s.code && !sources.some((x) => x.kind === "code" && x.id === s.code!.path && x.line === s.code!.line)) sources.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
   }
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
-  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost };
+  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost, spent };
+  if (a.mode === "chat") { const c = parseChat(text, a); return { reply: { ...base, answer: c.answer, insert: null, edits: c.edits, dropped: c.dropped }, seen: p.seen }; }
   if (a.mode === "ask") return { reply: { ...base, answer: text.trim(), insert: null }, seen: p.seen };
   if (a.mode === "figure") { const f = parseFigure(text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }
   const { insert, why } = parseFill(text);

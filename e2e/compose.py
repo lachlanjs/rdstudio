@@ -1,7 +1,7 @@
 """End to end: writing comfortably (T30 slice 4), in headless Chromium against
 a real rdstudio serve on a throwaway copy of the differential geometry test
 bed: maths, tables and diagrams drawn in the editor; the formatting toolbar
-and its shortcuts; the details form as a sheet on a phone; and making a new
+and its shortcuts; the details form in a dropdown under the title; and making a new
 folder and note from the map (the litmus test's "Philosophy").
 Run with: mise run e2e
 
@@ -142,7 +142,7 @@ with sync_playwright() as pw:
     open_editor(p)
     bar = p.get_by_role("toolbar", name="Formatting")
     check("formatting toolbar shown under the editing bar", bar.is_visible())
-    check("details beside the editor on a desktop, no Details button", p.locator("#edit-details").is_visible() and not p.get_by_role("button", name="Details").is_visible())
+    check("details in a dropdown under the note's title, closed, and no column of them beside the note", p.locator("details#edit-details summary").is_visible() and not p.get_by_label("Description").is_visible() and p.locator("aside.meta").count() == 0)
     p.locator(".cm-line", has_text="Plain words").click()
     p.keyboard.press("End")
     p.keyboard.press("Enter"); p.keyboard.press("Enter")
@@ -192,8 +192,8 @@ with sync_playwright() as pw:
     phone = {"viewport": {"width": 390, "height": 844}, "device_scale_factor": 2, "is_mobile": True, "has_touch": True}
     ctx, p = page_for(**phone)
     open_editor(p)
-    details = p.get_by_role("button", name="Details")
-    check("phone: details are a sheet, closed until asked for", details.is_visible() and not p.locator("#edit-details").is_visible())
+    details = p.locator("#edit-details summary")
+    check("phone: details are a dropdown under the title, closed until asked for", details.is_visible() and not p.get_by_label("Description").is_visible())
     bar = p.get_by_role("toolbar", name="Formatting")
     box = bar.bounding_box()
     check("phone: toolbar at the bottom of the screen", box and abs(box["y"] + box["height"] - 844) < 2, str(box))
@@ -202,23 +202,21 @@ with sync_playwright() as pw:
     p.screenshot(path=str(OUT / "compose-phone.png"))
     details.tap()
     sheet = p.locator("#edit-details")
-    expect(sheet).to_be_visible()
-    time.sleep(0.4)  # it slides up
-    sb = sheet.bounding_box()
-    check("phone: the sheet rises from the bottom, within the screen", sb and sb["y"] > 100 and abs(sb["y"] + sb["height"] - 844) < 2, str(sb))
-    check("phone: the toolbar steps aside for the sheet", not bar.is_visible())
-    p.screenshot(path=str(OUT / "compose-phone-details.png"))
     title = sheet.get_by_label("Title")
+    expect(title).to_be_visible()
+    sb, hb = sheet.bounding_box(), p.locator(".edit-head h1").bounding_box()
+    check("phone: opened, the details are in the page under the title, within the screen", sb and hb and sb["y"] >= hb["y"] + hb["height"] - 1 and sb["x"] >= 0 and sb["x"] + sb["width"] <= 390, str(sb))
+    p.screenshot(path=str(OUT / "compose-phone-details.png"))
     title.fill("Blocks on a phone")
-    sheet.get_by_role("button", name="Done").tap()
-    expect(sheet).to_be_hidden()
-    check("phone: the toolbar is back once the sheet closes", bar.is_visible())
+    check("phone: the title typed there heads the page", p.locator(".edit-head h1").inner_text() == "Blocks on a phone")
+    details.tap()
+    expect(title).to_be_hidden()
     sw = p.evaluate("document.documentElement.scrollWidth")
     check("phone: no sideways scrolling", sw <= 390, str(sw))
     p.get_by_role("button", name="Done").tap()
     p.wait_for_selector("article.doc:not(.editing)")
     time.sleep(0.3)
-    check("phone: the title from the sheet saved", "title: Blocks on a phone" in NOTE.read_text())
+    check("phone: the title from the details saved", "title: Blocks on a phone" in NOTE.read_text())
     ctx.close()
 
     # The on-screen keyboard: Android is told to shrink the page for it (as

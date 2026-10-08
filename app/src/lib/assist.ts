@@ -4,7 +4,7 @@
 
 import { editing } from "./edit.svelte.ts";
 
-export type Mode = "ask" | "fill" | "figure";
+export type Mode = "ask" | "fill" | "figure" | "chat";
 export interface Source { kind: "note" | "code"; id: string; title: string; line?: number }
 /** One thing the model looked up for itself (T84): a search, or a note or a file opened, and how it was reached. */
 export interface Step {
@@ -16,9 +16,20 @@ export interface Reply {
   sources: Source[]; steps?: Step[]; model: string; tier?: Tier; cost: number;
   /** figure: the artifact written, to be checked and shown before anything is saved. */
   artifact?: { title: string; caption: string; html: string } | null;
+  spent?: Spent;
+  /** chat: the changes proposed, placed in the text that was sent. */
+  edits?: Edit[];
+  dropped?: string[];
 }
+export interface Spent { calls: number; input: number; output: number; cached: number }
+/** A change proposed to the note (T98): `insert` in place of from..to. */
+export interface Edit { kind: "passage" | "insert" | "change"; from: number; to: number; insert: string }
 export type Tier = "low" | "mid" | "max";
-export interface Asking { mode: Mode; tier?: Tier; body: string; from: number; to: number; prompt?: string; title?: string; fix?: { html: string; problems: string[] } }
+export interface Asking {
+  mode: Mode; tier?: Tier; body: string; from: number; to: number; prompt?: string; title?: string; fix?: { html: string; problems: string[] };
+  /** chat: where new text is to go, apart from the passage; what it may change; the turns before; the kept chat it goes on from. */
+  at?: number | null; may?: { passage?: boolean; note?: boolean }; thread?: { question: string; answer: string }[]; chat?: string | null;
+}
 
 /** Post a request whose reply streams as server-sent events: text, step, then done (whose data is returned), or error. */
 async function events<T>(path: string, body: unknown, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<T> {
@@ -57,14 +68,55 @@ async function events<T>(path: string, body: unknown, onText: (soFar: string) =>
 export const askAssist = async (note: string, body: Asking, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void): Promise<Reply> =>
   (await events<{ reply: Reply }>(`api/notes/${encodeURIComponent(note)}/assist`, body, onText, signal, onStep)).reply;
 
+// A chat beside the note (T97): its turns, as they are shown and as they are kept in the learner record.
+
+export interface Turn {
+  at: string; question: string; passage: string | null; here: { line: number; after: string } | null; may: { passage: boolean; note: boolean };
+  answer: string; edits: { kind: Edit["kind"]; line: number; old: string; new: string }[]; dropped: string[];
+  steps: Step[]; sources: Source[]; model: string; tier: string; cost: number; spent?: Spent;
+}
+export interface Chat { id: string; note: string; title: string; at: string; updated: string; turns: Turn[] }
+export interface ChatSummary { id: string; note: string; title: string; at: string; updated: string; question: string; turns: number; cost: number }
+
+/** One turn of a chat: resolves with the reply (the changes placed in the text sent), the turn as it is kept, and the id of the chat it is kept in (null where chats are not kept). */
+export const askChat = (note: string, body: Asking, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void): Promise<{ reply: Reply; turn: Turn; chat: string | null }> =>
+  events<{ reply: Reply; turn: Turn; chat: string | null }>(`api/notes/${encodeURIComponent(note)}/assist`, { ...body, mode: "chat" }, onText, signal, onStep);
+
+/** A chat turn's reply while it is being written: the answer, without the tags round it or the changes after it. */
+export const streamingChat = (s: string): string => s.replace(/<(passage|insert|change)>[\s\S]*$/i, "").replace(/<\/?answer>\n?/gi, "").replace(/<\/?[a-z]*$/i, "").trim();
+
 // Ask Atlas (T85): a question asked on the map, answered from the notes; what it looked up is what the map draws.
 
 /** A note the answer rests on: a sentence of it, and how the note was reached. */
 export interface Used { note: string; title: string; section?: string; quote: string; checked: boolean; how: "search" | "link" | "meaning"; from?: string }
-export interface AtlasAnswer { question: string; answer: string; used: Used[]; steps: Step[]; code: Source[]; model: string; tier: Tier; cost: number }
+export interface AtlasAnswer { question: string; answer: string; used: Used[]; steps: Step[]; code: Source[]; model: string; tier: Tier; cost: number; spent?: { calls: number; input: number; output: number; cached: number } }
 
-export const askAtlas = async (body: { question: string; start?: string; tier?: Tier }, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<AtlasAnswer> =>
-  (await events<{ answer: AtlasAnswer }>("api/atlas/ask", body, onText, signal, onStep, token)).answer;
+/** Ask; resolves with the answer and, where the learner record is on, the id it is kept under (T94). */
+export const askAtlas = async (body: { question: string; start?: string; tier?: Tier }, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<{ answer: AtlasAnswer; kept: string | null }> => {
+  const done = await events<{ answer: AtlasAnswer; kept?: string | null }>("api/atlas/ask", body, onText, signal, onStep, token);
+  return { answer: done.answer, kept: done.kept ?? null };
+};
+
+// The questions kept in the learner record (T94).
+export interface AskFrom { ref: string; kind: "note" | "folder" }
+export interface AskSummary { id: string; at: string; question: string; from: AskFrom | null; tier: Tier; model: string; cost: number; notes: number }
+/** What is no longer as it was when a kept question was answered. */
+export interface AskSince { gone: string[]; changed: string[]; links: { from: string; to: string }[]; quotes: Record<string, boolean> }
+export interface KeptAsk { id: string; at: string; from: AskFrom | null; answer: AtlasAnswer; since: AskSince }
+
+const got = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const r = await fetch(path, { cache: "no-store", ...init });
+  if (!r.ok) throw new Error(((await r.json().catch(() => null)) as { error?: string } | null)?.error ?? `HTTP ${r.status}`);
+  return (await r.json()) as T;
+};
+export const keptChats = (note: string): Promise<{ enabled: boolean; chats: ChatSummary[] }> => got(`api/assist/chats?note=${encodeURIComponent(note)}`);
+export const keptChat = (id: string): Promise<Chat> => got(`api/assist/chats/${encodeURIComponent(id)}`);
+export const forgetChat = (id: string, token: string | null): Promise<{ id: string }> =>
+  got(`api/assist/chats/${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { "x-rdstudio-token": token } : {} });
+export const keptAsks = (): Promise<{ enabled: boolean; asks: AskSummary[] }> => got("api/atlas/asks");
+export const keptAsk = (id: string): Promise<KeptAsk> => got(`api/atlas/asks/${encodeURIComponent(id)}`);
+export const forgetAsk = (id: string, token: string | null): Promise<{ id: string }> =>
+  got(`api/atlas/asks/${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { "x-rdstudio-token": token } : {} });
 
 /** An Atlas answer while it is being written: its text, without the tags round it or the list after it. */
 export const streamingAnswer = (s: string): string => s.replace(/<used>[\s\S]*$/i, "").replace(/<\/?answer>\n?/gi, "").replace(/<\/?[a-z]*$/i, "").trim();

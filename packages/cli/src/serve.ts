@@ -28,6 +28,8 @@ import * as models from "./models.ts";
 import * as tutor from "./tutor.ts";
 import * as assist from "./assist.ts";
 import * as atlasask from "./atlasask.ts";
+import * as assistchats from "./assistchats.ts";
+import * as atlasasks from "./atlasasks.ts";
 import * as embed from "./embed.ts";
 import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifact } from "./artifacts.ts";
 import { streamSSE } from "hono/streaming";
@@ -372,9 +374,13 @@ const putProfile = createRoute({
 });
 const assistNote = createRoute({
   method: "post", path: "/api/notes/{id}/assist",
-  summary: "Ask the connected model about a place in a note being edited (ask), or have text proposed for it (fill). The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply, or error. Nothing is written.",
+  summary: "Ask the connected model about a note being edited. chat is a turn of a conversation beside the note (T97): it answers, and may propose changes where it is let (T98): at a place set for new text, to a marked passage, or anywhere in the note. figure has an artifact made; ask and fill are the two chat replaced. The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply (for chat, also the turn as it is kept and the id of the chat it is kept in, where the learner record is on), or error. No note is written.",
   request: { params: NoteId, headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
-    mode: z.enum(["ask", "fill", "figure"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+    mode: z.enum(["ask", "fill", "figure", "chat"]), tier: z.enum(["low", "mid", "max"]).optional().openapi({ description: "How strong a model to ask: the tier's model is used. Left out, the mode's usual tier." }), fix: z.object({ html: z.string(), problems: z.array(z.string()) }).optional(), body: z.string(), from: z.number().int(), to: z.number().int(), prompt: z.string().optional(), title: z.string().optional(),
+    at: z.number().int().nullable().optional().openapi({ description: "chat: where new text is to go, apart from the passage (from..to)." }),
+    may: z.object({ passage: z.boolean().optional(), note: z.boolean().optional() }).optional().openapi({ description: "chat: what it may change: the marked passage, or anything in the note." }),
+    thread: z.array(z.object({ question: z.string(), answer: z.string() })).optional().openapi({ description: "chat: the turns before this one, oldest first." }),
+    chat: z.string().nullable().optional().openapi({ description: "chat: the kept chat this turn goes on from; left out, a new one." }),
   }).openapi("NoteAssist") } }, required: true } },
   responses: { 200: { description: "Server-sent events", content: { "text/event-stream": { schema: z.string() } } },
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
@@ -383,7 +389,7 @@ const assistNote = createRoute({
 });
 const askAtlas = createRoute({
   method: "post", path: "/api/atlas/ask",
-  summary: "Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer, or error. Nothing is written.",
+  summary: "Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer (and the id it is kept under, where the learner record is on), or error. No note is written.",
   request: { headers: z.object({ "x-rdstudio-token": z.string() }), body: { content: { "application/json": { schema: z.object({
     question: z.string(), start: z.string().optional().openapi({ description: "Where the asker is on the map: a note's id or a folder. Left out, the whole map." }), tier: z.enum(["low", "mid", "max"]).optional(),
   }).openapi("AtlasAsk") } }, required: true } },
@@ -391,6 +397,37 @@ const askAtlas = createRoute({
     400: { description: "Not a valid request", content: { "application/json": { schema: ErrorBody } } },
     403: { description: "Cross-origin request, bad token or host not allowed", content: { "application/json": { schema: ErrorBody } } },
     409: { description: "No model account is connected", content: { "application/json": { schema: ErrorBody } } } },
+});
+const AskId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" } }) });
+const listAsks = createRoute({
+  method: "get", path: "/api/atlas/asks", summary: "The questions asked on the Atlas that are kept in your learner record (T94), newest first",
+  responses: { 200: { description: "Whether questions are kept, and those that are", content: { "application/json": { schema: z.object({ enabled: z.boolean(), asks: z.array(z.record(z.string(), z.unknown())) }) } } }, 403: teacherErrors[403] },
+});
+const getAsk = createRoute({
+  method: "get", path: "/api/atlas/asks/{id}", summary: "One kept question with its answer, the lookups made, and what has changed in the notes since",
+  request: { params: AskId },
+  responses: { 200: { description: "The kept question", content: { "application/json": { schema: z.record(z.string(), z.unknown()) } } }, 403: teacherErrors[403], 404: { description: "No such kept question", content: { "application/json": { schema: ErrorBody } } } },
+});
+const forgetAsk = createRoute({
+  method: "delete", path: "/api/atlas/asks/{id}", summary: "Forget a kept question",
+  request: { params: AskId, headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Forgotten", content: { "application/json": { schema: z.object({ id: z.string() }) } } }, 400: teacherErrors[400], 403: teacherErrors[403] },
+});
+const ChatId = z.object({ id: z.string().openapi({ param: { name: "id", in: "path" } }) });
+const listChats = createRoute({
+  method: "get", path: "/api/assist/chats", summary: "The chats with Axis beside a note that are kept in your learner record (T97), the one last added to first",
+  request: { query: z.object({ note: z.string().optional().openapi({ description: "Only the chats about this note." }) }) },
+  responses: { 200: { description: "Whether chats are kept, and those that are", content: { "application/json": { schema: z.object({ enabled: z.boolean(), chats: z.array(z.record(z.string(), z.unknown())) }) } } }, 403: teacherErrors[403] },
+});
+const getChat = createRoute({
+  method: "get", path: "/api/assist/chats/{id}", summary: "One kept chat: its turns, each with its answer, the changes proposed, what was looked up and what it cost",
+  request: { params: ChatId },
+  responses: { 200: { description: "The kept chat", content: { "application/json": { schema: z.record(z.string(), z.unknown()) } } }, 403: teacherErrors[403], 404: { description: "No such kept chat", content: { "application/json": { schema: ErrorBody } } } },
+});
+const forgetChat = createRoute({
+  method: "delete", path: "/api/assist/chats/{id}", summary: "Delete a kept chat",
+  request: { params: ChatId, headers: z.object({ "x-rdstudio-token": z.string() }) },
+  responses: { 200: { description: "Deleted", content: { "application/json": { schema: z.object({ id: z.string() }) } } }, 400: teacherErrors[400], 403: teacherErrors[403] },
 });
 const putNote = createRoute({
   method: "put", path: "/api/notes/{id}", summary: "Save an edit to a note, or create it",
@@ -683,6 +720,12 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
     if ((models.TIERS as readonly string[]).includes(body.tier as string)) a.tier = body.tier as models.Tier;
     const fix = body.fix as { html?: unknown; problems?: unknown } | undefined;
     if (fix && typeof fix.html === "string" && Array.isArray(fix.problems)) a.fix = { html: fix.html, problems: fix.problems.filter((x) => typeof x === "string").slice(0, 12) as string[] };
+    if (a.mode === "chat") {
+      if (typeof body.at === "number" && Number.isFinite(body.at)) a.at = Math.trunc(body.at);
+      const may = body.may as { passage?: unknown; note?: unknown } | undefined;
+      a.may = { passage: may?.passage === true, note: may?.note === true };
+      if (Array.isArray(body.thread)) a.thread = (body.thread as { question?: unknown; answer?: unknown }[]).filter((t) => t && typeof t.question === "string" && typeof t.answer === "string").map((t) => ({ question: t.question as string, answer: t.answer as string }));
+    }
     if (!(assist.MODES as readonly string[]).includes(a.mode)) return refuse(c, 400, `a mode is one of ${assist.MODES.join(", ")}`);
     if (!models.apiKey()) return refuse(c, 409, "No model account is connected: connect one on the Teacher page.");
     try { assist.prepare(cfg, a); } catch (err) { return refuse(c, 400, (err as Error).message); } // what is wrong with the request, before anything is sent
@@ -693,7 +736,12 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
           // Something looked up: what was written before it was not the reply, so the text starts again.
           onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
         });
-        await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) });
+        if (a.mode !== "chat") { await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen }) }); return; }
+        // A chat's turn is kept in the learner record (T97), where that is on; failing to keep it does not lose the reply.
+        const turn = assistchats.turnOf(a, reply);
+        let chat: string | null = null;
+        try { chat = assistchats.keep(cfg, a.note, a.title?.trim() || a.note, turn, str(body.chat))?.id ?? null; } catch { /* not kept */ }
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ reply, seen, turn, chat }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
       }
@@ -716,11 +764,38 @@ export function createApp({ cfg, site, token, loopback, allowHosts = [], readOnl
           onText: (piece) => { void stream.writeSSE({ event: "text", data: JSON.stringify(piece) }); },
           onStep: (step) => { void stream.writeSSE({ event: "step", data: JSON.stringify(step) }); },
         });
-        await stream.writeSSE({ event: "done", data: JSON.stringify({ answer, seen }) });
+        // Kept in the learner record (T94), where that is on; failing to keep it does not lose the answer.
+        let kept: string | null = null;
+        try { kept = atlasasks.keep(cfg, answer, q.start)?.id ?? null; } catch { /* not kept */ }
+        await stream.writeSSE({ event: "done", data: JSON.stringify({ answer, seen, kept }) });
       } catch (err) {
         await stream.writeSSE({ event: "error", data: JSON.stringify((err as Error).message) });
       }
     });
+  }) as never);
+
+  // The questions kept (T94).
+  app.openapi(listAsks, ((c: Context) => (hostOk(c) ? json(c, 200, { enabled: learner.enabled(cfg), asks: atlasasks.list(cfg) }) : json(c, 403, { error: "host not allowed" }))) as never);
+  app.openapi(getAsk, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    try { return json(c, 200, atlasasks.read(cfg, c.req.param("id") ?? "")); } catch (err) { return json(c, 404, { error: (err as Error).message }); }
+  }) as never);
+  app.openapi(forgetAsk, ((c: Context) => {
+    const refused = writeRefused(c, false);
+    if (refused) return refused;
+    try { return json(c, 200, atlasasks.forget(cfg, c.req.param("id") ?? "")); } catch (err) { return refuse(c, 400, (err as Error).message); }
+  }) as never);
+
+  // The chats kept (T97).
+  app.openapi(listChats, ((c: Context) => (hostOk(c) ? json(c, 200, { enabled: learner.enabled(cfg), chats: assistchats.list(cfg, c.req.query("note") || undefined) }) : json(c, 403, { error: "host not allowed" }))) as never);
+  app.openapi(getChat, ((c: Context) => {
+    if (!hostOk(c)) return json(c, 403, { error: "host not allowed" });
+    try { return json(c, 200, assistchats.read(cfg, c.req.param("id") ?? "")); } catch (err) { return json(c, 404, { error: (err as Error).message }); }
+  }) as never);
+  app.openapi(forgetChat, ((c: Context) => {
+    const refused = writeRefused(c, false);
+    if (refused) return refused;
+    try { return json(c, 200, assistchats.forget(cfg, c.req.param("id") ?? "")); } catch (err) { return refuse(c, 400, (err as Error).message); }
   }) as never);
 
   app.openapi(listDraftsRoute, ((c: Context) => {

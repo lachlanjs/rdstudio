@@ -13,6 +13,8 @@ The grid Atlas (`gridmap.js`, with `grid/nested.js`, `grid/cells.js` and
 is), and the cells, the router and the drawing know nothing of how it was
 made, so the layout can be replaced on its own.
 
-Ask Atlas (`ask.js`, T85) is the box to ask from, the answer beside the map,
-and the marks an answer leaves; `gridmap.js` draws the marks, so `ask.js`
-knows nothing of where a note is.
+Ask Atlas (`ask.js`, T85) is the Axis panel docked beside the map or below
+it (T93): the question, the answer, its cost, the questions asked before and
+their replay (T94), and the marks an answer leaves. `gridmap.js` puts the
+panel in the map's frame and draws the marks, so `ask.js` knows nothing of
+where a note is.

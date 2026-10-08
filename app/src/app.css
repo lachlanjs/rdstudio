@@ -402,22 +402,95 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
    a search of words (dashed), found by meaning (dotted; T90), reached by a link from a note in hand (solid,
    with the link drawn). */
 :root { --ask-search: var(--f0); --ask-link: var(--f3); --ask-meaning: var(--f1); }
-.atlas-ask { position: absolute; top: 52px; right: 12px; width: 340px; display: flex; gap: 6px; align-items: center; }
-.atlas-ask[hidden], .atlas-ask [hidden] { display: none; }
-.atlas-ask input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; font: 14px var(--font-ui); color: var(--text); background: var(--surface-1); border: 1px solid var(--rule-strong); border-radius: var(--radius); }
-.atlas-ask select { height: 34px; padding: 0 4px; font: 13px var(--font-ui); color: var(--text); background: var(--surface-1); border: 1px solid var(--rule); border-radius: var(--radius); }
-.atlas-ask :is(input, select):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+/* The Axis panel (T93): beside the map where the frame is wide, below it otherwise; the map has the rest. */
+.atlas-shell { position: relative; display: flex; height: calc(var(--vh) - var(--bar-h)); }
+.atlas-shell.below { flex-direction: column; }
+.atlas-shell > .graph-wrap.gridmap-wrap { flex: 1 1 0; min-width: 0; min-height: 0; height: auto; }
+.axis-panel { position: relative; flex: none; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface-1); font: 13px/1.45 var(--font-ui); color: var(--text-soft); }
+.axis-panel[hidden], .axis-panel [hidden] { display: none; }
+.axis-shell.side .axis-panel { width: var(--axis-size, 400px); border-left: 1px solid var(--rule-strong); }
+.axis-shell.below .axis-panel { height: var(--axis-size, 46%); border-top: 1px solid var(--rule-strong); }
+/* Folded: only its tab is left, over the map's corner. */
+.atlas-shell .axis-panel.folded { position: absolute; top: 52px; right: 12px; width: auto; height: auto; border: 0; background: none; }
+.axis-panel.folded > :not(.axis-head) { display: none; }
+.axis-panel.folded .axis-head { padding: 0; border: 0; }
+.axis-panel.folded .axis-back { display: none; }
+.axis-panel.folded .axis-tab { background: var(--paper-raised); box-shadow: 0 2px 8px rgb(0 0 0 / .08); }
+.atlas-shell:has(> .axis-panel.folded:not([hidden])) .map-folders { right: 84px; }
+.axis-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.axis-tab { height: 34px; font-weight: 700; }
+.axis-tab::after { content: "▸" / ""; display: inline-block; margin-left: 8px; font-size: 11px; }
+.axis-shell.below .axis-tab::after { content: "▾" / ""; }
+.axis-panel.folded .axis-tab::after { content: "◂" / ""; }
+.axis-shell.below .axis-panel.folded .axis-tab::after { content: "▴" / ""; }
+/* The edge to drag: wider than it looks, so a finger finds it. */
+.axis-grip { position: absolute; z-index: 3; touch-action: none; }
+.axis-shell.side .axis-grip { top: 0; bottom: 0; left: -5px; width: 10px; cursor: col-resize; }
+.axis-shell.below .axis-grip { left: 0; right: 0; top: -7px; height: 14px; cursor: row-resize; }
+.axis-grip::after { content: ""; position: absolute; border-radius: 2px; background: var(--rule-strong); }
+.axis-shell.side .axis-grip::after { top: calc(50% - 18px); left: 3px; width: 4px; height: 36px; }
+.axis-shell.below .axis-grip::after { left: calc(50% - 18px); top: 5px; width: 36px; height: 4px; }
+.axis-grip:hover::after, .axis-grip:focus-visible::after, .axis-panel.dragging .axis-grip::after { background: var(--accent); }
+.axis-grip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.axis-panel.dragging { user-select: none; }
+.axis-body { flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 14px; }
+.axis-body h4 { margin: 12px 0 4px; font: 700 12.5px/1.3 var(--font-ui); color: var(--text); }
+.axis-body > h4:first-child { margin-top: 0; }
+.axis-body p { margin: 0 0 8px; }
+.axis-body .aq-text { font-size: 15px; line-height: 1.5; color: var(--text); }
+.axis-body .aq-text > :first-child { margin-top: 0; }
+.axis-body .aq-text > :last-child { margin-bottom: 0; }
+/* The question asked: a quotation, not a heading. */
+.aq-question { margin: 0 0 8px; padding: 6px 12px 8px; border-left: 3px solid var(--accent); background: var(--paper); color: var(--text); }
+.aq-question .aq-label { display: block; margin-bottom: 2px; font: 700 11px/1.5 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+.aq-question .prose { font: 15px/1.5 var(--font-text); }
+.aq-question .prose > :first-child { margin-top: 0; }
+.aq-question .prose > :last-child { margin-bottom: 0; }
+.aq-since { padding: 6px 10px; border: 1px dashed var(--rule-strong); color: var(--text); }
+.aq-flag { margin-left: 4px; font-size: 12px; color: var(--pen-red); }
+.aq-gone { color: var(--text-faint); text-decoration: line-through; }
+.aq-acts { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+/* The questions asked before. */
+.aq-asked { list-style: none; margin: 0; padding: 0; }
+.aq-asked li { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); }
+.aq-ask { flex: 1; min-width: 0; padding: 8px 4px 8px 0; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.aq-ask:hover .aq-ask-q, .aq-ask:focus-visible .aq-ask-q { color: var(--accent); }
+.aq-ask-q { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; color: var(--text); }
+.aq-ask-meta { display: block; font-size: 12px; color: var(--text-faint); }
+.aq-drop { flex: none; width: 32px; border: 0; background: none; color: var(--text-faint); font-size: 18px; line-height: 1; cursor: pointer; }
+.aq-drop:hover, .aq-drop:focus-visible { color: var(--pen-red); }
+/* What the answer cost: below the answer, where it does not scroll away. */
+.axis-cost { flex: none; max-height: 45%; overflow: auto; padding: 0 14px; border-top: 1px solid var(--rule); background: var(--paper); font-size: 12.5px; }
+.axis-cost summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-height: 32px; padding: 6px 0; cursor: pointer; color: var(--text-soft); }
+.axis-cost .axis-price { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+.axis-cost .axis-model { margin-left: auto; color: var(--text-faint); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
+.axis-cost dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0 0 10px; }
+.axis-cost dt { color: var(--text-faint); }
+.axis-cost dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* The question being written. */
+.atlas-ask { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 12px; border-top: 1px solid var(--rule); }
+.axis-where { margin: 0; font-size: 12px; color: var(--text-faint); }
+.axis-editor { max-height: 34vh; overflow: auto; font-size: 15px; line-height: 1.5; }
+.axis-shell.side .axis-editor { min-height: 7.5em; }
+.axis-shell.below .axis-editor { max-height: 22vh; }
+.axis-panel .axis-editor .cm-editor .cm-content { padding: 8px 10px; font-size: 15px; line-height: 1.5; }
+/* The map is narrower with the panel beside it: its hint would run under the buttons. */
+.atlas-shell > .gridmap-wrap { container-type: inline-size; }
+@container (max-width: 900px) { .atlas-shell .graph-hint { display: none; } }
+.axis-row { display: flex; align-items: center; gap: 6px; }
+/* Below the map there is less height: the question is one row with its controls, and the answer has the rest. */
+.axis-shell.below .axis-head { padding: 6px 12px; }
+.axis-shell.below .atlas-ask { flex-direction: row; flex-wrap: wrap; align-items: flex-end; padding: 8px 12px; }
+.axis-shell.below :is(.axis-where, .axis-keys) { display: none; }
+.axis-shell.below .axis-editor { flex: 1 1 0; min-width: 0; min-height: 2.6em; }
+.axis-shell.below .axis-row { flex: none; }
+.axis-shell.below .atlas-ask-off { flex-basis: 100%; }
+.axis-shell.below .axis-cost .axis-model { display: none; }
+.axis-keys { margin-right: auto; font-size: 12px; color: var(--text-faint); }
+.atlas-ask select { height: 34px; max-width: 150px; padding: 0 4px; font: 13px var(--font-ui); color: var(--text); background: var(--surface-1); border: 1px solid var(--rule); border-radius: var(--radius); }
+.atlas-ask select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .atlas-ask .toggle { height: 34px; }
 .atlas-ask-off { margin: 0; padding: 7px 10px; font: 13px var(--font-ui); color: var(--text-soft); background: var(--surface-1); border: 1px solid var(--rule); border-radius: var(--radius); }
-.atlas-answer { position: absolute; top: 96px; right: 12px; width: 340px; max-height: calc(100% - 160px); overflow: auto; padding: 12px 14px 12px; background: var(--surface-1);
-  border: 1px solid var(--rule); border-radius: var(--radius-md, 6px); font: 13px/1.45 var(--font-ui); color: var(--text-soft); }
-.atlas-answer[hidden] { display: none; }
-.atlas-answer h3 { margin: 0 24px 6px 0; font: 700 14px/1.3 var(--font-ui); color: var(--text); }
-.atlas-answer h4 { margin: 12px 0 4px; font: 700 12.5px/1.3 var(--font-ui); color: var(--text); }
-.atlas-answer p { margin: 0 0 8px; }
-.atlas-answer .aq-text { font-size: 15px; line-height: 1.5; color: var(--text); }
-.atlas-answer .aq-text > :first-child { margin-top: 0; }
-.atlas-answer .aq-text > :last-child { margin-bottom: 0; }
 .aq-steps { margin: 0 0 8px; padding-left: 1.5em; }
 .aq-steps li.failed { color: var(--text-faint); }
 .aq-steps li.aq-now { list-style: none; color: var(--text-faint); }
@@ -440,8 +513,6 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-key i.meaning { border: 2px dotted var(--ask-meaning); }
 .aq-key i.cited { border-color: var(--text-soft); background: color-mix(in srgb, var(--text) 22%, var(--surface)); }
 .aq-show { display: block; margin: 0 0 6px; font-size: 12px; }
-.aq-meta { margin: 0; font-size: 12px; }
-.gridmap-wrap.asking .atlas-card { right: 364px; }
 /* On the map. What the question touched stands out; the rest steps back. */
 .g-ask { pointer-events: none; }
 .gridmap.asked .g-routes, .gridmap.asked .g-counts { opacity: .3; }
@@ -527,7 +598,6 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .f4 { fill: var(--f4); background: var(--f4); } .f5 { fill: var(--f5); background: var(--f5); } .f6 { fill: var(--f6); background: var(--f6); } .f7 { fill: var(--f7); background: var(--f7); }
 .map-folders { position: absolute; top: 56px; right: 12px; min-width: 190px; max-width: 260px; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); padding: 2px 10px 8px; font-size: 13.5px; }
 .map-folders:not([open]) { padding-bottom: 2px; }
-@media (min-width: 761px) { .gridmap-wrap.can-ask .map-folders { right: 364px; } } /* beside the box to ask from (T85) */
 .map-folders[hidden] { display: none; }
 .map-folders > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 16px; min-height: 28px; line-height: 28px; color: var(--text-soft); }
 .map-folders > summary::-webkit-details-marker { display: none; }
@@ -602,10 +672,6 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
   .map-panel { width: auto; }
   .map-panel .lens-title { display: none; }
   .atlas-card { top: auto; bottom: 104px; left: 8px; right: 8px; width: auto; }
-  .atlas-ask { top: auto; bottom: 104px; left: 8px; right: 8px; width: auto; }
-  .atlas-card, .gridmap-wrap.asking .atlas-card { bottom: 148px; right: 8px; }
-  .atlas-answer { top: auto; bottom: 148px; left: 8px; right: 8px; width: auto; max-height: 42%; }
-  .gridmap-wrap.asking .atlas-card { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -770,36 +836,12 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .edit-status.error, .edit-status.conflict { color: var(--stale); font-weight: 600; }
 .edit-message { max-width: var(--measure); font-size: 14.5px; color: var(--ink-soft); margin: 10px auto; }
 .edit-message.bad { color: var(--stale); }
-/* An agent in the editor (T74): the bar to ask from, and its reply. */
-.assist-bar { display: flex; gap: 6px; align-items: center; padding: 6px 0 8px; border-bottom: 1px solid var(--rule); }
-.assist-bar input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: 14.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
-.assist-bar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-.assist-bar .toggle { white-space: nowrap; }
-.assist-bar select { height: 32px; max-width: 150px; padding: 0 6px; font: 13.5px var(--font-ui); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
-.assist-bar select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
-@media (max-width: 640px) { .assist-bar { flex-wrap: wrap; } .assist-bar input { flex-basis: 100%; } }
 .tiers { display: grid; grid-template-columns: max-content minmax(0, 320px) 1fr; gap: 6px 12px; align-items: center; margin: 8px 0 4px; }
 .tiers label { font-weight: 600; }
 .tiers input { height: 32px; padding: 0 10px; font: 13.5px var(--font-mono); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
 .tiers input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .tiers button { justify-self: start; }
 @media (max-width: 640px) { .tiers { grid-template-columns: max-content 1fr; } .tiers .section-note { grid-column: 2; } }
-.assist-off { margin: 0; padding: 6px 0 8px; font-size: 13.5px; color: var(--ink-faint); border-bottom: 1px solid var(--rule); }
-.assist-reply { position: relative; max-width: var(--measure); margin: 10px auto 4px; padding: 10px 14px 12px; background: var(--paper-raised); border: 1px solid var(--rule); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); }
-.assist-reply header { display: flex; align-items: baseline; gap: 12px; margin: 0 28px 6px 0; font: 13px var(--font-ui); }
-.assist-reply header b { font-weight: 700; color: var(--ink); }
-.assist-meta { color: var(--ink-faint); }
-.assist-stream { margin: 0; white-space: pre-wrap; font: 14px/1.55 var(--font-mono); color: var(--ink-soft); max-height: 40vh; overflow: auto; }
-.assist-answer { font-size: 16px; max-height: 50vh; overflow: auto; }
-.assist-answer > :first-child { margin-top: 0; } .assist-answer > :last-child { margin-bottom: 0; }
-.assist-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); }
-.assist-sources { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
-.assist-sources code { font-size: 12.5px; }
-.assist-steps { margin: 8px 0 0; padding-left: 1.4em; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
-.assist-steps li.failed { color: var(--ink-faint); }
-.assist-steps span { color: var(--ink-faint); }
-.assist-looked { margin: 10px 0 0; font-size: 13px; color: var(--ink-faint); }
-.assist-looked summary { cursor: pointer; }
 .assist-figure { margin: 4px 0 10px; }
 .assist-figure .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-problems { margin: 4px 0 0 18px; padding: 0; font-size: 14px; color: var(--ink-soft); }
@@ -848,23 +890,72 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .format-bar .glyph.italic { font-style: italic; font-weight: 500; }
 .format-bar .glyph.maths { font-weight: 400; font-size: 18px; }
 
-/* The details form: beside the editor on a wide screen; a sheet from the
-   bottom on a narrower one, opened from the editing bar. */
-.details-button, .details-close, .details-scrim { display: none; }
-.details-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* The details form: under the note's title, in a dropdown (T96). */
+.edit-head { margin-top: 14px; }
+.edit-head h1 { font: 600 30px/1.2 var(--font-heading, var(--font-text)); font-size: var(--h1-size, 30px); margin: 0 0 6px; color: var(--ink); }
+.edit-details-drop { margin: 0 0 6px; border-bottom: 1px solid var(--rule); }
+.edit-details-drop > summary { display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer; list-style: none; font: 600 13px/1.4 var(--font-ui); color: var(--ink-soft); }
+.edit-details-drop > summary::-webkit-details-marker { display: none; }
+.edit-details-drop > summary::before { content: "▸" / ""; font-size: 11px; color: var(--ink-faint); }
+.edit-details-drop[open] > summary::before { content: "▾" / ""; }
+.edit-details-drop > summary .chip { margin: 0; font-weight: 400; }
+.edit-details-drop .edit-details { padding: 8px 0 2px; }
+.edit-details-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 
-@media (max-width: 1180px) {
-  .details-button, .details-close { display: inline-block; }
-  .meta.edit-meta {
-    position: fixed; z-index: 41; left: 0; right: 0; bottom: 0; top: auto; max-height: min(82vh, 640px); height: auto;
-    overflow-y: auto; overscroll-behavior: contain; padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-    border: 1px solid var(--rule); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--paper-raised);
-    box-shadow: 0 -10px 30px rgb(0 0 0 / .18); transform: translateY(105%); visibility: hidden;
-    transition: transform .18s ease-out, visibility 0s .18s;
-  }
-  .meta.edit-meta.open { transform: none; visibility: visible; transition: transform .18s ease-out; }
-  .meta.edit-meta .meta-inner { max-width: 72ch; margin: 0 auto; }
-  .details-scrim { display: block; position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .25); }
+/* Axis beside a note being edited (T96): the panel to the right of the note where the frame is wide, below it
+   otherwise (axisDock.js). The page scrolls as before; the panel stays in view, with its own scrolling. */
+.edit-shell { display: flex; align-items: flex-start; min-width: 0; min-height: calc(var(--vh) - var(--bar-h)); }
+.edit-shell.below { flex-direction: column; align-items: stretch; }
+.edit-shell > .doc { flex: 1 1 0; min-width: 0; }
+.edit-shell.below > .doc { flex: 1 0 auto; }
+.edit-shell .note-axis { position: sticky; z-index: 6; }
+.edit-shell.side .note-axis { top: var(--bar-h); height: calc(var(--vh) - var(--bar-h)); }
+.edit-shell.below .note-axis { bottom: 0; }
+.edit-shell .note-axis.folded { display: none; }
+.axis-button[aria-expanded="true"] { background: var(--surface-3, var(--paper-sunk)); }
+.note-axis .axis-editor { min-height: 4.5em; }
+.axis-shell.below .note-axis .axis-editor { min-height: 2.6em; }
+.note-axis .assist-figure { margin: 4px 0 10px; }
+.nx-turn { margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--rule); }
+.nx-turn:last-of-type { border-bottom: 0; margin-bottom: 0; }
+.nx-about { margin: 4px 0 0 !important; font: 12.5px/1.45 var(--font-ui); color: var(--text-soft); overflow-wrap: anywhere; }
+.nx-about b { margin-right: 4px; font: 700 11px/1.5 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); }
+.nx-edits { list-style: none; margin: 0; padding: 0; }
+.nx-edits li { padding: 6px 0 8px; border-top: 1px solid var(--rule); }
+.nx-kind { display: block; margin-bottom: 3px; font-size: 11.5px; color: var(--text-faint); }
+.nx-edits :is(del, ins) { display: block; padding: 2px 6px; font: 12.5px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; text-decoration: none; color: var(--text); }
+.nx-edits del { background: color-mix(in srgb, var(--stale) 12%, transparent); text-decoration: line-through; text-decoration-color: var(--stale); color: var(--text-soft); }
+.nx-edits ins { background: color-mix(in srgb, var(--reviewed) 13%, transparent); }
+.nx-edits li:is(.accepted, .rejected, .lost) :is(del, ins) { opacity: .6; }
+.nx-acts { display: flex; gap: 6px; margin-top: 6px; }
+.nx-acts .toggle, .nx-set { min-height: 26px; padding: 2px 10px; font-size: 12.5px; }
+.nx-said { display: block; margin-top: 4px; font-size: 12px; color: var(--text-faint); }
+.nx-context { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; }
+.nx-chip { display: inline-flex; max-width: 100%; min-width: 0; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: color-mix(in srgb, var(--pen-blue) 14%, transparent); }
+.nx-chip.here { background: color-mix(in srgb, var(--pen-green) 14%, transparent); }
+.nx-chip button { border: 0; background: none; font: inherit; color: var(--text); cursor: pointer; padding: 3px 8px; }
+.nx-chip button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.nx-chip b { margin-right: 4px; font-weight: 700; color: var(--text-soft); }
+.nx-chip-show { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nx-chip .nx-chip-drop { flex: none; padding: 3px 7px; color: var(--text-faint); border-left: 1px solid var(--rule); }
+.nx-chip .nx-chip-drop:hover { color: var(--pen-red); }
+.nx-may { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-soft); }
+.nx-hint { color: var(--text-faint); }
+.nx-short { display: none; }
+/* Below the note there is little height: what is marked and what is let go in a line or two with the model and
+   Figure, and the question and Ask share the last line. */
+.axis-shell.below .note-ask :is(.nx-context, .axis-row) { display: contents; }
+.axis-shell.below .note-ask :is(.nx-hint, .nx-long) { display: none; }
+.axis-shell.below .note-ask .nx-short { display: inline; }
+.axis-shell.below .note-ask { align-items: center; gap: 6px 10px; font-size: 12.5px; }
+.axis-shell.below .note-ask::after { content: ""; flex-basis: 100%; height: 0; margin-top: -6px; }
+.axis-shell.below .note-ask :is(.axis-editor, button[type="submit"]) { order: 1; }
+.axis-shell.below .note-ask .axis-editor { align-self: stretch; }
+.axis-shell.below .note-ask :is(select, .toggle) { height: 30px; min-height: 30px; }
+.axis-shell.below .note-ask select { max-width: 110px; }
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1180px) {
+  /* Clear of the formatting bar, fixed at the foot of the window there, and of the spaces under it on a phone. */
+  .edit-shell.below .note-axis { bottom: max(var(--tab-h), calc(53px + env(safe-area-inset-bottom, 0px))); }
 }
 
 @media (max-width: 760px), (pointer: coarse) and (max-width: 1180px) {
@@ -875,7 +966,6 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
   }
   .format-bar .format { min-width: 44px; height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) { .meta.edit-meta, .meta.edit-meta.open { transition: none; } }
 
 @media (max-width: 760px) {
   .edit-bar { padding: 8px 0; }
@@ -1687,7 +1777,9 @@ p code { overflow-wrap: anywhere; }
 [data-theme="station"] .status .sp ~ span:last-child::after { content: ""; }
 [data-theme="station"] .status kbd { font: inherit; font-weight: 500; color: var(--line); margin-right: 6px; }
 [data-theme="station"] #view { padding-bottom: 30px; }
-[data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h) - 30px); }
+[data-theme="station"] :is(.graph-wrap, .atlas-shell) { height: calc(var(--vh) - var(--bar-h) - 30px); }
+[data-theme="station"] .edit-shell.side .note-axis { height: calc(var(--vh) - var(--bar-h) - 30px); }
+[data-theme="station"] .edit-shell.below .note-axis { bottom: 30px; }
 [data-theme="station"] .status-keys { bottom: 40px; font: 300 11px/1.8 var(--font-map); font-variation-settings: "wdth" 112; text-transform: uppercase; background-color: var(--surface-1); }
 [data-theme="station"] .status-keys kbd { color: var(--line); }
 /* The Atlas as a schematic: cyan outlines, each note a small dark tile with a thin cyan edge, bright when
@@ -1713,7 +1805,8 @@ p code { overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   [data-theme="station"] .status { display: none; }
   [data-theme="station"] #view { padding-bottom: 0; }
-  [data-theme="station"] .graph-wrap { height: calc(var(--vh) - var(--bar-h)); }
+  [data-theme="station"] :is(.graph-wrap, .atlas-shell) { height: calc(var(--vh) - var(--bar-h)); }
+  [data-theme="station"] .edit-shell.below .note-axis { bottom: max(var(--tab-h), calc(53px + env(safe-area-inset-bottom, 0px))); }
 }
 
 /* ------------------------------------------------------------ the answer sheet */

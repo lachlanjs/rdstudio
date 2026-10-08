@@ -7,7 +7,7 @@
 
 import { loadBundle } from "@rdstudio/core/node";
 import type { Bundle } from "@rdstudio/core";
-import { BY_MEANING, ROUNDS, rounds, type Source } from "./assist.ts";
+import { BY_MEANING, ROUNDS, rounds, type Source, type Spent } from "./assist.ts";
 import * as embed from "./embed.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
@@ -46,6 +46,8 @@ export interface Answer {
   model: string;
   tier: models.Tier;
   cost: number;
+  /** Calls to the model and tokens in and out, over every round (T93). */
+  spent: Spent;
 }
 
 export const MAX_QUESTION = 2000, MAX_USED = 8;
@@ -138,6 +140,9 @@ export function prepare(cfg: Config, q: Question, b: Bundle = loadBundle(cfg.kno
 
 const flat = (s: string) => s.replace(/[*_`~]|\[\^[^\]]*\]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
+/** Whether a sentence is in a note's text, ignoring Markdown's marks and spacing. */
+export const quoteIn = (quote: string, text: string): boolean => quote.length >= 12 && flat(text).includes(flat(quote));
+
 /** A sentence as plain words: a link as its text, without Markdown's marks. */
 const plain = (s: string) => s.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[\^[^\]]*\]/g, "").replace(/\*\*|__|`/g, "").replace(/\s+/g, " ").trim();
 
@@ -158,7 +163,7 @@ export function parseAnswer(reply: string, b: Bundle, steps: Step[]): { answer: 
     const c = b.concepts.get(id)!;
     const opened = good.filter((s) => s.opened === id), first = opened[0], read = opened.filter((s) => s.tool === "read_note");
     const said = quote.trim().replace(/^["“']+|["”']+$/g, "").trim();
-    const checked = said.length >= 12 && flat(c.body + " " + c.description).includes(flat(said));
+    const checked = quoteIn(said, c.body + " " + c.description);
     const fallback = (read.find((s) => section && s.section?.toLowerCase() === section.toLowerCase()) ?? read.at(-1))?.excerpt || c.description || "";
     const heading = section.replace(/^#+\s*/, "").trim();
     used.push({ note: id, title: c.title, ...(heading ? { section: heading } : {}), quote: checked ? plain(said) : fallback, checked,
@@ -176,13 +181,13 @@ export function parseAnswer(reply: string, b: Bundle, steps: Step[]): { answer: 
 
 export interface Hooks { onText?: (piece: string) => void; onStep?: (step: Step) => void; signal?: AbortSignal }
 
-/** Ask, streaming the answer's text and each lookup as it is made. Nothing is kept but the usage. */
+/** Ask, streaming the answer's text and each lookup as it is made. The caller keeps it (atlasasks.ts). */
 export async function ask(cfg: Config, q: Question, hooks: Hooks = {}): Promise<{ answer: Answer; seen: Seen[] }> {
   const tier = q.tier ?? "mid", model = models.tiers()[tier];
   const b = loadBundle(cfg.knowledgeDir);
   let p = prepare(cfg, { ...q, tier }, b);
   const look = new Lookup(cfg, b, p.note);
-  const { text, cost, model: used } = await rounds({
+  const { text, cost, model: used, spent } = await rounds({
     call: { cfg, job: "discuss", feature: "atlas-ask", onText: hooks.onText, model, maxTokens: 1600, signal: hooks.signal },
     messages: p.messages, look, tier, onStep: hooks.onStep,
     // A model that cannot call tools: the search is made for it, and the three notes it finds first are read.
@@ -198,5 +203,5 @@ export async function ask(cfg: Config, q: Question, hooks: Hooks = {}): Promise<
   });
   const code: Source[] = [];
   for (const s of look.steps) if (!s.failed && s.tool === "read_code" && s.code && !code.some((x) => x.id === s.code!.path && x.line === s.code!.line)) code.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
-  return { answer: { question: q.question.trim(), ...parseAnswer(text, b, look.steps), steps: look.steps, code, model: used, tier, cost }, seen: p.seen };
+  return { answer: { question: q.question.trim(), ...parseAnswer(text, b, look.steps), steps: look.steps, code, model: used, tier, cost, spent }, seen: p.seen };
 }
