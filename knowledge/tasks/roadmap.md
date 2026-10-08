@@ -186,6 +186,9 @@ Released as 0.4.0 on 2026-10-08.
 
 # M16 — Leaner, cleaner, and Axis writes
 
+Written up, with M17, in
+[M16 and M17: leaner, Axis writes, agents seen](m16-m17-leaner-and-agents.html).
+
 Recorded 2026-10-08, when the developer asked what would improve the
 project. T101 and T110 are the developer's own ideas; the rest are the
 agent's suggestions, for the developer to take or leave. The order
@@ -199,7 +202,7 @@ was suggested alongside.
 - [x] [T102 Retire the Python implementation](/tasks/T102-retire-python.md)
 - [ ] [T103 Decide what the tool is not: unbuilt platforms, little-used pages, older views](/tasks/T103-prune-scope.md) (dropped by the developer: [the decision](/decisions/two-targets-many-platforms.md))
 - [x] [T104 Tidy: the task board, the server file, the repository root](/tasks/T104-tidy-board-server-root.md)
-- [ ] [T105 Find out why no note here is verified, and act on it](/tasks/T105-verification-in-use.md)
+- [x] [T105 Find out why no note here is verified, and act on it](/tasks/T105-verification-in-use.md)
 - [x] [T106 rdstudio provider init](/tasks/T106-provider-init.md)
 - [x] [T110 Set how much goes to a model and how much may come back, in rdstudio itself](/tasks/T110-context-limits-settings.md)
 

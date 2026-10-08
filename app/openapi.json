@@ -1164,6 +1164,25 @@
           "to"
         ]
       },
+      "Verified": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "by"
+        ]
+      },
       "NoteDeleted": {
         "type": "object",
         "properties": {
@@ -4079,6 +4098,83 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Moved"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cross-origin request, bad token, host not allowed, or read-only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The note changed since `base`, or is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteConflict"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Not JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{id}/verify": {
+      "post": {
+        "summary": "Mark a note as checked by you (T105): a verification is added under your name, as rdstudio verify does. Only a person does this: no agent's tool reaches it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The note's id, such as design/model (slashes encoded)."
+            },
+            "required": true,
+            "description": "The note's id, such as design/model (slashes encoded).",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "x-rdstudio-token",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Verified"
                 }
               }
             }

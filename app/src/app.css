@@ -544,6 +544,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .gn.aq-write .gn-block { fill: color-mix(in srgb, var(--ask-write) 20%, var(--surface)); }
 .aq-key i.write { border: 2px solid var(--ask-write); }
 .aq-steps button.link { display: inline; text-align: left; }
+.check-note { height: 26px; padding: 0 8px; font-size: 12.5px; }
 .aq-sent { cursor: default; }
 .aq-sent:hover .aq-ask-q { color: var(--text); }
 .aq-asked li.taken .aq-ask-q { color: var(--text-soft); }

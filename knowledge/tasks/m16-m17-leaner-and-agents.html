@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M16 and M17: leaner, Axis writes, agents seen</title>
+<meta name="rdstudio:date" content="2026-10-09">
+<meta name="rdstudio:author" content="claude-code/claude-opus-5-5">
+<meta name="description" content="Write-up of milestones M16 and M17: the Python implementation retired, one agent loop, limits by tier, Axis proposing notes from the Atlas, provider init, marking notes as checked, and a terminal agent's path shown live.">
+<link rel="stylesheet" href="report.css">
+<script defer src="report.js"></script>
+<style>
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule, #ccc); }
+  th { font-weight: 600; white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <header class="report-head">
+    <p class="report-meta">Report, 2026-10-09, claude-code/claude-opus-5-5</p>
+    <h1>M16 and M17: leaner, Axis writes, agents seen</h1>
+  </header>
+
+  <p class="summary">Ten of the eleven tasks recorded on 2026-10-08 are built, on the branch <code>feat/m16-leaner</code>; the eleventh was dropped by the developer. The Python implementation is gone. Axis can propose notes, changes and moves from the Atlas, and writes nothing until one is accepted. A terminal agent's work in the base shows on the Atlas as it happens, and the developer can send something back to it. Nothing here was tried against a real model, a real Claude Code or opencode session, or a real gateway: every check used a stand-in.</p>
+
+  <h2>What changed</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Task</th><th>What it is now</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><th>T102</th><td>The Python implementation removed: 39 files, about 5,600 lines. The wheel is a launcher, the templates and the built dashboard, and needs only Node.</td><td><code>src/rdstudio</code>, <code>fixtures/expected.ts</code></td></tr>
+      <tr><th>T100</th><td>The loop Axis runs on in a file of its own, with tools in boxes. It was already shared by the editor and Ask Atlas; the task supposed otherwise.</td><td><code>agent.ts</code></td></tr>
+      <tr><th>T110</th><td>An input and an output limit for each tier, set on the Teacher page. What was looked up is shortened to fit; a reply cut off says so.</td><td><code>context.ts</code>, <code>models.ts</code></td></tr>
+      <tr><th>T101</th><td>From the Atlas, Axis proposes a new note, a change or a move. Each is a card to accept or reject.</td><td><code>proposals.ts</code>, <code>ask.js</code></td></tr>
+      <tr><th>T106</th><td><code>rdstudio provider init</code>: a gateway set up by about eight one-line answers, or by flags. No secret is asked for or written.</td><td><code>providerinit.ts</code></td></tr>
+      <tr><th>T105</th><td>A note is marked as checked from the app. Before, only the command line could. Which notes should need a check is asked of the developer.</td><td><code>serve/notes.ts</code>, the Review page</td></tr>
+      <tr><th>T104</th><td>The task board brought up to date. <code>serve.ts</code>, 1,157 lines, split into the API's description, shared guards and handlers by area.</td><td><code>serve/</code></td></tr>
+      <tr><th>T107</th><td>Each call a terminal agent makes to the MCP server is kept as a step in a private log, and drawn on the Atlas as it is made.</td><td><code>trace.ts</code></td></tr>
+      <tr><th>T108</th><td>A file of the base read or edited with the agent's own tools joins the same path, through a Claude Code hook that <code>init</code> installs.</td><td><code>rdstudio trace</code></td></tr>
+      <tr><th>T109</th><td>Send to agent in the Axis panel; the agent takes what was sent with the <code>from_developer</code> tool, once.</td><td><code>inbox.ts</code></td></tr>
+      <tr><th>T103</th><td>Dropped: the tool aims at two overlapping targets and several platforms on purpose.</td><td>the decision note</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Results</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Check</th><th class="num">Before</th><th class="num">After</th></tr></thead>
+    <tbody>
+      <tr><td>Command line tests (vitest)</td><td class="num">148</td><td class="num">173</td></tr>
+      <tr><td>Core tests</td><td class="num">207</td><td class="num">207</td></tr>
+      <tr><td>App tests</td><td class="num">56</td><td class="num">56</td></tr>
+      <tr><td>Python tests</td><td class="num">57</td><td class="num">4</td></tr>
+      <tr><td>Browser suites that run without the differential geometry test bed</td><td class="num">5</td><td class="num">7</td></tr>
+      <tr><td>Lines in <code>serve.ts</code></td><td class="num">1,034</td><td class="num">178</td></tr>
+      <tr><td>Python dependencies of the wheel</td><td class="num">4</td><td class="num">1</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The Python tests fell because what they tested was removed; the four left test the launcher and the benchmark's generator. The two new browser suites are <code>e2e/propose.py</code> (20 checks) and <code>e2e/agents.py</code> (24 checks, against a real <code>rdstudio mcp</code> process).</p>
+
+  <h2>Deviations and issues</h2>
+  <ul>
+    <li><b>Two claims made when the tasks were written were wrong.</b> There were not three separate agent set-ups: the loop was already shared (T100). And the page already learnt of an outside edit by itself, by asking for the build's version on a timer (T107).</li>
+    <li><b>The limits are on the Teacher page</b>, beside the tier models, not on Settings as first said. And an output limit set is what is sent, so it can raise rdstudio's own figure as well as lower it: a model that reasons needs the higher one.</li>
+    <li><b>Found by running, not by tests.</b> A proposed change whose new text holds the old could be made twice. At a terminal, <code>provider init</code> took "n" as a path, named a bare address "0", and printed a stack trace on Ctrl+D. All four are fixed, the first with a test.</li>
+    <li><b>The sign-in browser suite failed once and passed when run again</b>, on a slow machine. It was not looked into further.</li>
+    <li><b>The benchmark's load and build timings no longer compare with the baselines kept</b>, which timed the Python build.</li>
+  </ul>
+
+  <h2>Not checked</h2>
+  <ul>
+    <li>The five browser suites that need the differential geometry test bed: edit, compose, reshape, learn, teacher. They cover routes that moved when <code>serve.ts</code> was split.</li>
+    <li>Anything with a real model: whether it proposes sensibly, or stops at a limit as expected.</li>
+    <li>A real Claude Code or opencode session. The hook's field names for Claude Code's file tools were not confirmed from its documentation.</li>
+    <li>A real corporate gateway, private authority or proxy with <code>provider init</code>.</li>
+  </ul>
+
+  <h2>Waiting for the developer</h2>
+  <ul>
+    <li>The question "Which notes should count as needing a person's check?", with four ways to answer.</li>
+    <li>The draft decision "On the Atlas, Axis proposes changes to the base and writes none itself".</li>
+    <li>Choices the agent made in each task, listed in its Outcome for the developer to overrule.</li>
+  </ul>
+</main>
+</body>
+</html>

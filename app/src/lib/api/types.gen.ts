@@ -446,6 +446,12 @@ export type NoteMove = {
     base?: string | null;
 };
 
+export type Verified = {
+    id: string;
+    path: string;
+    by: string;
+};
+
 export type NoteDeleted = {
     deleted: string;
     /**
@@ -2192,6 +2198,51 @@ export type PostApiNotesByIdMoveResponses = {
 };
 
 export type PostApiNotesByIdMoveResponse = PostApiNotesByIdMoveResponses[keyof PostApiNotesByIdMoveResponses];
+
+export type PostApiNotesByIdVerifyData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}/verify';
+};
+
+export type PostApiNotesByIdVerifyErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since `base`, or is gone
+     */
+    409: NoteConflict;
+    /**
+     * Not JSON
+     */
+    415: Error;
+};
+
+export type PostApiNotesByIdVerifyError = PostApiNotesByIdVerifyErrors[keyof PostApiNotesByIdVerifyErrors];
+
+export type PostApiNotesByIdVerifyResponses = {
+    /**
+     * Marked
+     */
+    200: Verified;
+};
+
+export type PostApiNotesByIdVerifyResponse = PostApiNotesByIdVerifyResponses[keyof PostApiNotesByIdVerifyResponses];
 
 export type PostApiFoldersMoveData = {
     body: FolderMove;

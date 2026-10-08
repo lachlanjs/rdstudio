@@ -4,7 +4,8 @@ test bed, with a fake OpenRouter that proposes as a model would. Run with: mise 
 The switch that lets it propose is off unless ticked, and the tools are offered only then. A change, a new note and a
 move are each shown as a card and write nothing; one accepted is in the file with the model named in the stamp, one
 rejected is not; the answer stays in view as the map reads the notes again. A kept question opened later still
-offers what was not settled, and a change already made is refused, not made twice.
+offers what was not settled, and a change already made is refused, not made twice. Last, a note is marked as checked
+(T105) from the Review page and from its own page.
 """
 import json, os, socket, subprocess, sys, tempfile, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -127,6 +128,24 @@ try:
         lint = subprocess.run(["node", str(REPO / "packages/cli/src/main.ts"), "-C", str(ROOT), "check"], capture_output=True, text=True, env=ENV).stdout.strip()
         check("the base still checks clean", " 0 errors" in lint, lint)
         p.screenshot(path=str(OUT / "propose-3.png"))
+        # Marking a note as checked, from the app (T105): on the Review page, and on the note's own page.
+        import re
+        p.goto(URL + "?nosw#/review")
+        marks = p.get_by_role("button", name=re.compile(r"^Mark .* as checked$"))
+        expect(marks.first).to_be_visible(timeout=15000)
+        n = marks.count()
+        which = marks.first.get_attribute("aria-label")[5:-11]
+        marks.first.click()
+        expect(marks).to_have_count(n - 1, timeout=10000)
+        files = [f for f in K.rglob("*.md") if f"title: {which}" in f.read_text() or f'title: "{which}"' in f.read_text()]
+        check("checked on the Review page: it leaves the list, and the file says who checked it", len(files) == 1 and "- by: human:" in files[0].read_text().split("verified:", 1)[-1], which)
+        p.goto(URL + "?nosw#/k/design/integrators")
+        mark = p.get_by_role("button", name="Mark as checked", exact=True)
+        expect(mark).to_be_visible(timeout=15000)
+        mark.click()
+        expect(p.locator(".meta.companion")).to_contain_text("Reviewed by a person.", timeout=10000)
+        expect(mark).to_have_count(0)
+        check("checked on the note's page: it says a person reviewed it, and the button goes", "- by: human:" in (K / "design/integrators.md").read_text().split("verified:", 1)[-1])
         # The one refusal above is logged by the browser as a failed request; nothing else is.
         check("no page errors", [e for e in errors if "400" not in e] == [] and len(errors) <= 1, errors)
         b.close()

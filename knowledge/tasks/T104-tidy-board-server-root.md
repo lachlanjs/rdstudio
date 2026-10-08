@@ -62,7 +62,7 @@ marked done, each with a note saying why; what they left unchecked is
 developer. T99 is on the roadmap.
 
 **The server file.** `packages/cli/src/serve.ts` was 1,157 lines by the
-end of this milestone. It is now 190: the app put together, the static
+end of this milestone. It is now 178: the app put together, the static
 files and the watching. Beside it, in `serve/`:
 
 - `api.ts` (492 lines): every route's address and shapes, from which the

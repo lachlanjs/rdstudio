@@ -248,3 +248,22 @@ test("a proposal Axis made on the Atlas is accepted over the API, behind a note'
   const ro = await start(true), roPort = (servers.at(-1)!.address() as { port: number }).port;
   expect((await ro("POST", "/api/atlas/proposals", { ...good, Origin: `http://127.0.0.1:${roPort}` }, { proposal: made, model })).status).toBe(403);
 });
+
+test("a note is marked as checked from the app, under the person's name, behind a write's guards (T105)", async () => {
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "X-Rdstudio-Token": "tok" };
+  writeFileSync(join(tmp, "project", "knowledge", "a", "v.md"), "---\ntype: Note\ntitle: V\ngenerated: { by: agent/x, at: 2026-01-01T00:00:00Z }\n---\n\nText.\n");
+  expect((await call("POST", "/api/notes/a%2Fv/verify", { ...good, "X-Rdstudio-Token": "wrong" })).status).toBe(403);
+  expect((await call("POST", "/api/notes/a%2Fv/verify", { "X-Rdstudio-Token": "tok" })).status).toBe(403); // no Origin
+  expect((await call("POST", "/api/notes/a%2Fnowhere/verify", good)).status).toBe(400);
+  const before = writes;
+  const done = await call("POST", "/api/notes/a%2Fv/verify", good);
+  expect(done.status).toBe(200);
+  expect(done.json).toEqual({ id: "a/v", path: "a/v.md", by: "human:tester" });
+  expect(writes).toBe(before + 1);
+  const text = readFileSync(join(tmp, "project", "knowledge", "a", "v.md"), "utf8");
+  expect(text).toMatch(/verified:\n? *-? *\{? *by: human:tester/);
+  expect(text).toContain("generated: { by: agent/x, at: 2026-01-01T00:00:00Z }"); // nothing else is changed
+  const ro = await start(true), roPort = (servers.at(-1)!.address() as { port: number }).port;
+  expect((await ro("POST", "/api/notes/a%2Fv/verify", { ...good, Origin: `http://127.0.0.1:${roPort}` })).status).toBe(403);
+});

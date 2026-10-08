@@ -14,8 +14,17 @@
   import Time from "./Time.svelte";
   import { STATE_LABEL } from "$lib/understanding.svelte.ts";
   import { understanding } from "$lib/understanding.svelte.ts";
+  import { editing, verifyNote } from "$lib/edit.svelte.ts";
 
   let { c }: { c: ConceptRecord } = $props();
+
+  // Marking the note as checked, from its own page (T105).
+  let checking = $state(false), checkFailed = $state("");
+  async function check() {
+    checking = true; checkFailed = "";
+    try { await verifyNote(c.id); } catch (err) { checkFailed = err instanceof Error ? err.message : String(err); }
+    checking = false;
+  }
 
   const HIDDEN_KEYS = new Set(["title", "description"]);
   const narrow = typeof matchMedia !== "undefined" && matchMedia("(max-width: 760px)").matches;
@@ -55,6 +64,11 @@
     <div class="blk">
       <div class="kind-row"><span class="kind">Trust</span><TrustBadge {c} /></div>
       <p class="small">{provenance}{#if c.generated_at} on <Time iso={c.generated_at} rel={false} />{/if}. {c.trust === "human-reviewed" ? "Reviewed by a person." : c.trust === "machine-confirmed" ? "Checked by a machine, not yet by a person." : "Not yet reviewed by a person."}{c.verification_stale ? " Meaningfully edited after the last review." : ""}</p>
+      {#if editing.enabled && (c.trust !== "human-reviewed" || c.verification_stale)}
+        <p class="small"><button class="toggle check-note" type="button" disabled={checking} onclick={check}>{checking ? "Marking…" : "Mark as checked"}</button>
+          <span class="caption">Says you have read this and it is right; recorded as {store.site.human || "you"}.</span></p>
+        {#if checkFailed}<p class="small" role="alert">{checkFailed}</p>{/if}
+      {/if}
     </div>
     {#if before}
       <div class="blk">

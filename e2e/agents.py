@@ -105,7 +105,8 @@ try:
         done = subprocess.run([*MAIN, "trace"], env=ENV, input=json.dumps(hook), capture_output=True, text=True)
         took = time.time() - t
         check("the hook's command takes its report and says nothing", done.returncode == 0 and done.stdout == "" and done.stderr == "", done.stderr[:200])
-        check("and is quick enough to run on every tool call", took < 1.0, f"{took:.2f}s")
+        # It is run in the background, so a tool call does not wait for it: the limit is against something being badly wrong, with room for a slow machine.
+        check("and does not take long, for a command run on every tool call", took < 4.0, f"{took:.2f}s")
         expect(steps).to_have_count(5, timeout=5000)
         check("a file read outside MCP joins the same session", "as a file" in steps.nth(4).inner_text(), steps.nth(4).inner_text())
         other = {**hook, "tool_input": {"file_path": str(ROOT / "README.md")}}

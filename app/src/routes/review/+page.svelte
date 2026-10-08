@@ -6,6 +6,15 @@
   import { store } from "$lib/data.svelte.ts";
   import { conceptHref } from "$lib/format.ts";
   import { reviewItems, type Proposal } from "$lib/review.ts";
+  import { editing, verifyNote } from "$lib/edit.svelte.ts";
+
+  // Marking a note as checked from here (T105): one at a time, and what went wrong is said beside it.
+  let marking = $state<string | null>(null), failed = $state<Record<string, string>>({});
+  async function mark(id: string) {
+    marking = id;
+    try { await verifyNote(id); delete failed[id]; } catch (err) { failed[id] = err instanceof Error ? err.message : String(err); }
+    marking = null;
+  }
 
   const r = $derived(reviewItems());
   const human = $derived(store.site.human || "human:<you>");
@@ -16,8 +25,14 @@
 
 {#snippet conceptRow(c: ConceptRecord)}<ConceptRow {c} />{/snippet}
 
+{#snippet checkButton(c: ConceptRecord)}
+  {#if editing.enabled}<button class="toggle check-note" type="button" disabled={marking !== null} onclick={() => mark(c.id)} aria-label="Mark {c.title} as checked">{marking === c.id ? "Marking…" : "Mark as checked"}</button>{/if}
+  {#if failed[c.id]}<span class="section-note" role="alert">{failed[c.id]}</span>{/if}
+{/snippet}
+{#snippet staleRow(c: ConceptRecord)}<ConceptRow {c}>{#snippet extra()}{@render checkButton(c)}{/snippet}</ConceptRow>{/snippet}
+
 {#snippet unverifiedRow(c: ConceptRecord)}
-  <ConceptRow {c}>{#snippet extra()}{#if generatedBy(c)}<span>by {generatedBy(c)}</span>{/if}{/snippet}</ConceptRow>
+  <ConceptRow {c}>{#snippet extra()}{#if generatedBy(c)}<span>by {generatedBy(c)}</span>{/if}{@render checkButton(c)}{/snippet}</ConceptRow>
 {/snippet}
 
 {#snippet issueRow(i: SiteInfo["issues"][number])}
@@ -38,8 +53,8 @@
 
 <div class="page">
   <h1>Review</h1>
-  <p class="lede">What needs a human look. Mark a concept as checked with <code>rdstudio verify &lt;id&gt;</code> (recorded as {human}).</p>
-  <Section title="Changed since review" note="Human-reviewed concepts that were meaningfully edited afterwards." items={r.stale} row={conceptRow} />
+  <p class="lede">What needs a human look. {#if editing.enabled}Open a note, read it, and mark it as checked here or on its page{:else}Mark a concept as checked with <code>rdstudio verify &lt;id&gt;</code>{/if} (recorded as {human}).</p>
+  <Section title="Changed since review" note="Human-reviewed concepts that were meaningfully edited afterwards." items={r.stale} row={staleRow} />
   <Section title="Open questions" items={r.questions} row={conceptRow} />
   {#if r.proposals.length}
     <Section title="Proposed procedure changes" note="Apply or reject with rdstudio procedure apply|reject <procedure> <n>." items={r.proposals} row={proposalRow} />

@@ -475,6 +475,11 @@ export const postMove = createRoute({
   request: { params: NoteId, headers: Token, body: { content: { "application/json": { schema: MoveBody } }, required: true } },
   responses: { 200: { description: "Moved", content: { "application/json": { schema: Moved } } }, ...writeErrors },
 });
+export const postVerify = createRoute({
+  method: "post", path: "/api/notes/{id}/verify", summary: "Mark a note as checked by you (T105): a verification is added under your name, as rdstudio verify does. Only a person does this: no agent's tool reaches it.",
+  request: { params: NoteId, headers: Token },
+  responses: { 200: { description: "Marked", content: { "application/json": { schema: z.object({ id: z.string(), path: z.string(), by: z.string() }).openapi("Verified") } } }, ...writeErrors },
+});
 export const deleteNoteRoute = createRoute({
   method: "delete", path: "/api/notes/{id}", summary: "Delete a note",
   request: { params: NoteId, headers: Token, query: z.object({ base: z.string().optional() }) },

@@ -9,7 +9,7 @@ import { ArtifactError, SANDBOX, artifactPath, keepPreview, preview, saveArtifac
 import { ConflictError, noteSource, saveNote } from "../edit.ts";
 import { historySince } from "../gitlog.ts";
 import { deleteFolder, deleteNote, moveFolder, moveNote } from "../reshape.ts";
-import { StoreError, existingNotePath } from "../store.ts";
+import { StoreError, existingNotePath, verify } from "../store.ts";
 
 export function notesRoutes(app: OpenAPIHono, ctx: Ctx): void {
   const { cfg, token, readOnly, onWrite, actor, hostOk, json, refuse, writeRefused, change, tourChange, str } = ctx;
@@ -41,6 +41,10 @@ export function notesRoutes(app: OpenAPIHono, ctx: Ctx): void {
 
   app.openapi(api.postMove, ((c: Context) => change(c, (b) =>
     moveNote(cfg.knowledgeDir, c.req.param("id") ?? "", str(b.to, "to"), typeof b.base === "string" ? b.base : null))) as never);
+  app.openapi(api.postVerify, ((c: Context) => change(c, () => {
+    const done = verify(cfg.knowledgeDir, c.req.param("id") ?? "", actor);
+    return { id: done.id, path: done.path, by: actor };
+  }, false)) as never);
   app.openapi(api.deleteNoteRoute, ((c: Context) => change(c, () =>
     deleteNote(cfg.knowledgeDir, c.req.param("id") ?? "", c.req.query("base") ?? null), false)) as never);
   app.openapi(api.postFolderMove, ((c: Context) => change(c, (b) =>

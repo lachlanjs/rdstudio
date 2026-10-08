@@ -7,7 +7,7 @@
 
 import { client } from "./api/client.gen.ts";
 import {
-  deleteApiFoldersByPath, deleteApiNotesById, getApiEdit, getApiNotesById, postApiFoldersMove, postApiNotesByIdMove, putApiNotesById,
+  deleteApiFoldersByPath, deleteApiNotesById, getApiEdit, getApiNotesById, postApiFoldersMove, postApiNotesByIdMove, postApiNotesByIdVerify, putApiNotesById,
 } from "./api/sdk.gen.ts";
 import type { NoteConflict, NoteSource } from "./api/types.gen.ts";
 import { store } from "./data.svelte.ts";
@@ -247,6 +247,14 @@ export async function createNote(id: string, meta: Record<string, unknown>, body
   if (!data) throw failure(error, response?.status);
   await store.refresh();
   return data.note;
+}
+
+/** Mark a note as checked by you (T105): a verification under your name, as `rdstudio verify` records. */
+export async function verifyNote(id: string): Promise<{ id: string; by: string }> {
+  const { data, error, response } = await postApiNotesByIdVerify({ path: { id }, headers: auth() });
+  if (!data) throw failure(error, response?.status);
+  await store.refresh();
+  return data;
 }
 
 export async function moveNoteTo(id: string, to: string): Promise<{ moved: { from: string; to: string }[]; rewritten: string[] }> {
