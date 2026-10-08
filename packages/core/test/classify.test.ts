@@ -1,5 +1,5 @@
-// The classifier rules (and the port of difflib under them) against the
-// Python core's, recorded in fixtures/expected/classify.json.
+// The classifier rules (and the port of Python's difflib under them) against
+// fixtures/expected/classify.json, recorded from Python and kept as it is.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

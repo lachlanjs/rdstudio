@@ -3,7 +3,7 @@ type: Roadmap
 title: Roadmap
 description: Milestones and task checklist for building rdstudio; the progress tracker.
 tags: [roadmap]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T23:11:24Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T04:55:31Z}
 ---
 
 Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
@@ -180,6 +180,38 @@ same panel as a chat, on the branch `feat/axis-panel`. Decisions:
 - [x] [T96 Axis beside the note being edited, and the details under its title](/tasks/T96-axis-beside-the-note.md)
 - [x] [T97 Chats with Axis about a note: follow-ups, cost, kept and deleted](/tasks/T97-note-chats.md)
 - [x] [T98 What Axis may change in a note: a marked passage, a place for new text, or anywhere](/tasks/T98-edits-by-leave.md)
+- [x] [T99 Less friction setting up an organisation's gateway](/tasks/T99-gateway-setup-friction.md)
+
+Released as 0.4.0 on 2026-10-08.
+
+# M16 — Leaner, cleaner, and Axis writes
+
+Recorded 2026-10-08, when the developer asked what would improve the
+project. T101 and T110 are the developer's own ideas; the rest are the
+agent's suggestions, for the developer to take or leave. The order
+suggested: the cuts first (T102, T103), then a rename if one is chosen,
+then T100 and T101. A trial on a real project
+([T16](/tasks/T16-himode-test-drive.md), [T46](/tasks/T46-dmft-trial.md))
+was suggested alongside.
+
+- [x] [T100 One agent loop for Axis](/tasks/T100-one-agent-loop.md)
+- [x] [T101 Axis creates, changes and moves notes from Ask Atlas](/tasks/T101-axis-writes-notes.md)
+- [x] [T102 Retire the Python implementation](/tasks/T102-retire-python.md)
+- [ ] [T103 Decide what the tool is not: unbuilt platforms, little-used pages, older views](/tasks/T103-prune-scope.md) (dropped by the developer: [the decision](/decisions/two-targets-many-platforms.md))
+- [x] [T104 Tidy: the task board, the server file, the repository root](/tasks/T104-tidy-board-server-root.md)
+- [ ] [T105 Find out why no note here is verified, and act on it](/tasks/T105-verification-in-use.md)
+- [x] [T106 rdstudio provider init](/tasks/T106-provider-init.md)
+- [x] [T110 Set how much goes to a model and how much may come back, in rdstudio itself](/tasks/T110-context-limits-settings.md)
+
+# M17 — Terminal agents seen in the app
+
+From the developer, 2026-10-08: a terminal agent's reading and editing of
+the base shown live in the browser. The idea:
+[the agent's path](/ideas/project-agent-features.md).
+
+- [x] [T107 A terminal agent's path through the base, shown live in the browser](/tasks/T107-agent-path-live.md)
+- [x] [T108 The agent's path: reads and edits made outside MCP](/tasks/T108-agent-path-file-hooks.md)
+- [x] [T109 From the browser to the terminal agent](/tasks/T109-browser-to-agent.md)
 
 # Future
 

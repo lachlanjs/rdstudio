@@ -5,7 +5,7 @@ description: "Point rdstudio at an enterprise-hosted, OpenAI-compatible gateway 
   OpenRouter: the settings, certificates, proxies and keys, how to diagnose a failure, what is not
   covered, and where in the code to patch a gap."
 tags: [procedure, models, enterprise, security]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T01:21:40Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T12:49:26Z}
 ---
 
 # What this covers
@@ -35,6 +35,34 @@ vLLM, Portkey, Kong AI Gateway and most others do.
 Helpful but not required: streamed replies, tool calls, token counts.
 
 # Steps
+
+The short way, at a terminal:
+
+```sh
+rdstudio provider init
+```
+
+It asks for the gateway's address, how the gateway knows who you are (a
+client certificate, a key, or both), how this machine trusts it, and a
+proxy if there is one. Each answer is one line, and most take Enter. It
+offers what it finds: a `.pfx` or `.p12` file and an authority's `.pem` in
+the usual folders, and a proxy in `HTTPS_PROXY`. It then lists the
+gateway's models for you to choose three, writes the settings, and runs
+the check.
+
+- **It never asks for a key or a password**, and writes none. It asks for
+  the name of the environment variable that will hold each, and tells you
+  which are not set yet.
+- A path with no file there is asked again at once; `n` means none.
+- With flags it asks nothing, for a script or a machine with no terminal:
+  `rdstudio provider init --url https://ai.acme.example/v1 --client-pfx
+  ~/id.p12 --ca-file ~/corp-ca.pem --proxy env --low M --mid M --max M`.
+  `rdstudio provider --help` lists them.
+- Where a gateway is already set it asks before replacing it (`--force`
+  with flags). The whole `[teacher.provider]` table is replaced; the
+  tables under it (headers, query, prices) are left.
+
+By hand, which does the same:
 
 1. Find your user config: `rdstudio provider` prints its path
    (`~/.config/rdstudio/config.toml` on Linux).
@@ -246,6 +274,39 @@ counts as nothing and the weekly budget stops nothing. If the gateway does
 send `usage.cost`, that is used.
 
 Cached tokens are not priced apart.
+
+# Limits
+
+How much is sent to a model in one call, and how long its reply may be, can
+be set for each tier ([T110](/tasks/T110-context-limits-settings.md)). Set
+them on the Teacher page, under Limits, or in the user config:
+
+```toml
+[teacher.limits]
+low = { output = 4096 }
+mid = { input = 60000, output = 8000 }
+```
+
+Both are in tokens, and either may be left out. `rdstudio provider show`
+prints the ones in force.
+
+- **`input`:** the most sent in one call. What was looked up and gathered
+  is shortened to fit, in proportion. The instructions, your own words and
+  the passage being changed are never cut; if those alone are over the
+  limit, the request is refused with the two figures. While the model looks
+  things up, what a tool answers is cut to the room left, and it is told to
+  reply. Set it under the model's context window, with room for the reply.
+  Tokens are estimated at four characters each, so leave a margin.
+- **`output`:** sent as the reply's limit in place of rdstudio's own
+  figure, which differs by the kind of request (900 for an answer, more for
+  a rewrite). Set it lower where the gateway allows less. Set it higher for
+  a model that spends its reply on reasoning: with such a model rdstudio's
+  own figure can leave no room for the answer.
+- A reply that stops at the limit says so under it.
+- Hints take the low tier's limits; feedback, discussion and marking the
+  mid tier's.
+
+With none set, nothing changes.
 
 # Not covered
 

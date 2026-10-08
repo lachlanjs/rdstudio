@@ -1,9 +1,6 @@
 // Writing notes with provenance: create, update (whole body or one section),
-// verify. A port of src/rdstudio/store.py, with one difference by design:
-// frontmatter is edited in place (the YAML library's document API), so keys
-// that are not changed keep their formatting and comments. The Python store
-// re-renders the whole block; fixtures/agree_writes.py checks that both leave
-// a note that reads the same.
+// verify. Frontmatter is edited in place (the YAML library's document API), so
+// keys that are not changed keep their formatting and comments.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

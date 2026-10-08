@@ -92,6 +92,30 @@ function ownName(model: string): boolean {
   return !set.includes(model) && [...Object.values(DEFAULT_TIERS), ...Object.values(DEFAULT_MODELS)].includes(model);
 }
 
+/** Write one table of the user config whole, the rest of the file left as it is. With no rows, the table is taken out. */
+export function writeTable(name: string, rows: string[], comment: string): void {
+  const path = userConfigPath();
+  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+  const lines = text.split("\n");
+  const block = rows.length ? [`[${name}]`, ...rows] : [];
+  const head = lines.findIndex((l) => new RegExp(`^\\s*\\[${name.replace(/\./g, "\\.")}\\]\\s*(#.*)?$`).test(l));
+  let out: string;
+  if (head < 0) {
+    if (!block.length) return;
+    out = `${text.replace(/\s*$/, "")}${text.trim() ? "\n\n" : ""}# ${comment}\n${block.join("\n")}\n`;
+  } else {
+    let end = lines.findIndex((l, i) => i > head && /^\s*\[/.test(l));
+    if (end < 0) end = lines.length;
+    while (end > head + 1 && !lines[end - 1]!.trim()) end--; // the blank lines before the next table stay
+    let start = head;
+    if (!block.length && start > 0 && lines[start - 1]!.trim() === `# ${comment}`) start--; // its comment goes with it
+    lines.splice(start, end - start, ...block);
+    out = lines.join("\n");
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, out, "utf8");
+}
+
 export function tiers(): Record<Tier, string> {
   const set = table(teacherSettings().tiers);
   return Object.fromEntries(TIERS.map((t) => [t, typeof set[t] === "string" && set[t] ? (set[t] as string) : DEFAULT_TIERS[t]])) as Record<Tier, string>;
@@ -110,24 +134,40 @@ export function setTiers(next: Partial<Record<Tier, string>>): Record<Tier, stri
       throw new ModelError(p.custom ? `"${id}" is not a model's id: write it as ${p.name} names the model, with no spaces or quotes` : `"${id}" is not a model's id: it is written as OpenRouter lists it, like ${DEFAULT_TIERS[t]}`, 400);
     now[t] = id;
   }
-  const path = userConfigPath();
-  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
-  const lines = text.split("\n");
-  const block = ["[teacher.tiers]", ...TIERS.map((t) => `${t} = "${now[t]}"`)];
-  const head = lines.findIndex((l) => /^\s*\[teacher\.tiers\]\s*(#.*)?$/.test(l));
-  let out: string;
-  if (head < 0) out = `${text.replace(/\s*$/, "")}${text.trim() ? "\n\n" : ""}# The models Axis uses in the editor, by how strong a request is worth.\n${block.join("\n")}\n`;
-  else {
-    let end = lines.findIndex((l, i) => i > head && /^\s*\[/.test(l));
-    if (end < 0) end = lines.length;
-    while (end > head + 1 && !lines[end - 1]!.trim()) end--; // the blank lines before the next table stay
-    lines.splice(head, end - head, ...block);
-    out = lines.join("\n");
-  }
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, out, "utf8");
+  writeTable("teacher.tiers", TIERS.map((t) => `${t} = "${now[t]}"`), "The models Axis uses in the editor, by how strong a request is worth.");
   return now;
 }
+
+/** How much may be sent to a tier's model in one call, and how long its reply may be, in tokens (T110); null where none is set. */
+export interface Limit { input: number | null; output: number | null }
+export const MIN_INPUT = 2000, MIN_OUTPUT = 100, MAX_LIMIT = 2_000_000;
+
+/** [teacher.limits] in the user config: `mid = { input = 60000, output = 8000 }`, either or both, for any of the tiers. */
+export function limits(): Record<Tier, Limit> {
+  const set = table(teacherSettings().limits);
+  const one = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.trunc(v) : null);
+  return Object.fromEntries(TIERS.map((t) => [t, { input: one(table(set[t]).input), output: one(table(set[t]).output) }])) as Record<Tier, Limit>;
+}
+
+/** Set the limits in the user config. A tier left out is left as it is; a null takes that limit off. */
+export function setLimits(next: Partial<Record<Tier, Partial<Record<keyof Limit, number | null>>>>): Record<Tier, Limit> {
+  const now = limits();
+  for (const t of TIERS) for (const k of ["input", "output"] as const) {
+    const v = next[t]?.[k];
+    if (v === undefined) continue;
+    if (v === null) { now[t][k] = null; continue; }
+    const least = k === "input" ? MIN_INPUT : MIN_OUTPUT;
+    if (typeof v !== "number" || !Number.isInteger(v) || v < least || v > MAX_LIMIT)
+      throw new ModelError(`the ${k} limit for ${t} is a whole number of tokens from ${least} to ${MAX_LIMIT}, or empty for none`, 400);
+    now[t][k] = v;
+  }
+  const row = (t: Tier) => { const parts = (["input", "output"] as const).filter((k) => now[t][k] !== null).map((k) => `${k} = ${now[t][k]}`); return parts.length ? `${t} = { ${parts.join(", ")} }` : ""; };
+  writeTable("teacher.limits", TIERS.map(row).filter(Boolean), "The most tokens sent to each tier's model in one call (input), and the longest reply asked of it (output).");
+  return now;
+}
+
+/** The tier whose limits a call is under: the one it names, else its job's. */
+export const tierOf = (call: Pick<Call, "job" | "tier">): Tier => call.tier ?? JOB_TIER[call.job];
 
 export function weeklyBudget(): number {
   const b = teacherSettings().weekly_budget;
@@ -259,6 +299,8 @@ export interface Call {
   maxTokens?: number;
   /** The model to use, where it is not the job's (a tier's, in the editor). */
   model?: string;
+  /** The tier asked at, where the job's own is not it: its limits apply (T110). */
+  tier?: Tier;
   exercise?: string;
   /** Tools the model may call; what it calls comes back in the reply's `calls`, to be run and answered. */
   tools?: ToolDef[];
@@ -274,6 +316,8 @@ export interface Reply {
   usage: Usage;
   /** The tools it called instead of finishing; empty when the reply is whole. */
   calls: ToolCall[];
+  /** The reply stopped at the output limit sent with the request: how many tokens that was. */
+  cut?: number;
 }
 
 const plain = (m: Message) => (typeof m.content === "string" ? m.content : m.content.map((p) => p.text).join("\n\n"));
@@ -317,8 +361,11 @@ export async function complete(call: Call): Promise<Reply> {
   const s = spending(call.cfg);
   if (s.stopped) throw new ModelError(`This week's budget ($${s.budget.toFixed(2)}) is spent. It renews on Monday; [teacher] weekly_budget in the user config changes it.`, 402);
   const model = call.model || models()[call.job];
+  // An output limit set for the tier is what is sent, in place of the request's own figure: a gateway may allow
+  // less than rdstudio would ask for, and a model that reasons may need more.
+  const maxTokens = limits()[tierOf(call)].output ?? call.maxTokens;
   const body = JSON.stringify({ model, messages: call.messages.map(wire(p.cacheMarks)), stream: p.stream, ...(p.stream && p.streamUsage ? { stream_options: { include_usage: true } } : {}),
-    ...(call.maxTokens ? { [p.maxTokensField]: call.maxTokens } : {}),
+    ...(maxTokens ? { [p.maxTokensField]: maxTokens } : {}),
     ...(call.tools?.length && p.tools ? { tools: call.tools, tool_choice: call.toolChoice ?? "auto" } : {}) });
   const send = async (key: string): Promise<Response> => {
     const init = { method: "POST", headers: authHeaders(p, key), body, signal: call.signal };
@@ -358,7 +405,7 @@ export async function complete(call: Call): Promise<Reply> {
     failed.raw = raw.slice(0, 2000);
     throw failed;
   }
-  let text = "", usage: Record<string, unknown> | null = null;
+  let text = "", usage: Record<string, unknown> | null = null, finish = "";
   const calls: ToolCall[] = []; // a call arrives in pieces, by its index
   type Called = { index?: number; id?: string; function?: { name?: string; arguments?: string } };
   const take = (list: Called[] | undefined) => {
@@ -371,10 +418,11 @@ export async function complete(call: Call): Promise<Reply> {
   };
   if (!p.stream || (res.headers.get("content-type") ?? "").includes("application/json")) {
     // One reply, whole: asked for (stream = false), or what a gateway that does not stream sent anyway.
-    let whole: { choices?: { message?: { content?: string | null; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
+    let whole: { choices?: { finish_reason?: string | null; message?: { content?: string | null; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
     try { whole = JSON.parse(await res.text()); } catch { throw new ModelError(`${called(p)} sent a reply that could not be read`); }
     if (whole.error) throw new ModelError(`${called(p)}: ${whole.error.message ?? "an error"}`);
     text = whole.choices?.[0]?.message?.content ?? "";
+    finish = whole.choices?.[0]?.finish_reason ?? "";
     if (text) call.onText?.(text);
     take(whole.choices?.[0]?.message?.tool_calls?.map((t, index) => ({ ...t, index })));
     usage = whole.usage ?? null;
@@ -394,12 +442,13 @@ export async function complete(call: Call): Promise<Reply> {
         if (!line.startsWith("data:")) continue;
         const data = line.slice(5).trim();
         if (data === "[DONE]") continue;
-        let chunk: { choices?: { delta?: { content?: string; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
+        let chunk: { choices?: { finish_reason?: string | null; delta?: { content?: string; tool_calls?: Called[] } }[]; usage?: Record<string, unknown>; error?: { message?: string } };
         try { chunk = JSON.parse(data); } catch { continue; }
         if (chunk.error) throw new ModelError(`${called(p)}: ${chunk.error.message ?? "an error"}`);
         const piece = chunk.choices?.[0]?.delta?.content;
         if (piece) { text += piece; call.onText?.(piece); }
         take(chunk.choices?.[0]?.delta?.tool_calls);
+        if (chunk.choices?.[0]?.finish_reason) finish = chunk.choices[0].finish_reason;
         if (chunk.usage) usage = chunk.usage;
       }
     }
@@ -414,5 +463,6 @@ export async function complete(call: Call): Promise<Reply> {
     cost: typeof usage?.cost === "number" ? num(usage.cost) : priced(p, model, promptTokens, completionTokens) ?? 0, ...(call.exercise ? { exercise: call.exercise } : {}),
   };
   logUsage(u);
-  return { text, usage: u, calls: calls.filter((c) => c && c.name).map((c, k) => ({ ...c, id: c.id || `call_${k}` })) };
+  return { text, usage: u, calls: calls.filter((c) => c && c.name).map((c, k) => ({ ...c, id: c.id || `call_${k}` })),
+    ...(/^(length|max_tokens)$/.test(finish) && maxTokens ? { cut: maxTokens } : {}) };
 }

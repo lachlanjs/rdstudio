@@ -14,10 +14,12 @@ import { SearchIndex, headings, section, tokenize, type Bundle, type CodeIndex, 
 import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
 import * as embed from "./embed.ts";
+import type { Toolbox } from "./agent.ts";
 import type { ToolDef } from "./models.ts";
 
-/** How a note or a file came to be looked at. */
-export type How = "search" | "read" | "link" | "code" | "meaning";
+/** How a note or a file came to be looked at; "propose" is a change proposed (T101), which looks at nothing, and
+ *  "write" a note written by an agent outside the app (T107). */
+export type How = "search" | "read" | "link" | "code" | "meaning" | "propose" | "write";
 
 /** One thing looked up. */
 export interface Step {
@@ -79,7 +81,7 @@ export function noteId(b: Bundle, raw: unknown): string | null {
 }
 
 /** What is looked up for one request: the base as it was when asked, and what has been opened so far. */
-export class Lookup {
+export class Lookup implements Toolbox {
   readonly steps: Step[] = [];
   private index: SearchIndex | null = null;
   /** The notes in hand, latest last: the one being written, then each one opened. */
@@ -98,6 +100,13 @@ export class Lookup {
     let args: Record<string, unknown>;
     try { args = raw.trim() ? JSON.parse(raw) : {}; } catch { args = {}; }
     return typeof args !== "object" || args === null || Array.isArray(args) ? {} : args;
+  }
+
+  defs(): ToolDef[] { return toolsFor(); }
+
+  async call(name: string, raw: string): Promise<{ text: string; step: Step }> {
+    const text = await this.runAsync(name, raw);
+    return { text, step: this.steps.at(-1)! };
   }
 
   /** Run one call that may take a while (a search by meaning runs the model); any other is run at once. */

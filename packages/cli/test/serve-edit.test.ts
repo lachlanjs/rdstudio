@@ -1,7 +1,7 @@
 // Editing notes through rdstudio serve: the same protection as the learner
 // record's writes, conflicts, read-only servers, and a rebuild after a save.
 
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -174,6 +174,30 @@ test("the mode is switched by setting the profile, which is written to rdstudio.
   expect(toml()).toContain("title = 'T'"); // the rest of the file is kept
 });
 
+test("each tier's limits are set over the API, into the user config (T110)", async () => {
+  const kept = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = join(tmp, "limits-config");
+  try {
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  type Limits = { limits: Record<string, { input: number | null; output: number | null }> };
+  const none = { input: null, output: null };
+  expect(((await call("GET", "/api/teacher/ai")).json as Limits).limits).toEqual({ low: none, mid: none, max: none });
+  expect((await call("PUT", "/api/teacher/limits", { ...good, "X-Rdstudio-Token": "wrong" }, { mid: { input: 9000 } })).status).toBe(403);
+  expect((await call("PUT", "/api/teacher/limits", good, { mid: { input: "lots" } })).status).toBe(400); // not a number: the schema refuses it
+  const bad = await call("PUT", "/api/teacher/limits", good, { mid: { input: 50 } });
+  expect(bad.status).toBe(400);
+  expect((bad.json as { error: string }).error).toMatch(/whole number of tokens from 2000/);
+  const set = await call("PUT", "/api/teacher/limits", good, { mid: { input: 60000, output: 8000 }, max: { output: null } });
+  expect(set.status).toBe(200);
+  expect((set.json as Limits).limits).toEqual({ low: none, mid: { input: 60000, output: 8000 }, max: none });
+  expect(readFileSync(join(tmp, "limits-config", "rdstudio", "config.toml"), "utf8")).toContain("[teacher.limits]\nmid = { input = 60000, output = 8000 }");
+  expect(((await call("PUT", "/api/teacher/limits", good, { mid: { input: null } })).json as Limits).limits.mid).toEqual({ input: null, output: 8000 });
+  } finally {
+    if (kept === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = kept;
+  }
+});
+
 test("the editor's tiers are set over the API, into the user config (T83)", async () => {
   // A user config of this test's own: the person's is never written.
   const kept = process.env.XDG_CONFIG_HOME;
@@ -193,4 +217,34 @@ test("the editor's tiers are set over the API, into the user config (T83)", asyn
   } finally {
     if (kept === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = kept;
   }
+});
+
+test("a proposal Axis made on the Atlas is accepted over the API, behind a note's own guards (T101)", async () => {
+  const port = (servers[0]!.address() as { port: number }).port;
+  const good = { Origin: `http://127.0.0.1:${port}`, "Content-Type": "application/json", "X-Rdstudio-Token": "tok" };
+  const k = join(tmp, "project", "knowledge");
+  const made = { kind: "create", id: "p/made", type: "Idea", title: "Made", description: "By proposal.", tags: [], body: "A first line.\n\nA second line." };
+  const model = "anthropic/claude-sonnet-5.5";
+  expect((await call("POST", "/api/atlas/proposals", { ...good, "X-Rdstudio-Token": "wrong" }, { proposal: made, model })).status).toBe(403);
+  expect((await call("POST", "/api/atlas/proposals", { ...good, Origin: "http://evil.example" }, { proposal: made, model })).status).toBe(403);
+  expect(existsSync(join(k, "p/made.md"))).toBe(false);
+  expect((await call("POST", "/api/atlas/proposals", good, { proposal: { kind: "delete", id: "a/n" }, model })).status).toBe(400);
+  expect((await call("POST", "/api/atlas/proposals", good, { proposal: made })).status).toBe(400); // no model named
+  const before = writes;
+  const done = await call("POST", "/api/atlas/proposals", good, { proposal: made, model });
+  expect(done.status).toBe(200);
+  expect(done.json).toMatchObject({ kind: "create", id: "p/made" });
+  expect(writes).toBe(before + 1); // the site is built again
+  expect(readFileSync(join(k, "p/made.md"), "utf8")).toMatch(/by: human:tester with openrouter\/anthropic\/claude-sonnet-5\.5/);
+  expect((await call("POST", "/api/atlas/proposals", good, { proposal: made, model })).status).toBe(409); // it is there now
+  const change = { kind: "change", id: "p/made", title: "Made", edits: [{ old: "A second line.", new: "A better second line." }] };
+  expect((await call("POST", "/api/atlas/proposals", good, { proposal: change, model })).status).toBe(200);
+  const again = await call("POST", "/api/atlas/proposals", good, { proposal: change, model });
+  expect(again.status).toBe(400);
+  expect(again.json.error).toMatch(/changed since this was proposed/);
+  expect((await call("POST", "/api/atlas/proposals", good, { proposal: { kind: "move", from: "p/made", to: "p/moved" }, model })).status).toBe(200);
+  expect(readFileSync(join(k, "p/moved.md"), "utf8")).toContain("A better second line.");
+  // A read-only server takes none, and does not offer the tools.
+  const ro = await start(true), roPort = (servers.at(-1)!.address() as { port: number }).port;
+  expect((await ro("POST", "/api/atlas/proposals", { ...good, Origin: `http://127.0.0.1:${roPort}` }, { proposal: made, model })).status).toBe(403);
 });

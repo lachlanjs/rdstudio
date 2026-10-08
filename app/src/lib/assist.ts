@@ -8,7 +8,7 @@ export type Mode = "ask" | "fill" | "figure" | "chat";
 export interface Source { kind: "note" | "code"; id: string; title: string; line?: number }
 /** One thing the model looked up for itself (T84): a search, or a note or a file opened, and how it was reached. */
 export interface Step {
-  tool: string; said: string; how: "search" | "read" | "link" | "code" | "meaning"; notes: string[];
+  tool: string; said: string; how: "search" | "read" | "link" | "code" | "meaning" | "propose" | "write"; notes: string[];
   opened?: string; section?: string; from?: string; code?: { path: string; line: number }; excerpt?: string; failed?: boolean;
 }
 export interface Reply {
@@ -74,6 +74,8 @@ export interface Turn {
   at: string; question: string; passage: string | null; here: { line: number; after: string } | null; may: { passage: boolean; note: boolean };
   answer: string; edits: { kind: Edit["kind"]; line: number; old: string; new: string }[]; dropped: string[];
   steps: Step[]; sources: Source[]; model: string; tier: string; cost: number; spent?: Spent;
+  /** Where a limit shaped the reply (T110): it was cut off, or it stopped looking things up. */
+  notices?: string[];
 }
 export interface Chat { id: string; note: string; title: string; at: string; updated: string; turns: Turn[] }
 export interface ChatSummary { id: string; note: string; title: string; at: string; updated: string; question: string; turns: number; cost: number }
@@ -89,13 +91,50 @@ export const streamingChat = (s: string): string => s.replace(/<(passage|insert|
 
 /** A note the answer rests on: a sentence of it, and how the note was reached. */
 export interface Used { note: string; title: string; section?: string; quote: string; checked: boolean; how: "search" | "link" | "meaning"; from?: string }
-export interface AtlasAnswer { question: string; answer: string; used: Used[]; steps: Step[]; code: Source[]; model: string; tier: Tier; cost: number; spent?: { calls: number; input: number; output: number; cached: number } }
+/** Something Axis proposed on the Atlas (T101): a new note, a change to one, or a move. Nothing is written until it is accepted. */
+export type Proposal =
+  | { kind: "create"; id: string; type: string; title: string; description: string; tags: string[]; body: string }
+  | { kind: "change"; id: string; title: string; edits: { old: string; new: string }[] }
+  | { kind: "move"; from: string; to: string; title: string; links: number };
+export interface AtlasAnswer { question: string; answer: string; used: Used[]; steps: Step[]; code: Source[]; model: string; tier: Tier; cost: number; spent?: { calls: number; input: number; output: number; cached: number };
+  /** Where a limit shaped the answer (T110). */ notices?: string[]; proposals?: Proposal[] }
 
 /** Ask; resolves with the answer and, where the learner record is on, the id it is kept under (T94). */
-export const askAtlas = async (body: { question: string; start?: string; tier?: Tier }, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<{ answer: AtlasAnswer; kept: string | null }> => {
+export const askAtlas = async (body: { question: string; start?: string; tier?: Tier; may?: { propose?: boolean } }, onText: (soFar: string) => void, signal?: AbortSignal, onStep?: (step: Step) => void, token?: string | null): Promise<{ answer: AtlasAnswer; kept: string | null }> => {
   const done = await events<{ answer: AtlasAnswer; kept?: string | null }>("api/atlas/ask", body, onText, signal, onStep, token);
   return { answer: done.answer, kept: done.kept ?? null };
 };
+
+/** Accept one proposal: the note is written, changed or moved, with the model named in its stamp. */
+export async function acceptProposal(proposal: Proposal, model: string, token: string | null): Promise<{ kind: Proposal["kind"]; id: string }> {
+  const r = await fetch("api/atlas/proposals", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { "x-rdstudio-token": token } : {}) }, body: JSON.stringify({ proposal, model }) });
+  const j = (await r.json().catch(() => null)) as { error?: string; kind?: Proposal["kind"]; id?: string } | null;
+  if (!r.ok || !j?.id) throw new Error(j?.error ?? `HTTP ${r.status}`);
+  return { kind: j.kind!, id: j.id };
+}
+
+// What agents outside the app did in the base (T107): sessions of the MCP server and of a harness's file tools.
+export interface AgentSession { id: string; client: string; sources: ("mcp" | "hook")[]; started: string; last: string; steps: number; notes: number; wrote: number }
+export interface AgentEvent { at: string; source: "mcp" | "hook"; step: Step; session?: string; client?: string }
+export const agentSessions = (): Promise<{ enabled: boolean; quietMs: number; sessions: AgentSession[] }> => got("api/agents/sessions");
+export const agentSession = (id: string): Promise<{ id: string; client: string; events: AgentEvent[] }> => got(`api/agents/sessions/${encodeURIComponent(id)}`);
+export const forgetAgentSession = (id: string, token: string | null): Promise<{ id: string }> =>
+  got(`api/agents/sessions/${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { "x-rdstudio-token": token } : {} });
+/** Listen for what agents do from now on. Returns a function that stops listening. The browser connects again by itself if the stream drops. */
+export function followAgents(onStep: (e: AgentEvent & { session: string; client: string }) => void): () => void {
+  if (typeof EventSource === "undefined") return () => {};
+  const es = new EventSource("api/agents/live");
+  es.addEventListener("step", (m) => { try { onStep(JSON.parse((m as MessageEvent).data)); } catch { /* not ours */ } });
+  return () => es.close();
+}
+
+// From the app to a terminal agent (T109): what was sent, and whether an agent has taken it.
+export interface SentToAgent { id: string; at: string; text: string; ref?: string; kind?: "note" | "folder"; taken?: { by: string; at: string } }
+export const sentToAgent = (): Promise<{ sent: SentToAgent[] }> => got("api/agents/inbox");
+export const sendToAgent = (body: { text: string; ref?: string }, token: string | null): Promise<SentToAgent> =>
+  got("api/agents/inbox", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { "x-rdstudio-token": token } : {}) }, body: JSON.stringify(body) });
+export const unsendToAgent = (id: string, token: string | null): Promise<{ id: string }> =>
+  got(`api/agents/inbox/${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { "x-rdstudio-token": token } : {} });
 
 // The questions kept in the learner record (T94).
 export interface AskFrom { ref: string; kind: "note" | "folder" }

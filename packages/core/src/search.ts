@@ -1,6 +1,6 @@
 // Deterministic BM25 search over a bundle. Results carry only what is needed
 // to decide what to open next (id, title, description, score, a snippet);
-// bodies are fetched separately by section. A port of src/rdstudio/search.py.
+// bodies are fetched separately by section.
 
 import type { Bundle, Concept, Trust } from "./bundle.ts";
 import { headings } from "./markdown.ts";

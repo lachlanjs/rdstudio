@@ -12,6 +12,9 @@ are also slash commands.
 
 - **Start oriented.** If this session did not open with a knowledge-base brief,
   call the rdstudio `brief` tool first.
+- **From the developer:** when the brief says the developer sent something
+  from the app, or they say they have, call the rdstudio `from_developer`
+  tool. It gives each thing once.
 - **Look before re-deriving.** Search the knowledge base (the `search-okf`
   skill, or the `librarian` subagent) before reopening a question or
   redesigning something. Recorded decisions stand unless their stated

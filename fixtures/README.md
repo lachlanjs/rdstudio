@@ -1,8 +1,8 @@
 # Conformance fixtures
 
-The contract every implementation of rdstudio's OKF core keeps: the Python
-core today, the Rust core (T35 to T37) next, and any other reader of OKF
-bundles that wants to agree with them.
+The contract rdstudio's OKF core keeps (`packages/core`), and any other reader
+of OKF bundles that wants to agree with it. First recorded from a Python core,
+which the TypeScript one replaced; that one was removed in T102.
 
 - `bundles/`: small OKF bundles, each a knowledge folder's contents.
   - `basics`: frontmatter, every form of link, trust and staleness, headings,
@@ -18,19 +18,20 @@ bundles that wants to agree with them.
 - `queries.json`: search queries run against each bundle.
 - `learner/`: two devices' learner records, with repeats, unreadable lines and
   events from before ids; `expected/learner.json` is each as read, and merged.
-- `expected/<bundle>.json`: what the core computes, from `expected.py`.
+- `expected/<bundle>.json`: what the core computes, from `expected.ts`.
+- `expected/classify.json`: the classifier's rules, with 400 cases from
+  Python's `difflib`, which the core's `opcodes()` is a port of. Kept as
+  recorded; `expected.ts` does not write it.
 
 ## Use
 
 ```sh
-uv run python fixtures/expected.py            # does the Python core still agree?
-uv run python fixtures/expected.py --update   # record again, then review the diff
+node fixtures/expected.ts            # does the core still agree?
+node fixtures/expected.ts --update   # record again, then review the diff
 ```
 
-`tests/test_conformance.py` runs the check with the other tests;
-`packages/core/test/conformance.test.ts` checks the TypeScript core against the
-same files. `fixtures/agree.py` (`mise run core:agree <folders>`) compares the
-two cores on any real bundle.
+`packages/core/test/conformance.test.ts` runs the same check with the other
+tests, part by part, so a failure names the note.
 
 ## What is compared
 
@@ -51,8 +52,8 @@ past or future.
 Decided in T35 (2026-09-29), after T34 found the first core reading Markdown
 and YAML by pattern:
 
-- **Links and headings come from a CommonMark parser** (markdown-it, in both
-  the Python and TypeScript cores, and the dashboard renders with it). No link
+- **Links and headings come from a CommonMark parser** (markdown-it, in the
+  core, and the dashboard renders with it). No link
   in code, after an escaped bracket or in an image; nested brackets and
   parentheses in targets work; indented and setext headings count
   (`markdown/`). The links of a note are every link in order, then each

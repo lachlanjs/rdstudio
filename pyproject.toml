@@ -6,15 +6,11 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Lachlan Stewart" }]
 dependencies = [
-    "markdown-it-py>=4.2.0",
-    "mcp>=2.2.0",
-    "nodejs-wheel-binaries>=24.19",
-    "pyyaml>=6.0.3",
+    "nodejs-wheel-binaries>=24.19",   # Node itself; the program it runs is bundled (see launcher.py)
 ]
 
 [project.scripts]
 rdstudio = "rdstudio.launcher:main"      # the Node command line (see launcher.py)
-rdstudio-py = "rdstudio.cli:main"        # the Python one, while it lasts
 
 [build-system]
 requires = ["hatchling"]

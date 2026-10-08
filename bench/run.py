@@ -107,19 +107,10 @@ def prepare(name: str, fresh: bool) -> Path | None:
 
 
 def build_times(root: Path) -> dict:
-    from rdstudio import config as config_mod
-    from rdstudio.build import build
-    from rdstudio.okf import Bundle
-
-    cfg = config_mod.load(root)
-    t = time.perf_counter()
-    bundle = Bundle.load(cfg.knowledge_dir)
-    load_s = time.perf_counter() - t
-    t = time.perf_counter()
-    build(cfg)
-    build_s = time.perf_counter() - t
-    links = sum(len(c.links) for c in bundle.concepts.values())
-    return {"notes": len(bundle.concepts), "links": links, "load_ms": r1(load_s * 1000), "build_ms": r1(build_s * 1000)}
+    """Notes, links, and the time to load the bundle and build the site (bench/bundle.ts)."""
+    out = subprocess.run(["node", str(REPO / "bench" / "bundle.ts"), str(root), "--build"], capture_output=True, text=True, check=True)
+    got = json.loads(out.stdout)
+    return {k: got[k] for k in ("notes", "links", "load_ms", "build_ms")}
 
 
 def free_port() -> int:
@@ -129,14 +120,11 @@ def free_port() -> int:
 
 
 def start_server(root: Path, web_dir: Path | None = None) -> tuple[subprocess.Popen, str]:
-    """rdstudio serve for the bundle: the Python one, or with web_dir (a built
-    dashboard, such as a saved copy of an older build) the Node one, which serves that folder."""
+    """rdstudio serve for the bundle; with web_dir it serves that folder (a
+    built dashboard, such as a saved copy of an older build)."""
     port = free_port()
-    if web_dir:
-        cmd = ["node", str(REPO / "packages" / "cli" / "src" / "main.ts"), "serve", "--no-watch", "--port", str(port)]
-        env = {**os.environ, "RDSTUDIO_WEB_DIR": str(web_dir.resolve())}
-    else:
-        cmd, env = [sys.executable, "-m", "rdstudio.cli", "serve", "--no-watch", "--port", str(port)], None
+    cmd = ["node", str(REPO / "packages" / "cli" / "src" / "main.ts"), "serve", "--no-watch", "--port", str(port)]
+    env = {**os.environ, "RDSTUDIO_WEB_DIR": str(web_dir.resolve())} if web_dir else None
     proc = subprocess.Popen(cmd, cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=env)
     deadline = time.time() + 120
     while time.time() < deadline:
@@ -336,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
                 server.terminate()
                 server.wait()
         result = {"meta": {**meta(args.label), "chromium": browser.version, "service_worker": not args.no_sw,
-                           "dashboard": str(args.web_dir) if args.web_dir else "python"}, "runs": runs}
+                           "dashboard": str(args.web_dir) if args.web_dir else "node"}, "runs": runs}
         browser.close()
 
     out = args.out or WORK / "results" / f"{datetime.now():%Y%m%d-%H%M%S}-{result['meta']['commit']}.json"

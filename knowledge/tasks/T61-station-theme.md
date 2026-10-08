@@ -4,7 +4,7 @@ title: T61 — The Station theme
 description: "Station as a second theme beside Marginalia: the theme picker back, the station
   tokens, and all of its terminal chrome (status line, key legend, numbered spaces, framed panes,
   scan lines)."
-tags: [task, m13, active]
+tags: [task, m13, done]
 generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T04:16:41Z}
 ---
 
@@ -123,3 +123,10 @@ seen in it, and the walkthroughs have not been run.
   list.
 - **Not checked:** the workbench and an exercise in Station; a phone; the
   contrast audit; the walkthroughs.
+
+## Closed, 2026-10-08
+
+Marked done in [T104](/tasks/T104-tidy-board-server-root.md): built and in
+use since 2026-10-06. What was left unchecked, the walkthroughs, is
+[T73](/tasks/T73-walkthroughs-grid-atlas.md), still todo. The workbench has
+still not been looked at in this theme.

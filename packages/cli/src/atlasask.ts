@@ -7,12 +7,13 @@
 
 import { loadBundle } from "@rdstudio/core/node";
 import type { Bundle } from "@rdstudio/core";
-import { BY_MEANING, ROUNDS, rounds, type Source, type Spent } from "./assist.ts";
+import { BY_MEANING, LOOKING, ROUNDS, codeRead, notices, rounds, type Hooks, type Source, type Spent } from "./agent.ts";
 import * as embed from "./embed.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
 import { Lookup, noteId, type How, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
+import { HOW as PROPOSING, Proposals, type Proposal } from "./proposals.ts";
 import { StoreError } from "./store.ts";
 
 export interface Question {
@@ -20,6 +21,8 @@ export interface Question {
   /** Where the asker is on the map: a note's id, or a folder. Left out, the whole map. */
   start?: string;
   tier?: models.Tier;
+  /** What it is let do besides answer (T101): `propose` offers the tools that propose a new note, a change or a move. */
+  may?: { propose?: boolean };
 }
 
 /** A note the answer rests on. */
@@ -48,6 +51,10 @@ export interface Answer {
   cost: number;
   /** Calls to the model and tokens in and out, over every round (T93). */
   spent: Spent;
+  /** Where a limit shaped the answer (T110): it was cut off, or it stopped looking things up. */
+  notices?: string[];
+  /** What it proposed to change in the base (T101), for the person to accept or reject: nothing is written by asking. */
+  proposals?: Proposal[];
 }
 
 export const MAX_QUESTION = 2000, MAX_USED = 8;
@@ -75,13 +82,7 @@ const LOOKUP = (rounds: number, meaning: boolean) => `Nothing has been looked up
   link: open the linked note, do not search for it again.${meaning ? BY_MEANING : ""}
 - Read a note before you rest a claim on it: a search's one line is not
   enough.
-- For code: search_symbols finds functions and classes by what they are
-  for, when you do not know the name; outline_code lists what a folder or a
-  file holds; search_code finds exact text; read_code reads lines. Quote
-  code only as you read it.
-- You may call several tools at once. You have ${rounds} rounds of looking
-  up at most; then reply in the form asked, with what you have.
-- Say nothing between lookups: no "let me check". Only the reply is shown.`;
+${LOOKING(rounds)}`;
 
 const FORM = `Reply in exactly this form and nothing else:
 
@@ -128,13 +129,14 @@ export function prepare(cfg: Config, q: Question, b: Bundle = loadBundle(cfg.kno
   if (question.length > MAX_QUESTION) throw new StoreError(`that question is too long (${question.length} characters; ${MAX_QUESTION} at most)`);
   const where = place(b, q.start);
   const { messages, seen } = assemble([
-    { name: "How to help", text: HOW, tokens: 500 },
-    { name: "Looking things up", text: given ? GIVEN : LOOKUP(ROUNDS[q.tier ?? "mid"], embed.available()), tokens: 500 },
-    { name: "Your reply", text: FORM, tokens: 400, cache: true },
+    { name: "How to help", text: HOW, tokens: 500, keep: true },
+    { name: "Looking things up", text: given ? GIVEN : LOOKUP(ROUNDS[q.tier ?? "mid"], embed.available()), tokens: 500, keep: true },
+    { name: "Proposing changes", text: q.may?.propose && !given ? PROPOSING : "", tokens: 500, keep: true },
+    { name: "Your reply", text: FORM, tokens: 400, cache: true, keep: true },
     { name: "Where they are on the map", text: where.text, tokens: 1500, role: "user" },
     { name: "Looked up for you", text: given, tokens: 6000, role: "user" },
-    { name: "Their question", text: question, tokens: 700, role: "user", cache: true },
-  ]);
+    { name: "Their question", text: question, tokens: 700, role: "user", cache: true, keep: true },
+  ], models.limits()[q.tier ?? "mid"].input);
   return { messages, seen, note: where.note };
 }
 
@@ -179,17 +181,18 @@ export function parseAnswer(reply: string, b: Bundle, steps: Step[]): { answer: 
   return { answer, used };
 }
 
-export interface Hooks { onText?: (piece: string) => void; onStep?: (step: Step) => void; signal?: AbortSignal }
+export type { Hooks };
 
 /** Ask, streaming the answer's text and each lookup as it is made. The caller keeps it (atlasasks.ts). */
 export async function ask(cfg: Config, q: Question, hooks: Hooks = {}): Promise<{ answer: Answer; seen: Seen[] }> {
   const tier = q.tier ?? "mid", model = models.tiers()[tier];
   const b = loadBundle(cfg.knowledgeDir);
   let p = prepare(cfg, { ...q, tier }, b);
-  const look = new Lookup(cfg, b, p.note);
-  const { text, cost, model: used, spent } = await rounds({
-    call: { cfg, job: "discuss", feature: "atlas-ask", onText: hooks.onText, model, maxTokens: 1600, signal: hooks.signal },
-    messages: p.messages, look, tier, onStep: hooks.onStep,
+  const look = new Lookup(cfg, b, p.note), proposing = q.may?.propose === true ? new Proposals(cfg.knowledgeDir, b) : null;
+  const { text, cost, model: used, spent, cut, full, steps } = await rounds({
+    // A proposed note is written out in a tool call, which counts as the reply: room for it.
+    call: { cfg, job: proposing ? "write" : "discuss", feature: proposing ? "atlas-propose" : "atlas-ask", onText: hooks.onText, model, tier, maxTokens: proposing ? 8000 : 1600, signal: hooks.signal },
+    messages: p.messages, boxes: proposing ? [look, proposing] : [look], tier, onStep: hooks.onStep, inputLimit: models.limits()[tier].input,
     // A model that cannot call tools: the search is made for it, and the three notes it finds first are read.
     gathered: () => {
       const out = [look.run("search_notes", JSON.stringify({ query: q.question, limit: 6 }))];
@@ -201,7 +204,9 @@ export async function ask(cfg: Config, q: Question, hooks: Hooks = {}): Promise<
       return (p = prepare(cfg, { ...q, tier }, b, out.join("\n\n"))).messages;
     },
   });
-  const code: Source[] = [];
-  for (const s of look.steps) if (!s.failed && s.tool === "read_code" && s.code && !code.some((x) => x.id === s.code!.path && x.line === s.code!.line)) code.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
-  return { answer: { question: q.question.trim(), ...parseAnswer(text, b, look.steps), steps: look.steps, code, model: used, tier, cost, spent }, seen: p.seen };
+  const said = notices({ cut, full }, tier);
+  // Every step in the order made: the lookups, and the proposals among them. A model given what was gathered made only lookups.
+  const all = steps.length ? steps : look.steps;
+  return { answer: { question: q.question.trim(), ...parseAnswer(text, b, look.steps), steps: all, code: codeRead(look.steps), model: used, tier, cost, spent, ...(said.length ? { notices: said } : {}),
+    ...(proposing?.made.length ? { proposals: proposing.made } : {}) }, seen: p.seen };
 }

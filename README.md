@@ -10,7 +10,7 @@ for rdstudio's own knowledge base, rebuilt on every push to `main`.
 
 ## Requirements
 
-- Python 3.11+ and [uv](https://docs.astral.sh/uv/)
+- [uv](https://docs.astral.sh/uv/) (with Python 3.11+), or Node 24+
 - git
 - An agent harness: [Claude Code](https://claude.com/claude-code) and
   [OpenCode](https://opencode.ai) are set up automatically; others that read
@@ -23,10 +23,9 @@ uv tool install rdstudio       # from PyPI; `uv tool upgrade rdstudio` later
 ```
 
 or, with Node 24 or later, `npm install -g rdstudio` (or run it without
-installing: `npx rdstudio init`). Either way you get the same program: its
-command line runs on Node, which the Python package brings along as a
-dependency, so there is nothing else to install. `rdstudio-py` runs the older
-Python command line, which does the same things, while it lasts.
+installing: `npx rdstudio init`). Either way you get the same program: it
+runs on Node, which the Python package brings along as a dependency, so there
+is nothing else to install.
 
 To work on rdstudio itself, clone the repository, run `mise run setup`, then
 `uv tool install --editable . --force` inside it. Releases are made by pushing
@@ -179,9 +178,9 @@ them), or run the command each one names.
 
 ```sh
 mise run setup      # Node 24 (mise), Python and npm dependencies, the dashboard, Chromium for the benchmarks
-mise run test       # the Python tests, then the TypeScript packages
+mise run test       # the TypeScript packages, then the launcher and benchmark tests
 mise run core:test  # the TypeScript core against the conformance fixtures
-mise run core:agree ~/notes/knowledge   # do the Python and TypeScript cores agree on a bundle?
+mise run fixtures   # the core against the conformance fixtures (fixtures:update records them again)
 mise run bench      # load and map benchmarks, written to .bench/results/
 mise run bench:compare .bench/results/a.json .bench/results/b.json
 mise run bench:synth field /tmp/field   # a synthetic project of about 1,300 notes
@@ -194,13 +193,12 @@ Chromium, as a desktop and as a phone. Compare any change that could affect
 speed against a baseline. The platform plan is in
 `knowledge/design/platform.md`.
 
-The TypeScript core (`packages/core`) and command line (`packages/cli`) are
-replacing the Python ones; `fixtures/` holds the contract both keep (see
-`fixtures/README.md`), and `mise run agree` runs every comparison between the
-two: the core on real bundles, every command's output, every file `build`,
-`export` and `init` write, the notes after the same writes, and the MCP
-server's tools and replies. In a checkout, `rdstudio` runs the TypeScript
-sources directly; `mise run bundle` builds the single file a release ships.
+rdstudio is the TypeScript core (`packages/core`) and command line
+(`packages/cli`). The Python package (`src/rdstudio`) is a launcher for them,
+with the templates and the built dashboard beside it; the Python
+implementation they replaced is gone. `fixtures/` holds what the core must
+compute (see `fixtures/README.md`). In a checkout, `rdstudio` runs the
+TypeScript sources directly; `mise run bundle` builds the single file a release ships.
 
 The dashboard is a SvelteKit app in `app/`. `mise run app:build` builds it into
 `src/rdstudio/web/`, where `rdstudio build` and `serve` find it (it is not

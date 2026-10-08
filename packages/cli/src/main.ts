@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// The rdstudio command line in Node, replacing src/rdstudio/cli.py command by
-// command (see knowledge/tasks/T37-node-cli-mcp-serve.md). Output matches the
-// Python command line's, so either can be used while both exist.
+// The rdstudio command line. It began as a port of a Python one, command by
+// command (knowledge/tasks/T37-node-cli-mcp-serve.md), and still prints what
+// that printed; the Python one was removed in T102.
 
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { Bundle, ProcedureError, SearchIndex, graphOf, isProcedure, round3 } from "@rdstudio/core";
 import { loadBundle, writeIndexes } from "@rdstudio/core/node";
-import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { indexCode } from "./code.ts";
@@ -21,6 +21,9 @@ import * as refs from "./references.ts";
 import { runServer } from "./mcp.ts";
 import { init } from "./scaffold.ts";
 import * as teacher from "./teacher.ts";
+import * as trace from "./trace.ts";
+import * as providerinit from "./providerinit.ts";
+import { createInterface } from "node:readline/promises";
 import { ScopeError, globalConfig, initGlobal, moveSkill, promote, skillDirs } from "./scopes.ts";
 import { StoreError, verify } from "./store.ts";
 import { loadConfig, userConfigPath, type Config } from "./config.ts";
@@ -42,8 +45,43 @@ interface Command {
 
 const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
-// Ported in later slices of T37; until then the Python command line has them.
-const PENDING: string[] = [];
+/** `rdstudio provider init`: the gateway's table written from flags, or from a few questions at a terminal; then the check. */
+async function providerInit(cfg: Config, v: Record<string, unknown>): Promise<number> {
+  const s = (k: string) => (typeof v[k] === "string" && (v[k] as string).trim() ? (v[k] as string).trim() : undefined);
+  const asking = !s("url");
+  if (asking && !process.stdin.isTTY) return usageError("provider", "init needs --url, or a terminal to ask at");
+  const rl = asking ? createInterface({ input: process.stdin, output: process.stdout }) : null;
+  const ask: providerinit.Ask = async (question, fallback = "") => (await rl!.question(`${question}${fallback ? ` [${fallback}]` : ""}: `)).trim() || fallback;
+  const say = (line: string) => console.log(line);
+  try {
+    if (providerinit.has() && !v.force) {
+      const was = models.provider();
+      if (!asking) { console.error(`A gateway is already set (${was.name}, ${was.url}). --force replaces it; rdstudio provider show prints it.`); return 1; }
+      if (!(await ask(`A gateway is already set (${was.name}, ${was.url}). Replace it? (y/n)`, "n")).toLowerCase().startsWith("y")) { say("Left as it is."); return 0; }
+    }
+    const a: providerinit.Answers = asking ? await providerinit.interview(ask, say) : {
+      url: s("url")!, name: s("name"), auth: s("auth") as providerinit.Answers["auth"], authHeader: s("auth-header"), keyEnv: s("key-env"), caFile: s("ca-file"), systemCa: Boolean(v["system-ca"]),
+      clientPfx: s("client-pfx"), pfxPasswordEnv: s("pfx-password-env"), clientCert: s("client-cert"), clientKey: s("client-key"), proxy: s("proxy") };
+    const rows = providerinit.write(a);
+    say(`\nWritten to ${userConfigPath()}:\n\n[teacher.provider]\n${rows.join("\n")}\n`);
+    const p = models.provider();
+    // What must be in the environment before anything can be asked: named, never asked for.
+    const need = [p.auth !== "none" && !p.keyFile && !p.keyCommand ? p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY" : "", p.clientPfx && !p.pfxPasswordFile ? p.pfxPasswordEnv ?? "RDSTUDIO_PFX_PASSWORD" : ""].filter((n) => n && !process.env[n]?.trim());
+    if (need.length) say(`Not set in this terminal yet: ${need.join(", ")}. Set ${need.length === 1 ? "it" : "them"} (export NAME=…), in your shell's start-up file to keep ${need.length === 1 ? "it" : "them"}, then: rdstudio provider check`);
+    let tiers: Partial<Record<models.Tier, string>> = Object.fromEntries(models.TIERS.filter((t) => s(t)).map((t) => [t, s(t)!]));
+    if (asking && !Object.keys(tiers).length) tiers = await providerinit.tiers(ask, say, need.length ? null : await models.offered());
+    if (Object.keys(tiers).length) { models.setTiers(tiers); say(`Models: ${Object.entries(models.tiers()).map(([t, m]) => `${t}=${m}`).join(", ")}`); }
+    else if (models.unnamed().length) say("The tiers' models are not named yet: name them on the Teacher page, or under [teacher.tiers] (low, mid, max) in the user config.");
+    if (v["no-check"] || need.length) return 0;
+    say("\nChecking the connection:");
+    return (await providerCheck(cfg, p, undefined, Boolean(v.verbose))) ? 0 : 1;
+  } catch (err) {
+    if (err instanceof providerinit.InitError || err instanceof models.ModelError) { console.error(`rdstudio provider init: ${err.message}`); return 1; }
+    // Ctrl+C or Ctrl+D at a question: stopped, not broken.
+    if ((err as { code?: string }).code === "ABORT_ERR") { console.error("\nStopped. What was written before this, if anything, is in the user config: rdstudio provider show."); return 1; }
+    throw err;
+  } finally { rl?.close(); }
+}
 
 /** `rdstudio provider check`: one small request, and what it shows of the connection, the models and the spending. */
 async function providerCheck(cfg: Config, p: Provider, model: string | undefined, verbose: boolean): Promise<boolean> {
@@ -182,6 +220,18 @@ const COMMANDS: Record<string, Command> = {
     help: "print a short orientation for an agent session",
     run(cfg) {
       console.log(brief(cfg));
+      return 0;
+    },
+  },
+
+  trace: {
+    help: "keep one tool call of an agent's own (a file of the base read, searched or edited), from its harness's hook: the hook's JSON on standard input",
+    run(cfg) {
+      // Says nothing and never fails: it runs on every tool call, and a hook that complains gets in the agent's way.
+      try {
+        const e = trace.hookEvent(cfg, JSON.parse(readFileSync(0, "utf8")));
+        if (e) trace.append(cfg, e);
+      } catch { /* not a report, or not kept */ }
       return 0;
     },
   },
@@ -408,14 +458,19 @@ const COMMANDS: Record<string, Command> = {
 
   provider: {
     help: "where the models come from (OpenRouter, or a gateway set in the user config), and a check that it answers",
-    usage: "[show|check [model]] [--verbose]",
-    options: { verbose: { type: "boolean", short: "v" } },
+    usage: "[show|check [model]|init] [--verbose]   init: [--url URL] [--name NAME] [--auth bearer|header|none] [--auth-header H] [--key-env VAR] [--ca-file PEM] [--system-ca] [--client-pfx FILE] [--pfx-password-env VAR] [--client-cert PEM --client-key PEM] [--proxy URL|env] [--low M --mid M --max M] [--force] [--no-check]",
+    options: { verbose: { type: "boolean", short: "v" }, url: { type: "string" }, name: { type: "string" }, auth: { type: "string" }, "auth-header": { type: "string" }, "key-env": { type: "string" },
+      "ca-file": { type: "string" }, "system-ca": { type: "boolean" }, "client-pfx": { type: "string" }, "pfx-password-env": { type: "string" }, "client-cert": { type: "string" }, "client-key": { type: "string" },
+      proxy: { type: "string" }, low: { type: "string" }, mid: { type: "string" }, max: { type: "string" }, force: { type: "boolean" }, "no-check": { type: "boolean" } },
     run(cfg, v, [action = "show", model]) {
+      if (action === "init") { void providerInit(cfg, v).then((code) => { process.exitCode = code; }); return 0; }
       const p = models.provider();
       if (action === "show" || action === "check") {
         console.log(`user config: ${userConfigPath()}`);
         for (const [k, val] of Object.entries(describeProvider(p))) console.log(`${(k + ":").padEnd(20)} ${val}`);
         console.log(`${"models:".padEnd(20)} tiers ${Object.entries(models.tiers()).map(([t, m]) => `${t}=${m}`).join(", ")}`);
+        const lim = Object.entries(models.limits()).filter(([, l]) => l.input || l.output).map(([t, l]) => `${t} ${[l.input ? `input ${l.input}` : "", l.output ? `output ${l.output}` : ""].filter(Boolean).join(", ")}`);
+        console.log(`${"limits:".padEnd(20)} ${lim.length ? lim.join("; ") + " (tokens)" : "none set: rdstudio's own figures for each kind of request"}`);
         const unnamed = models.unnamed();
         if (unnamed.length) console.log(`\nStill at rdstudio's own models, which are OpenRouter's names: ${unnamed.join(", ")}.\nSet them as ${p.name} names them, under [teacher.tiers] in the user config:  low = "…"  mid = "…"  max = "…"`);
         if (action === "show") { console.log("\nrdstudio provider check   sends one small request and says what came back (--verbose: what the connection was made with)"); return 0; }
@@ -518,13 +573,12 @@ function usageError(command: string, message: string): number {
 }
 
 function help(): string {
-  const names = [...Object.keys(COMMANDS).filter((n) => !n.startsWith("__")), ...PENDING].sort();
+  const names = Object.keys(COMMANDS).filter((n) => !n.startsWith("__")).sort();
   return [
     "usage: rdstudio [-h] [--version] [-C DIRECTORY] <command> ...",
     "",
     "commands:",
     ...Object.entries(COMMANDS).filter(([n]) => !n.startsWith("__")).map(([n, c]) => `  ${n.padEnd(10)} ${c.help}`),
-    `  (still in the Python command line: ${PENDING.join(", ")})`,
     "",
     `all: ${names.join(", ")}`,
   ].join("\n");
@@ -545,10 +599,6 @@ export function main(argv: string[]): number {
   if (!name) { console.error(help()); return 2; }
   const command = COMMANDS[name];
   if (!command) {
-    if (PENDING.includes(name)) {
-      console.error(`rdstudio ${name} is not in the Node command line yet; run the Python one (uv run rdstudio ${name}).`);
-      return 2;
-    }
     console.error(`rdstudio: error: unknown command '${name}'\n\n${help()}`);
     return 2;
   }

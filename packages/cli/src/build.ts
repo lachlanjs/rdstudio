@@ -1,5 +1,5 @@
-// Build the dashboard: the web app plus the bundle's data as JSON, written so
-// that it is byte for byte what the Python build writes (src/rdstudio/build.py).
+// Build the dashboard: the web app plus the bundle's data as JSON, written in
+// the form the first, Python, build wrote (removed in T102).
 
 import { codeIndexSync } from "./code.ts";
 import { createHash } from "node:crypto";

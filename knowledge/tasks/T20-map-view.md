@@ -2,7 +2,7 @@
 type: Task
 title: T20 — Map view (first version)
 description: A Map tab showing folders as nested regions with links drawn at their scale, tested on a separate differential geometry bundle.
-tags: [task, m7, active]
+tags: [task, m7, done]
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-09-26T04:26:47Z
@@ -74,3 +74,10 @@ test bed. The label limit must be configurable.
 Use it and tune. Open questions: straight region-to-region lines cross other
 regions; reports are not on the map yet; the note page layout (mini-map,
 nearby versus across-the-map links) is the next piece.
+
+## Closed, 2026-10-08
+
+Marked done in [T104](/tasks/T104-tidy-board-server-root.md): this first
+map was replaced by the grid Atlas, and the old Atlas was retired on the
+developer's word in [T63](/tasks/T63-grid-atlas-parity.md). Nothing here is
+still being worked on.

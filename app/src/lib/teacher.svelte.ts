@@ -4,7 +4,7 @@
 // customising how the agent teaches is possible, not encouraged.
 
 import {
-  deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect, putApiTeacherTiers,
+  deleteApiTeacherAi, getApiTeacherAi, getApiTeacherDrafts, postApiTeacherAiCheck, postApiTeacherAiConnect, putApiTeacherLimits, putApiTeacherTiers,
   deleteApiTeacherSkillsByName, getApiTeacher, getApiTeacherDraftsById, getApiTeacherFilesByName, getApiTeacherSkillsByName, postApiTeacherDraftsByIdRestore,
   postApiTeacherDraftsByIdSubmitted, postApiTeacherDraftsByIdVersions, putApiTeacherDraftsById, putApiTeacherFilesByName, putApiTeacherProfile, putApiTeacherSkillsByName,
 } from "./api/sdk.gen.ts";
@@ -210,6 +210,13 @@ export const ai = {
     await editing.known;
     const { data, error } = await putApiTeacherTiers({ body: tiers, headers: { "x-rdstudio-token": editing.token ?? learner.writeHeaders()["x-rdstudio-token"] } });
     if (!data) throw new Error(said(error, "The models were not changed"));
+    return data;
+  },
+  /** Set each tier's limits (T110): the most tokens sent in one call, and the longest reply asked for; null takes one off. */
+  async setLimits(limits: Partial<Record<"low" | "mid" | "max", { input?: number | null; output?: number | null }>>): Promise<AiState> {
+    await editing.known;
+    const { data, error } = await putApiTeacherLimits({ body: limits, headers: { "x-rdstudio-token": editing.token ?? learner.writeHeaders()["x-rdstudio-token"] } });
+    if (!data) throw new Error(said(error, "The limits were not changed"));
     return data;
   },
   async check(): Promise<{ text: string; model: string; cost: number }> {

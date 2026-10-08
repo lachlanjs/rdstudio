@@ -25,3 +25,30 @@ test("sections become system and user messages, cached where asked, with a repor
   ]);
   expect(seen.map((s) => [s.name, s.role, s.shortened])).toEqual([["Skill", "system", false], ["Exercise", "system", false], ["Your draft", "user", false], ["Asked", "user", false]]);
 });
+
+test("with an input limit, loose sections are shortened in proportion and kept ones are not (T110)", () => {
+  const long = (n: number) => Array.from({ length: n }, (_, i) => `Line ${i} ${"y".repeat(36)}`).join("\n");
+  const sections = [
+    { name: "How", text: "Be exact.", tokens: 500, keep: true },
+    { name: "Found", text: long(200), tokens: 4000 },
+    { name: "Code", text: long(100), tokens: 4000 },
+    { name: "Aside", text: "A short aside.", tokens: 500 },
+    { name: "Asked", text: "What is the point?", tokens: 500, role: "user" as const, keep: true },
+  ];
+  const whole = assemble(sections);
+  const total = (r: { seen: { tokens: number }[] }) => r.seen.reduce((n, x) => n + x.tokens, 0);
+  expect(total(whole)).toBeGreaterThan(3000);
+  expect(assemble(sections, 100_000).seen).toEqual(whole.seen); // a limit not reached changes nothing
+
+  const fit = assemble(sections, 1500), by = Object.fromEntries(fit.seen.map((x) => [x.name, x]));
+  expect(total(fit)).toBeLessThanOrEqual(1500);
+  expect(total(fit)).toBeGreaterThan(1200); // and the room is used
+  expect(by.How!.text).toBe("## How\n\nBe exact.");
+  expect(by.Asked!.text).toBe("## Asked\n\nWhat is the point?");
+  expect(by.Aside!.shortened).toBe(false); // small enough to stay whole
+  expect(by.Found!.shortened && by.Code!.shortened).toBe(true);
+  expect(by.Found!.text).toMatch(/\[…shortened to fit\]$/);
+  expect(by.Found!.tokens / by.Code!.tokens).toBeGreaterThan(1.6); // twice the text, about twice the room
+  // What must be kept is more than the limit: refused, with what to do.
+  expect(() => assemble([{ name: "Note", text: long(400), tokens: 9000, keep: true }, { name: "Found", text: long(50), tokens: 900 }], 2000)).toThrow(/larger than the input limit.*limit is 2000/);
+});

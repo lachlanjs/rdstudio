@@ -359,7 +359,11 @@ with sync_playwright() as pw:
     p.goto(URL + "?nosw#/map")
     p.locator(".axis-panel").get_by_role("button", name="Axis", exact=True).click()
     expect(p.locator(".atlas-ask-off")).to_be_visible(timeout=15000)
-    check("with no model account, the panel says how to connect one and offers nothing to ask", p.locator(".atlas-ask .axis-editor:visible").count() == 0 and p.locator(".atlas-ask-off a").get_attribute("href") == "#/teacher")
+    ask_form = p.locator(".atlas-ask")
+    check("with no model account, the panel says how to connect one and offers nothing to ask", ask_form.get_by_role("button", name="Ask", exact=True).is_hidden() and ask_form.locator("select").is_hidden()
+          and p.locator(".atlas-ask-off a").get_attribute("href") == "#/teacher")
+    # The box is still there to write in: what is written can be sent to an agent in the terminal, which needs no model (T109).
+    check("and still offers to send what is written to the terminal agent", ask_form.locator(".axis-editor").is_visible() and ask_form.get_by_role("button", name="Send to agent").is_visible())
     browser.close()
 
 check("no errors in the browser console", not errors, errors[:5])

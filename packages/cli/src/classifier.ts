@@ -1,5 +1,6 @@
 // The classifier chosen in rdstudio.toml: the core's rules, or an external
-// command that answers JSON (see src/rdstudio/classify.py for the protocol).
+// command that answers JSON: it is sent {question, options, state} and replies
+// {choice, confidence} (see choose() below).
 //
 //   [classifier]
 //   backend = "command"

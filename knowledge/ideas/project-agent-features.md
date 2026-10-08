@@ -66,3 +66,9 @@ Not the developer's words; what exists to build on, and what to decide.
   stamp names the model; and proposed text is a suggestion in the note, which
   may hold links and code.
 - **The agent's path** is not started.
+
+- **The agent's path**, 2026-10-08: scoped and recorded as tasks, none
+  started. [T107](/tasks/T107-agent-path-live.md) is the log, the stream and
+  the live path; [T108](/tasks/T108-agent-path-file-hooks.md) covers reads
+  and edits made outside MCP; [T109](/tasks/T109-browser-to-agent.md) is the
+  other direction, browser to agent.

@@ -14,9 +14,10 @@ import { SearchIndex, type Bundle, type CodeIndex } from "@rdstudio/core";
 import { loadBundle } from "@rdstudio/core/node";
 import { codeIndexSync } from "./code.ts";
 import type { Config } from "./config.ts";
-import { assemble, type Seen } from "./context.ts";
+import { assemble, size, type Seen } from "./context.ts";
 import * as embed from "./embed.ts";
-import { Lookup, toolsFor, type Step } from "./lookup.ts";
+import { BY_MEANING, LOOKING, ROUNDS, codeRead, notices, rounds, type Hooks, type Source, type Spent } from "./agent.ts";
+import { Lookup, type Step } from "./lookup.ts";
 import * as models from "./models.ts";
 import { StoreError } from "./store.ts";
 
@@ -54,14 +55,6 @@ export interface Edit { kind: "passage" | "insert" | "change"; from: number; to:
 /** The tier a mode is asked at when none is chosen: a figure is the hardest to get right. */
 export const USUAL: Record<Mode, models.Tier> = { ask: "mid", fill: "mid", figure: "max", chat: "mid" };
 
-/** Something the model was given, shown under its reply. */
-export interface Source {
-  kind: "note" | "code";
-  id: string; // a note's id, or a file's path
-  title: string;
-  line?: number;
-}
-
 export interface Reply {
   mode: Mode;
   reply: string; // as the model wrote it
@@ -83,6 +76,8 @@ export interface Reply {
   edits?: Edit[];
   /** chat: changes it proposed that are not offered, each with why (not let, not found in the note, cut short). */
   dropped?: string[];
+  /** Where a limit shaped the reply (T110): it was cut off, or it stopped looking things up. */
+  notices?: string[];
 }
 
 // What it works from: what it looks up for itself (T84), or, for a model that cannot call tools, what was gathered for it.
@@ -93,15 +88,6 @@ const USE = { looked: `- Work from the note below and from what you look up with
   found by searching the base, and code from the repository. Do not invent
   facts, names, file paths or code that are not there. If what you are given
   does not answer, say so plainly and say what would.` };
-
-/** How many times it may look things up before it must reply, by tier. */
-export const ROUNDS: Record<models.Tier, number> = { low: 3, mid: 6, max: 8 };
-
-/** Said only where notes can be searched by meaning (T89). */
-export const BY_MEANING = `
-- find_similar finds notes by meaning, in other words than theirs. It is
-  second: use it when search_notes and the links of the notes in hand have
-  not found what you need.`;
 
 const LOOKUP = (rounds: number, meaning: boolean) => `# Looking things up
 
@@ -117,13 +103,7 @@ below there is only the note, and the titles of the notes it links to.
   note's headings and what it links to; read_note reads one section. Prefer
   one section to a whole note. Follow a note's links when what you need is
   one step on from it.${meaning ? BY_MEANING : ""}
-- For code: search_symbols finds functions and classes by what they are
-  for, when you do not know the name; outline_code lists what a folder or a
-  file holds; search_code finds exact text; read_code reads lines. Quote
-  code only as you read it.
-- You may call several tools at once. You have ${rounds} rounds of looking
-  up at most; then reply in the form asked, with what you have.
-- Say nothing between lookups: no "let me check". Only the reply is shown.`;
+${LOOKING(rounds)}`;
 
 const PLACE = `The place they are asking about is marked in their note: a
 passage between ${OPEN} and ${CLOSE}, or the point ${HERE}.`;
@@ -316,6 +296,8 @@ is not offered if it breaks one.
 - Only what the note, the notes given and the code given support. Do not
   invent data: if a figure needs numbers you were not given, compute them
   from the formula in the passage, and say so in the caption.`;
+
+export type { Hooks, Source, Spent };
 
 // ------------------------------------------------------------------ the note, marked
 
@@ -526,27 +508,29 @@ export function prepare(cfg: Config, ask: Ask, opts: { gather?: boolean } = {}):
   // The whole of the marked passage is always sent, with the note round it.
   const room = Math.max(14000, selection.length + 6000);
   const how = chat ? HOW_TEXT(gather ? USE.given : USE.looked, PLACES) : gather ? HOW : HOW_TEXT(USE.looked);
+  // The turns before this one count towards the tier's input limit (T110), and are sent as they were.
+  const before = thread.flatMap((t): models.Message[] => [{ role: "user", content: t.question.slice(0, 4000) }, { role: "assistant", content: t.answer.slice(0, 6000) || "(No answer.)" }]);
+  const limit = models.limits()[ask.tier ?? USUAL[ask.mode]].input;
   // A provider takes few cache marks (Anthropic, four): one where the fixed part ends, one where the request does.
   const { messages, seen } = assemble([
-    { name: "How to help", text: how.replace(/^# How to help\n\n/, ""), tokens: 600 },
-    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700 },
-    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]], embed.available()).replace(/^# Looking things up\n\n/, ""), tokens: 600 },
-    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900 },
-    { name: "Your reply", text: (ask.mode === "chat" ? chatForm(ask) : FORM[ask.mode]).replace(/^# Your reply\n\n/, ""), tokens: 700, cache: true },
+    { name: "How to help", text: how.replace(/^# How to help\n\n/, ""), tokens: 600, keep: true },
+    { name: "How notes work here", text: FORMAT.replace(/^# How notes work here\n\n/, ""), tokens: 700, keep: true },
+    { name: "Looking things up", text: gather ? "" : LOOKUP(ROUNDS[ask.tier ?? USUAL[ask.mode]], embed.available()).replace(/^# Looking things up\n\n/, ""), tokens: 600, keep: true },
+    { name: "The artifact", text: ask.mode === "figure" ? FIGURE_HOW.replace(/^# The artifact\n\n/, "") : "", tokens: 900, keep: true },
+    { name: "Your reply", text: (ask.mode === "chat" ? chatForm(ask) : FORM[ask.mode]).replace(/^# Your reply\n\n/, ""), tokens: 700, cache: true, keep: true },
     { name: "Notes this one links to", text: gather ? linked.map((id) => noteText(b, id, 2400)).join("\n\n")
       : every.slice(0, 60).map((id) => { const c = b.concepts.get(id)!; return `- ${c.title} (/${id}.md)${c.description ? `: ${c.description}` : ""}`; }).join("\n") + (every.length > 60 ? `\n[…and ${every.length - 60} more]` : ""), tokens: gather ? 3600 : 1500 },
     { name: "Notes found by searching the base", text: found.map((id) => noteText(b, id, 1600)).join("\n\n"), tokens: 2400 },
     { name: "Code from the repository", text: code.map((f) => `### ${f.title} (\`${f.path}:${f.line}\`)\n${f.text}`).join("\n\n"), tokens: 3600 },
-    { name: `The note being written: ${title} (/${ask.note}.md)`, text: chat ? markedPlaces(ask.body, from, to, ask.at, room, ok.note) : marked(ask.body, from, to, room) || HERE, tokens: chat && ok.note ? Math.ceil(MAX_WHOLE / 4) + 400 : Math.ceil(room / 4) + 100, role: "user" },
-    { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user" },
+    { name: `The note being written: ${title} (/${ask.note}.md)`, text: chat ? markedPlaces(ask.body, from, to, ask.at, room, ok.note) : marked(ask.body, from, to, room) || HERE, tokens: chat && ok.note ? Math.ceil(MAX_WHOLE / 4) + 400 : Math.ceil(room / 4) + 100, role: "user", keep: true },
+    { name: "The artifact you wrote before", text: ask.fix ? ask.fix.html : "", tokens: 12000, role: "user", keep: true },
     // Cached to here: when it looks things up, each further round sends all of this again.
-    { name: "What to do", text: what, tokens: 900, role: "user", cache: true },
-  ]);
+    { name: "What to do", text: what, tokens: 900, role: "user", cache: true, keep: true },
+  ], limit ? Math.max(1, limit - before.reduce((n, m) => n + size(m), 0)) : null);
   // The turns before this one go between what is fixed and the note as it is now.
   if (thread.length) {
     const first = messages.findIndex((m) => m.role === "user");
-    messages.splice(first < 0 ? messages.length : first, 0, ...thread.flatMap((t): models.Message[] => [
-      { role: "user", content: t.question.slice(0, 4000) }, { role: "assistant", content: t.answer.slice(0, 6000) || "(No answer.)" }]));
+    messages.splice(first < 0 ? messages.length : first, 0, ...before);
   }
   return { messages, seen, sources, job: ask.mode === "ask" || (chat && !ok.passage && !ok.insert && !ok.note) ? "discuss" : "write" };
 }
@@ -644,71 +628,22 @@ const featureOf = (a: Ask) => (a.mode === "ask" || (a.mode === "chat" && !change
 /** Room for a chat turn's reply: the answer, and each kind of change it has been let make. */
 export const chatTokens = (a: Ask): number => { const ok = allowed(a); return Math.min(32_000, 1200 + (ok.passage ? fillTokens(Math.abs(a.to - a.from)) : 0) + (ok.insert ? 2500 : 0) + (ok.note ? Math.max(4000, Math.ceil(a.body.length / 2)) : 0)); };
 const roomFor = (a: Ask) => (a.mode === "ask" ? 900 : a.mode === "figure" ? 8000 : a.mode === "chat" ? chatTokens(a) : fillTokens(Math.abs(a.to - a.from)));
-/** A model, or the provider it is routed to, that cannot call tools says so; then it is given what it would have looked up. */
-const noTools = (err: unknown) => err instanceof models.ModelError && /\btools?\b|tool_choice|function.?call/i.test(err.message) && /support|not available|no endpoints|invalid|unknown|unrecognized|not allowed|not permitted|unexpected|extra|disabled/i.test(err.message);
-
-export interface Hooks {
-  /** Each piece of the reply's text as it is written. */
-  onText?: (piece: string) => void;
-  /** Each thing it looks up, as it does. What was written before a lookup is not the reply: text starts again after one. */
-  onStep?: (step: Step) => void;
-  signal?: AbortSignal;
-}
-
-/** What a request used, over all its rounds: calls to the model, and tokens sent (of which read from the cache) and written. */
-export interface Spent { calls: number; input: number; output: number; cached: number }
-
-/** The rounds of looking up (T84): the model is asked, each tool it calls is run and answered, and it is asked
- *  again, until it replies or the tier's rounds are used, when it must reply. `gathered` is what to send
- *  in place of the request for a model that cannot call tools. */
-export async function rounds(o: { call: Omit<models.Call, "messages" | "tools" | "toolChoice">; messages: models.Message[]; look: Lookup; tier: models.Tier;
-  onStep?: (step: Step) => void; gathered: () => models.Message[] }): Promise<{ text: string; cost: number; model: string; spent: Spent }> {
-  const messages = [...o.messages], most = ROUNDS[o.tier], tools = toolsFor();
-  let text = "", cost = 0, used = o.call.model ?? "";
-  const spent: Spent = { calls: 0, input: 0, output: 0, cached: 0 };
-  const add = (u: models.Usage) => { spent.calls++; spent.input += u.prompt_tokens; spent.output += u.completion_tokens; spent.cached += u.cached_tokens; };
-  // A provider set not to offer tools (provider.ts, tools = false): one call, with the context gathered for it.
-  if (!models.provider().tools) { const r = await models.complete({ ...o.call, messages: o.gathered() }); add(r.usage); return { text: r.text, cost: r.usage.cost, model: r.usage.model, spent }; }
-  for (let round = 0; ; round++) {
-    let r: models.Reply;
-    try {
-      r = await models.complete({ ...o.call, messages, tools, toolChoice: round < most ? "auto" : "none" });
-    } catch (err) {
-      if (round > 0 || !noTools(err)) throw err;
-      r = await models.complete({ ...o.call, messages: o.gathered() });
-      r.calls = [];
-    }
-    cost += r.usage.cost; used = r.usage.model; text = r.text;
-    add(r.usage);
-    if (!r.calls.length || round >= most) break;
-    messages.push({ role: "assistant", content: r.text, calls: r.calls });
-    for (const c of r.calls) {
-      const out = await o.look.runAsync(c.name, c.arguments);
-      messages.push({ role: "tool", callId: c.id, content: out });
-      o.onStep?.(o.look.steps.at(-1)!);
-    }
-  }
-  return { text, cost, model: used, spent };
-}
-
 /** Ask, streaming the reply's text. The model may look things up first (`rounds`). Nothing is kept but the usage. */
 export async function ask(cfg: Config, a: Ask, hooks: Hooks | ((piece: string) => void) = {}): Promise<{ reply: Reply; seen: Seen[] }> {
   const h: Hooks = typeof hooks === "function" ? { onText: hooks } : hooks;
   const tier = a.tier ?? USUAL[a.mode], model = models.tiers()[tier];
   let p = prepare(cfg, a);
   const look = new Lookup(cfg, loadBundle(cfg.knowledgeDir), a.note);
-  const { text, cost, model: used, spent } = await rounds({
-    call: { cfg, job: p.job, feature: featureOf(a), onText: h.onText, model, maxTokens: roomFor(a), signal: h.signal },
-    messages: p.messages, look, tier, onStep: h.onStep, gathered: () => (p = prepare(cfg, a, { gather: true })).messages });
+  const { text, cost, model: used, spent, cut, full } = await rounds({
+    call: { cfg, job: p.job, feature: featureOf(a), onText: h.onText, model, tier, maxTokens: roomFor(a), signal: h.signal },
+    messages: p.messages, boxes: [look], tier, onStep: h.onStep, inputLimit: models.limits()[tier].input, gathered: () => (p = prepare(cfg, a, { gather: true })).messages });
   // What it drew on: what was gathered for it, and each note and file it opened itself.
   const sources = [...p.sources];
-  for (const s of look.steps) {
-    if (s.failed) continue;
-    if (s.opened && !sources.some((x) => x.kind === "note" && x.id === s.opened)) sources.push({ kind: "note", id: s.opened, title: look.b.concepts.get(s.opened)?.title ?? s.opened });
-    else if (s.tool === "read_code" && s.code && !sources.some((x) => x.kind === "code" && x.id === s.code!.path && x.line === s.code!.line)) sources.push({ kind: "code", id: s.code.path, title: s.code.path, line: s.code.line });
-  }
+  for (const s of look.steps) if (!s.failed && s.opened && !sources.some((x) => x.kind === "note" && x.id === s.opened)) sources.push({ kind: "note", id: s.opened, title: look.b.concepts.get(s.opened)?.title ?? s.opened });
+  for (const c of codeRead(look.steps)) if (!sources.some((x) => x.kind === "code" && x.id === c.id && x.line === c.line)) sources.push(c);
   const from = Math.min(a.from, a.to), to = Math.max(a.from, a.to);
-  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost, spent };
+  const said = notices({ cut, full }, tier);
+  const base = { mode: a.mode, reply: text, from, to, sources, steps: look.steps, model: used, tier, cost, spent, ...(said.length ? { notices: said } : {}) };
   if (a.mode === "chat") { const c = parseChat(text, a); return { reply: { ...base, answer: c.answer, insert: null, edits: c.edits, dropped: c.dropped }, seen: p.seen }; }
   if (a.mode === "ask") return { reply: { ...base, answer: text.trim(), insert: null }, seen: p.seen };
   if (a.mode === "figure") { const f = parseFigure(text); return { reply: { ...base, answer: f.why, insert: null, artifact: f.artifact }, seen: p.seen }; }

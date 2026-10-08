@@ -4,9 +4,10 @@ repository), bundled into this package at release, with Node from the
 nothing else.
 
 - In a checkout (an editable install), the TypeScript sources run directly.
-- ``RDSTUDIO_PYTHON=1`` (or the ``rdstudio-py`` command) runs the Python
-  command line instead, while it lasts; so does a missing Node program.
 - ``RDSTUDIO_NODE`` names another node executable (24 or later).
+
+This package holds nothing else of rdstudio: the Node program is the only
+implementation (T102).
 """
 
 from __future__ import annotations
@@ -39,19 +40,14 @@ def program() -> Path | None:
     return BUNDLE if BUNDLE.is_file() else None
 
 
-def python_cli() -> None:
-    from .cli import main as python_main
-
-    sys.exit(python_main())
-
-
 def main() -> None:
-    if os.environ.get("RDSTUDIO_PYTHON"):
-        python_cli()
     script, node = program(), node_executable()
-    if script is None or node is None:
-        print("rdstudio: the Node command line is not available here; using the Python one.", file=sys.stderr)
-        python_cli()
+    if script is None:
+        sys.exit("rdstudio: the Node program is missing from this installation (rdstudio/_node/rdstudio.mjs). "
+                 "Install it again: uv tool install --reinstall rdstudio; or run it with npx rdstudio.")
+    if node is None:
+        sys.exit("rdstudio: no node executable was found. Install it again (uv tool install --reinstall rdstudio), "
+                 "or name one, version 24 or later, in RDSTUDIO_NODE.")
     env = {**os.environ, "RDSTUDIO_WEB_DIR": str(HERE / "web"), "RDSTUDIO_TEMPLATES_DIR": str(HERE / "templates")}
     args = [node, str(script), *sys.argv[1:]]
     if os.name == "posix":

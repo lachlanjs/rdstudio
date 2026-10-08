@@ -1,7 +1,7 @@
 // Optional papis backend: reference stubs in the bundle, and cheap access to
 // bibliographic metadata and PDF text for agents. papis keeps one folder per
 // document with an info.yaml, read here directly (papis itself is not
-// needed); PDF text comes from pdftotext. A port of src/rdstudio/references.py.
+// needed); PDF text comes from pdftotext.
 //
 //   [references]
 //   backend = "papis"

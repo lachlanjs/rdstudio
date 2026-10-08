@@ -1,6 +1,6 @@
 // The learner record: what a person has done to learn a project, one JSON
-// event per line, only ever appended. A port of src/rdstudio/learner.py
-// (where the record lives and how it is written stay with the caller).
+// event per line, only ever appended. Where the record
+// lives and how it is written stay with the caller.
 //
 // Every event has an `id`, a ULID (a millisecond timestamp, then randomness,
 // in 26 sortable characters), and the `device` that wrote it. Records from

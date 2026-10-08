@@ -7,6 +7,7 @@
 
 import { LearnerError, splitSolution, type Bundle } from "@rdstudio/core";
 import { loadBundle } from "@rdstudio/core/node";
+import { notices } from "./agent.ts";
 import type { Config } from "./config.ts";
 import { assemble, type Seen } from "./context.ts";
 import * as models from "./models.ts";
@@ -179,20 +180,20 @@ export function prepare(cfg: Config, ask: Ask): Prepared {
   const skill = teacher.skill(cfg, "tutor")?.text ?? "";
   const earlier = turns.slice(-6).map((t) => `${t.mode}${t.rung ? ` (rung ${t.rung})` : ""}${t.prompt ? `, asked: ${t.prompt}` : ""}:\n${t.reply}`).join("\n\n");
   const { messages, seen } = assemble([
-    { name: "How to teach", text: skill, tokens: 2500, cache: true },
-    { name: "Reply form", text: FORM, tokens: 400, cache: true },
-    { name: `The exercise: ${ex.title}`, text: problem, tokens: 1500 },
+    { name: "How to teach", text: skill, tokens: 2500, cache: true, keep: true },
+    { name: "Reply form", text: FORM, tokens: 400, cache: true, keep: true },
+    { name: `The exercise: ${ex.title}`, text: problem, tokens: 1500, keep: true },
     { name: "Its solution (for you only; never quote it)", text: solution ?? "(none written)", tokens: 1500, cache: true },
     { name: "The notes it tests", text: notes.tested, tokens: 3000 },
     { name: "What those notes build on", text: notes.around, tokens: 600 },
     { name: "What the developer has found hard here", text: struggles(cfg, [ex.title, ...notes.tested.split("\n").filter((l) => l.startsWith("### ")).map((l) => l.slice(4))]), tokens: 400 },
     { name: "Earlier in this session", text: earlier, tokens: 1500 },
-    { name: "The developer's draft", text: draft.text || "(empty so far)", tokens: 3000, role: "user" },
+    { name: "The developer's draft", text: draft.text || "(empty so far)", tokens: 3000, role: "user", keep: true },
     { name: "Their working", text: draft.working, tokens: 1500, role: "user" },
-    { name: "The passage they highlighted", text: turn.selection ?? "", tokens: 500, role: "user" },
-    { name: "Their question", text: turn.prompt ?? "", tokens: 500, role: "user" },
-    { name: "What to do", text: MODE_ASK[ask.mode](turn), tokens: 300, role: "user" },
-  ]);
+    { name: "The passage they highlighted", text: turn.selection ?? "", tokens: 500, role: "user", keep: true },
+    { name: "Their question", text: turn.prompt ?? "", tokens: 500, role: "user", keep: true },
+    { name: "What to do", text: MODE_ASK[ask.mode](turn), tokens: 300, role: "user", keep: true },
+  ], models.limits()[models.tierOf({ job: ask.mode === "hint" ? "hint" : ask.mode })].input);
   return { turn, messages, seen, job: ask.mode === "hint" ? "hint" : ask.mode };
 }
 
@@ -202,7 +203,9 @@ export async function ask(cfg: Config, a: Ask, onText?: (piece: string) => void)
   const reply = await models.complete({ cfg, job: p.job, feature: a.mode, messages: p.messages, exercise: a.exercise, onText,
     maxTokens: a.mode === "hint" ? 200 : 900 });
   const version = teacher.readDraft(cfg, a.exercise).versions.find((v) => v.id === p.turn.version)!;
-  const { general, pins } = parseReply(reply.text, version.text);
+  const parsed = parseReply(reply.text, version.text), pins = parsed.pins;
+  // A reply stopped at the output limit says so (T110): the limit set for the job's tier, or the tutor's own.
+  const general = reply.cut ? `${parsed.general}\n\n*${notices({ cut: reply.cut }, models.tierOf({ job: p.job }))[0]}*`.trim() : parsed.general;
   const turn: Turn = { ...p.turn, reply: reply.text, general, pins, model: reply.usage.model, cost: reply.usage.cost };
   teacher.addTurn(cfg, a.exercise, turn as unknown as Record<string, unknown> & { id: string; mode: string });
   return { turn, seen: p.seen };

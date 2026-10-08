@@ -15,7 +15,18 @@
 * [T08 — MCP server](T08-mcp-server.md) - Local stdio MCP for search, outline, read, record, verify and log.
 * [T09 — Scaffolding, skills and agents](T09-scaffold-skills.md) - rdstudio init plus the skill and agent set.
 * [T10 — Reports](T10-reports.md) - HTML reports with vendored charting, Reports tab, graph integration and the /report skill.
+* [T100 — One agent loop for Axis](T100-one-agent-loop.md) - Fold the separate agent set-ups (Axis in the editor, Ask Atlas, the tutor) into one loop with one set of tools, so that a new tool is added once.
+* [T101 — Axis creates, changes and moves notes from Ask Atlas](T101-axis-writes-notes.md) - From the Axis panel on the Atlas, the agent proposes new notes, changes to notes and moves, shown for the developer to accept before anything is written.
+* [T102 — Retire the Python implementation](T102-retire-python.md) - Remove the second implementation of the library, search, build, server and MCP server in Python, keeping only the launcher that starts the Node program.
+* [T103 — Decide what the tool is not: unbuilt platforms, little-used pages, older views](T103-prune-scope.md) - Go through the unbuilt platform tasks, the app's pages and the older map views with the developer, and drop or remove what does not serve the tool's purpose.
+* [T104 — Tidy: the task board, the server file, the repository root](T104-tidy-board-server-root.md) - Bring the task states up to date, split serve.ts by area, and clear the repository root of leftovers.
+* [T105 — Find out why no note here is verified, and act on it](T105-verification-in-use.md) - All 174 notes in this project's own knowledge base are unverified; decide whether verifying costs too much or is not worth doing, and change the design to suit.
+* [T106 — rdstudio provider init: set up an organisation's gateway by answering questions](T106-provider-init.md) - A command that asks for the gateway's address, certificates, proxy and model names, writes the settings, and runs the check, left over from T99.
+* [T107 — A terminal agent's path through the base, shown live in the browser](T107-agent-path-live.md) - The MCP server logs each call with the notes it names, rdstudio serve streams the log, and the Atlas draws a session as a path, live and replayable.
+* [T108 — The agent's path: reads and edits made outside MCP](T108-agent-path-file-hooks.md) - Report a terminal agent's direct reads and edits of knowledge files to the same log, through each harness's hooks, Claude Code first.
+* [T109 — From the browser to the terminal agent](T109-browser-to-agent.md) - To explore: an MCP tool by which a terminal agent learns what the developer is looking at in the app, or what they have left for it.
 * [T11 — Procedural graphs](T11-procedures.md) - Procedure concepts with graphs; MCP neighbourhood lookup; Procedures tab.
+* [T110 — Set how much goes to a model and how much may come back, in rdstudio itself](T110-context-limits-settings.md) - Settings for the input budget and the output limit of the model calls, which are fixed in the code today.
 * [T12 — papis and Zotero references](T12-references.md) - Optional papis backend: reference stubs, MCP reference tools, /ingest-ref.
 * [T13 — Global bundle and promote](T13-global-bundle.md) - Support ~/knowledge as a second bundle; scoped search; /promote.
 * [T14 — Pluggable classifier interface](T14-classifier.md) - Interface for edit-significance and step localisation with deterministic default.

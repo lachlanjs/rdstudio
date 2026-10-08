@@ -1,5 +1,5 @@
 // rdstudio init: scaffold rdstudio into a repository, idempotently.
-// A port of src/rdstudio/scaffold.py. The templates are src/rdstudio/templates,
+// The templates are src/rdstudio/templates,
 // copied beside the program in a release.
 
 import { execFileSync } from "node:child_process";
@@ -18,6 +18,7 @@ export const TEMPLATES = assetDir("templates", "RDSTUDIO_TEMPLATES_DIR", fileURL
 const SECTION_START = "<!-- rdstudio:start";
 const SECTION_END = "<!-- rdstudio:end -->";
 const HOOK_COMMAND = "rdstudio brief";
+const TRACE_COMMAND = "rdstudio trace";
 const OPENCODE_AGENT = "opencode/unknown";
 
 // OpenCode subagent permissions; Claude Code's equivalent is each agent's `tools` list.
@@ -172,6 +173,13 @@ export function init(target: string, { title, human, force = false }: { title?: 
     const brief = command.command === "rdstudio" ? HOOK_COMMAND : "uv run " + HOOK_COMMAND;
     const present = hooks.some((entry) => (entry.hooks ?? []).some((h) => (h.command ?? "").endsWith(HOOK_COMMAND)));
     if (!present) hooks.push({ hooks: [{ type: "command", command: brief }] } as never);
+    // What the agent reads, searches and edits of the base with its own file tools is reported (T108), so that
+    // its path on the Atlas is whole. In the background: a tool call does not wait for it.
+    const after = arr(obj(data, "hooks"), "PostToolUse") as { matcher?: string; hooks?: { command?: string }[] }[];
+    const report = brief.slice(0, -HOOK_COMMAND.length) + TRACE_COMMAND;
+    if (!after.some((entry) => (entry.hooks ?? []).some((h) => (h.command ?? "").endsWith(TRACE_COMMAND)))) {
+      after.push({ matcher: "Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob", hooks: [{ type: "command", command: report, async: true }] } as never);
+    }
   }));
 
   // OpenCode: MCP registration. It reads skills from .claude/skills directly.

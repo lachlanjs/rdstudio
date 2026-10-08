@@ -1,8 +1,7 @@
 // The local stdio MCP server over the project knowledge bundle, on the official
-// TypeScript SDK. A port of src/rdstudio/mcp_server.py: the same tools, the
-// same arguments and the same compact text, so agents see no difference.
-// One change by design: read(frontmatter=true) returns the frontmatter as it
-// is in the file, rather than re-rendered.
+// TypeScript SDK. Tool output is compact text, in the form the first, Python,
+// server wrote (removed in T102). read(frontmatter=true) returns the
+// frontmatter as it is in the file.
 
 import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -24,6 +23,8 @@ import { ScopeError, globalConfig, promote, scoped } from "./scopes.ts";
 import { StoreError, conceptPath, record } from "./store.ts";
 import * as learner from "./learner.ts";
 import * as teacher from "./teacher.ts";
+import { Tracer } from "./trace.ts";
+import * as inbox from "./inbox.ts";
 
 export const INSTRUCTIONS = `Project knowledge base (OKF markdown bundle). Retrieve progressively:
 search -> outline -> read(section). Prefer reading one section over a whole
@@ -33,6 +34,9 @@ procedures as they happen. Mark an edit significant=false only for trivial or
 dictated changes; significant edits flag human-reviewed concepts for re-review.
 Never claim human verification; only humans verify (rdstudio verify).`;
 
+/** The tools whose trace names a note by its title, and so needs the base. */
+const TRACED_NOTES = new Set(["outline", "read", "backlinks", "study_path", "record", "procedure_next", "procedure_propose"]);
+
 /** Tool output: JSON as the Python server writes it (indent 1, not ASCII-escaped). */
 const fmt = (value: unknown): string => pyDumps(value, { indent: 1, ensureAscii: false });
 const reply = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
@@ -41,7 +45,10 @@ const opt = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 export function createServer(cfg: Config, version: string): McpServer {
   const server = new McpServer({ name: "rdstudio", version }, { instructions: INSTRUCTIONS });
   const classifier = fromConfig(cfg.raw);
-  const bundle = (): Bundle => loadBundle(cfg.knowledgeDir);
+  // What each call touched is kept for the Atlas to draw (T107): the base as the call saw it is remembered for that.
+  let seen: Bundle | null = null;
+  const bundle = (): Bundle => (seen = loadBundle(cfg.knowledgeDir));
+  const tracer = new Tracer(cfg, () => { const c = server.server.getClientVersion(); return c ? `${c.name}${c.version ? ` ${c.version}` : ""}` : "an agent"; });
 
   /** Resolve "id" (project) or "global:id" (global knowledge base). */
   const locate = (ref: string): { bundle: Bundle; cid: string | null } => {
@@ -55,11 +62,26 @@ export function createServer(cfg: Config, version: string): McpServer {
     return { bundle: b, cid: b.resolveId(ref) };
   };
   const tool = <S extends z.ZodRawShape>(name: string, description: string, shape: S, run: (args: z.infer<z.ZodObject<S>>) => string) =>
-    server.registerTool(name, { description, inputSchema: shape }, ((args: z.infer<z.ZodObject<S>>) => reply(run(args))) as never);
+    server.registerTool(name, { description, inputSchema: shape }, ((args: z.infer<z.ZodObject<S>>) => {
+      seen = null;
+      const out = run(args);
+      // The base is loaded for the trace where the call did not load it, and only for the tools that name a note.
+      tracer.call(name, args as Record<string, unknown>, out, seen ?? (TRACED_NOTES.has(name) ? loadBundle(cfg.knowledgeDir) : null));
+      return reply(out);
+    }) as never);
 
   tool("brief", `A short orientation to the project knowledge base: what exists, active
 tasks, what awaits the developer and recent commits. Call it at the start
 of a session unless one was already provided.`, {}, () => brief(cfg));
+
+  tool("from_developer", `What the developer has sent you from the app: a message, with the note or
+folder they were on and any passage they marked. Each is given once. Call it
+when the brief says something waits, and again when the developer says they
+have sent something. They send on purpose; nothing else of what they do in
+the app is seen here.`, {}, () => {
+    const who = server.server.getClientVersion();
+    return inbox.told(inbox.take(cfg, who ? `${who.name}${who.version ? ` ${who.version}` : ""}` : cfg.agent), bundle());
+  });
 
   // Search by meaning (T89), where the model for it is installed: second to the keyword search.
   if (embed.available()) server.registerTool("find_similar", { description: `Find concepts by meaning: ones that say something like the text given, even
@@ -72,8 +94,10 @@ relying on one. Project knowledge base only.`, inputSchema: { text: z.string(), 
       const b = bundle();
       const found = await embed.similar(cfg, b, text, { limit, under: under ?? undefined });
       if (!found.ready) return reply("Search by meaning is still being prepared for this knowledge base (the first time takes a minute or two). Use search for now.");
-      return reply(JSON.stringify({ results: found.hits.map((h) => { const c = b.concepts.get(h.note)!; return { id: h.note, title: c.title, type: c.type, description: c.description, section: h.heading, alike: Number(h.score.toFixed(3)), snippet: h.body.replace(/\s+/g, " ").slice(0, 200) }; }),
-        ...(found.pending ? { pending: `${found.pending} sections changed lately are not searched by meaning yet` } : {}) }, null, 1));
+      const out = JSON.stringify({ results: found.hits.map((h) => { const c = b.concepts.get(h.note)!; return { id: h.note, title: c.title, type: c.type, description: c.description, section: h.heading, alike: Number(h.score.toFixed(3)), snippet: h.body.replace(/\s+/g, " ").slice(0, 200) }; }),
+        ...(found.pending ? { pending: `${found.pending} sections changed lately are not searched by meaning yet` } : {}) }, null, 1);
+      tracer.call("find_similar", { text, under }, out, null);
+      return reply(out);
     }) as never);
 
   tool("search", `Keyword (BM25) search over the knowledge base. Returns concept ids, titles,
@@ -191,6 +215,7 @@ not specific to this project, and only when the developer asked for it.`, {
       throw err;
     }
     const b = loadBundle(target.knowledgeDir);
+    if (target === cfg) seen = b; // for the trace, which names the note by its title
     writeIndexes(b, target.knowledgeDir);
     const issues = b.lint().filter((i) => i.path === result.path).map((i) => `${i.level}: ${i.message}`);
     // An Exercise note's answer settings, which the dashboard needs to check answers.

@@ -401,7 +401,7 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
    the map. Three ways a note is reached, each a colour and a line of its own, none of them a pen's: found by
    a search of words (dashed), found by meaning (dotted; T90), reached by a link from a note in hand (solid,
    with the link drawn). */
-:root { --ask-search: var(--f0); --ask-link: var(--f3); --ask-meaning: var(--f1); }
+:root { --ask-search: var(--f0); --ask-link: var(--f3); --ask-meaning: var(--f1); --ask-write: var(--pen-red); }
 /* The Axis panel (T93): beside the map where the frame is wide, below it otherwise; the map has the rest. */
 .atlas-shell { position: relative; display: flex; height: calc(var(--vh) - var(--bar-h)); }
 .atlas-shell.below { flex-direction: column; }
@@ -447,6 +447,20 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-question .prose > :first-child { margin-top: 0; }
 .aq-question .prose > :last-child { margin-bottom: 0; }
 .aq-since { padding: 6px 10px; border: 1px dashed var(--rule-strong); color: var(--text); }
+/* What Axis proposed on the Atlas (T101): a card each, with what would change and the two things to do with it. */
+.axis-may { display: flex; gap: 6px; align-items: center; margin: 4px 0 0; font-size: 13px; color: var(--text-soft); }
+.aq-props { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; gap: 8px; }
+.aq-prop { padding: 8px 10px; border: 1px solid var(--rule-strong); border-left: 3px solid var(--pen-blue); border-radius: var(--radius); min-width: 0; }
+.aq-prop.done { border-left-color: var(--rule-strong); color: var(--text-soft); }
+.aq-prop p { margin: 0 0 6px; }
+.aq-prop-head code, .aq-move code { font-size: 12.5px; overflow-wrap: anywhere; }
+.aq-prop-meta, .aq-prop-done { font-size: 13px; color: var(--text-soft); }
+.aq-prop-body { margin: 6px 0; padding: 6px 10px; border: 1px solid var(--rule); max-height: 320px; overflow: auto; font-size: 14px; }
+.aq-edit { margin: 0 0 8px; }
+.aq-edit pre { margin: 0; padding: 4px 8px; font: 12.5px/1.45 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; border-left: 3px solid transparent; }
+.aq-old { border-left-color: var(--pen-red) !important; text-decoration: line-through; text-decoration-color: var(--pen-red); color: var(--text-soft); }
+.aq-new { border-left-color: var(--pen-green) !important; }
+.aq-prop .aq-acts { margin: 6px 0 0; }
 .aq-flag { margin-left: 4px; font-size: 12px; color: var(--pen-red); }
 .aq-gone { color: var(--text-faint); text-decoration: line-through; }
 .aq-acts { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
@@ -525,6 +539,20 @@ code, pre, kbd, samp { font-variant-ligatures: none; } /* show -> and != as type
 .aq-ring.meaning { stroke: var(--ask-meaning); stroke-dasharray: .1 4.4; stroke-linecap: round; }
 .aq-ring.meaning.open { stroke-width: 3.25; }
 .aq-ring.start { stroke: none; }
+/* A note an agent outside the app wrote (T107). */
+.aq-ring.write { stroke: var(--ask-write); stroke-width: 2.75; opacity: 1; }
+.gn.aq-write .gn-block { fill: color-mix(in srgb, var(--ask-write) 20%, var(--surface)); }
+.aq-key i.write { border: 2px solid var(--ask-write); }
+.aq-steps button.link { display: inline; text-align: left; }
+.aq-sent { cursor: default; }
+.aq-sent:hover .aq-ask-q { color: var(--text); }
+.aq-asked li.taken .aq-ask-q { color: var(--text-soft); }
+.aq-steps li.wrote { color: var(--text); }
+.aq-steps li.wrote::marker { color: var(--ask-write); }
+.aq-live { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--pen-green); vertical-align: 1px; }
+.axis-tab.live::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--pen-green); vertical-align: 1px; }
+@media (prefers-reduced-motion: no-preference) { .aq-live { animation: aq-live 1.6s ease-in-out infinite; } }
+@keyframes aq-live { 50% { opacity: .35; } }
 .gn.aq-cited.aq-search .gn-block { fill: color-mix(in srgb, var(--ask-search) 26%, var(--surface)); }
 .gn.aq-cited.aq-link .gn-block { fill: color-mix(in srgb, var(--ask-link) 26%, var(--surface)); }
 .gn.aq-cited.aq-meaning .gn-block { fill: color-mix(in srgb, var(--ask-meaning) 26%, var(--surface)); }
@@ -842,6 +870,11 @@ dialog.sheet .hint { display: block; font-weight: 400; color: var(--ink-faint); 
 .tiers input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .tiers button { justify-self: start; }
 @media (max-width: 640px) { .tiers { grid-template-columns: max-content 1fr; } .tiers .section-note { grid-column: 2; } }
+.limits { display: grid; grid-template-columns: max-content repeat(2, minmax(0, 160px)); gap: 6px 12px; align-items: center; margin: 8px 0 4px; }
+.limits label { font-weight: 600; }
+.limits input { height: 32px; min-width: 0; padding: 0 10px; font: 13.5px var(--font-mono); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius); }
+.limits input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.limits button { justify-self: start; grid-column: 2 / -1; }
 .assist-figure { margin: 4px 0 10px; }
 .assist-figure .artifact-frame { border: 1px solid var(--rule); border-radius: var(--radius); }
 .assist-problems { margin: 4px 0 0 18px; padding: 0; font-size: 14px; color: var(--ink-soft); }

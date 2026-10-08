@@ -9,8 +9,8 @@ description = "Install every dependency group and the benchmark browser"
 run = ["mise install", "uv sync --all-groups", "npm install", "node packages/cli/scripts/embed-model.ts", "npm run build --workspace @rdstudio/app", "uv run --group bench playwright install chromium"]
 
 [tasks.test]
-description = "Run every test: Python, then the TypeScript packages"
-run = ["uv run pytest -q", "npm test"]
+description = "Run every test: the TypeScript packages, then the launcher and benchmark tests in Python"
+run = ["npm test", "uv run pytest -q"]
 
 [tasks."core:test"]
 description = "Test the TypeScript core (vitest), including the conformance fixtures"
@@ -41,36 +41,12 @@ description = "Generate a synthetic project: a preset (subject, area, field, cei
 run = "uv run python bench/synth.py"
 
 [tasks.fixtures]
-description = "Check the Python core against the conformance fixtures"
-run = "uv run python fixtures/expected.py"
+description = "Check the core against the conformance fixtures"
+run = "node fixtures/expected.ts"
 
 [tasks."fixtures:update"]
 description = "Record the conformance fixtures again (review the diff before committing)"
-run = "uv run python fixtures/expected.py --update"
-
-[tasks."core:agree"]
-description = "Compare the Python and TypeScript cores on real bundle folders"
-run = "uv run python fixtures/agree.py"
-
-[tasks."cli:agree"]
-description = "Compare the Python and Node command lines (fixture bundles and this repository, or the given projects)"
-run = "uv run python fixtures/agree_cli.py"
-
-[tasks."build:agree"]
-description = "Compare what the Python and Node builds and exports write, file by file"
-run = "uv run python fixtures/agree_build.py"
-
-[tasks."writes:agree"]
-description = "Check the Python and Node stores leave notes that read the same"
-run = "uv run python fixtures/agree_writes.py"
-
-[tasks."scaffold:agree"]
-description = "Compare init, global, promote and skills between the Python and Node command lines (in a temporary home)"
-run = "uv run python fixtures/agree_scaffold.py"
-
-[tasks."mcp:agree"]
-description = "Compare the Python and Node MCP servers (tools and 58 calls, papis included) and the refs command"
-run = "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""
+run = "node fixtures/expected.ts --update"
 
 [tasks.bundle]
 description = "Bundle the Node command line into the Python package (src/rdstudio/_node/)"
@@ -79,12 +55,6 @@ run = "npm run bundle --workspace rdstudio"
 [tasks."release:build"]
 description = "Build the wheel for release: bundle the Node command line, then uv build"
 run = ["node packages/cli/scripts/version.ts", "npm run bundle --workspace rdstudio", "uv build"]
-
-[tasks.agree]
-description = "Every comparison between the Python and Node implementations"
-run = ["uv run python fixtures/agree.py knowledge", "uv run python fixtures/agree_cli.py", "uv run python fixtures/agree_build.py",
-       "uv run python fixtures/agree_writes.py", "uv run python fixtures/agree_scaffold.py",
-       "node packages/cli/scripts/mcp-agree.ts \"$(uv run python -c 'import sys; print(sys.executable)')\""]
 
 [tasks."release:npm"]
 description = "Stage and pack the npm package in .release/npm/ (publishing is manual: knowledge/procedures/publish-npm.md)"
@@ -119,5 +89,5 @@ description = "Regenerate the dashboard's typed API client from rdstudio serve's
 run = "npm run generate --workspace @rdstudio/app"
 
 [tasks.e2e]
-description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing; maths, diagrams and tables in the editor, its toolbar and the phone sheet; creating, moving and deleting notes, also from the map; signing in again through a tunnel; the learning features; the teacher; the code map; an agent in the editor; artifacts and pictures; Ask Atlas); screenshots in .e2e/"
-run = ["uv run --group bench python e2e/edit.py", "uv run --group bench python e2e/compose.py", "uv run --group bench python e2e/reshape.py", "uv run --group bench python e2e/signin.py", "uv run --group bench python e2e/learn.py", "uv run --group bench python e2e/teacher.py", "uv run --group bench python e2e/code.py", "uv run --group bench python e2e/assist.py", "uv run --group bench python e2e/artifacts.py", "uv run --group bench python e2e/ask.py"]
+description = "End-to-end checks in headless Chromium against a real rdstudio serve (editing; maths, diagrams and tables in the editor, its toolbar and the phone sheet; creating, moving and deleting notes, also from the map; signing in again through a tunnel; the learning features; the teacher; the code map; an agent in the editor; artifacts and pictures; Ask Atlas; Axis proposing changes from it; a terminal agent's path shown live); screenshots in .e2e/"
+run = ["uv run --group bench python e2e/edit.py", "uv run --group bench python e2e/compose.py", "uv run --group bench python e2e/reshape.py", "uv run --group bench python e2e/signin.py", "uv run --group bench python e2e/learn.py", "uv run --group bench python e2e/teacher.py", "uv run --group bench python e2e/code.py", "uv run --group bench python e2e/assist.py", "uv run --group bench python e2e/artifacts.py", "uv run --group bench python e2e/ask.py", "uv run --group bench python e2e/propose.py", "uv run --group bench python e2e/agents.py"]

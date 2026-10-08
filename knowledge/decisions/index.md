@@ -8,6 +8,7 @@
 * [Dashboard is a static site built from JSON](static-build.md) - A Python build step emits JSON; the browser app is static and can be served by any file server.
 * [Distribute as a uv tool, not a template repo](uv-tool-distribution.md) - rdstudio ships as a Python package installed with uv; project content lives at the repo root.
 * [OKF v0.2 is ground truth](okf-ground-truth.md) - The knowledge format conforms to the OKF spec; conventions only choose among what OKF allows.
+* [On the Atlas, Axis proposes changes to the base and writes none itself](atlas-proposals-by-leave.md) - Asked from the Atlas with leave, Axis may propose a new note, a change or a move; each is accepted or rejected by the person, and only then written, through the app's own saving.
 * [Optional structured classifier (Jev-style)](classifier-optional.md) - Small classification steps go through a pluggable interface, off by default, with deterministic fallback.
 * [Project mode is for the knowledge base and agents' workflows, not a map of the code](project-mode-scope.md) - Project mode's features stay with managing the OKF base and working with agents; the code map is kept as an option on the Atlas, not its default or its direction.
 * [Reports are HTML outside the bundle](reports-html.md) - Agent-to-developer reports are self-contained HTML in reports/, linking one-way into knowledge.
@@ -18,4 +19,5 @@
 * [The agent is called Axis, in both modes](axis.md) - The teacher of Learning mode and the helper of Project mode are one agent with one name, Axis, chosen to pair with the Atlas.
 * [The grid Atlas replaces the continuous Atlas](grid-atlas.md) - The Atlas moves to a square grid of note blocks and rectangular folders with routes over cells; the circle and contour Atlas is kept switchable until the grid reaches parity, then deleted.
 * [The person chooses how strong a model each editor request gets, from three tiers](model-tiers.md) - Axis in the editor is asked at a tier (low, mid, max), each a model the person sets; rdstudio offers a usual tier per action and does not judge a request's difficulty itself.
+* [The tool aims at two overlapping targets and several platforms, and is not narrowed to one](two-targets-many-platforms.md) - rdstudio serves both developers working with agents and people learning, on several platforms for different purposes; breadth is intended and is not a reason to cut features.
 * [Verification goes stale only on significant edits](verification-staleness.md) - Significant edits bump generated.at; human verification older than that is stale.

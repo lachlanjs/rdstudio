@@ -1,6 +1,7 @@
 // JSON written exactly as Python's json.dumps writes it (ASCII escapes, ", " and
-// ": " separators, or an indent), so the Node and Python command lines print
-// the same bytes while both exist.
+// ": " separators, or an indent), the form rdstudio's output has
+// had since its first, Python, command line (removed in T102). Agents and
+// scripts read this output, so it is kept.
 
 /** A number Python holds as a float, so it prints as one (2.0, 1e-05). */
 import { floatRepr, pyRepr as coreRepr } from "@rdstudio/core";

@@ -36,6 +36,8 @@ export interface Turn {
   tier: string;
   cost: number;
   spent: Spent;
+  /** Where a limit shaped the reply (T110). */
+  notices?: string[];
 }
 
 export interface Chat { id: string; note: string; title: string; at: string; updated: string; turns: Turn[] }
@@ -55,7 +57,7 @@ export function turnOf(a: Ask, r: Reply): Turn {
     may: { passage: ok.passage, note: ok.note },
     answer: r.answer,
     edits: (r.edits ?? []).map((e) => ({ kind: e.kind, line: lineAt(a.body, e.from), old: cut(a.body.slice(e.from, e.to)), new: cut(e.insert) })),
-    dropped: r.dropped ?? [], steps: r.steps, sources: r.sources, model: r.model, tier: r.tier, cost: r.cost, spent: r.spent,
+    dropped: r.dropped ?? [], steps: r.steps, sources: r.sources, model: r.model, tier: r.tier, cost: r.cost, spent: r.spent, ...(r.notices?.length ? { notices: r.notices } : {}),
   };
 }
 

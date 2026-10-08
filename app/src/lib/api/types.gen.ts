@@ -123,74 +123,6 @@ export type TeacherFileSave = {
     text: string;
 };
 
-export type AiState = {
-    connected: boolean;
-    /**
-     * Where the key comes from.
-     */
-    from: 'environment' | 'file' | 'command' | 'none' | null;
-    provider: {
-        name: string;
-        host: string;
-        /**
-         * True for a gateway set in the user config ([teacher.provider]); false for OpenRouter.
-         */
-        custom: boolean;
-        /**
-         * Whether spending can be known: OpenRouter reports it; a gateway needs prices set.
-         */
-        priced: boolean;
-    };
-    /**
-     * The model for each job ([teacher.models] in the user config).
-     */
-    models: {
-        [key: string]: string;
-    };
-    /**
-     * The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config).
-     */
-    tiers: {
-        low: string;
-        mid: string;
-        max: string;
-    };
-    spending: {
-        budget: number;
-        spent: number;
-        left: number;
-        warn: boolean;
-        stopped: boolean;
-        weekStart: string;
-        byFeature: {
-            [key: string]: number;
-        };
-        byModel: {
-            [key: string]: number;
-        };
-        byExercise: {
-            [key: string]: number;
-        };
-        calls: number;
-    };
-};
-
-export type AiConnect = {
-    url: string;
-};
-
-export type TiersSet = {
-    low?: string;
-    mid?: string;
-    max?: string;
-};
-
-export type AiCheck = {
-    text: string;
-    model: string;
-    cost: number;
-};
-
 export type TutorAsk = {
     mode: 'hint' | 'feedback' | 'discuss';
     text: string;
@@ -198,54 +130,6 @@ export type TutorAsk = {
     prompt?: string;
     selection?: string;
     confidence?: string;
-};
-
-export type NoteAssist = {
-    mode: 'ask' | 'fill' | 'figure' | 'chat';
-    /**
-     * How strong a model to ask: the tier's model is used. Left out, the mode's usual tier.
-     */
-    tier?: 'low' | 'mid' | 'max';
-    fix?: {
-        html: string;
-        problems: Array<string>;
-    };
-    body: string;
-    from: number;
-    to: number;
-    prompt?: string;
-    title?: string;
-    /**
-     * chat: where new text is to go, apart from the passage (from..to).
-     */
-    at?: number | null;
-    /**
-     * chat: what it may change: the marked passage, or anything in the note.
-     */
-    may?: {
-        passage?: boolean;
-        note?: boolean;
-    };
-    /**
-     * chat: the turns before this one, oldest first.
-     */
-    thread?: Array<{
-        question: string;
-        answer: string;
-    }>;
-    /**
-     * chat: the kept chat this turn goes on from; left out, a new one.
-     */
-    chat?: string | null;
-};
-
-export type AtlasAsk = {
-    question: string;
-    /**
-     * Where the asker is on the map: a note's id or a folder. Left out, the whole map.
-     */
-    start?: string;
-    tier?: 'low' | 'mid' | 'max';
 };
 
 export type DraftSummary = {
@@ -306,6 +190,171 @@ export type SkillSave = {
 
 export type SkillReset = {
     skill: Skill;
+};
+
+export type AiState = {
+    connected: boolean;
+    /**
+     * Where the key comes from.
+     */
+    from: 'environment' | 'file' | 'command' | 'none' | null;
+    provider: {
+        name: string;
+        host: string;
+        /**
+         * True for a gateway set in the user config ([teacher.provider]); false for OpenRouter.
+         */
+        custom: boolean;
+        /**
+         * Whether spending can be known: OpenRouter reports it; a gateway needs prices set.
+         */
+        priced: boolean;
+    };
+    /**
+     * The model for each job ([teacher.models] in the user config).
+     */
+    models: {
+        [key: string]: string;
+    };
+    /**
+     * The model for each tier Axis may be asked at in the editor ([teacher.tiers] in the user config).
+     */
+    tiers: {
+        low: string;
+        mid: string;
+        max: string;
+    };
+    /**
+     * For each tier, the most tokens sent in one call and the longest reply asked for ([teacher.limits] in the user config); null where none is set.
+     */
+    limits: {
+        low: Limit;
+        mid: Limit;
+        max: Limit;
+    };
+    spending: {
+        budget: number;
+        spent: number;
+        left: number;
+        warn: boolean;
+        stopped: boolean;
+        weekStart: string;
+        byFeature: {
+            [key: string]: number;
+        };
+        byModel: {
+            [key: string]: number;
+        };
+        byExercise: {
+            [key: string]: number;
+        };
+        calls: number;
+    };
+};
+
+export type Limit = {
+    input: number | null;
+    output: number | null;
+};
+
+export type AiConnect = {
+    url: string;
+};
+
+export type TiersSet = {
+    low?: string;
+    mid?: string;
+    max?: string;
+};
+
+export type LimitsSet = {
+    low?: LimitSet;
+    mid?: LimitSet;
+    max?: LimitSet;
+};
+
+export type LimitSet = {
+    input?: number | null;
+    output?: number | null;
+};
+
+export type AiCheck = {
+    text: string;
+    model: string;
+    cost: number;
+};
+
+export type NoteAssist = {
+    mode: 'ask' | 'fill' | 'figure' | 'chat';
+    /**
+     * How strong a model to ask: the tier's model is used. Left out, the mode's usual tier.
+     */
+    tier?: 'low' | 'mid' | 'max';
+    fix?: {
+        html: string;
+        problems: Array<string>;
+    };
+    body: string;
+    from: number;
+    to: number;
+    prompt?: string;
+    title?: string;
+    /**
+     * chat: where new text is to go, apart from the passage (from..to).
+     */
+    at?: number | null;
+    /**
+     * chat: what it may change: the marked passage, or anything in the note.
+     */
+    may?: {
+        passage?: boolean;
+        note?: boolean;
+    };
+    /**
+     * chat: the turns before this one, oldest first.
+     */
+    thread?: Array<{
+        question: string;
+        answer: string;
+    }>;
+    /**
+     * chat: the kept chat this turn goes on from; left out, a new one.
+     */
+    chat?: string | null;
+};
+
+export type AtlasAsk = {
+    question: string;
+    /**
+     * Where the asker is on the map: a note's id or a folder. Left out, the whole map.
+     */
+    start?: string;
+    tier?: 'low' | 'mid' | 'max';
+    /**
+     * What it is let do besides answer (T101). propose: it may propose a new note, a change to a note, or a move; the answer then carries `proposals`, and nothing is written until one is accepted (POST /api/atlas/proposals).
+     */
+    may?: {
+        propose?: boolean;
+    };
+};
+
+export type ProposalAccept = {
+    /**
+     * The proposal as the answer gave it: {kind: create | change | move, …}.
+     */
+    proposal: {
+        [key: string]: unknown;
+    };
+    /**
+     * The model that proposed it, as the answer named it.
+     */
+    model: string;
+};
+
+export type SendToAgent = {
+    text: string;
+    ref?: string;
+    passage?: string;
 };
 
 export type EditState = {
@@ -890,171 +939,6 @@ export type PutApiTeacherFilesByNameResponses = {
 
 export type PutApiTeacherFilesByNameResponse = PutApiTeacherFilesByNameResponses[keyof PutApiTeacherFilesByNameResponses];
 
-export type DeleteApiTeacherAiData = {
-    body?: never;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/teacher/ai';
-};
-
-export type DeleteApiTeacherAiErrors = {
-    /**
-     * Bad name or text
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * The learner record is off
-     */
-    409: Error;
-};
-
-export type DeleteApiTeacherAiError = DeleteApiTeacherAiErrors[keyof DeleteApiTeacherAiErrors];
-
-export type DeleteApiTeacherAiResponses = {
-    /**
-     * Forgotten
-     */
-    200: AiState;
-};
-
-export type DeleteApiTeacherAiResponse = DeleteApiTeacherAiResponses[keyof DeleteApiTeacherAiResponses];
-
-export type GetApiTeacherAiData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/teacher/ai';
-};
-
-export type GetApiTeacherAiErrors = {
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-};
-
-export type GetApiTeacherAiError = GetApiTeacherAiErrors[keyof GetApiTeacherAiErrors];
-
-export type GetApiTeacherAiResponses = {
-    /**
-     * The state
-     */
-    200: AiState;
-};
-
-export type GetApiTeacherAiResponse = GetApiTeacherAiResponses[keyof GetApiTeacherAiResponses];
-
-export type PostApiTeacherAiConnectData = {
-    body?: never;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/teacher/ai/connect';
-};
-
-export type PostApiTeacherAiConnectErrors = {
-    /**
-     * Bad name or text
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * The learner record is off
-     */
-    409: Error;
-};
-
-export type PostApiTeacherAiConnectError = PostApiTeacherAiConnectErrors[keyof PostApiTeacherAiConnectErrors];
-
-export type PostApiTeacherAiConnectResponses = {
-    /**
-     * Where to go
-     */
-    200: AiConnect;
-};
-
-export type PostApiTeacherAiConnectResponse = PostApiTeacherAiConnectResponses[keyof PostApiTeacherAiConnectResponses];
-
-export type PutApiTeacherTiersData = {
-    body: TiersSet;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/teacher/tiers';
-};
-
-export type PutApiTeacherTiersErrors = {
-    /**
-     * Not a model's id
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token, host not allowed, or read-only
-     */
-    403: Error;
-};
-
-export type PutApiTeacherTiersError = PutApiTeacherTiersErrors[keyof PutApiTeacherTiersErrors];
-
-export type PutApiTeacherTiersResponses = {
-    /**
-     * Set
-     */
-    200: AiState;
-};
-
-export type PutApiTeacherTiersResponse = PutApiTeacherTiersResponses[keyof PutApiTeacherTiersResponses];
-
-export type PostApiTeacherAiCheckData = {
-    body?: never;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/teacher/ai/check';
-};
-
-export type PostApiTeacherAiCheckErrors = {
-    /**
-     * Bad name or text
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * The learner record is off
-     */
-    409: Error;
-};
-
-export type PostApiTeacherAiCheckError = PostApiTeacherAiCheckErrors[keyof PostApiTeacherAiCheckErrors];
-
-export type PostApiTeacherAiCheckResponses = {
-    /**
-     * The reply
-     */
-    200: AiCheck;
-};
-
-export type PostApiTeacherAiCheckResponse = PostApiTeacherAiCheckResponses[keyof PostApiTeacherAiCheckResponses];
-
 export type PostApiTeacherTutorByIdData = {
     body: TutorAsk;
     headers: {
@@ -1095,286 +979,6 @@ export type PostApiTeacherTutorByIdResponses = {
 };
 
 export type PostApiTeacherTutorByIdResponse = PostApiTeacherTutorByIdResponses[keyof PostApiTeacherTutorByIdResponses];
-
-export type PostApiNotesByIdAssistData = {
-    body: NoteAssist;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path: {
-        /**
-         * The note's id, such as design/model (slashes encoded).
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/api/notes/{id}/assist';
-};
-
-export type PostApiNotesByIdAssistErrors = {
-    /**
-     * Not a valid request
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * No model account is connected
-     */
-    409: Error;
-};
-
-export type PostApiNotesByIdAssistError = PostApiNotesByIdAssistErrors[keyof PostApiNotesByIdAssistErrors];
-
-export type PostApiNotesByIdAssistResponses = {
-    /**
-     * Server-sent events
-     */
-    200: string;
-};
-
-export type PostApiNotesByIdAssistResponse = PostApiNotesByIdAssistResponses[keyof PostApiNotesByIdAssistResponses];
-
-export type PostApiAtlasAskData = {
-    body: AtlasAsk;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/atlas/ask';
-};
-
-export type PostApiAtlasAskErrors = {
-    /**
-     * Not a valid request
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * No model account is connected
-     */
-    409: Error;
-};
-
-export type PostApiAtlasAskError = PostApiAtlasAskErrors[keyof PostApiAtlasAskErrors];
-
-export type PostApiAtlasAskResponses = {
-    /**
-     * Server-sent events
-     */
-    200: string;
-};
-
-export type PostApiAtlasAskResponse = PostApiAtlasAskResponses[keyof PostApiAtlasAskResponses];
-
-export type GetApiAtlasAsksData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/atlas/asks';
-};
-
-export type GetApiAtlasAsksErrors = {
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-};
-
-export type GetApiAtlasAsksError = GetApiAtlasAsksErrors[keyof GetApiAtlasAsksErrors];
-
-export type GetApiAtlasAsksResponses = {
-    /**
-     * Whether questions are kept, and those that are
-     */
-    200: {
-        enabled: boolean;
-        asks: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type GetApiAtlasAsksResponse = GetApiAtlasAsksResponses[keyof GetApiAtlasAsksResponses];
-
-export type DeleteApiAtlasAsksByIdData = {
-    body?: never;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/atlas/asks/{id}';
-};
-
-export type DeleteApiAtlasAsksByIdErrors = {
-    /**
-     * Bad name or text
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-};
-
-export type DeleteApiAtlasAsksByIdError = DeleteApiAtlasAsksByIdErrors[keyof DeleteApiAtlasAsksByIdErrors];
-
-export type DeleteApiAtlasAsksByIdResponses = {
-    /**
-     * Forgotten
-     */
-    200: {
-        id: string;
-    };
-};
-
-export type DeleteApiAtlasAsksByIdResponse = DeleteApiAtlasAsksByIdResponses[keyof DeleteApiAtlasAsksByIdResponses];
-
-export type GetApiAtlasAsksByIdData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/atlas/asks/{id}';
-};
-
-export type GetApiAtlasAsksByIdErrors = {
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * No such kept question
-     */
-    404: Error;
-};
-
-export type GetApiAtlasAsksByIdError = GetApiAtlasAsksByIdErrors[keyof GetApiAtlasAsksByIdErrors];
-
-export type GetApiAtlasAsksByIdResponses = {
-    /**
-     * The kept question
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type GetApiAtlasAsksByIdResponse = GetApiAtlasAsksByIdResponses[keyof GetApiAtlasAsksByIdResponses];
-
-export type GetApiAssistChatsData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Only the chats about this note.
-         */
-        note?: string;
-    };
-    url: '/api/assist/chats';
-};
-
-export type GetApiAssistChatsErrors = {
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-};
-
-export type GetApiAssistChatsError = GetApiAssistChatsErrors[keyof GetApiAssistChatsErrors];
-
-export type GetApiAssistChatsResponses = {
-    /**
-     * Whether chats are kept, and those that are
-     */
-    200: {
-        enabled: boolean;
-        chats: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type GetApiAssistChatsResponse = GetApiAssistChatsResponses[keyof GetApiAssistChatsResponses];
-
-export type DeleteApiAssistChatsByIdData = {
-    body?: never;
-    headers: {
-        'x-rdstudio-token': string;
-    };
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/assist/chats/{id}';
-};
-
-export type DeleteApiAssistChatsByIdErrors = {
-    /**
-     * Bad name or text
-     */
-    400: Error;
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-};
-
-export type DeleteApiAssistChatsByIdError = DeleteApiAssistChatsByIdErrors[keyof DeleteApiAssistChatsByIdErrors];
-
-export type DeleteApiAssistChatsByIdResponses = {
-    /**
-     * Deleted
-     */
-    200: {
-        id: string;
-    };
-};
-
-export type DeleteApiAssistChatsByIdResponse = DeleteApiAssistChatsByIdResponses[keyof DeleteApiAssistChatsByIdResponses];
-
-export type GetApiAssistChatsByIdData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/assist/chats/{id}';
-};
-
-export type GetApiAssistChatsByIdErrors = {
-    /**
-     * Cross-origin request, bad token or host not allowed
-     */
-    403: Error;
-    /**
-     * No such kept chat
-     */
-    404: Error;
-};
-
-export type GetApiAssistChatsByIdError = GetApiAssistChatsByIdErrors[keyof GetApiAssistChatsByIdErrors];
-
-export type GetApiAssistChatsByIdResponses = {
-    /**
-     * The kept chat
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type GetApiAssistChatsByIdResponse = GetApiAssistChatsByIdResponses[keyof GetApiAssistChatsByIdResponses];
 
 export type GetApiTeacherDraftsData = {
     body?: never;
@@ -1610,6 +1214,741 @@ export type PostApiTeacherDraftsByIdSubmittedResponses = {
 };
 
 export type PostApiTeacherDraftsByIdSubmittedResponse = PostApiTeacherDraftsByIdSubmittedResponses[keyof PostApiTeacherDraftsByIdSubmittedResponses];
+
+export type DeleteApiTeacherAiData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type DeleteApiTeacherAiErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type DeleteApiTeacherAiError = DeleteApiTeacherAiErrors[keyof DeleteApiTeacherAiErrors];
+
+export type DeleteApiTeacherAiResponses = {
+    /**
+     * Forgotten
+     */
+    200: AiState;
+};
+
+export type DeleteApiTeacherAiResponse = DeleteApiTeacherAiResponses[keyof DeleteApiTeacherAiResponses];
+
+export type GetApiTeacherAiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai';
+};
+
+export type GetApiTeacherAiErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiTeacherAiError = GetApiTeacherAiErrors[keyof GetApiTeacherAiErrors];
+
+export type GetApiTeacherAiResponses = {
+    /**
+     * The state
+     */
+    200: AiState;
+};
+
+export type GetApiTeacherAiResponse = GetApiTeacherAiResponses[keyof GetApiTeacherAiResponses];
+
+export type PostApiTeacherAiConnectData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/connect';
+};
+
+export type PostApiTeacherAiConnectErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiConnectError = PostApiTeacherAiConnectErrors[keyof PostApiTeacherAiConnectErrors];
+
+export type PostApiTeacherAiConnectResponses = {
+    /**
+     * Where to go
+     */
+    200: AiConnect;
+};
+
+export type PostApiTeacherAiConnectResponse = PostApiTeacherAiConnectResponses[keyof PostApiTeacherAiConnectResponses];
+
+export type PutApiTeacherTiersData = {
+    body: TiersSet;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/tiers';
+};
+
+export type PutApiTeacherTiersErrors = {
+    /**
+     * Not a model's id
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+};
+
+export type PutApiTeacherTiersError = PutApiTeacherTiersErrors[keyof PutApiTeacherTiersErrors];
+
+export type PutApiTeacherTiersResponses = {
+    /**
+     * Set
+     */
+    200: AiState;
+};
+
+export type PutApiTeacherTiersResponse = PutApiTeacherTiersResponses[keyof PutApiTeacherTiersResponses];
+
+export type PutApiTeacherLimitsData = {
+    body: LimitsSet;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/limits';
+};
+
+export type PutApiTeacherLimitsErrors = {
+    /**
+     * Not a number of tokens that can be set
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+};
+
+export type PutApiTeacherLimitsError = PutApiTeacherLimitsErrors[keyof PutApiTeacherLimitsErrors];
+
+export type PutApiTeacherLimitsResponses = {
+    /**
+     * Set
+     */
+    200: AiState;
+};
+
+export type PutApiTeacherLimitsResponse = PutApiTeacherLimitsResponses[keyof PutApiTeacherLimitsResponses];
+
+export type PostApiTeacherAiCheckData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/teacher/ai/check';
+};
+
+export type PostApiTeacherAiCheckErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * The learner record is off
+     */
+    409: Error;
+};
+
+export type PostApiTeacherAiCheckError = PostApiTeacherAiCheckErrors[keyof PostApiTeacherAiCheckErrors];
+
+export type PostApiTeacherAiCheckResponses = {
+    /**
+     * The reply
+     */
+    200: AiCheck;
+};
+
+export type PostApiTeacherAiCheckResponse = PostApiTeacherAiCheckResponses[keyof PostApiTeacherAiCheckResponses];
+
+export type PostApiNotesByIdAssistData = {
+    body: NoteAssist;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        /**
+         * The note's id, such as design/model (slashes encoded).
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/notes/{id}/assist';
+};
+
+export type PostApiNotesByIdAssistErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No model account is connected
+     */
+    409: Error;
+};
+
+export type PostApiNotesByIdAssistError = PostApiNotesByIdAssistErrors[keyof PostApiNotesByIdAssistErrors];
+
+export type PostApiNotesByIdAssistResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiNotesByIdAssistResponse = PostApiNotesByIdAssistResponses[keyof PostApiNotesByIdAssistResponses];
+
+export type PostApiAtlasAskData = {
+    body: AtlasAsk;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/atlas/ask';
+};
+
+export type PostApiAtlasAskErrors = {
+    /**
+     * Not a valid request
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No model account is connected
+     */
+    409: Error;
+};
+
+export type PostApiAtlasAskError = PostApiAtlasAskErrors[keyof PostApiAtlasAskErrors];
+
+export type PostApiAtlasAskResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type PostApiAtlasAskResponse = PostApiAtlasAskResponses[keyof PostApiAtlasAskResponses];
+
+export type PostApiAtlasProposalsData = {
+    body: ProposalAccept;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/atlas/proposals';
+};
+
+export type PostApiAtlasProposalsErrors = {
+    /**
+     * Not a proposal that can be made (and why)
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token, host not allowed, or read-only
+     */
+    403: Error;
+    /**
+     * The note changed since, exists already, or is gone
+     */
+    409: Error;
+};
+
+export type PostApiAtlasProposalsError = PostApiAtlasProposalsErrors[keyof PostApiAtlasProposalsErrors];
+
+export type PostApiAtlasProposalsResponses = {
+    /**
+     * Done: the note's id, and what was saved or moved
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type PostApiAtlasProposalsResponse = PostApiAtlasProposalsResponses[keyof PostApiAtlasProposalsResponses];
+
+export type GetApiAtlasAsksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/atlas/asks';
+};
+
+export type GetApiAtlasAsksErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAtlasAsksError = GetApiAtlasAsksErrors[keyof GetApiAtlasAsksErrors];
+
+export type GetApiAtlasAsksResponses = {
+    /**
+     * Whether questions are kept, and those that are
+     */
+    200: {
+        enabled: boolean;
+        asks: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAtlasAsksResponse = GetApiAtlasAsksResponses[keyof GetApiAtlasAsksResponses];
+
+export type DeleteApiAtlasAsksByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/atlas/asks/{id}';
+};
+
+export type DeleteApiAtlasAsksByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAtlasAsksByIdError = DeleteApiAtlasAsksByIdErrors[keyof DeleteApiAtlasAsksByIdErrors];
+
+export type DeleteApiAtlasAsksByIdResponses = {
+    /**
+     * Forgotten
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAtlasAsksByIdResponse = DeleteApiAtlasAsksByIdResponses[keyof DeleteApiAtlasAsksByIdResponses];
+
+export type GetApiAtlasAsksByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/atlas/asks/{id}';
+};
+
+export type GetApiAtlasAsksByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such kept question
+     */
+    404: Error;
+};
+
+export type GetApiAtlasAsksByIdError = GetApiAtlasAsksByIdErrors[keyof GetApiAtlasAsksByIdErrors];
+
+export type GetApiAtlasAsksByIdResponses = {
+    /**
+     * The kept question
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApiAtlasAsksByIdResponse = GetApiAtlasAsksByIdResponses[keyof GetApiAtlasAsksByIdResponses];
+
+export type GetApiAssistChatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only the chats about this note.
+         */
+        note?: string;
+    };
+    url: '/api/assist/chats';
+};
+
+export type GetApiAssistChatsErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAssistChatsError = GetApiAssistChatsErrors[keyof GetApiAssistChatsErrors];
+
+export type GetApiAssistChatsResponses = {
+    /**
+     * Whether chats are kept, and those that are
+     */
+    200: {
+        enabled: boolean;
+        chats: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAssistChatsResponse = GetApiAssistChatsResponses[keyof GetApiAssistChatsResponses];
+
+export type DeleteApiAssistChatsByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/assist/chats/{id}';
+};
+
+export type DeleteApiAssistChatsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAssistChatsByIdError = DeleteApiAssistChatsByIdErrors[keyof DeleteApiAssistChatsByIdErrors];
+
+export type DeleteApiAssistChatsByIdResponses = {
+    /**
+     * Deleted
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAssistChatsByIdResponse = DeleteApiAssistChatsByIdResponses[keyof DeleteApiAssistChatsByIdResponses];
+
+export type GetApiAssistChatsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/assist/chats/{id}';
+};
+
+export type GetApiAssistChatsByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such kept chat
+     */
+    404: Error;
+};
+
+export type GetApiAssistChatsByIdError = GetApiAssistChatsByIdErrors[keyof GetApiAssistChatsByIdErrors];
+
+export type GetApiAssistChatsByIdResponses = {
+    /**
+     * The kept chat
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApiAssistChatsByIdResponse = GetApiAssistChatsByIdResponses[keyof GetApiAssistChatsByIdResponses];
+
+export type GetApiAgentsSessionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agents/sessions';
+};
+
+export type GetApiAgentsSessionsErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAgentsSessionsError = GetApiAgentsSessionsErrors[keyof GetApiAgentsSessionsErrors];
+
+export type GetApiAgentsSessionsResponses = {
+    /**
+     * Whether sessions are kept, and those that are
+     */
+    200: {
+        enabled: boolean;
+        quietMs: number;
+        sessions: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAgentsSessionsResponse = GetApiAgentsSessionsResponses[keyof GetApiAgentsSessionsResponses];
+
+export type DeleteApiAgentsSessionsByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/agents/sessions/{id}';
+};
+
+export type DeleteApiAgentsSessionsByIdErrors = {
+    /**
+     * Not deleted
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAgentsSessionsByIdError = DeleteApiAgentsSessionsByIdErrors[keyof DeleteApiAgentsSessionsByIdErrors];
+
+export type DeleteApiAgentsSessionsByIdResponses = {
+    /**
+     * Deleted
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAgentsSessionsByIdResponse = DeleteApiAgentsSessionsByIdResponses[keyof DeleteApiAgentsSessionsByIdResponses];
+
+export type GetApiAgentsSessionsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/agents/sessions/{id}';
+};
+
+export type GetApiAgentsSessionsByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such session
+     */
+    404: Error;
+};
+
+export type GetApiAgentsSessionsByIdError = GetApiAgentsSessionsByIdErrors[keyof GetApiAgentsSessionsByIdErrors];
+
+export type GetApiAgentsSessionsByIdResponses = {
+    /**
+     * The steps
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApiAgentsSessionsByIdResponse = GetApiAgentsSessionsByIdResponses[keyof GetApiAgentsSessionsByIdResponses];
+
+export type GetApiAgentsInboxData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agents/inbox';
+};
+
+export type GetApiAgentsInboxErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAgentsInboxError = GetApiAgentsInboxErrors[keyof GetApiAgentsInboxErrors];
+
+export type GetApiAgentsInboxResponses = {
+    /**
+     * What was sent
+     */
+    200: {
+        sent: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAgentsInboxResponse = GetApiAgentsInboxResponses[keyof GetApiAgentsInboxResponses];
+
+export type PostApiAgentsInboxData = {
+    body: SendToAgent;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/agents/inbox';
+};
+
+export type PostApiAgentsInboxErrors = {
+    /**
+     * Nothing to send
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type PostApiAgentsInboxError = PostApiAgentsInboxErrors[keyof PostApiAgentsInboxErrors];
+
+export type PostApiAgentsInboxResponses = {
+    /**
+     * Kept, to be taken
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type PostApiAgentsInboxResponse = PostApiAgentsInboxResponses[keyof PostApiAgentsInboxResponses];
+
+export type DeleteApiAgentsInboxByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/agents/inbox/{id}';
+};
+
+export type DeleteApiAgentsInboxByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAgentsInboxByIdError = DeleteApiAgentsInboxByIdErrors[keyof DeleteApiAgentsInboxByIdErrors];
+
+export type DeleteApiAgentsInboxByIdResponses = {
+    /**
+     * Taken back
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAgentsInboxByIdResponse = DeleteApiAgentsInboxByIdResponses[keyof DeleteApiAgentsInboxByIdResponses];
+
+export type GetApiAgentsLiveData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/agents/live';
+};
+
+export type GetApiAgentsLiveErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAgentsLiveError = GetApiAgentsLiveErrors[keyof GetApiAgentsLiveErrors];
+
+export type GetApiAgentsLiveResponses = {
+    /**
+     * Server-sent events
+     */
+    200: string;
+};
+
+export type GetApiAgentsLiveResponse = GetApiAgentsLiveResponses[keyof GetApiAgentsLiveResponses];
 
 export type GetApiEditData = {
     body?: never;

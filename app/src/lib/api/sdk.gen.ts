@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, ServerSentEventsResult, TDataShape } from './client/index.js';
-import type { DeleteApiAssistChatsByIdData, DeleteApiAssistChatsByIdErrors, DeleteApiAssistChatsByIdResponses, DeleteApiAtlasAsksByIdData, DeleteApiAtlasAsksByIdErrors, DeleteApiAtlasAsksByIdResponses, DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherAiData, DeleteApiTeacherAiErrors, DeleteApiTeacherAiResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiAssistChatsByIdData, GetApiAssistChatsByIdErrors, GetApiAssistChatsByIdResponses, GetApiAssistChatsData, GetApiAssistChatsErrors, GetApiAssistChatsResponses, GetApiAtlasAsksByIdData, GetApiAtlasAsksByIdErrors, GetApiAtlasAsksByIdResponses, GetApiAtlasAsksData, GetApiAtlasAsksErrors, GetApiAtlasAsksResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherAiData, GetApiTeacherAiErrors, GetApiTeacherAiResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsData, GetApiTeacherDraftsErrors, GetApiTeacherDraftsResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiArtifactsPreviewData, PostApiArtifactsPreviewErrors, PostApiArtifactsPreviewResponses, PostApiAtlasAskData, PostApiAtlasAskErrors, PostApiAtlasAskResponse, PostApiAtlasAskResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdAssistData, PostApiNotesByIdAssistErrors, PostApiNotesByIdAssistResponse, PostApiNotesByIdAssistResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherAiCheckData, PostApiTeacherAiCheckErrors, PostApiTeacherAiCheckResponses, PostApiTeacherAiConnectData, PostApiTeacherAiConnectErrors, PostApiTeacherAiConnectResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherTutorByIdData, PostApiTeacherTutorByIdErrors, PostApiTeacherTutorByIdResponse, PostApiTeacherTutorByIdResponses, PutApiArtifactsByPathData, PutApiArtifactsByPathErrors, PutApiArtifactsByPathResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherProfileData, PutApiTeacherProfileErrors, PutApiTeacherProfileResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses, PutApiTeacherTiersData, PutApiTeacherTiersErrors, PutApiTeacherTiersResponses } from './types.gen.js';
+import type { DeleteApiAgentsInboxByIdData, DeleteApiAgentsInboxByIdErrors, DeleteApiAgentsInboxByIdResponses, DeleteApiAgentsSessionsByIdData, DeleteApiAgentsSessionsByIdErrors, DeleteApiAgentsSessionsByIdResponses, DeleteApiAssistChatsByIdData, DeleteApiAssistChatsByIdErrors, DeleteApiAssistChatsByIdResponses, DeleteApiAtlasAsksByIdData, DeleteApiAtlasAsksByIdErrors, DeleteApiAtlasAsksByIdResponses, DeleteApiFoldersByPathData, DeleteApiFoldersByPathErrors, DeleteApiFoldersByPathResponses, DeleteApiLearnerToursByNameData, DeleteApiLearnerToursByNameErrors, DeleteApiLearnerToursByNameResponses, DeleteApiNotesByIdData, DeleteApiNotesByIdErrors, DeleteApiNotesByIdResponses, DeleteApiTeacherAiData, DeleteApiTeacherAiErrors, DeleteApiTeacherAiResponses, DeleteApiTeacherSkillsByNameData, DeleteApiTeacherSkillsByNameErrors, DeleteApiTeacherSkillsByNameResponses, GetApiAgentsInboxData, GetApiAgentsInboxErrors, GetApiAgentsInboxResponses, GetApiAgentsLiveData, GetApiAgentsLiveErrors, GetApiAgentsLiveResponse, GetApiAgentsLiveResponses, GetApiAgentsSessionsByIdData, GetApiAgentsSessionsByIdErrors, GetApiAgentsSessionsByIdResponses, GetApiAgentsSessionsData, GetApiAgentsSessionsErrors, GetApiAgentsSessionsResponses, GetApiAssistChatsByIdData, GetApiAssistChatsByIdErrors, GetApiAssistChatsByIdResponses, GetApiAssistChatsData, GetApiAssistChatsErrors, GetApiAssistChatsResponses, GetApiAtlasAsksByIdData, GetApiAtlasAsksByIdErrors, GetApiAtlasAsksByIdResponses, GetApiAtlasAsksData, GetApiAtlasAsksErrors, GetApiAtlasAsksResponses, GetApiEditData, GetApiEditErrors, GetApiEditResponses, GetApiHistoryByIdData, GetApiHistoryByIdErrors, GetApiHistoryByIdResponses, GetApiLearnerData, GetApiLearnerErrors, GetApiLearnerResponses, GetApiLearnerToursData, GetApiLearnerToursErrors, GetApiLearnerToursResponses, GetApiNotesByIdData, GetApiNotesByIdErrors, GetApiNotesByIdResponses, GetApiTeacherAiData, GetApiTeacherAiErrors, GetApiTeacherAiResponses, GetApiTeacherData, GetApiTeacherDraftsByIdData, GetApiTeacherDraftsByIdErrors, GetApiTeacherDraftsByIdResponses, GetApiTeacherDraftsData, GetApiTeacherDraftsErrors, GetApiTeacherDraftsResponses, GetApiTeacherErrors, GetApiTeacherFilesByNameData, GetApiTeacherFilesByNameErrors, GetApiTeacherFilesByNameResponses, GetApiTeacherResponses, GetApiTeacherSkillsByNameData, GetApiTeacherSkillsByNameErrors, GetApiTeacherSkillsByNameResponses, PostApiAgentsInboxData, PostApiAgentsInboxErrors, PostApiAgentsInboxResponses, PostApiArtifactsPreviewData, PostApiArtifactsPreviewErrors, PostApiArtifactsPreviewResponses, PostApiAtlasAskData, PostApiAtlasAskErrors, PostApiAtlasAskResponse, PostApiAtlasAskResponses, PostApiAtlasProposalsData, PostApiAtlasProposalsErrors, PostApiAtlasProposalsResponses, PostApiFoldersMoveData, PostApiFoldersMoveErrors, PostApiFoldersMoveResponses, PostApiLearnerData, PostApiLearnerErrors, PostApiLearnerResponses, PostApiNotesByIdAssistData, PostApiNotesByIdAssistErrors, PostApiNotesByIdAssistResponse, PostApiNotesByIdAssistResponses, PostApiNotesByIdMoveData, PostApiNotesByIdMoveErrors, PostApiNotesByIdMoveResponses, PostApiTeacherAiCheckData, PostApiTeacherAiCheckErrors, PostApiTeacherAiCheckResponses, PostApiTeacherAiConnectData, PostApiTeacherAiConnectErrors, PostApiTeacherAiConnectResponses, PostApiTeacherDraftsByIdRestoreData, PostApiTeacherDraftsByIdRestoreErrors, PostApiTeacherDraftsByIdRestoreResponses, PostApiTeacherDraftsByIdSubmittedData, PostApiTeacherDraftsByIdSubmittedErrors, PostApiTeacherDraftsByIdSubmittedResponses, PostApiTeacherDraftsByIdVersionsData, PostApiTeacherDraftsByIdVersionsErrors, PostApiTeacherDraftsByIdVersionsResponses, PostApiTeacherTutorByIdData, PostApiTeacherTutorByIdErrors, PostApiTeacherTutorByIdResponse, PostApiTeacherTutorByIdResponses, PutApiArtifactsByPathData, PutApiArtifactsByPathErrors, PutApiArtifactsByPathResponses, PutApiLearnerToursByNameData, PutApiLearnerToursByNameErrors, PutApiLearnerToursByNameResponses, PutApiNotesByIdData, PutApiNotesByIdErrors, PutApiNotesByIdResponses, PutApiTeacherDraftsByIdData, PutApiTeacherDraftsByIdErrors, PutApiTeacherDraftsByIdResponses, PutApiTeacherFilesByNameData, PutApiTeacherFilesByNameErrors, PutApiTeacherFilesByNameResponses, PutApiTeacherLimitsData, PutApiTeacherLimitsErrors, PutApiTeacherLimitsResponses, PutApiTeacherProfileData, PutApiTeacherProfileErrors, PutApiTeacherProfileResponses, PutApiTeacherSkillsByNameData, PutApiTeacherSkillsByNameErrors, PutApiTeacherSkillsByNameResponses, PutApiTeacherTiersData, PutApiTeacherTiersErrors, PutApiTeacherTiersResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -114,38 +114,6 @@ export const putApiTeacherFilesByName = <ThrowOnError extends boolean = false>(o
 });
 
 /**
- * Forget the OpenRouter key kept here
- */
-export const deleteApiTeacherAi = <ThrowOnError extends boolean = false>(options: Options<DeleteApiTeacherAiData, ThrowOnError>): RequestResult<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
-
-/**
- * Whether a model account is connected, the models by job, and this week's spending
- */
-export const getApiTeacherAi = <ThrowOnError extends boolean = false>(options?: Options<GetApiTeacherAiData, ThrowOnError>): RequestResult<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError> => (options?.client ?? client).get<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
-
-/**
- * Start connecting an OpenRouter account: the address to send the browser to
- */
-export const postApiTeacherAiConnect = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiConnectData, ThrowOnError>): RequestResult<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError>({ url: '/api/teacher/ai/connect', ...options });
-
-/**
- * Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.
- */
-export const putApiTeacherTiers = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherTiersData, ThrowOnError>): RequestResult<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError>({
-    url: '/api/teacher/tiers',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Check the connection with a tiny request (its cost is logged as "check")
- */
-export const postApiTeacherAiCheck = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiCheckData, ThrowOnError>): RequestResult<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError>({ url: '/api/teacher/ai/check', ...options });
-
-/**
  * Ask the teacher about your draft (hint, feedback or discuss); the reply streams as server-sent events: text, then done with the turn, or error
  */
 export const postApiTeacherTutorById = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherTutorByIdData, ThrowOnError, PostApiTeacherTutorByIdResponse>): Promise<ServerSentEventsResult<PostApiTeacherTutorByIdResponses>> => (options.client ?? client).sse.post<PostApiTeacherTutorByIdResponses, PostApiTeacherTutorByIdErrors, ThrowOnError>({
@@ -156,60 +124,6 @@ export const postApiTeacherTutorById = <ThrowOnError extends boolean = false>(op
         ...options.headers
     }
 });
-
-/**
- * Ask the connected model about a note being edited. chat is a turn of a conversation beside the note (T97): it answers, and may propose changes where it is let (T98): at a place set for new text, to a marked passage, or anywhere in the note. figure has an artifact made; ask and fill are the two chat replaced. The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply (for chat, also the turn as it is kept and the id of the chat it is kept in, where the learner record is on), or error. No note is written.
- */
-export const postApiNotesByIdAssist = <ThrowOnError extends boolean = false>(options: Options<PostApiNotesByIdAssistData, ThrowOnError, PostApiNotesByIdAssistResponse>): Promise<ServerSentEventsResult<PostApiNotesByIdAssistResponses>> => (options.client ?? client).sse.post<PostApiNotesByIdAssistResponses, PostApiNotesByIdAssistErrors, ThrowOnError>({
-    url: '/api/notes/{id}/assist',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer (and the id it is kept under, where the learner record is on), or error. No note is written.
- */
-export const postApiAtlasAsk = <ThrowOnError extends boolean = false>(options: Options<PostApiAtlasAskData, ThrowOnError, PostApiAtlasAskResponse>): Promise<ServerSentEventsResult<PostApiAtlasAskResponses>> => (options.client ?? client).sse.post<PostApiAtlasAskResponses, PostApiAtlasAskErrors, ThrowOnError>({
-    url: '/api/atlas/ask',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * The questions asked on the Atlas that are kept in your learner record (T94), newest first
- */
-export const getApiAtlasAsks = <ThrowOnError extends boolean = false>(options?: Options<GetApiAtlasAsksData, ThrowOnError>): RequestResult<GetApiAtlasAsksResponses, GetApiAtlasAsksErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAtlasAsksResponses, GetApiAtlasAsksErrors, ThrowOnError>({ url: '/api/atlas/asks', ...options });
-
-/**
- * Forget a kept question
- */
-export const deleteApiAtlasAsksById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAtlasAsksByIdData, ThrowOnError>): RequestResult<DeleteApiAtlasAsksByIdResponses, DeleteApiAtlasAsksByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAtlasAsksByIdResponses, DeleteApiAtlasAsksByIdErrors, ThrowOnError>({ url: '/api/atlas/asks/{id}', ...options });
-
-/**
- * One kept question with its answer, the lookups made, and what has changed in the notes since
- */
-export const getApiAtlasAsksById = <ThrowOnError extends boolean = false>(options: Options<GetApiAtlasAsksByIdData, ThrowOnError>): RequestResult<GetApiAtlasAsksByIdResponses, GetApiAtlasAsksByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiAtlasAsksByIdResponses, GetApiAtlasAsksByIdErrors, ThrowOnError>({ url: '/api/atlas/asks/{id}', ...options });
-
-/**
- * The chats with Axis beside a note that are kept in your learner record (T97), the one last added to first
- */
-export const getApiAssistChats = <ThrowOnError extends boolean = false>(options?: Options<GetApiAssistChatsData, ThrowOnError>): RequestResult<GetApiAssistChatsResponses, GetApiAssistChatsErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAssistChatsResponses, GetApiAssistChatsErrors, ThrowOnError>({ url: '/api/assist/chats', ...options });
-
-/**
- * Delete a kept chat
- */
-export const deleteApiAssistChatsById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAssistChatsByIdData, ThrowOnError>): RequestResult<DeleteApiAssistChatsByIdResponses, DeleteApiAssistChatsByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAssistChatsByIdResponses, DeleteApiAssistChatsByIdErrors, ThrowOnError>({ url: '/api/assist/chats/{id}', ...options });
-
-/**
- * One kept chat: its turns, each with its answer, the changes proposed, what was looked up and what it cost
- */
-export const getApiAssistChatsById = <ThrowOnError extends boolean = false>(options: Options<GetApiAssistChatsByIdData, ThrowOnError>): RequestResult<GetApiAssistChatsByIdResponses, GetApiAssistChatsByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiAssistChatsByIdResponses, GetApiAssistChatsByIdErrors, ThrowOnError>({ url: '/api/assist/chats/{id}', ...options });
 
 /**
  * Your drafts in progress, most recently touched first
@@ -268,6 +182,158 @@ export const postApiTeacherDraftsByIdSubmitted = <ThrowOnError extends boolean =
         ...options.headers
     }
 });
+
+/**
+ * Forget the OpenRouter key kept here
+ */
+export const deleteApiTeacherAi = <ThrowOnError extends boolean = false>(options: Options<DeleteApiTeacherAiData, ThrowOnError>): RequestResult<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiTeacherAiResponses, DeleteApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
+
+/**
+ * Whether a model account is connected, the models by job, and this week's spending
+ */
+export const getApiTeacherAi = <ThrowOnError extends boolean = false>(options?: Options<GetApiTeacherAiData, ThrowOnError>): RequestResult<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError> => (options?.client ?? client).get<GetApiTeacherAiResponses, GetApiTeacherAiErrors, ThrowOnError>({ url: '/api/teacher/ai', ...options });
+
+/**
+ * Start connecting an OpenRouter account: the address to send the browser to
+ */
+export const postApiTeacherAiConnect = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiConnectData, ThrowOnError>): RequestResult<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiConnectResponses, PostApiTeacherAiConnectErrors, ThrowOnError>({ url: '/api/teacher/ai/connect', ...options });
+
+/**
+ * Set the model for each tier (low, mid, max) Axis may be asked at in the editor. Written to [teacher.tiers] in the user config, so it is the person's, across projects.
+ */
+export const putApiTeacherTiers = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherTiersData, ThrowOnError>): RequestResult<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherTiersResponses, PutApiTeacherTiersErrors, ThrowOnError>({
+    url: '/api/teacher/tiers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set, for each tier, the most tokens sent to its model in one call (input) and the longest reply asked of it (output); null takes a limit off. Written to [teacher.limits] in the user config, so it is the person's, across projects.
+ */
+export const putApiTeacherLimits = <ThrowOnError extends boolean = false>(options: Options<PutApiTeacherLimitsData, ThrowOnError>): RequestResult<PutApiTeacherLimitsResponses, PutApiTeacherLimitsErrors, ThrowOnError> => (options.client ?? client).put<PutApiTeacherLimitsResponses, PutApiTeacherLimitsErrors, ThrowOnError>({
+    url: '/api/teacher/limits',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Check the connection with a tiny request (its cost is logged as "check")
+ */
+export const postApiTeacherAiCheck = <ThrowOnError extends boolean = false>(options: Options<PostApiTeacherAiCheckData, ThrowOnError>): RequestResult<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError> => (options.client ?? client).post<PostApiTeacherAiCheckResponses, PostApiTeacherAiCheckErrors, ThrowOnError>({ url: '/api/teacher/ai/check', ...options });
+
+/**
+ * Ask the connected model about a note being edited. chat is a turn of a conversation beside the note (T97): it answers, and may propose changes where it is let (T98): at a place set for new text, to a marked passage, or anywhere in the note. figure has an artifact made; ask and fill are the two chat replaced. The model may first look things up in the knowledge base and the code. The reply streams as server-sent events: step for each thing looked up, text, then done with the reply (for chat, also the turn as it is kept and the id of the chat it is kept in, where the learner record is on), or error. No note is written.
+ */
+export const postApiNotesByIdAssist = <ThrowOnError extends boolean = false>(options: Options<PostApiNotesByIdAssistData, ThrowOnError, PostApiNotesByIdAssistResponse>): Promise<ServerSentEventsResult<PostApiNotesByIdAssistResponses>> => (options.client ?? client).sse.post<PostApiNotesByIdAssistResponses, PostApiNotesByIdAssistErrors, ThrowOnError>({
+    url: '/api/notes/{id}/assist',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Ask the connected model a question about the project, from the Atlas (T85). It looks things up in the knowledge base and the code, and says which notes its answer rests on. Server-sent events: step for each thing looked up (what the map draws), text, then done with the answer (and the id it is kept under, where the learner record is on), or error. No note is written.
+ */
+export const postApiAtlasAsk = <ThrowOnError extends boolean = false>(options: Options<PostApiAtlasAskData, ThrowOnError, PostApiAtlasAskResponse>): Promise<ServerSentEventsResult<PostApiAtlasAskResponses>> => (options.client ?? client).sse.post<PostApiAtlasAskResponses, PostApiAtlasAskErrors, ThrowOnError>({
+    url: '/api/atlas/ask',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Accept one thing Axis proposed on the Atlas (T101): the note is written, changed or moved as an edit made in the app is, with the model named in its stamp. A change is found again in the note as it is now, and refused if its text is no longer there.
+ */
+export const postApiAtlasProposals = <ThrowOnError extends boolean = false>(options: Options<PostApiAtlasProposalsData, ThrowOnError>): RequestResult<PostApiAtlasProposalsResponses, PostApiAtlasProposalsErrors, ThrowOnError> => (options.client ?? client).post<PostApiAtlasProposalsResponses, PostApiAtlasProposalsErrors, ThrowOnError>({
+    url: '/api/atlas/proposals',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The questions asked on the Atlas that are kept in your learner record (T94), newest first
+ */
+export const getApiAtlasAsks = <ThrowOnError extends boolean = false>(options?: Options<GetApiAtlasAsksData, ThrowOnError>): RequestResult<GetApiAtlasAsksResponses, GetApiAtlasAsksErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAtlasAsksResponses, GetApiAtlasAsksErrors, ThrowOnError>({ url: '/api/atlas/asks', ...options });
+
+/**
+ * Forget a kept question
+ */
+export const deleteApiAtlasAsksById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAtlasAsksByIdData, ThrowOnError>): RequestResult<DeleteApiAtlasAsksByIdResponses, DeleteApiAtlasAsksByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAtlasAsksByIdResponses, DeleteApiAtlasAsksByIdErrors, ThrowOnError>({ url: '/api/atlas/asks/{id}', ...options });
+
+/**
+ * One kept question with its answer, the lookups made, and what has changed in the notes since
+ */
+export const getApiAtlasAsksById = <ThrowOnError extends boolean = false>(options: Options<GetApiAtlasAsksByIdData, ThrowOnError>): RequestResult<GetApiAtlasAsksByIdResponses, GetApiAtlasAsksByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiAtlasAsksByIdResponses, GetApiAtlasAsksByIdErrors, ThrowOnError>({ url: '/api/atlas/asks/{id}', ...options });
+
+/**
+ * The chats with Axis beside a note that are kept in your learner record (T97), the one last added to first
+ */
+export const getApiAssistChats = <ThrowOnError extends boolean = false>(options?: Options<GetApiAssistChatsData, ThrowOnError>): RequestResult<GetApiAssistChatsResponses, GetApiAssistChatsErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAssistChatsResponses, GetApiAssistChatsErrors, ThrowOnError>({ url: '/api/assist/chats', ...options });
+
+/**
+ * Delete a kept chat
+ */
+export const deleteApiAssistChatsById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAssistChatsByIdData, ThrowOnError>): RequestResult<DeleteApiAssistChatsByIdResponses, DeleteApiAssistChatsByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAssistChatsByIdResponses, DeleteApiAssistChatsByIdErrors, ThrowOnError>({ url: '/api/assist/chats/{id}', ...options });
+
+/**
+ * One kept chat: its turns, each with its answer, the changes proposed, what was looked up and what it cost
+ */
+export const getApiAssistChatsById = <ThrowOnError extends boolean = false>(options: Options<GetApiAssistChatsByIdData, ThrowOnError>): RequestResult<GetApiAssistChatsByIdResponses, GetApiAssistChatsByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiAssistChatsByIdResponses, GetApiAssistChatsByIdErrors, ThrowOnError>({ url: '/api/assist/chats/{id}', ...options });
+
+/**
+ * The sessions of agents outside the app that are kept (T107), the latest first: each run of the MCP server, with what it searched, opened and wrote
+ */
+export const getApiAgentsSessions = <ThrowOnError extends boolean = false>(options?: Options<GetApiAgentsSessionsData, ThrowOnError>): RequestResult<GetApiAgentsSessionsResponses, GetApiAgentsSessionsErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAgentsSessionsResponses, GetApiAgentsSessionsErrors, ThrowOnError>({ url: '/api/agents/sessions', ...options });
+
+/**
+ * Delete a kept session
+ */
+export const deleteApiAgentsSessionsById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAgentsSessionsByIdData, ThrowOnError>): RequestResult<DeleteApiAgentsSessionsByIdResponses, DeleteApiAgentsSessionsByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAgentsSessionsByIdResponses, DeleteApiAgentsSessionsByIdErrors, ThrowOnError>({ url: '/api/agents/sessions/{id}', ...options });
+
+/**
+ * One session's steps, in order: what was touched, never what was read or written
+ */
+export const getApiAgentsSessionsById = <ThrowOnError extends boolean = false>(options: Options<GetApiAgentsSessionsByIdData, ThrowOnError>): RequestResult<GetApiAgentsSessionsByIdResponses, GetApiAgentsSessionsByIdErrors, ThrowOnError> => (options.client ?? client).get<GetApiAgentsSessionsByIdResponses, GetApiAgentsSessionsByIdErrors, ThrowOnError>({ url: '/api/agents/sessions/{id}', ...options });
+
+/**
+ * What you have sent to a terminal agent lately, the latest first, each waiting or taken (by whom, and when)
+ */
+export const getApiAgentsInbox = <ThrowOnError extends boolean = false>(options?: Options<GetApiAgentsInboxData, ThrowOnError>): RequestResult<GetApiAgentsInboxResponses, GetApiAgentsInboxErrors, ThrowOnError> => (options?.client ?? client).get<GetApiAgentsInboxResponses, GetApiAgentsInboxErrors, ThrowOnError>({ url: '/api/agents/inbox', ...options });
+
+/**
+ * Send something to a terminal agent (T109): a message, with the note or folder you are on. It waits until an agent asks for it through the MCP server (the from_developer tool); nothing else of what you do in the app is seen by an agent.
+ */
+export const postApiAgentsInbox = <ThrowOnError extends boolean = false>(options: Options<PostApiAgentsInboxData, ThrowOnError>): RequestResult<PostApiAgentsInboxResponses, PostApiAgentsInboxErrors, ThrowOnError> => (options.client ?? client).post<PostApiAgentsInboxResponses, PostApiAgentsInboxErrors, ThrowOnError>({
+    url: '/api/agents/inbox',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Take back something sent to a terminal agent
+ */
+export const deleteApiAgentsInboxById = <ThrowOnError extends boolean = false>(options: Options<DeleteApiAgentsInboxByIdData, ThrowOnError>): RequestResult<DeleteApiAgentsInboxByIdResponses, DeleteApiAgentsInboxByIdErrors, ThrowOnError> => (options.client ?? client).delete<DeleteApiAgentsInboxByIdResponses, DeleteApiAgentsInboxByIdErrors, ThrowOnError>({ url: '/api/agents/inbox/{id}', ...options });
+
+/**
+ * What agents outside the app are doing, as they do it: server-sent events, a step for each thing touched from now on, for as long as the page listens
+ */
+export const getApiAgentsLive = <ThrowOnError extends boolean = false>(options?: Options<GetApiAgentsLiveData, ThrowOnError, GetApiAgentsLiveResponse>): Promise<ServerSentEventsResult<GetApiAgentsLiveResponses>> => (options?.client ?? client).sse.get<GetApiAgentsLiveResponses, GetApiAgentsLiveErrors, ThrowOnError>({ url: '/api/agents/live', ...options });
 
 /**
  * Whether notes can be edited here, and the token to do it with

@@ -1,6 +1,5 @@
 // Where the private learner record lives, and reading and writing it. The
-// record's rules are in @rdstudio/core (record.ts); this is the file side,
-// a port of src/rdstudio/learner.py.
+// record's rules are in @rdstudio/core (record.ts); this is the file side.
 
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";

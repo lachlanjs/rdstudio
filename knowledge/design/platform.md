@@ -4,7 +4,7 @@ title: Platform, performance and deployment
 description: "Scope for making rdstudio fast on every device: local-first data, a GPU map renderer, a Tauri app, and one TypeScript core shared by the web, desktop, mobile, command line and MCP server."
 status: draft
 tags: [design, architecture, performance, platform]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-29T01:14:28Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T05:10:20Z}
 ---
 
 # Why
@@ -237,3 +237,21 @@ keeps shipping throughout.
   three differences T34 found); the Python core is changed to match.
 - Learner events get unique ids now, before any sync exists (done in T31:
   ULIDs, a device id, and merging by union).
+
+# The Python implementation is gone (2026-10-08)
+
+What this note calls the Python core, command line, build, server and MCP
+server was removed in [T102](/tasks/T102-retire-python.md). Where the
+sections above say Python "stays" or is "retired part by part", read: done.
+
+- `src/rdstudio` is the launcher (`launcher.py`), the templates and the
+  built dashboard. Its one dependency is Node (`nodejs-wheel-binaries`).
+- papis references and the classifier, which the Stack table kept in
+  Python, are in TypeScript (`packages/cli/src/references.ts`,
+  `packages/core/src/classify.ts`). A classifier of the developer's own is
+  still any command that answers JSON.
+- The conformance fixtures stay, checked and recorded by
+  `fixtures/expected.ts`. The comparisons between the two implementations
+  (`mise run agree`) went with the Python one.
+- Output keeps the form the Python programs gave it (`pyjson.ts`), since
+  agents and scripts read it.

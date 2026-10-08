@@ -1,5 +1,4 @@
 // Commit-by-commit change lists, with each file sorted into a category.
-// A port of src/rdstudio/gitlog.py.
 
 import { execFileSync } from "node:child_process";
 

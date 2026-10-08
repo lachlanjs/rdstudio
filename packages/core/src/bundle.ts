@@ -1,6 +1,6 @@
 // An OKF bundle: notes (concepts), folders and links, with trust and staleness,
-// lint, the requires graph and generated indexes. A port of the Python core
-// (src/rdstudio/okf.py), checked against fixtures/.
+// lint, the requires graph and generated indexes. Checked against fixtures/, which the
+// first, Python, core recorded (removed in T102).
 //
 // The core never touches a file system: it is given the bundle's files as
 // text, so it runs the same in a browser, Node and Tauri (see node.ts).

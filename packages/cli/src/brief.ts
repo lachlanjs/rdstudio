@@ -1,11 +1,12 @@
 // A short orientation for the start of an agent session (rdstudio brief).
 // Printed by a Claude Code SessionStart hook and returned by the MCP brief
-// tool, so it must stay small. A port of src/rdstudio/brief.py.
+// tool, so it must stay small.
 
 import { cmp } from "@rdstudio/core";
 import { loadBundle } from "@rdstudio/core/node";
 import { categoryGlobs, type Config } from "./config.ts";
 import { history } from "./gitlog.ts";
+import * as inbox from "./inbox.ts";
 import { globalConfig } from "./scopes.ts";
 
 export function brief(cfg: Config, commits = 3): string {
@@ -21,6 +22,9 @@ export function brief(cfg: Config, commits = 3): string {
   const questions = concepts.filter((c) => c.type.toLowerCase() === "question" && !c.tags.includes("answered")).length;
   const unverified = concepts.filter((c) => c.trust === "unverified").length;
   lines.push(`Awaiting the developer: ${stale} changed since review, ${questions} open questions, ${unverified} unverified.`);
+  // Something the developer sent from the app waits (T109): it reaches an agent only when asked for.
+  const sent = inbox.waiting(cfg).length;
+  if (sent) lines.push(`The developer sent ${sent === 1 ? "something" : `${sent} things`} from the app: call the rdstudio from_developer tool to read ${sent === 1 ? "it" : "them"}.`);
   const log = history(cfg.root, categoryGlobs(cfg), commits, [cfg.output.replace(/^\/+|\/+$/g, "") + "/"]) as { commits?: { subject: string; pending?: boolean }[] };
   const recent = (log.commits ?? []).filter((c) => !c.pending).slice(0, commits).map((c) => c.subject);
   if (recent.length) lines.push("Recent commits: " + recent.join(" | "));

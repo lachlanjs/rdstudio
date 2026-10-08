@@ -4,7 +4,7 @@ title: "T62 — The grid Atlas: cells, routes and drawing"
 description: "The grid Atlas in the app as a third folder shape on real bundles: note blocks and
   rectangular folders on cells, A* routes with lanes, solved in the worker, behind a layout
   interface with a placeholder layout."
-tags: [task, m13, active]
+tags: [task, m13, done]
 generated: {by: claude-code/claude-opus-5-5, at: 2026-10-06T00:19:15Z}
 ---
 
@@ -157,3 +157,10 @@ Built on 2026-10-06, on the branch `grid-dag-view`; not committed. Left
   hover, study paths and tours, the label budget, hiding what is not
   reached, the phone layout, keeping notes in place. More options still
   lists the continuous Atlas's settings, most of which do nothing on the grid.
+
+## Closed, 2026-10-08
+
+Marked done in [T104](/tasks/T104-tidy-board-server-root.md): the grid
+Atlas has been the only Atlas since
+[T63](/tasks/T63-grid-atlas-parity.md). What was left unchecked, the
+walkthroughs, is [T73](/tasks/T73-walkthroughs-grid-atlas.md), still todo.

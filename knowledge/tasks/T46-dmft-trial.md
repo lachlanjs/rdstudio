@@ -2,7 +2,7 @@
 type: Task
 title: "T46 — Trial: dynamical mean-field theory"
 description: "Learn the DMFT of random neural networks from first principles to Clark and Abbott's theory of coupled neuronal-synaptic dynamics, in a separate repository, using the teacher throughout."
-tags: [task, m10, active]
+tags: [task, m10, todo]
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-02T12:00:00Z }
 ---
 
@@ -212,3 +212,9 @@ written to the task, as they are met.
   - **Streaks,** which go against the "no scores or streaks" rule of the
     practice design.
   - **A third idea,** not given yet.
+
+## Waiting, 2026-10-08
+
+Moved from active to todo in [T104](/tasks/T104-tidy-board-server-root.md):
+it is the developer's own trial in its own repository, and no agent is
+working on it here.

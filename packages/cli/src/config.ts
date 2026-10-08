@@ -1,5 +1,5 @@
 // Project (rdstudio.toml) and user (~/.config/rdstudio/config.toml)
-// configuration. A port of src/rdstudio/config.py.
+// configuration.
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";

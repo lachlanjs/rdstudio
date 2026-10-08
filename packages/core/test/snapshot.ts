@@ -1,5 +1,5 @@
-// The conformance snapshot (the shape of fixtures/expected/*.json, built by
-// snapshot() in fixtures/expected.py), from the TypeScript core.
+// The conformance snapshot: the shape of fixtures/expected/*.json, which
+// fixtures/expected.ts checks and records.
 
 import { SearchIndex, contentHash, headings, iso, round3, type Bundle } from "../src/index.ts";
 import { cmpTuple } from "../src/text.ts";

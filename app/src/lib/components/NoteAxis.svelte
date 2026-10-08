@@ -365,6 +365,7 @@
             {/if}
           {/if}
           {#each turn.dropped as d (d)}<p class="aq-since" role="note">{d}</p>{/each}
+          {#each turn.notices ?? [] as n (n)}<p class="aq-since" role="note">{n}</p>{/each}
           {#if turn.steps.length}
             <details class="aq-looked"><summary>Looked up {plural(turn.steps.length, "thing")}</summary>{@render looking(turn.steps)}</details>
           {:else}

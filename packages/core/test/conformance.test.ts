@@ -1,5 +1,4 @@
-// The TypeScript core against the conformance fixtures (fixtures/README.md):
-// the same JSON the Python core recorded, part by part.
+// The core against the conformance fixtures (fixtures/README.md), part by part.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

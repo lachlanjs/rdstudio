@@ -20,12 +20,32 @@
   onMount(() => {
     const back = new URLSearchParams(location.search).get("ai");
     if (back && RETURN[back]) status = RETURN[back];
-    void ai.state().then((s) => { st = s; loaded = true; if (s) tiers = { ...s.tiers }; });
+    void ai.state().then((s) => { st = s; loaded = true; if (s) { tiers = { ...s.tiers }; limits = shown(s); } });
   });
   // The editor's three tiers (T83): which model each one is.
   const TIER = [["low", "Low", "Small, mechanical changes: quick and cheap"], ["mid", "Mid", "Most questions and drafting"], ["max", "Max", "Figures, and what needs the most care"]] as const;
   let tiers = $state({ low: "", mid: "", max: "" });
   const tiersChanged = $derived(!!st && TIER.some(([k]) => tiers[k].trim() !== st!.tiers[k]));
+  // Each tier's limits (T110), as typed: empty is none.
+  type Typed = Record<"low" | "mid" | "max", { input: string; output: string }>;
+  const shown = (s: AiState): Typed => Object.fromEntries(TIER.map(([k]) => [k, { input: s.limits?.[k]?.input?.toString() ?? "", output: s.limits?.[k]?.output?.toString() ?? "" }])) as Typed;
+  let limitStatus = $state(""); // said under the form itself, which is far down the page from the panel's own status
+  let limits = $state<Typed>({ low: { input: "", output: "" }, mid: { input: "", output: "" }, max: { input: "", output: "" } });
+  const limitsChanged = $derived(!!st?.limits && TIER.some(([k]) => (["input", "output"] as const).some((f) => limits[k][f].trim() !== (st!.limits[k][f]?.toString() ?? ""))));
+  /** What was typed, as it is sent: a whole number, or null for none. Anything else is said, not sent. */
+  function typedLimits() {
+    const out: Partial<Record<"low" | "mid" | "max", { input: number | null; output: number | null }>> = {};
+    for (const [k, label] of TIER) {
+      const one = (f: "input" | "output") => {
+        const t = limits[k][f].trim().replace(/[,_ ]/g, "");
+        if (!t) return null;
+        if (!/^\d+$/.test(t)) throw new Error(`${label}, ${f}: write a whole number of tokens, or leave it empty for none.`);
+        return Number(t);
+      };
+      out[k] = { input: one("input"), output: one("output") };
+    }
+    return out;
+  }
   const JOB: Record<string, string> = { hint: "Hints", feedback: "Feedback", discuss: "Discussion", marking: "Marking", write: "Writing in notes", "note-ask": "Answers in the editor", "note-fill": "Text proposed in the editor", "note-figure": "Figures made in the editor", check: "Checking the connection" };
   const sorted = (m: Record<string, number>) => Object.entries(m).sort((a, b) => b[1] - a[1]);
 
@@ -98,6 +118,23 @@
     {/each}
     <span></span><button class="toggle" type="submit" disabled={busy || !tiersChanged}>Save the models</button>
   </form>
+
+  {#if st.limits}
+    <h3 class="sub-h" id="limits">Limits</h3>
+    <p class="section-note">How much may be sent to each tier's model in one call, and how long its reply may be, in tokens. Leave one empty and rdstudio uses its own figures, which differ by the kind of request.
+      With an input limit, what was looked up and gathered is shortened to fit; your own words, the instructions and the passage being changed are never cut. Set an output limit lower where {own ? st.provider.name : "the provider"} allows less, or higher for a model that spends its reply on reasoning.
+      Hints and marking take the limits of the tier their job belongs to (hints: low; the rest: mid).</p>
+    <form class="limits" onsubmit={async (e) => { e.preventDefault(); busy = true; limitStatus = ""; try { st = await ai.setLimits(typedLimits()); limits = shown(st); limitStatus = "The limits are set."; } catch (err) { limitStatus = (err as Error).message; } busy = false; }}>
+      <span></span><span class="section-note" id="limit-in">Input, at most</span><span class="section-note" id="limit-out">Output, at most</span>
+      {#each TIER as [k, label] (k)}
+        <label for="limit-{k}-input">{label}</label>
+        <input id="limit-{k}-input" type="text" inputmode="numeric" bind:value={limits[k].input} placeholder="no limit" autocomplete="off" aria-label="{label}: input limit, in tokens" />
+        <input id="limit-{k}-output" type="text" inputmode="numeric" bind:value={limits[k].output} placeholder="rdstudio's own" autocomplete="off" aria-label="{label}: output limit, in tokens" />
+      {/each}
+      <span></span><button class="toggle" type="submit" disabled={busy || !limitsChanged}>Save the limits</button>
+    </form>
+    <p class="edit-status limits-status" role="status">{limitStatus}</p>
+  {/if}
 
   <h3 class="sub-h">Models elsewhere</h3>
   <table class="fm spend">
