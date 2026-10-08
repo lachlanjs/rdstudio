@@ -27,6 +27,10 @@
 * [T109 — From the browser to the terminal agent](T109-browser-to-agent.md) - To explore: an MCP tool by which a terminal agent learns what the developer is looking at in the app, or what they have left for it.
 * [T11 — Procedural graphs](T11-procedures.md) - Procedure concepts with graphs; MCP neighbourhood lookup; Procedures tab.
 * [T110 — Set how much goes to a model and how much may come back, in rdstudio itself](T110-context-limits-settings.md) - Settings for the input budget and the output limit of the model calls, which are fixed in the code today.
+* [T111 — An opencode plugin that reports file reads and edits of the base](T111-opencode-file-plugin.md) - A plugin that rdstudio init installs for opencode, calling rdstudio trace after each file read, search or edit, so an opencode session's path on the Atlas is whole.
+* [T112 — Axis's proposals marked on the map, with cards and notes linked both ways](T112-proposals-on-the-map.md) - A proposed change or move marks its note on the Atlas, and each card links to the note or folder it concerns, and back.
+* [T113 — Proposed new notes and folders drawn on the map before they exist](T113-ghosts-for-proposed-notes.md) - A note Axis proposes is drawn as a ghost at the folder it would join, a new folder as a ghost folder, and a note in no folder as a ghost in free space.
+* [T114 — Folders an agent makes are said and shown, in proposals, the trace and the Atlas](T114-folders-made-explicit.md) - When a proposal or an outside agent's write makes a new folder, the card, the trace's step and the map say so; and, to settle, whether agents may move and rename folders.
 * [T12 — papis and Zotero references](T12-references.md) - Optional papis backend: reference stubs, MCP reference tools, /ingest-ref.
 * [T13 — Global bundle and promote](T13-global-bundle.md) - Support ~/knowledge as a second bundle; scoped search; /promote.
 * [T14 — Pluggable classifier interface](T14-classifier.md) - Interface for edit-significance and step localisation with deterministic default.

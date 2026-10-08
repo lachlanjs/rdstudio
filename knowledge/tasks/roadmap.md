@@ -3,7 +3,7 @@ type: Roadmap
 title: Roadmap
 description: Milestones and task checklist for building rdstudio; the progress tracker.
 tags: [roadmap]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T04:55:31Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T23:45:06Z}
 ---
 
 Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
@@ -215,6 +215,29 @@ the base shown live in the browser. The idea:
 - [x] [T107 A terminal agent's path through the base, shown live in the browser](/tasks/T107-agent-path-live.md)
 - [x] [T108 The agent's path: reads and edits made outside MCP](/tasks/T108-agent-path-file-hooks.md)
 - [x] [T109 From the browser to the terminal agent](/tasks/T109-browser-to-agent.md)
+
+# M18 — Proposals on the map, and opencode
+
+From the developer, 2026-10-09, on seeing M16 and M17: the opencode plugin
+left out of T108, and Axis's proposals shown on the map and not only as
+cards. To begin on the developer's own machine, where opencode and the
+differential geometry test bed are.
+
+First, before any of these: run the five browser suites that could not run
+where M16 and M17 were built (edit, compose, reshape, learn, teacher), and
+try M16 and M17 with a real model and a real Claude Code session. See
+[the write-up](m16-m17-leaner-and-agents.html), "Not checked".
+
+- [ ] [T111 An opencode plugin that reports file reads and edits of the base](/tasks/T111-opencode-file-plugin.md)
+- [ ] [T112 Axis's proposals marked on the map, with cards and notes linked both ways](/tasks/T112-proposals-on-the-map.md)
+- [ ] [T113 Proposed new notes and folders drawn on the map before they exist](/tasks/T113-ghosts-for-proposed-notes.md)
+- [ ] [T114 Folders an agent makes are said and shown, in proposals, the trace and the Atlas](/tasks/T114-folders-made-explicit.md)
+
+Waiting on the developer:
+[which notes should need a check](/questions/what-verification-covers.md);
+the draft decision
+[Axis proposes and writes none itself](/decisions/atlas-proposals-by-leave.md);
+and, in T114, whether an agent may move or rename a folder.
 
 # Future
 
