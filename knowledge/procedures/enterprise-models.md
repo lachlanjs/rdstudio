@@ -5,7 +5,7 @@ description: "Point rdstudio at an enterprise-hosted, OpenAI-compatible gateway 
   OpenRouter: the settings, certificates, proxies and keys, how to diagnose a failure, what is not
   covered, and where in the code to patch a gap."
 tags: [procedure, models, enterprise, security]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T05:40:28Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T01:21:40Z}
 ---
 
 # What this covers
@@ -39,13 +39,20 @@ Helpful but not required: streamed replies, tool calls, token counts.
 1. Find your user config: `rdstudio provider` prints its path
    (`~/.config/rdstudio/config.toml` on Linux).
 2. Add a `[teacher.provider]` table with at least `url`. See the settings
-   and the examples below.
-3. Name the models as the gateway names them, under `[teacher.tiers]` and
-   `[teacher.models]`. The defaults are OpenRouter's names and will not
-   exist on your gateway.
-4. Run `rdstudio provider check`. It prints the settings as read (never the
-   key), sends one small request, and says what came back or what to
-   change.
+   and the examples below. A client identity handed out as one `.pfx` or
+   `.p12` file is named as it is (`client_pfx`): nothing has to be taken
+   out of it first.
+3. Name three models as the gateway names them, under `[teacher.tiers]`
+   (`low`, `mid`, `max`). The defaults are OpenRouter's names and will not
+   exist on your gateway. Each job (hints, feedback, marking, the check)
+   takes its tier's model unless `[teacher.models]` gives it one of its own.
+4. Run `rdstudio provider check`. It prints the settings as read (never a
+   key or a password), says which models are still unnamed, sends one small
+   request, says what came back or which one setting to change, and
+   compares the names in use with the gateway's own list where it has one.
+   `--verbose` adds what the connection was made with: the proxy, the
+   gateway's certificate and who signed it, the client certificate and when
+   it runs out, and the body of a refusal.
 5. Restart `rdstudio serve`. The Axis page then names the gateway.
 
 The provider is read from the **user** config only. A project's
@@ -63,19 +70,24 @@ All under `[teacher.provider]`. Only `url` is required.
 | `path` | `/chat/completions` | |
 | `key_env` | `RDSTUDIO_PROVIDER_KEY` | Environment variable holding the key. |
 | `key_file` | | A file holding the key. `~/` is your home. |
-| `key_command` | | A command that prints a token on its last line. |
+| `key_command` | | A command that prints a token on its last line. This is also how a key is read from the system's keychain (`secret-tool lookup …`, `security find-generic-password -w …`). |
 | `key_ttl` | `600` | Seconds a command's token is kept. After a 401 the command is asked again once. |
 | `auth` | `bearer` | `bearer`: `Authorization: Bearer KEY`. `header`: the key alone in `auth_header`. `none`: no key. |
 | `auth_header` | `Authorization` | For example `api-key`. |
 | `ca_file` | | A PEM file of authorities to trust **besides** the usual ones. |
+| `system_ca` | `false` | `true` also trusts the authorities in this machine's own store, where a managed machine usually has the organisation's. |
 | `client_cert`, `client_key` | | PEM files, for mutual TLS. |
-| `proxy` | | `http://host:port`, with `user:password@` if needed; or `env` to use `HTTPS_PROXY`. |
+| `client_key_passphrase_env` | | Environment variable holding the passphrase of `client_key`, where it has one. |
+| `client_pfx` | | A PKCS#12 file (`.pfx`, `.p12`) holding the certificate and key, in the pair's place. Setting both is an error. |
+| `pfx_password_env` | `RDSTUDIO_PFX_PASSWORD` | Environment variable holding the file's password. |
+| `pfx_password_file` | | Or a file holding it. The environment is looked in first. |
+| `proxy` | | `http://host:port`, with `user:password@` if needed; or `env` to use `HTTPS_PROXY`, passed by for the hosts `NO_PROXY` names. |
 | `stream` | `true` | `false` asks for one whole reply. |
 | `tools` | `true` | `false` never offers tool calls; context is gathered for the model instead. |
 | `cache_marks` | `false` | Send Anthropic's `cache_control` parts. Off, messages are plain strings. |
 | `stream_usage` | `true` | Ask for token counts with a streamed reply. |
 | `max_tokens_field` | `max_tokens` | Some models want `max_completion_tokens`. |
-| `timeout` | `120` | Seconds. Applies when `ca_file`, a client certificate or `proxy` is set. |
+| `timeout` | `120` | Seconds. Applies when `ca_file`, `system_ca`, a client certificate or `proxy` is set. |
 | `[teacher.provider.headers]` | | Sent with every request. |
 | `[teacher.provider.query]` | | Added to the address. |
 | `[teacher.provider.prices]` | | `"model" = [in, out]` in US dollars a million tokens. |
@@ -83,20 +95,32 @@ All under `[teacher.provider]`. Only `url` is required.
 The key is looked for in that order: the environment, the file, the
 command.
 
+A gateway that knows you by your certificate may still want a key in a
+header (it answers 401, "no api key"). Any value often does: leave `auth`
+as `bearer` and set `RDSTUDIO_PROVIDER_KEY` to one.
+
 # Certificates
 
 Certificates are always verified, the name in them included. There is no
 setting to turn that off, and none should be added.
+`NODE_TLS_REJECT_UNAUTHORIZED=0` in the environment does not turn it off
+for a gateway either; `rdstudio provider` says when it is set.
 
 - **A private authority.** Set `ca_file` to your organisation's
-  authorities in PEM form. It adds to Node's own list.
+  authorities in PEM form, or `system_ca = true` where this machine's own
+  store already holds them. Both add to Node's own list.
 - **Alternatively**, set `NODE_EXTRA_CA_CERTS` to that file before starting
-  rdstudio. This also covers anything else rdstudio fetches. Recent Node
-  versions can also use the operating system's store
-  (`node --use-system-ca`); check that your Node has it.
+  rdstudio. This also covers anything else rdstudio fetches.
 - **A proxy that inspects traffic** re-signs every connection with its own
   authority. Treat that authority as above.
-- **Mutual TLS.** Set `client_cert` and `client_key`.
+- **Mutual TLS.** Set `client_pfx` and its password, or `client_cert` and
+  `client_key` (with `client_key_passphrase_env` where the key has a
+  passphrase).
+- **An old PKCS#12 file.** One protected with RC2 or 3DES, as older tools
+  export, is refused by Node 24. The message says so and gives the two
+  `openssl` commands that write it again.
+- **A client certificate about to run out.** `rdstudio provider check`
+  says so within thirty days of the end.
 
 # Examples
 
@@ -114,17 +138,37 @@ low = "gpt-4o-mini"
 mid = "claude-sonnet"
 max = "claude-opus"
 
-[teacher.models]
-hint = "gpt-4o-mini"
-feedback = "claude-sonnet"
-discuss = "claude-sonnet"
-marking = "claude-sonnet"
-check = "gpt-4o-mini"
-
 [teacher.provider.prices]
 "gpt-4o-mini" = [0.15, 0.6]
 "claude-sonnet" = [3, 15]
 ```
+
+The jobs take their tier's model. `[teacher.models]` is only for a job
+that should have another (`hint`, `feedback`, `discuss`, `marking`,
+`check`).
+
+A client identity handed out as one password-protected `.pfx`, the
+authority as a PEM file beside it, and the corporate proxy from the
+environment:
+
+```toml
+[teacher.provider]
+name = "acme"
+url = "https://ai.acme.example/v1"
+ca_file = "~/.acme/acme-ca.pem"
+client_pfx = "~/.acme/me.pfx"
+pfx_password_env = "ACME_PFX_PASSWORD"
+proxy = "env"
+
+[teacher.tiers]
+low = "gpt-4o-mini"
+mid = "claude-sonnet"
+max = "claude-opus"
+```
+
+with `ACME_PFX_PASSWORD` set in the environment, and
+`RDSTUDIO_PROVIDER_KEY` set to any value if the gateway wants a key in a
+header even so.
 
 Azure OpenAI (one deployment; every tier must name it, since the address
 chooses the model):
@@ -155,18 +199,29 @@ proxy = "http://proxy.acme.example:8080"
 
 # When a request fails
 
-`rdstudio provider check [model]` is the first thing to run. What it says:
+`rdstudio provider check [model]` is the first thing to run, and
+`--verbose` the second. What it says:
 
 | Message | Change |
 |---|---|
-| "certificate is not signed by an authority this machine trusts" | `ca_file`, or `NODE_EXTRA_CA_CERTS`. |
+| "certificate is not signed by an authority this machine trusts" | `system_ca = true`, `ca_file`, or `NODE_EXTRA_CA_CERTS`. |
 | "certificate is for another name" | Use the host name the certificate names. |
-| "closed the connection while it was being set up" | It may want a client certificate. |
+| "closed the connection while it was being set up" | It may want a client certificate: `client_pfx`, or `client_cert` and `client_key`. |
+| "PKCS#12 file's password is wrong or missing" | `pfx_password_env` or `pfx_password_file`. |
+| "protected with an old cipher" | Write the PKCS#12 file again, as the message says. |
+| "client key is kept under a passphrase" | `client_key_passphrase_env`. |
+| "did not accept the client certificate" or "has expired" | A new client certificate. |
 | "could not be found" or "could not be reached" | The address, the network, or `proxy`. |
-| "the proxy refused the connection (407)" | The proxy wants a name and password in `proxy`. |
-| "NAME said 401" or 403 | The key, `auth`, or `auth_header`. |
+| "the proxy asks for a name and password (407)" | Put them in `proxy`. |
+| "the proxy asks for a sign-in rdstudio does not do (407: NTLM…)" | A local proxy that signs in for you, named as `proxy`. |
+| "NAME said 401 … No key is sent" | `auth = "bearer"` and a key, any value where the certificate is what counts. |
+| "NAME said 401 … The key was not accepted" | The key, `auth`, or `auth_header`. |
+| "NAME said 403" | Access to the model or the gateway, granted by its owner. |
+| "NAME said 404 … is rdstudio's own choice" | `[teacher.tiers]`. |
+| "NAME said 404 … has no model called" | The model's name (the check lists what is offered), or `url` and `path`. |
 | "NAME said 400" mentioning `cache_control`, `stream_options`, `tools` or `max_tokens` | Set `cache_marks`, `stream_usage`, `tools` or `max_tokens_field`. |
-| "NAME said 404" | `url`, `path`, or the model's name. |
+| "It answered, with no text" | Nothing is wrong with the connection: the model spent its allowance reasoning. Try another model. |
+| "NAME does not list MODEL" | The tier or job named beside it. |
 | "No token counts came back" | `stream_usage = true`, or `stream = false`. |
 | Text arrives all at once | The gateway or a proxy buffers streams. Harmless; `stream = false` says so plainly. |
 
@@ -200,16 +255,22 @@ Each of these needs code. "Where to patch" says where.
   OpenAI-compatible gateway in front, or patch.
 - **APIs that are not chat completions**: Anthropic's Messages API,
   Google's own, OpenAI's Responses API.
-- **Proxies** that need NTLM or Kerberos, or are found through a PAC file.
-  Only a named HTTP proxy with optional basic authentication is done.
+- **Proxies** that need NTLM or Kerberos, or are found through a PAC file
+  or the system's settings. Only a named HTTP proxy with optional basic
+  authentication is done; the refusal names what the proxy asked for.
 - **A proxy for a plain `http://` gateway.**
-- **Client keys with a passphrase**, PKCS#12 files, keys on a smart card or
-  in the system keychain.
+- **Keys on a smart card.**
 - **Several gateways at once**, or a different one per model.
 - **Reasoning settings**, sampling settings and other extra request fields.
 - **The OpenRouter sign-in on the Axis page** has no counterpart: a
   gateway's key is set outside the app.
-- **Checking a model's name** against the gateway's list.
+- **Writing the settings for you** (`provider init`): the table is written
+  by hand, from the examples below.
+
+Search by meaning needs no network: its model comes inside the npm
+package. Where rdstudio was installed another way and has none,
+`RDSTUDIO_EMBED_DIR` names a folder holding `model.onnx`,
+`tokenizer.json`, `tokenizer_config.json` and `ort.wasm`.
 
 # Where to patch
 

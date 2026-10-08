@@ -52,6 +52,8 @@ export const WARN_AT = 0.8;
 
 export class ModelError extends Error {
   readonly status: number;
+  /** What the provider sent with a refusal, as it came (the check's --verbose). */
+  raw?: string;
   constructor(message: string, status = 502) { super(message); this.status = status; }
 }
 
@@ -66,9 +68,28 @@ export function setFetch(f: typeof fetch | null): void { fetcher = f ?? plainFet
 const table = (v: unknown): Table => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Table) : {});
 const teacherSettings = (): Table => table(readToml(userConfigPath()).teacher);
 
+/** The tier a job's model is taken from on a gateway, where the job has none of its own. */
+const JOB_TIER: Record<Job, Tier> = { hint: "low", check: "low", feedback: "mid", discuss: "mid", marking: "mid", write: "mid" };
+
+/** Each job's model: [teacher.models]; on a gateway, else the job's tier where [teacher.tiers] sets it (three names
+ *  to set, not nine); else rdstudio's own, which are OpenRouter's names. */
 export function models(): Record<Job, string> {
-  const set = table(teacherSettings().models);
-  return Object.fromEntries(JOBS.map((j) => [j, typeof set[j] === "string" && set[j] ? (set[j] as string) : DEFAULT_MODELS[j]])) as Record<Job, string>;
+  const set = table(teacherSettings().models), tier = provider().custom ? table(teacherSettings().tiers) : {};
+  const one = (v: unknown) => (typeof v === "string" && v ? v : undefined);
+  return Object.fromEntries(JOBS.map((j) => [j, one(set[j]) ?? one(tier[JOB_TIER[j]]) ?? DEFAULT_MODELS[j]])) as Record<Job, string>;
+}
+
+/** On a gateway, the tiers and jobs still at rdstudio's own models, which are OpenRouter's names and are seldom a gateway's. */
+export function unnamed(): string[] {
+  if (!provider().custom) return [];
+  const t = table(teacherSettings().tiers), m = table(teacherSettings().models);
+  const has = (v: unknown) => typeof v === "string" && !!v;
+  return [...TIERS.filter((k) => !has(t[k])).map((k) => `tier ${k}`), ...JOBS.filter((j) => j !== "write" && !has(m[j]) && !has(t[JOB_TIER[j]])).map((j) => `job ${j}`)];
+}
+/** Whether a model's name is rdstudio's own and not one set in the user config. */
+function ownName(model: string): boolean {
+  const s = teacherSettings(), set = [...Object.values(table(s.tiers)), ...Object.values(table(s.models))];
+  return !set.includes(model) && [...Object.values(DEFAULT_TIERS), ...Object.values(DEFAULT_MODELS)].includes(model);
 }
 
 export function tiers(): Record<Tier, string> {
@@ -268,12 +289,30 @@ const wire = (marks: boolean) => (m: Message) => m.role === "tool" ? { role: "to
 /** What the provider is called in a message to the person. */
 const called = (p: Provider) => (p.custom ? p.name : "OpenRouter");
 
+/** The models a gateway says it offers (GET <url>/models, as the OpenAI API has it); null where it has no such list or does not answer. */
+export async function offered(): Promise<string[] | null> {
+  const p = provider();
+  try {
+    const k = p.custom ? providerKey(p) : apiKey();
+    if (!k) return null;
+    const u = new URL(p.url + "/models");
+    for (const [q, v] of Object.entries(p.query)) u.searchParams.set(q, v);
+    const { "Content-Type": _none, ...headers } = authHeaders(p, k.key);
+    const init = { method: "GET", headers, signal: AbortSignal.timeout(20_000) };
+    const res = await (ownTransport(p) && !swapped ? request(p, u.href, init) : fetcher(u.href, init));
+    if (!res.ok) return null;
+    const j = JSON.parse(await res.text()) as { data?: { id?: unknown }[] } | { id?: unknown }[];
+    const ids = (Array.isArray(j) ? j : j.data ?? []).map((m) => m?.id).filter((id): id is string => typeof id === "string");
+    return ids.length ? ids : null;
+  } catch { return null; }
+}
+
 /** Call the model for a job, streaming; the usage is logged and the budget kept. */
 export async function complete(call: Call): Promise<Reply> {
   const p = provider();
   let k: { key: string } | null;
   try { k = p.custom ? providerKey(p) : apiKey(); } catch (err) { throw new ModelError((err as Error).message, 409); }
-  if (!k) throw new ModelError(p.custom ? `No key for ${p.name}: set ${p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY"}, or key_file or key_command under [teacher.provider] in the user config.`
+  if (!k) throw new ModelError(p.custom ? `No key for ${p.name}: set ${p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY"}, or key_file or key_command under [teacher.provider] in the user config (or auth = "none", where the gateway wants no key).`
     : "No OpenRouter key: connect an account on the Teacher page, or set OPENROUTER_API_KEY.", 409);
   const s = spending(call.cfg);
   if (s.stopped) throw new ModelError(`This week's budget ($${s.budget.toFixed(2)}) is spent. It renews on Monday; [teacher] weekly_budget in the user config changes it.`, 402);
@@ -300,12 +339,24 @@ export async function complete(call: Call): Promise<Reply> {
     if (again && again.key !== k.key) res = await send(again.key);
   }
   if (!res.ok || !res.body) {
-    let detail = "";
+    let detail = "", raw = "";
     try {
-      const said = await res.text();
+      const said = raw = await res.text();
       try { const j = JSON.parse(said) as { error?: { message?: string } | string; message?: string }; detail = (typeof j.error === "string" ? j.error : j.error?.message) ?? j.message ?? ""; } catch { detail = said.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300); }
     } catch { /* none */ }
-    throw new ModelError(`${called(p)} said ${res.status}${detail ? `: ${detail}` : ""}`, res.status === 401 || res.status === 403 ? 409 : 502);
+    // What to change, by the kind of refusal: one setting each.
+    let advice = "";
+    if (p.custom) {
+      const from = k && "from" in k ? (k as { from: KeyFrom }).from : "none";
+      if (res.status === 401) advice = from === "none" ? `No key is sent (auth = "none"), and ${p.name} wants one in a header all the same. Where a client certificate is what says who you are, any value often does: set auth = "bearer" under [teacher.provider], and ${p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY"} in the environment.` : `The key (from ${from === "environment" ? `the environment, ${p.keyEnv ?? "RDSTUDIO_PROVIDER_KEY"}` : from === "file" ? `the file ${p.keyFile}` : "the key command"}) was not accepted: it may have run out, or be sent in the wrong header (auth, auth_header).`;
+      else if (res.status === 403) advice = "The key was read but is not allowed this: the model, or the gateway itself, may need access granted to you.";
+      else if (res.status === 407) advice = "A proxy on the way wants a sign-in: set proxy under [teacher.provider].";
+      else if ((res.status === 404 || res.status === 400) && ownName(model)) advice = `${model} is rdstudio's own choice, an OpenRouter name: set the models as ${p.name} names them under [teacher.tiers] (low, mid, max) in the user config.`;
+      else if (res.status === 404) advice = `Either ${p.name} has no model called ${model} (rdstudio provider check lists the ones it offers), or the address is not its chat completions (url and path under [teacher.provider]: ${endpoint(p)}).`;
+    }
+    const failed = new ModelError(`${called(p)} said ${res.status}${detail ? `: ${detail}` : ""}${advice ? `${detail && !/[.!?]$/.test(detail) ? "." : ""} ${advice}` : ""}`, res.status === 401 || res.status === 403 ? 409 : 502);
+    failed.raw = raw.slice(0, 2000);
+    throw failed;
   }
   let text = "", usage: Record<string, unknown> | null = null;
   const calls: ToolCall[] = []; // a call arrives in pieces, by its index
