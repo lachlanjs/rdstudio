@@ -361,3 +361,130 @@ test("without git the code is still searched and read: a walk of the files, leav
     for (const path of [".env", "node_modules/x/index.js", "../x"]) expect(look.run("read_code", JSON.stringify({ path }))).toMatch(/is not a file of this repository/);
   } finally { delete process.env.GIT_CEILING_DIRECTORIES; }
 });
+
+// ------------------------------------------------------------------ a chat beside the note (T97, T98)
+
+const answers = (replies: string[], bodies: Record<string, any>[] = []) => models.setFetch((async (_u: unknown, init?: RequestInit) => {
+  bodies.push(JSON.parse(String(init?.body)));
+  const reply = replies[Math.min(bodies.length, replies.length) - 1]!;
+  const enc = new TextEncoder(), lines = [`data: ${JSON.stringify({ choices: [{ delta: { content: reply } }] })}\n\n`,
+    `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { prompt_tokens: 1200, completion_tokens: 80, cost: 0.003, prompt_tokens_details: { cached_tokens: 400 } } })}\n\n`, "data: [DONE]\n\n"];
+  return new Response(new ReadableStream({ start(c) { for (const l of lines) c.enqueue(enc.encode(l)); c.close(); } }), { status: 200 });
+}) as typeof fetch);
+
+test("a chat turn marks a passage and a separate place for new text, and is told only the changes it is let make", () => {
+  const { cfg } = project();
+  const body = "First line.\n\nGravity is softened here.\n\nLast line.";
+  const a = body.indexOf("Gravity"), z = a + "Gravity is softened here.".length;
+  expect(assist.markedPlaces(body, a, z, body.length)).toBe("First line.\n\n⟦Gravity is softened here.⟧\n\nLast line.⟦HERE⟧");
+  expect(assist.markedPlaces(body, a, z, a)).toBe("First line.\n\n⟦HERE⟧⟦Gravity is softened here.⟧\n\nLast line.");
+  expect(assist.markedPlaces(body, a, z, z)).toContain("here.⟧⟦HERE⟧");
+  expect(assist.markedPlaces(body, 0, 0, null)).toBe(body);
+  // A long note is cut round both places, and never when it is to be edited as a whole.
+  const long = "start " + "word ".repeat(6000) + "MIDDLE " + "word ".repeat(6000) + "end";
+  const m = long.indexOf("MIDDLE"), cut = assist.markedPlaces(long, m, m + 6, 3);
+  expect(cut.length).toBeLessThan(16000);
+  expect(cut).toContain("⟦MIDDLE⟧");
+  expect(cut).toContain("sta⟦HERE⟧rt");
+  expect(cut).toContain("\n[…]\n");
+  expect(assist.markedPlaces(long, m, m + 6, 3, 14000, true).length).toBe(long.length + 2 + "⟦HERE⟧".length);
+
+  const base = { note: "design/integrator", mode: "chat" as const, body, from: a, to: z, prompt: "Is this right?" };
+  const only = said(assist.prepare(cfg, base));
+  expect(only).toContain("You may not change the note in this turn");
+  expect(only).not.toContain("<passage>");
+  expect(assist.prepare(cfg, base).job).toBe("discuss");
+  const at = said(assist.prepare(cfg, { ...base, at: body.length }));
+  expect(at).toContain("<insert>");
+  expect(at).toContain("is there to be read: do not change it");
+  expect(at).not.toContain("<change>");
+  expect(at).toContain("Last line.⟦HERE⟧");
+  const pass = assist.prepare(cfg, { ...base, may: { passage: true } });
+  expect(said(pass)).toContain("<passage>");
+  expect(said(pass)).not.toContain("<insert>");
+  expect(pass.job).toBe("write");
+  const whole = said(assist.prepare(cfg, { ...base, from: 0, to: 0, may: { note: true } }));
+  expect(whole).toContain("<change>");
+  expect(whole).toContain("Choose the places yourself");
+  expect(() => assist.prepare(cfg, { ...base, from: 0, to: 0, prompt: "" })).toThrow(/ask something, or mark a passage/);
+  expect(() => assist.prepare(cfg, { ...base, body: "x".repeat(assist.MAX_WHOLE + 1), from: 0, to: 0, may: { note: true } })).toThrow(/too long to be edited as a whole/);
+  // A marked passage it may change, and no question: it is asked to rewrite it.
+  expect(said(assist.prepare(cfg, { ...base, prompt: "", may: { passage: true } }))).toContain("They want the marked passage rewritten");
+});
+
+test("a chat turn's reply is read: the answer, and the changes placed in the note; what it was not let do, or cannot be placed, is dropped and said", () => {
+  const body = "# Title\n\nGravity is softened here.\n\n- one\n- two\n- two\n\nLast line.\n";
+  const a = body.indexOf("Gravity"), z = a + "Gravity is softened here.".length;
+  const reply = `<answer>\nTidied, and a line added.\n</answer>\n<passage>\nGravity is ⟦softened⟧ at short range.\n</passage>\n<insert>\nA new last line.\n</insert>\n<change>\n<old>\n- one\n</old>\n<new>\n- one\n- one and a half\n</new>\n</change>\n<change>\n<old>\n# Title\n</old>\n<new>\n</new>\n</change>\n<change><old>- two</old><new>- 2</new></change>\n<change><old>not there</old><new>x</new></change>`;
+  const all = assist.parseChat(reply, { body, from: a, to: z, at: body.length, may: { passage: true, note: true } });
+  expect(all.answer).toBe("Tidied, and a line added.");
+  expect(all.edits).toEqual([
+    { kind: "change", from: 0, to: 8, insert: "" }, // the heading goes, with its line break
+    { kind: "passage", from: a, to: z, insert: "Gravity is softened at short range." },
+    { kind: "change", from: body.indexOf("- one"), to: body.indexOf("- one") + 5, insert: "- one\n- one and a half" },
+    { kind: "insert", from: body.length, to: body.length, insert: "A new last line." },
+  ]);
+  expect(all.dropped).toEqual(["A change could not be placed: “- two” is in the note more than once.", "A change could not be placed: “not there” is not in the note."]);
+  // Applied from the end, the edits give the note as proposed.
+  let out = body;
+  for (const e of [...all.edits].reverse()) out = out.slice(0, e.from) + e.insert + out.slice(e.to);
+  expect(out).toBe("\nGravity is softened at short range.\n\n- one\n- one and a half\n- two\n- two\n\nLast line.\nA new last line.");
+
+  // Let nothing: the answer alone, and it is said that changes were proposed.
+  const none = assist.parseChat(reply, { body, from: a, to: z });
+  expect(none.edits).toEqual([]);
+  expect(none.dropped).toEqual(["It proposed a new text for the marked passage, which it was not let change.", "It proposed new text, but no place was set for it.", "It proposed 4 changes elsewhere in the note, which it was not let edit."]);
+  // The place only.
+  expect(assist.parseChat(reply, { body, from: a, to: z, at: 3 }).edits).toEqual([{ kind: "insert", from: 3, to: 3, insert: "A new last line." }]);
+  // No tags: the reply is the answer. Text broken across lines differently is still found. A change cut short is not offered.
+  expect(assist.parseChat("Just an answer.", { body, from: 0, to: 0 })).toEqual({ answer: "Just an answer.", edits: [], dropped: [] });
+  expect(assist.parseChat("<change><old>Gravity is\nsoftened   here.</old><new>G.</new></change>", { body, from: 0, to: 0, may: { note: true } }).edits).toEqual([{ kind: "change", from: a, to: z, insert: "G." }]);
+  const cut = assist.parseChat("<answer>One.</answer>\n<change>\n<old>\nLast line.\n</old>\n<new>\nLast", { body, from: 0, to: 0, may: { note: true } });
+  expect(cut).toMatchObject({ answer: "One.", edits: [] });
+  expect(cut.dropped[0]).toMatch(/cut short/);
+  // Two changes to one text: the first stands.
+  expect(assist.parseChat("<passage>A</passage><change><old>softened here</old><new>B</new></change>", { body, from: a, to: z, may: { note: true } })).toMatchObject({ edits: [{ kind: "passage", insert: "A" }], dropped: [expect.stringMatching(/same text/)] });
+});
+
+test("a chat goes on from its earlier turns, and its turns are kept in the learner record, listed by note, read back and deleted (T97)", async () => {
+  const { cfg } = project();
+  const chats = await import("../src/assistchats.ts");
+  const bodies: Record<string, any>[] = [];
+  answers(["<answer>\nBecause close pairs would blow up.\n</answer>", "<answer>\nAdded.\n</answer>\n<insert>\nSoftening length: 0.1 nm.\n</insert>"], bodies);
+  const body = "Gravity is softened here.\n\nLast line.";
+  const first = { note: "design/integrator", mode: "chat" as const, title: "The integrator", body, from: 0, to: 25, prompt: "Why $\\epsilon$?" };
+  const one = (await assist.ask(cfg, first)).reply;
+  expect(one).toMatchObject({ mode: "chat", answer: "Because close pairs would blow up.", edits: [], dropped: [], spent: { calls: 1, input: 1200, output: 80, cached: 400 } });
+  expect(models.usageLog().at(-1)).toMatchObject({ feature: "note-ask" });
+  // Nothing is kept where the learner record is off.
+  expect(chats.keep(cfg, first.note, first.title, chats.turnOf(first, one))).toBeNull();
+  expect(chats.list(cfg)).toEqual([]);
+  writeFileSync(join(process.env.XDG_CONFIG_HOME!, "rdstudio", "config.toml"), "[learner]\nenabled = true\n");
+  const kept = chats.keep(cfg, first.note, first.title, chats.turnOf(first, one))!;
+  expect(kept.turns[0]).toMatchObject({ question: "Why $\\epsilon$?", passage: "Gravity is softened here.", here: null, may: { passage: false, note: false }, answer: "Because close pairs would blow up.", edits: [], cost: 0.003 });
+
+  const next = { ...first, from: 0, to: 0, at: body.length, prompt: "Add the length.", thread: [{ question: first.prompt, answer: one.answer }] };
+  const two = (await assist.ask(cfg, next)).reply;
+  const sent = bodies.at(-1)!.messages as { role: string; content: any }[];
+  expect(sent.map((m) => m.role)).toEqual(["system", "user", "assistant", "user"]);
+  expect(sent[1]!.content).toBe("Why $\\epsilon$?");
+  expect(sent[2]!.content).toBe("Because close pairs would blow up.");
+  expect(JSON.stringify(sent[3]!.content)).toContain("This goes on from the conversation above");
+  expect(JSON.stringify(sent[3]!.content)).toContain("Their next question");
+  expect(two.edits).toEqual([{ kind: "insert", from: body.length, to: body.length, insert: "Softening length: 0.1 nm." }]);
+  expect(models.usageLog().at(-1)).toMatchObject({ feature: "note-fill" });
+  const more = chats.keep(cfg, next.note, next.title, chats.turnOf(next, two), kept.id)!;
+  expect(more.id).toBe(kept.id);
+  expect(more.turns).toHaveLength(2);
+  expect(more.turns[1]).toMatchObject({ passage: null, here: { line: 3, after: "Last line." }, edits: [{ kind: "insert", line: 3, old: "", new: "Softening length: 0.1 nm." }] });
+  // A chat named that is about another note starts a new one.
+  const other = chats.keep(cfg, "design/forces", "The forces", chats.turnOf(first, one), kept.id)!;
+  expect(other.id).not.toBe(kept.id);
+  expect(chats.list(cfg, "design/integrator")).toMatchObject([{ id: kept.id, note: "design/integrator", title: "The integrator", question: "Why $\\epsilon$?", turns: 2, cost: 0.006 }]);
+  expect(chats.list(cfg).map((c) => c.note).sort()).toEqual(["design/forces", "design/integrator"]);
+  expect(chats.read(cfg, kept.id).turns).toHaveLength(2);
+  expect(() => chats.read(cfg, "../../x")).toThrow(/no such kept chat|not a kept chat/);
+  expect(chats.forget(cfg, kept.id)).toEqual({ id: kept.id });
+  expect(() => chats.read(cfg, kept.id)).toThrow(/no such kept chat/);
+  expect(chats.list(cfg, "design/integrator")).toEqual([]);
+});

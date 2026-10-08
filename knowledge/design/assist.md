@@ -5,7 +5,7 @@ description: While a note is edited, the connected model can be asked about a pa
   text to go at a place in it; an answer is shown beside the note and proposed text is a suggestion
   to accept or reject.
 tags: [design, editor, agents, models]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T03:14:33Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-08T00:58:21Z}
 ---
 
 # Why
@@ -34,23 +34,51 @@ with its weekly budget and usage log ([models](/design/ai-providers.md)).
 
 # In the editor
 
-A bar under the formatting bar, shown when a model account is connected (when
-none is, a line saying where to connect one): a box to type in, and two
-buttons.
+Since [T96](/tasks/T96-axis-beside-the-note.md "see also") Axis is in a
+panel beside the note, opened by "Axis" on the editing bar: to the right
+where the frame is at least 900 px wide and wider than tall, below the note
+otherwise, as on [the Atlas](/design/ask-atlas.md "see also"). It folds, and
+is resized by dragging its edge. The note's details are no longer beside
+it: they are a dropdown under the note's title. When no model account is
+connected the panel says where to connect one.
 
-- **Ask:** about the selection, or the question typed. The answer appears
-  under the bar, rendered, with the model, the cost and what it drew on.
-  Nothing in the note changes.
-- **Write here** (at the cursor), or **Rewrite** (with a passage selected):
-  the text proposed appears in the note as a suggestion. What it would
-  replace is struck through; the new text follows it, a phrase in the line
-  or a block below it, with Accept and Reject. Ctrl+Enter accepts and Esc
-  rejects. One suggestion at a time; it keeps its place as the note is
-  edited round it.
-- Accepting puts the text in the editor. It is then the person's to edit,
-  and is saved when they save, like anything typed. A block (several lines,
-  or a code fence) is set off from the text round it by a blank line.
-- Stop ends a reply being written.
+The panel holds a chat about the note
+([T97](/tasks/T97-note-chats.md "see also")):
+
+- **The question** is written at the foot of the panel in the note editor's
+  live preview (maths, links to notes). Ctrl+Enter or Ask sends it.
+- **Each turn** shows the question as a quotation, the answer, any changes
+  proposed, what was looked up and what was drawn on. A further question
+  goes on from the turns before.
+- **What it cost** is under the chat and does not scroll away: the last
+  turn's price, tokens in and out, tier and model; opened, the tokens read
+  from the cache, the calls, the lookups by kind, and the chat's total.
+- **Chats are kept** in the learner record and listed in the panel when no
+  chat is open; one can be opened, gone on from, or deleted (it asks first).
+
+What a turn is about and what it may change
+([T98](/tasks/T98-edits-by-leave.md "see also"),
+[the decision](/decisions/assist-changes-by-leave.md "requires")):
+
+- **A passage:** text selected in the note while the panel is open is
+  marked as what the question is about, and stays marked when the cursor
+  moves on. It is read only unless "Axis may change it" is ticked.
+- **A place for new text:** "Put new text at the cursor" marks a point,
+  apart from the passage.
+- **Anywhere:** with "Axis may edit anywhere in the note" ticked, the model
+  chooses where to add, reword or delete.
+
+Every change is a suggestion in the note. What it would replace is struck
+through and the new text follows it, a phrase in the line or a block below
+it, with Accept and Reject; the same pair is in the panel, with Accept all
+and Reject all when there are several. Ctrl+Enter in the note accepts the
+one the cursor is nearest and Esc rejects it. Suggestions keep their places
+as the note is edited. Accepted text is the person's to edit and is saved
+when they save. Asking again rejects what was still waiting.
+
+**Figure** has an artifact made for the marked passage, as before
+([T78](/tasks/T78-figure-from-editor.md "see also")); it is shown in the panel and is
+not part of the chat. Stop ends a reply being written.
 
 # What the model is given
 
@@ -120,10 +148,12 @@ A save that carries accepted text says which models wrote it
 
 # Not kept, not done
 
-- Requests and replies are not kept: only the usage log records that one
-  was made (features `note-ask` and `note-fill`).
-- The reply panel sits above the note's text, not beside it.
-- The model cannot search further or read a file it was not given; a
-  request about code it cannot find by name gets told so.
-- Not on a phone's layout specially, and not in the answer box of an
-  exercise (the tutor is there).
+- A follow-up carries the earlier questions and answers, not what was
+  looked up for them.
+- Chats are found by the note's id, so a note moved or renamed leaves its
+  chats unlisted. They are not kept where the learner record is off.
+- A figure is not kept.
+- A change is offered only if the text it replaces is in the note in
+  exactly one place; otherwise it is dropped and said.
+- Not tried on a real phone, and not in the answer box of an exercise (the
+  tutor is there).

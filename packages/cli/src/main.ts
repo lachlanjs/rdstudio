@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { indexCode } from "./code.ts";
 import * as embed from "./embed.ts";
 import * as models from "./models.ts";
-import { describe as describeProvider } from "./provider.ts";
+import { clientCertUntil, describe as describeProvider, endpoint, setWatch, type Provider, type Seen } from "./provider.ts";
 import * as artifacts from "./artifacts.ts";
 import { build } from "./build.ts";
 import { serve } from "./serve.ts";
@@ -28,7 +28,7 @@ import * as learner from "./learner.ts";
 import { resolve as resolveProposal } from "./procedures.ts";
 import { PyFloat, pyDumps, pyRepr, pyStr } from "./pyjson.ts";
 
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.0";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -44,6 +44,64 @@ const bundle = (cfg: Config): Bundle => loadBundle(cfg.knowledgeDir);
 
 // Ported in later slices of T37; until then the Python command line has them.
 const PENDING: string[] = [];
+
+/** `rdstudio provider check`: one small request, and what it shows of the connection, the models and the spending. */
+async function providerCheck(cfg: Config, p: Provider, model: string | undefined, verbose: boolean): Promise<boolean> {
+  const day = 86_400_000, soon = (until: Date) => until.getTime() - Date.now() < 30 * day;
+  const ends = (until: Date) => (until.getTime() < Date.now() ? `ran out on ${until.toISOString().slice(0, 10)}` : `runs out on ${until.toISOString().slice(0, 10)} (${Math.max(0, Math.floor((until.getTime() - Date.now()) / day))} days)`);
+  // A client certificate that has run out, or is about to, is said before the gateway's refusal is.
+  const pem = clientCertUntil(p);
+  if (pem && soon(pem)) console.log(`\nThe client certificate ${ends(pem)}.`);
+  const use = model ?? models.models().check;
+  let seen: Seen | null = null;
+  if (p.custom) setWatch((s) => { seen = s; });
+  const connection = () => {
+    const s = seen as Seen | null;
+    if (!s) return;
+    if (verbose) {
+      if (s.tunnel) console.log(`  tunnelled through   ${s.tunnel}`);
+      console.log(`  secured with        ${s.protocol ?? "TLS"}; the certificate is ${s.server ? `${s.server.subject}'s, signed by ${s.server.issuer}, good until ${s.server.until}` : "not known"}; verified`);
+      console.log(`  client certificate  ${s.client ? `${s.client.subject}'s, good until ${s.client.until}` : "none was shown"}`);
+    }
+    const until = s.client ? new Date(s.client.until) : null;
+    if (until && !pem && soon(until)) console.log(`The client certificate ${ends(until)}.`);
+  };
+  console.log(`\nAsking ${use} for one word…`);
+  if (verbose) console.log(`  POST ${endpoint(p)}`);
+  const t0 = Date.now();
+  let ok = true;
+  try {
+    // Room enough for a model that reasons before it answers.
+    const r = await models.complete({ cfg, job: "check", model: use, maxTokens: 512, messages: [{ role: "user", content: "Reply with the one word: ready" }] });
+    connection();
+    const counts = `${r.usage.prompt_tokens} tokens in, ${r.usage.completion_tokens} out, $${r.usage.cost.toFixed(5)}`;
+    if (r.text.trim()) console.log(`It answered ${JSON.stringify(r.text.trim())} in ${Date.now() - t0} ms (${counts}).`);
+    else console.log(`It answered in ${Date.now() - t0} ms, with no text (${counts}). The connection and the key are good; a model that reasons can spend its whole allowance before it writes. Try another model: rdstudio provider check <model>.`);
+    if (!r.usage.prompt_tokens) console.log("No token counts came back: spending cannot be worked out. If replies are streamed, try stream_usage = true, or stream = false.");
+    else if (p.custom && !p.prices[use] && !r.usage.cost) console.log(`No price is set for ${use}: add it under [teacher.provider.prices] for the weekly budget to count it.`);
+  } catch (err) {
+    connection();
+    console.log(`It failed: ${(err as Error).message}`);
+    if (verbose && (err as models.ModelError).raw) console.log(`  what came back:\n${(err as models.ModelError).raw!.split("\n").map((l) => "    " + l).join("\n")}`);
+    else if (!verbose) console.log("rdstudio provider check --verbose shows what the connection was made with, and what came back.");
+    ok = false;
+  }
+  // The names in use, against the gateway's own list, where it has one.
+  if (p.custom) {
+    const list = await models.offered();
+    setWatch(null);
+    if (list) {
+      const inUse = new Map<string, string[]>();
+      for (const [t, m] of Object.entries(models.tiers())) inUse.set(m, [...(inUse.get(m) ?? []), `tier ${t}`]);
+      for (const [j, m] of Object.entries(models.models())) if (j !== "write") inUse.set(m, [...(inUse.get(m) ?? []), `job ${j}`]);
+      const missing = [...inUse].filter(([m]) => !list.includes(m));
+      for (const [m, where] of missing) console.log(`${p.name} does not list ${m} (${where.join(", ")}).`);
+      if (missing.length || verbose) console.log(`It offers: ${list.slice(0, 40).join(", ")}${list.length > 40 ? `, and ${list.length - 40} more` : ""}`);
+      else console.log(`The models in use are all among the ${list.length} it offers.`);
+    } else if (verbose) console.log(`${p.name} gave no list of models (${p.url}/models): their names are not checked.`);
+  }
+  return ok;
+}
 
 const COMMANDS: Record<string, Command> = {
   init: {
@@ -350,22 +408,18 @@ const COMMANDS: Record<string, Command> = {
 
   provider: {
     help: "where the models come from (OpenRouter, or a gateway set in the user config), and a check that it answers",
-    usage: "[show|check [model]]",
-    run(cfg, _v, [action = "show", model]) {
+    usage: "[show|check [model]] [--verbose]",
+    options: { verbose: { type: "boolean", short: "v" } },
+    run(cfg, v, [action = "show", model]) {
       const p = models.provider();
       if (action === "show" || action === "check") {
         console.log(`user config: ${userConfigPath()}`);
-        for (const [k, v] of Object.entries(describeProvider(p))) console.log(`${(k + ":").padEnd(20)} ${v}`);
+        for (const [k, val] of Object.entries(describeProvider(p))) console.log(`${(k + ":").padEnd(20)} ${val}`);
         console.log(`${"models:".padEnd(20)} tiers ${Object.entries(models.tiers()).map(([t, m]) => `${t}=${m}`).join(", ")}`);
-        if (action === "show") { console.log("\nrdstudio provider check   sends one small request and says what came back"); return 0; }
-        const use = model ?? models.models().check;
-        console.log(`\nAsking ${use} for one word…`);
-        const t0 = Date.now();
-        void models.complete({ cfg, job: "check", model: use, maxTokens: 20, messages: [{ role: "user", content: "Reply with the one word: ready" }] }).then((r) => {
-          console.log(`It answered ${JSON.stringify(r.text.trim())} in ${Date.now() - t0} ms (${r.usage.prompt_tokens} tokens in, ${r.usage.completion_tokens} out, $${r.usage.cost.toFixed(5)}).`);
-          if (!r.usage.prompt_tokens) console.log("No token counts came back: spending cannot be worked out. If replies are streamed, try stream_usage = true, or stream = false.");
-          else if (p.custom && !p.prices[use] && !r.usage.cost) console.log(`No price is set for ${use}: add it under [teacher.provider.prices] for the weekly budget to count it.`);
-        }, (err: Error) => { console.log(`It failed: ${err.message}`); process.exitCode = 1; });
+        const unnamed = models.unnamed();
+        if (unnamed.length) console.log(`\nStill at rdstudio's own models, which are OpenRouter's names: ${unnamed.join(", ")}.\nSet them as ${p.name} names them, under [teacher.tiers] in the user config:  low = "…"  mid = "…"  max = "…"`);
+        if (action === "show") { console.log("\nrdstudio provider check   sends one small request and says what came back (--verbose: what the connection was made with)"); return 0; }
+        void providerCheck(cfg, p, model, Boolean(v.verbose)).then((ok) => { if (!ok) process.exitCode = 1; });
         return 0;
       }
       return usageError("provider", `argument action: invalid choice: ${pyRepr(action)} (choose from 'show', 'check')`);

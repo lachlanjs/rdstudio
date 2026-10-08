@@ -148,7 +148,8 @@ with sync_playwright() as pw:
     check("a selection stands out from the page in both modes", not weak, ", ".join(weak))
     p.keyboard.press("ArrowRight")
 
-    # Details: the title.
+    # Details, in the dropdown under the note's title: the title.
+    p.locator("#edit-details summary").click()
     title = p.get_by_label("Title")
     title.fill("Orientation of manifolds")
     p.get_by_role("button", name="Done").click()

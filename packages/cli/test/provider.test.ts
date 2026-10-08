@@ -14,7 +14,7 @@ import * as assist from "../src/assist.ts";
 import { loadConfig } from "../src/config.ts";
 import { withModels } from "../src/edit.ts";
 import * as models from "../src/models.ts";
-import { describe as describeProvider, explain, forgetToken, provider } from "../src/provider.ts";
+import { describe as describeProvider, explain, forgetToken, provider, proxyFor, setWatch, type Seen as Connection } from "../src/provider.ts";
 
 const put = (root: string, rel: string, text: string) => { mkdirSync(dirname(join(root, rel)), { recursive: true }); writeFileSync(join(root, rel), text); };
 
@@ -38,7 +38,7 @@ interface Seen { url: string; headers: Record<string, string>; body: Record<stri
 /** A fetch that records what it is sent and answers as a gateway would. */
 function gateway(reply: (n: number, seen: Seen) => Response, seen: Seen[] = []) {
   models.setFetch((async (url: unknown, init?: RequestInit) => {
-    const s = { url: String(url), headers: Object.fromEntries(Object.entries(init?.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])), body: JSON.parse(String(init?.body)) };
+    const s = { url: String(url), headers: Object.fromEntries(Object.entries(init?.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v])), body: init?.body === undefined ? {} : JSON.parse(String(init.body)) };
     seen.push(s);
     return reply(seen.length, s);
   }) as typeof fetch);
@@ -148,7 +148,7 @@ test("a gateway that does not stream, or does not take tools, is still used: a w
 
 // ------------------------------------------------------------------ the connection, against real local servers
 
-let pki: { dir: string; ca: string; cert: string; key: string; clientCert: string; clientKey: string } | null = null;
+let pki: { dir: string; ca: string; cert: string; key: string; clientCert: string; clientKey: string; pfx: string; lockedKey: string } | null = null;
 beforeAll(() => {
   // A private authority, a server certificate for localhost signed by it, and a client certificate.
   try {
@@ -159,7 +159,10 @@ beforeAll(() => {
       ssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", `${name}.key`, "-out", `${name}.csr`, "-subj", `/CN=${cn}`);
       ssl("x509", "-req", "-in", `${name}.csr`, "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-out", `${name}.pem`, "-days", "2", ...ext);
     }
-    pki = { dir, ca: join(dir, "ca.pem"), cert: join(dir, "server.pem"), key: join(dir, "server.key"), clientCert: join(dir, "client.pem"), clientKey: join(dir, "client.key") };
+    // The same client identity as one PKCS#12 file under a password, and its key under a passphrase.
+    ssl("pkcs12", "-export", "-in", "client.pem", "-inkey", "client.key", "-out", "client.p12", "-passout", "pass:open-sesame");
+    ssl("pkey", "-in", "client.key", "-aes256", "-out", "client.enc.key", "-passout", "pass:key-words");
+    pki = { dir, ca: join(dir, "ca.pem"), cert: join(dir, "server.pem"), key: join(dir, "server.key"), clientCert: join(dir, "client.pem"), clientKey: join(dir, "client.key"), pfx: join(dir, "client.p12"), lockedKey: join(dir, "client.enc.key") };
   } catch { pki = null; } // no openssl here: the tests below are skipped
 });
 
@@ -233,4 +236,129 @@ test("through a proxy: the connection is tunnelled, and the gateway's certificat
     expect(through).toEqual([`localhost:${gw.port} Basic ${Buffer.from("dev:pw").toString("base64")}`]);
     expect(explain(Object.assign(new Error("x"), { code: "ENOTFOUND" }), provider())).toMatch(/could not be found.*set proxy/);
   } finally { for (const s of open) s.destroy(); await gw.close(); proxy.closeAllConnections(); await new Promise((r) => proxy.close(r)); }
+});
+
+// ------------------------------------------------------------------ less to do by hand (T99)
+
+test("a client identity handed out as one PKCS#12 file under a password is used as it is; a wrong password and a key under a passphrase each say what to set", async (t) => {
+  if (!pki) return t.skip();
+  const gw = await secure(true);
+  const base = `[teacher.provider]\nurl = "https://localhost:${gw.port}/v1"\nauth = "none"\nca_file = "${pki.ca}"\n`;
+  try {
+    const { tmp, cfg } = project(`${base}client_pfx = "${pki.pfx}"\npfx_password_env = "ACME_PFX"\n`);
+    const set = (more: string) => put(tmp, "config/rdstudio/config.toml", base + more);
+    real();
+    delete process.env.ACME_PFX;
+    await expect(ask(cfg)).rejects.toThrow(/PKCS#12 file's password is wrong or missing.*ACME_PFX/);
+    process.env.ACME_PFX = "not-it";
+    await expect(ask(cfg)).rejects.toThrow(/PKCS#12 file's password is wrong or missing/);
+    expect(gw.seen).toHaveLength(0);
+    process.env.ACME_PFX = "open-sesame";
+    let seen: Connection | null = null;
+    setWatch((s) => { seen = s; });
+    expect((await ask(cfg)).text).toBe("ready");
+    setWatch(null);
+    expect(gw.seen.at(-1)).toEqual({ auth: undefined, client: "a-developer" });
+    // What the check is told of the connection: whose certificates, and until when.
+    expect(seen).toMatchObject({ server: { subject: "localhost", issuer: "Acme Test Authority" }, client: { subject: "a-developer" } });
+    expect(new Date(seen!.client!.until).getTime()).toBeGreaterThan(Date.now());
+    // The password from a file.
+    delete process.env.ACME_PFX;
+    put(tmp, "pfx.pass", "open-sesame\n");
+    set(`client_pfx = "${pki.pfx}"\npfx_password_file = "${join(tmp, "pfx.pass")}"\n`);
+    expect((await ask(cfg)).text).toBe("ready");
+    // Both the file and the pair: one of the two.
+    set(`client_pfx = "${pki.pfx}"\nclient_cert = "${pki.clientCert}"\nclient_key = "${pki.clientKey}"\n`);
+    await expect(ask(cfg)).rejects.toThrow(/both client_pfx and client_cert\/client_key are set.*keep one/);
+    expect(describeProvider(provider())["client certificate"]).toMatch(/PKCS#12.*keep one of the two/);
+    // A PEM key under a passphrase.
+    set(`client_cert = "${pki.clientCert}"\nclient_key = "${pki.lockedKey}"\n`);
+    await expect(ask(cfg)).rejects.toThrow(/client key is kept under a passphrase.*client_key_passphrase_env/);
+    set(`client_cert = "${pki.clientCert}"\nclient_key = "${pki.lockedKey}"\nclient_key_passphrase_env = "ACME_KEYPASS"\n`);
+    delete process.env.ACME_KEYPASS;
+    await expect(ask(cfg)).rejects.toThrow(/passphrase is not set: ACME_KEYPASS/);
+    process.env.ACME_KEYPASS = "wrong";
+    await expect(ask(cfg)).rejects.toThrow(/could not be opened with the passphrase in ACME_KEYPASS/);
+    process.env.ACME_KEYPASS = "key-words";
+    expect((await ask(cfg)).text).toBe("ready");
+    expect(JSON.stringify(describeProvider(provider()))).not.toMatch(/key-words|open-sesame/);
+  } finally { setWatch(null); delete process.env.ACME_PFX; delete process.env.ACME_KEYPASS; await gw.close(); }
+});
+
+test("a gateway's certificate is verified whatever NODE_TLS_REJECT_UNAUTHORIZED says, and the settings say so", async (t) => {
+  if (!pki) return t.skip();
+  const gw = await secure(false);
+  const before = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  try {
+    // No authority named, so nothing would send it past fetch but the variable itself.
+    const { cfg } = project(`[teacher.provider]\nurl = "https://localhost:${gw.port}/v1"\nauth = "none"\n`);
+    real();
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    await expect(ask(cfg)).rejects.toThrow(/certificate is not signed by an authority this machine trusts.*system_ca = true.*ca_file/);
+    expect(gw.seen).toHaveLength(0);
+    expect(describeProvider(provider()).verification).toMatch(/in force \(NODE_TLS_REJECT_UNAUTHORIZED=0 is set, and is not heeded/);
+    delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    expect(describeProvider(provider()).verification).toBe("in force");
+  } finally { if (before === undefined) delete process.env.NODE_TLS_REJECT_UNAUTHORIZED; else process.env.NODE_TLS_REJECT_UNAUTHORIZED = before; await gw.close(); }
+});
+
+test("the environment's proxy is passed by for the hosts NO_PROXY names, and a proxy that wants a sign-in rdstudio does not do says so", async (t) => {
+  const keep = { ...process.env };
+  try {
+    project(`[teacher.provider]\nurl = "https://ai.acme.example/v1"\nauth = "none"\nproxy = "env"\n`);
+    for (const k of ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy"]) delete process.env[k];
+    const to = (u: string) => proxyFor(provider(), new URL(u));
+    expect(to("https://ai.acme.example/v1")).toBeUndefined();
+    process.env.HTTPS_PROXY = "http://dev:pw@proxy.acme.example:8080";
+    expect(to("https://ai.acme.example/v1")).toBe("http://dev:pw@proxy.acme.example:8080");
+    expect(describeProvider(provider()).proxy).toBe("from the environment (http://…@proxy.acme.example:8080)"); // no name or password shown
+    process.env.NO_PROXY = "localhost, .acme.example";
+    expect(to("https://ai.acme.example/v1")).toBeUndefined();
+    expect(to("https://ai.other.example/v1")).toBe("http://dev:pw@proxy.acme.example:8080");
+    process.env.NO_PROXY = "ai.acme.example:8443";
+    expect(to("https://ai.acme.example/v1")).toBeDefined();
+    expect(to("https://ai.acme.example:8443/v1")).toBeUndefined();
+    process.env.NO_PROXY = "*";
+    expect(to("https://anything.example/")).toBeUndefined();
+  } finally { for (const k of ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy"]) { if (keep[k] === undefined) delete process.env[k]; else process.env[k] = keep[k]; } }
+  if (!pki) return t.skip();
+  const proxy = http.createServer();
+  proxy.on("connect", (_req, client) => { client.end("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Negotiate\r\nProxy-Authenticate: NTLM\r\n\r\n"); });
+  await new Promise<void>((r) => proxy.listen(0, "127.0.0.1", r));
+  try {
+    const { cfg } = project(`[teacher.provider]\nurl = "https://localhost:9/v1"\nauth = "none"\nproxy = "http://127.0.0.1:${(proxy.address() as net.AddressInfo).port}"\n`);
+    real();
+    await expect(ask(cfg)).rejects.toThrow(/proxy asks for a sign-in rdstudio does not do \(407: Negotiate, NTLM\).*NTLM and Kerberos need a local proxy/);
+  } finally { proxy.closeAllConnections(); await new Promise((r) => proxy.close(r)); }
+});
+
+test("on a gateway, three tier names serve every job; a refusal says which one setting to change; the gateway's list of models is read", async () => {
+  const { tmp, cfg } = project(`[teacher.provider]\nname = "acme"\nurl = "https://gw.example/v1"\nauth = "none"\n`);
+  // Nothing named yet: rdstudio's own names, and that is said.
+  expect(models.unnamed()).toEqual(["tier low", "tier mid", "tier max", "job hint", "job feedback", "job discuss", "job marking", "job check"]);
+  gateway(() => new Response(JSON.stringify({ error: { message: "model not found" } }), { status: 404 }));
+  await expect(ask(cfg)).rejects.toThrow(/acme said 404: model not found\. anthropic\/claude-sonnet-5\.5 is rdstudio's own choice, an OpenRouter name: set the models as acme names them under \[teacher\.tiers\]/);
+  // A gateway that takes a certificate for who you are and still wants a key in a header.
+  gateway(() => new Response(JSON.stringify({ error: { message: "No api key passed in." } }), { status: 401 }));
+  await expect(ask(cfg)).rejects.toThrow(/acme said 401: No api key passed in\. No key is sent \(auth = "none"\).*any value often does: set auth = "bearer".*RDSTUDIO_PROVIDER_KEY/);
+  put(tmp, "config/rdstudio/config.toml", `[teacher.provider]\nname = "acme"\nurl = "https://gw.example/v1"\nkey_env = "ACME_KEY"\n[teacher.provider.query]\napi-version = "1"\n[teacher.tiers]\nlow = "small-prod"\nmid = "large-prod"\nmax = "largest-prod"\n[teacher.models]\nmarking = "marker-prod"\n`);
+  process.env.ACME_KEY = "k-1";
+  expect(models.unnamed()).toEqual([]);
+  expect(models.models()).toMatchObject({ hint: "small-prod", check: "small-prod", feedback: "large-prod", discuss: "large-prod", marking: "marker-prod" });
+  gateway(() => new Response("{}", { status: 401 }));
+  await expect(ask(cfg)).rejects.toThrow(/The key \(from the environment, ACME_KEY\) was not accepted/);
+  gateway(() => new Response("{}", { status: 404 }));
+  await expect(ask(cfg)).rejects.toThrow(/Either acme has no model called large-prod \(rdstudio provider check lists the ones it offers\), or the address is not its chat completions/);
+  const seen = gateway(() => new Response(JSON.stringify({ object: "list", data: [{ id: "small-prod" }, { id: "large-prod" }] })));
+  expect(await models.offered()).toEqual(["small-prod", "large-prod"]);
+  expect(seen[0]).toMatchObject({ url: "https://gw.example/v1/models?api-version=1", headers: { authorization: "Bearer k-1" } });
+  // No such list: nothing is checked, and nothing fails.
+  gateway(() => new Response("not found", { status: 404 }));
+  expect(await models.offered()).toBeNull();
+});
+
+test("with OpenRouter, jobs keep their own models whatever the tiers are", () => {
+  project(`[teacher.tiers]\nlow = "x/small"\n`);
+  expect(models.models().hint).toBe("google/gemini-3.8-flash");
+  expect(models.unnamed()).toEqual([]);
 });

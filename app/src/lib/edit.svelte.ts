@@ -103,8 +103,6 @@ export class EditSession {
   conflict = $state.raw<{ current: NoteSource | null } | null>(null);
   /** The editor's text was replaced from outside (a restored draft, their version): it reloads. */
   revision = $state(0);
-  /** On a phone or a narrow window the details form is a sheet, open or not. */
-  detailsOpen = $state(false);
   /** Models whose proposed text was accepted since the last save (T74): the save names them in the note's stamp. */
   assisted = new Set<string>();
   private draftTimer: ReturnType<typeof setTimeout> | null = null;

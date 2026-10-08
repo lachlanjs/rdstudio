@@ -209,3 +209,42 @@ describe("the link control (T79)", () => {
     expect(linksIn(st, 0, cut).map((l) => l.url)).toEqual(["/tasks/T01.md"]);
   });
 });
+
+describe("places marked for Axis, and several suggestions at once (T98)", async () => {
+  const { places, placesIn, setPlaces } = await import("./places.ts");
+  const { pendingSuggestions, setSuggestions, suggestions } = await import("./suggest.ts");
+  const start = (doc: string) => EditorState.create({ doc, extensions: [places, suggestions] });
+  const waiting = (state: EditorState) => pendingSuggestions({ state } as EditorView).map((s) => [s.id, s.from, s.to, s.insert]);
+
+  test("a selection becomes the passage only while it is followed, stays when the cursor moves on, and a place is set apart from it", () => {
+    let st = start("one two three\nfour");
+    st = st.update({ selection: EditorSelection.single(4, 7) }).state;
+    expect(placesIn(st).passage).toBeNull(); // not followed yet
+    st = st.update({ effects: setPlaces.of({ follow: true }) }).state;
+    st = st.update({ selection: EditorSelection.single(4, 7) }).state;
+    expect(placesIn(st).passage).toEqual({ from: 4, to: 7 });
+    st = st.update({ selection: EditorSelection.single(18) }).state;
+    expect(placesIn(st).passage).toEqual({ from: 4, to: 7 });
+    st = st.update({ effects: setPlaces.of({ here: 18 }) }).state;
+    expect(placesIn(st)).toEqual({ passage: { from: 4, to: 7 }, here: 18, follow: true });
+    // Both keep their places as the note is typed in before them.
+    st = st.update({ changes: { from: 0, insert: "zero " } }).state;
+    expect(placesIn(st)).toMatchObject({ passage: { from: 9, to: 12 }, here: 23 });
+    // A passage typed over is gone; the place stays.
+    st = st.update({ changes: { from: 9, to: 12, insert: "2" } }).state;
+    expect(placesIn(st)).toMatchObject({ passage: null, here: 21 });
+    st = st.update({ effects: setPlaces.of({ follow: false, passage: null, here: null }) }).state;
+    expect(placesIn(st)).toEqual({ passage: null, here: null, follow: false });
+  });
+
+  test("several suggestions wait at once, in the order of the text, and each keeps its place as another goes in", () => {
+    let st = start("alpha beta gamma");
+    st = st.update({ effects: setSuggestions.of([{ id: "b", from: 11, to: 16, insert: "G", model: "m" }, { id: "a", from: 0, to: 5, insert: "A much longer word", model: "m" }, { from: 99, to: 120, insert: "end", model: "m" }]) }).state;
+    expect(waiting(st)).toEqual([["a", 0, 5, "A much longer word"], ["b", 11, 16, "G"], [expect.stringMatching(/^s\d+$/), 16, 16, "end"]]);
+    // The first is accepted (as acceptSuggestion does it): the others move with the text.
+    st = st.update({ changes: { from: 0, to: 5, insert: "A much longer word" } }).state;
+    expect(waiting(st).slice(1).map((s) => s.slice(1))).toEqual([[24, 29, "G"], [29, 29, "end"]]);
+    st = st.update({ effects: setSuggestions.of([]) }).state;
+    expect(waiting(st)).toEqual([]);
+  });
+});

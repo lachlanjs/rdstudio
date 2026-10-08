@@ -3,7 +3,6 @@
   import { beforeNavigate } from "$app/navigation";
   import { learner, store } from "$lib/data.svelte.ts";
   import { EditSession, arriving, editing } from "$lib/edit.svelte.ts";
-  import EditDetails from "./EditDetails.svelte";
   import NoteActions from "./NoteActions.svelte";
   import { render } from "$lib/markdown.ts";
   import KnowledgeLayout from "./KnowledgeLayout.svelte";
@@ -23,8 +22,8 @@
 
   let { id }: { id: string } = $props();
 
-  // Editing replaces the page with the editor (loaded only then) and the
-  // details panel with a form; both share one session.
+  // Editing replaces the page with the editor (loaded only then), which has
+  // the note's details under its title and Axis beside it: no details panel.
   // A note just created opens straight in the editor. (This component is
   // made afresh for each note: the page keys it by id.)
   const arrived = untrack(() => arriving.edit !== null && arriving.edit === id);
@@ -68,7 +67,8 @@
   <!-- An exercise is the workbench: the whole width, in the Practice space. -->
   {#await body then text}<ExerciseView {c} body={text} onedit={editing.enabled ? startEditing : undefined} />{/await}
 {:else}
-  <KnowledgeLayout current={"k:" + id}>
+  {#snippet companion()}<MetaPanel {c} />{/snippet}
+  <KnowledgeLayout current={"k:" + id} meta={session ? undefined : companion}>
     {#if session}
       {#await loadEditor()}
         <article class="doc editing"><p class="edit-message">Opening the editor…</p></article>
@@ -104,6 +104,5 @@
         {#if c.type === "Goal"}<GoalPanel {c} />{/if}
       </article>
     {/if}
-    {#snippet meta()}{#if session}<EditDetails {session} />{:else}<MetaPanel {c} />{/if}{/snippet}
   </KnowledgeLayout>
 {/if}

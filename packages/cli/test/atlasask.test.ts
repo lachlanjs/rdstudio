@@ -2,12 +2,13 @@
 // what it says it rests on is checked against what it looked at.
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { loadBundle } from "@rdstudio/core/node";
 import * as atlasask from "../src/atlasask.ts";
+import * as atlasasks from "../src/atlasasks.ts";
 import { loadConfig } from "../src/config.ts";
 import * as models from "../src/models.ts";
 
@@ -121,4 +122,47 @@ test("a model that cannot call tools is given a search's finds, and the steps ar
   expect(sent).toContain("Berendsen");
   expect(a.steps.map((s) => s.tool)).toEqual(["search_notes", "read_note", "read_note"]);
   expect(a.used).toMatchObject([{ note: "design/thermostat", checked: true }]);
+});
+
+test("a finished answer is kept in the learner record with what it used, and read back with what has changed since (T93, T94)", async () => {
+  const { root, cfg } = project();
+  const turns: Turn[] = [[{ name: "search_notes", args: { query: "thermostat" } }], [{ name: "read_note", args: { id: "/design/integrator.md" } }], [{ name: "read_note", args: { id: "/design/thermostat.md", section: "How" } }],
+    '<answer>\nBy [the thermostat](/design/thermostat.md).\n</answer>\n<used>\n- /design/thermostat.md | How | "A Berendsen thermostat rescales velocities towards a target temperature."\n</used>'];
+  script(turns);
+  const status = () => execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" });
+  const before = status();
+  const { answer } = await atlasask.ask(cfg, { question: "How is temperature held?", tier: "low" });
+  // What it used, over every round: four calls to the model.
+  expect(answer.spent).toEqual({ calls: 4, input: 2000, output: 80, cached: 0 });
+  expect(answer.cost).toBeCloseTo(0.004);
+
+  // Nothing is kept where the learner record is off.
+  expect(atlasasks.keep(cfg, answer, "design")).toBeNull();
+  expect(atlasasks.list(cfg)).toEqual([]);
+  writeFileSync(join(process.env.XDG_CONFIG_HOME!, "rdstudio", "config.toml"), "[learner]\nenabled = true\n");
+  const kept = atlasasks.keep(cfg, answer, "design")!;
+  expect(kept.from).toEqual({ ref: "design", kind: "folder" });
+  expect(Object.keys(kept.notes).sort()).toEqual(["design/integrator", "design/thermostat"]);
+  expect(atlasasks.keep(cfg, answer, "/design/units.md")!.from).toEqual({ ref: "design/units", kind: "note" });
+  expect(atlasasks.list(cfg).map((a) => a.question)).toEqual(["How is temperature held?", "How is temperature held?"]);
+  expect(status()).toBe(before); // not in the repository
+
+  // As it was: nothing has changed, and its sentence is still in the note.
+  expect(atlasasks.read(cfg, kept.id).since).toEqual({ gone: [], changed: [], links: [], quotes: { "design/thermostat": true } });
+  // The note is reworded: changed, and the sentence is no longer in it.
+  put(root, "knowledge/design/thermostat.md", note("The thermostat", "# How\n\nVelocities are rescaled."));
+  expect(atlasasks.read(cfg, kept.id).since).toEqual({ gone: [], changed: ["design/thermostat"], links: [], quotes: { "design/thermostat": false } });
+  // The link it followed is taken out of the note it was followed from.
+  put(root, "knowledge/design/integrator.md", note("The integrator", "Steps the system forward."));
+  expect(atlasasks.read(cfg, kept.id).since.links).toEqual([{ from: "design/integrator", to: "design/thermostat" }]);
+  // The note is gone.
+  rmSync(join(root, "knowledge/design/thermostat.md"));
+  const since = atlasasks.read(cfg, kept.id).since;
+  expect(since.gone).toEqual(["design/thermostat"]);
+  expect(since.links).toEqual([]);
+
+  expect(() => atlasasks.read(cfg, "../../etc/passwd")).toThrow("not a kept question's id");
+  atlasasks.forget(cfg, kept.id);
+  expect(atlasasks.list(cfg)).toHaveLength(1);
+  expect(() => atlasasks.read(cfg, kept.id)).toThrow("no such kept question");
 });

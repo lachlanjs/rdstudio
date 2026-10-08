@@ -17,10 +17,12 @@ import { livePreview, livePreviewTheme } from "./livePreview.ts";
 import { mathsSyntax } from "./maths.ts";
 import { linkControl } from "./linkControl.ts";
 import { pinsField, pinsTheme } from "./pins.ts";
-import { setSuggestion, suggestionHandler, suggestions, type Suggestion } from "./suggest.ts";
+import { places, placesIn, setPlaces, type Places } from "./places.ts";
+import { setSuggestions, suggestionHandler, suggestions, type Suggestion } from "./suggest.ts";
 
-export type { Format, Suggestion };
-export { acceptSuggestion, pendingSuggestion, rejectSuggestion } from "./suggest.ts";
+export type { Format, Places, Suggestion };
+export { acceptAll, acceptSuggestion, pendingSuggestion, pendingSuggestions, rejectAll, rejectSuggestion } from "./suggest.ts";
+export { placesOf } from "./places.ts";
 
 export interface EditorOptions {
   doc: string;
@@ -39,6 +41,8 @@ export interface EditorOptions {
   onSelect?: (text: string) => void;
   /** A suggestion (suggest.ts) was accepted into the text, or rejected. */
   onSuggestion?: (what: "accepted" | "rejected", s: Suggestion) => void;
+  /** The places marked for Axis (places.ts) changed: the passage, or where new text goes. */
+  onPlaces?: (p: Places) => void;
 }
 
 const mode = new Compartment();
@@ -111,7 +115,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
       syntaxHighlighting(highlight),
       noteDir.of(opts.dir ?? ""),
       theme,
-      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : [suggestions, suggestionHandler.of((what, s) => opts.onSuggestion?.(what, s)), linkControl]),
+      ...(opts.inline ? [inlineTheme, pinsField, pinsTheme] : [suggestions, suggestionHandler.of((what, s) => opts.onSuggestion?.(what, s)), places, linkControl]),
       mode.of(modeExtensions(Boolean(opts.source))),
       closeBrackets(),
       // Only brackets: closing quotes would get in the way of apostrophes in prose.
@@ -138,6 +142,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): EditorVi
           const r = u.state.selection.main;
           opts.onSelect(r.empty ? "" : u.state.sliceDoc(r.from, r.to));
         }
+        if (opts.onPlaces && placesIn(u.state) !== placesIn(u.startState)) opts.onPlaces(placesIn(u.state));
       }),
     ],
   });
@@ -155,9 +160,25 @@ export function setSource(view: EditorView, source: boolean): void {
   view.dispatch({ effects: mode.reconfigure(modeExtensions(source)) });
 }
 
-/** Show a suggestion in the text, in view (null takes one away). */
+/** Show a suggestion in the text, in view, in place of any there are (null takes them away). */
 export function suggest(view: EditorView, s: Suggestion | null): void {
-  view.dispatch({ effects: s ? [setSuggestion.of(s), EditorView.scrollIntoView(s.to, { y: "center" })] : setSuggestion.of(null) });
+  view.dispatch({ effects: s ? [setSuggestions.of([s]), EditorView.scrollIntoView(Math.min(s.to, view.state.doc.length), { y: "center" })] : setSuggestions.of([]) });
+}
+
+/** Show several suggestions at once (T98), the first of them in view. */
+export function suggestAll(view: EditorView, list: Suggestion[]): void {
+  const first = list.reduce<Suggestion | null>((a, s) => (!a || s.from < a.from ? s : a), null);
+  view.dispatch({ effects: first ? [setSuggestions.of(list), EditorView.scrollIntoView(Math.min(first.to, view.state.doc.length), { y: "center" })] : setSuggestions.of([]) });
+}
+
+/** Bring a place in the text into view. */
+export function reveal(view: EditorView, at: number): void {
+  view.dispatch({ effects: EditorView.scrollIntoView(Math.max(0, Math.min(at, view.state.doc.length)), { y: "center" }) });
+}
+
+/** Mark places for Axis, or take them away (places.ts). */
+export function markPlaces(view: EditorView, p: Partial<Places>): void {
+  view.dispatch({ effects: setPlaces.of(p) });
 }
 
 /** The selection, or the caret (from === to), as offsets in the text. */

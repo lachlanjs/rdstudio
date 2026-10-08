@@ -3,7 +3,7 @@ type: Roadmap
 title: Roadmap
 description: Milestones and task checklist for building rdstudio; the progress tracker.
 tags: [roadmap]
-generated: { by: claude-code/claude-opus-5-5, at: 2026-09-23T04:55:51Z }
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T23:11:24Z}
 ---
 
 Each task's state is also carried in its `tags` (`todo`, `active`, `done`).
@@ -166,6 +166,20 @@ In the order agreed on 2026-10-07. Written up in
 - [x] [T88 A measure of retrieval: questions with known answers](/tasks/T88-retrieval-measure.md)
 - [x] [T89 Search by meaning: the cache, the tool, and edits](/tasks/T89-find-similar.md)
 - [x] [T90 Ask Atlas shows notes found by meaning](/tasks/T90-ask-atlas-by-meaning.md)
+
+# M15 — The Axis panel
+
+Ask Atlas made to flow on the screen, and Axis in the editor moved into the
+same panel as a chat, on the branch `feat/axis-panel`. Decisions:
+[questions are kept](/decisions/ask-atlas-keeps-questions.md);
+[Axis changes a note only where it is let](/decisions/assist-changes-by-leave.md).
+
+- [x] [T93 Ask Atlas in a docked Axis panel](/tasks/T93-axis-panel.md)
+- [x] [T94 Ask Atlas keeps its questions and replays them](/tasks/T94-ask-history.md)
+- [ ] [T95 Ask Atlas: follow-up questions](/tasks/T95-ask-follow-ups.md)
+- [x] [T96 Axis beside the note being edited, and the details under its title](/tasks/T96-axis-beside-the-note.md)
+- [x] [T97 Chats with Axis about a note: follow-ups, cost, kept and deleted](/tasks/T97-note-chats.md)
+- [x] [T98 What Axis may change in a note: a marked passage, a place for new text, or anywhere](/tasks/T98-edits-by-leave.md)
 
 # Future
 

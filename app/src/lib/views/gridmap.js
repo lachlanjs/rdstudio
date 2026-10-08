@@ -479,7 +479,6 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       return focus >= 0 ? { ref: L.items[focus].ref, label: nodes.get(L.items[focus].id)?.label || L.items[focus].ref, kind: "folder" } : null;
     },
     changed: (what) => {
-      wrap.classList.toggle("asking", ask.active());
       if (what === "clear") { handsOn = false; askFit = ""; }
       askHotFor = null;
       if (what !== "clear") fitAsk();
@@ -493,7 +492,10 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       select(L.items[i].id);
     },
   });
-  if (ask) wrap.append(ask.form, ask.card, ask.previews);
+  if (ask) wrap.append(ask.previews);
+  // The map and, beside it or below it, the Axis panel (T93): the map has what the panel leaves.
+  const shell = h("div", { class: "atlas-shell axis-shell" }, wrap);
+  if (ask) { shell.append(ask.panel); ask.attach(shell); }
 
   // The links followed, as routes: the layout's own path where the two notes are joined by one, else the router's.
   function askRoutes(open, am) {
@@ -542,7 +544,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
       const at = wrap.getBoundingClientRect();
       const box = (i) => { const m = L.items[i]; return [X(m.gx) - 3, Y(m.gy) - 3, X(m.gx + m.w) + 3, Y(m.gy + m.h) + 3]; };
       const shownAs = (i) => { for (let k = up[i].length - 1; k >= 0; k--) if (!open[up[i][k]]) return up[i][k]; return i; };
-      const avoid = [panel, crumbs, legend, card, ask.form, ask.card].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
+      const avoid = [panel, crumbs, legend, card, ...ask.over()].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
       for (const id of am.notes.keys()) { const i = noteAt.get(id); if (i !== undefined && shown[shownAs(i)]) avoid.push(box(shownAs(i))); }
       // Rather not over any other note either, where there is room.
       const others = L.items.map((n, i) => i).filter((i) => L.items[i].kind === "note" && shown[i] && onScreen(L.items[i])).map(box);
@@ -784,11 +786,11 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     const on = trail.map((id) => noteAt.get(id)).filter((i) => i !== undefined).map((i) => L.items[i]);
     return on.length ? fitItems(on) : null;
   }
-  // A view that holds these items, between the lens panel and, where one is shown, the answer at the other side.
+  // A view that holds these items, clear of the lens panel.
   function fitItems(on, most = 1.6) {
     const x0 = Math.min(...on.map((n) => n.gx)) - 2, x1 = Math.max(...on.map((n) => n.gx + n.w)) + 2;
     const y0 = Math.min(...on.map((n) => n.gy)) - 2, y1 = Math.max(...on.map((n) => n.gy + n.h)) + 2, left = inset();
-    const wide = w - left - (ask && w >= 900 && !ask.card.hidden ? ask.card.offsetWidth + 24 : 0);
+    const wide = w - left;
     const k = Math.min(most, wide / ((x1 - x0) * CELL), hgt / ((y1 - y0) * CELL)) * 0.94;
     return d3.zoomIdentity.translate(left + wide / 2 - (k * (x0 + x1) * CELL) / 2, hgt / 2 - (k * (y0 + y1) * CELL) / 2).scale(k);
   }
@@ -1043,7 +1045,7 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     if (tip.hidden || !n || n.kind !== "note") return;
     const box = (i) => { const m = L.items[i]; return [X(m.gx) - 3, Y(m.gy) - 3, X(m.gx + m.w) + 3, Y(m.gy + m.h) + 3]; };
     const at = wrap.getBoundingClientRect();
-    const fixed = [panel, crumbs, legend, card, ...(ask ? [ask.form, ask.card] : [])].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
+    const fixed = [panel, crumbs, legend, card, ...(ask ? ask.over() : [])].filter((el) => !el.hidden && el.offsetWidth).map((el) => { const r = el.getBoundingClientRect(); return [r.left - at.left, r.top - at.top, r.right - at.left, r.bottom - at.top]; });
     const avoid = [box(hovered), ...(hot ? [...hot.notes].filter((i) => L.items[i]).map(box) : []), ...fixed];
     const best = beside(box(hovered), tip.offsetWidth, tip.offsetHeight, avoid);
     tip.style.left = `${Math.round(best.x)}px`;
@@ -1090,16 +1092,21 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
     viewed = true;
     initialView();
   });
-  const onResize = () => { size(); arrange(); schedule(); };
-  window.addEventListener("resize", onResize);
-  wrap.leave = () => { left = true; ask?.clear(); svg.interrupt(); window.removeEventListener("resize", onResize); persist(); };
-  wrap.refresh = () => { model = timed("map-model", buildModel); nodes = byId(model); o = effective(); arrange(); tones = null; schedule(); };
+  // The frame changes size with the window, and as the Axis panel is opened, folded or dragged.
+  let resizing = 0, sized = false;
+  const frame = new ResizeObserver(() => {
+    if (!sized) { sized = true; return; } // its first report is the size it was made at
+    if (!resizing) resizing = requestAnimationFrame(() => { resizing = 0; if (left) return; size(); arrange(); schedule(); });
+  });
+  frame.observe(wrap);
+  shell.leave = () => { left = true; ask?.clear(); ask?.leave(); svg.interrupt(); frame.disconnect(); cancelAnimationFrame(resizing); persist(); };
+  shell.refresh = () => { model = timed("map-model", buildModel); nodes = byId(model); o = effective(); arrange(); tones = null; schedule(); };
   M.reset = () => zoomTo(-1);
   // The panel's Notes or Code, or folders or none: another map, so shown whole, with a panel made for it
   // (the kinds in its key and the lenses it offers depend on what is mapped).
   M.resource = () => {
     userMoved = false;
-    wrap.refresh();
+    shell.refresh();
     const next = makePanel(), more = next.querySelector(".map-more");
     if (more) more.open = !!panel.querySelector(".map-more")?.open;
     panel.replaceWith(next);
@@ -1109,5 +1116,5 @@ export function mapView(focusRef = "", { path = "", tour = null } = {}) {
   wrap.layout = () => L;
   wrap.model = () => model;
   wrap.measures = () => cache?.measures || null;
-  return wrap;
+  return shell;
 }

@@ -1,24 +1,57 @@
 ---
 type: Design
 title: Ask Atlas
-description: "A question asked on the Atlas is answered beside the map from the notes and the code,
-  and the map shows where the answer came from: the notes found, the links followed, and a passage
-  beside each note the answer rests on."
+description: "A question asked on the Atlas is answered in a panel beside the map from the notes and
+  the code, and the map shows where the answer came from: the notes found, the links followed, and a
+  passage beside each note the answer rests on. Questions are kept and can be played again."
 tags: [design, atlas, assist, retrieval]
-generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T04:24:15Z}
+generated: {by: claude-code/claude-opus-5-5, at: 2026-10-07T23:11:36Z}
 ---
 
 # What it is
 
-The first version of [the idea](/ideas/ask-atlas.md "see also"), built in
-[T85](/tasks/T85-ask-atlas.md "see also"). On the Atlas there is a box to
-ask from. The answer is shown in a card beside the map. Nothing is written.
+The first version of [the idea](/ideas/ask-atlas.md "see also") was built in
+[T85](/tasks/T85-ask-atlas.md "see also"): a box to ask from and a card
+over the map. Since [T93](/tasks/T93-axis-panel.md "see also") it is one
+panel, the Axis panel, docked in the map's frame. No note is written.
 
 It uses the same lookups as
 [the agent in the editor](/design/assist.md "requires"): the model is given
 no context and calls read-only tools in rounds capped by tier
 ([the decision](/decisions/assist-looks-things-up.md "uses")). Each lookup
 is a step, streamed as it is made. Here the steps are what the map draws.
+
+# The panel
+
+- To the right of the map where the frame is wider than tall and at least
+  900 pixels wide; below it otherwise. The map has what the panel leaves
+  and refits when that changes.
+- Folded by default to a button "Axis" over the map's corner. A handle on
+  its inner edge resizes it, by a drag or the arrow keys. Open or folded,
+  and the size for each side, are kept on the device.
+- From the top: the answer (or, with nothing asked, the questions asked
+  before), which scrolls; the cost, which does not; the question being
+  written.
+- The question is written in the note editor's live preview, so maths,
+  emphasis and links to notes work as they do in a note. Ctrl+Enter asks.
+- The question asked is shown as a quotation above the answer.
+- The cost line gives the price, the tokens in and out, the tier and the
+  model. Opened, it lists tokens read from the cache, calls to the model,
+  and lookups by kind.
+
+# Questions kept
+
+[Decided](/decisions/ask-atlas-keeps-questions.md "requires") and built in
+[T94](/tasks/T94-ask-history.md "see also").
+
+- A finished answer is kept in the asker's learner record, with a
+  fingerprint of each note it opened or rests on. Nothing is kept where the
+  learner record is off.
+- Opening a kept question plays it again on the map, one lookup every 0.7
+  seconds, without asking the model.
+- A note changed since is flagged and its sentence checked again.
+- A note or a followed link that is gone stops the replay: the answer is
+  shown as it was, with what is missing named.
 
 # Where a question starts
 
@@ -67,18 +100,23 @@ on, each with the heading read and one sentence copied from the note.
 
 # Limits
 
-- The box is not offered on a study path or a tour, in an exported
+- The panel is not offered on a study path or a tour, in an exported
   snapshot, or without a write token.
 - In the code view the answer is shown but nothing is marked: the map there
   holds code, not notes.
 - A model that cannot call tools gets one search made for it and the first
   three notes read; those steps are still drawn.
-- Maths in the answer is not typeset in the card.
-- Usage is logged under the feature `atlas-ask`. Questions and answers are
-  not kept.
+- Usage is logged under the feature `atlas-ask`.
+- An answer stopped or failed is not kept.
+- Each question stands alone: one asked after an answer does not carry it
+  ([T95](/tasks/T95-ask-follow-ups.md "see also")).
+- A replay's pace is set, not the original: steps carry no times.
 
 # Where it lives
 
 `packages/cli/src/atlasask.ts` (the request, the reply's reading),
-`POST /api/atlas/ask`, `app/src/lib/views/ask.js` (the box, the card, the
-marks), `app/src/lib/views/gridmap.js` (the drawing), `e2e/ask.py`.
+`packages/cli/src/atlasasks.ts` (the questions kept),
+`POST /api/atlas/ask`, `GET /api/atlas/asks`, `GET` and
+`DELETE /api/atlas/asks/{id}`, `app/src/lib/views/ask.js` (the panel, the
+answer, the marks, the replay), `app/src/lib/views/gridmap.js` (the frame
+and the drawing), `e2e/ask.py`.

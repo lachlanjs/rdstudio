@@ -201,7 +201,7 @@ export type TutorAsk = {
 };
 
 export type NoteAssist = {
-    mode: 'ask' | 'fill' | 'figure';
+    mode: 'ask' | 'fill' | 'figure' | 'chat';
     /**
      * How strong a model to ask: the tier's model is used. Left out, the mode's usual tier.
      */
@@ -215,6 +215,28 @@ export type NoteAssist = {
     to: number;
     prompt?: string;
     title?: string;
+    /**
+     * chat: where new text is to go, apart from the passage (from..to).
+     */
+    at?: number | null;
+    /**
+     * chat: what it may change: the marked passage, or anything in the note.
+     */
+    may?: {
+        passage?: boolean;
+        note?: boolean;
+    };
+    /**
+     * chat: the turns before this one, oldest first.
+     */
+    thread?: Array<{
+        question: string;
+        answer: string;
+    }>;
+    /**
+     * chat: the kept chat this turn goes on from; left out, a new one.
+     */
+    chat?: string | null;
 };
 
 export type AtlasAsk = {
@@ -1150,6 +1172,209 @@ export type PostApiAtlasAskResponses = {
 };
 
 export type PostApiAtlasAskResponse = PostApiAtlasAskResponses[keyof PostApiAtlasAskResponses];
+
+export type GetApiAtlasAsksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/atlas/asks';
+};
+
+export type GetApiAtlasAsksErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAtlasAsksError = GetApiAtlasAsksErrors[keyof GetApiAtlasAsksErrors];
+
+export type GetApiAtlasAsksResponses = {
+    /**
+     * Whether questions are kept, and those that are
+     */
+    200: {
+        enabled: boolean;
+        asks: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAtlasAsksResponse = GetApiAtlasAsksResponses[keyof GetApiAtlasAsksResponses];
+
+export type DeleteApiAtlasAsksByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/atlas/asks/{id}';
+};
+
+export type DeleteApiAtlasAsksByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAtlasAsksByIdError = DeleteApiAtlasAsksByIdErrors[keyof DeleteApiAtlasAsksByIdErrors];
+
+export type DeleteApiAtlasAsksByIdResponses = {
+    /**
+     * Forgotten
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAtlasAsksByIdResponse = DeleteApiAtlasAsksByIdResponses[keyof DeleteApiAtlasAsksByIdResponses];
+
+export type GetApiAtlasAsksByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/atlas/asks/{id}';
+};
+
+export type GetApiAtlasAsksByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such kept question
+     */
+    404: Error;
+};
+
+export type GetApiAtlasAsksByIdError = GetApiAtlasAsksByIdErrors[keyof GetApiAtlasAsksByIdErrors];
+
+export type GetApiAtlasAsksByIdResponses = {
+    /**
+     * The kept question
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApiAtlasAsksByIdResponse = GetApiAtlasAsksByIdResponses[keyof GetApiAtlasAsksByIdResponses];
+
+export type GetApiAssistChatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only the chats about this note.
+         */
+        note?: string;
+    };
+    url: '/api/assist/chats';
+};
+
+export type GetApiAssistChatsErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type GetApiAssistChatsError = GetApiAssistChatsErrors[keyof GetApiAssistChatsErrors];
+
+export type GetApiAssistChatsResponses = {
+    /**
+     * Whether chats are kept, and those that are
+     */
+    200: {
+        enabled: boolean;
+        chats: Array<{
+            [key: string]: unknown;
+        }>;
+    };
+};
+
+export type GetApiAssistChatsResponse = GetApiAssistChatsResponses[keyof GetApiAssistChatsResponses];
+
+export type DeleteApiAssistChatsByIdData = {
+    body?: never;
+    headers: {
+        'x-rdstudio-token': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/assist/chats/{id}';
+};
+
+export type DeleteApiAssistChatsByIdErrors = {
+    /**
+     * Bad name or text
+     */
+    400: Error;
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+};
+
+export type DeleteApiAssistChatsByIdError = DeleteApiAssistChatsByIdErrors[keyof DeleteApiAssistChatsByIdErrors];
+
+export type DeleteApiAssistChatsByIdResponses = {
+    /**
+     * Deleted
+     */
+    200: {
+        id: string;
+    };
+};
+
+export type DeleteApiAssistChatsByIdResponse = DeleteApiAssistChatsByIdResponses[keyof DeleteApiAssistChatsByIdResponses];
+
+export type GetApiAssistChatsByIdData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/assist/chats/{id}';
+};
+
+export type GetApiAssistChatsByIdErrors = {
+    /**
+     * Cross-origin request, bad token or host not allowed
+     */
+    403: Error;
+    /**
+     * No such kept chat
+     */
+    404: Error;
+};
+
+export type GetApiAssistChatsByIdError = GetApiAssistChatsByIdErrors[keyof GetApiAssistChatsByIdErrors];
+
+export type GetApiAssistChatsByIdResponses = {
+    /**
+     * The kept chat
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type GetApiAssistChatsByIdResponse = GetApiAssistChatsByIdResponses[keyof GetApiAssistChatsByIdResponses];
 
 export type GetApiTeacherDraftsData = {
     body?: never;
