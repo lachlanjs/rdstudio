@@ -1,5 +1,6 @@
 # Idea
 
+* [An interactive tutorial on GitHub Pages, with exemplar knowledge bases and recorded AI answers](interactive-tutorial.md) - A tutorial for rdstudio served as a static site: exemplar knowledge bases to explore, guided by tours, with the AI features answering from recordings in place of a model.
 * [Ask Atlas: a question answered on the map, showing where the answer came from](ask-atlas.md) - Ask a question on the Atlas; the answer is composed from the notes and the code, and the notes it drew on are marked on the map with previews, the chain of lookups drawn, and the way each was found shown by colour.
 * [Distribution, funding and naming](distribution-and-naming.md) - Self-hosting by default under MIT, optional paid convenience or donations, the user always free to bring their own AI, and name candidates for an agentic harness for learning.
 * [Measuring whether a mapped codebase helps agents, and people](measuring-the-map.md) - The developer's question of how much more efficient an agent is after a codebase is mapped into OKF (with LSP as well), how much it helps a person working with one, and whether either can be measured in a standard way; with an outline of how.
